@@ -54,6 +54,7 @@ import {
     polyGeoJSON,
     questions,
     save,
+    showTrainLineOverlay,
     showTutorial,
     thunderforestApiKey,
     triggerLocalRefresh,
@@ -163,6 +164,7 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
     const $casServerUrl = useStore(casServerUrl);
     const $casStatus = useStore(casServerStatus);
     const $liveSyncEnabled = useStore(liveSyncEnabled);
+    const $showTrainLineOverlay = useStore(showTrainLineOverlay);
     const lastDefaultUnit = useRef($defaultUnit);
     const hasSyncedInitialUnit = useRef(false);
     const [isOptionsOpen, setOptionsOpen] = useState(false);
@@ -776,6 +778,18 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
                                     </a>
                                     .
                                 </p>
+                            </div>
+                            <Separator className="bg-slate-300 w-[280px]" />
+                            <div className="flex flex-row items-center gap-2">
+                                <label className="text-2xl font-semibold font-poppins">
+                                    Show train lines?
+                                </label>
+                                <Checkbox
+                                    checked={$showTrainLineOverlay}
+                                    onCheckedChange={(v) =>
+                                        showTrainLineOverlay.set(Boolean(v))
+                                    }
+                                />
                             </div>
                             <Separator className="bg-slate-300 w-[280px]" />
                             <Label>Permanent Map Overlay</Label>

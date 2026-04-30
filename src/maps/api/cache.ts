@@ -73,7 +73,12 @@ export const cacheFetch = async (
     } catch (e) {
         console.log(e); // Probably a caches not supported error
 
-        return fetch(url);
+        const fallbackFetch = fetch(url);
+        return loadingText
+            ? await toast.promise(fallbackFetch, {
+                  pending: loadingText,
+              })
+            : await fallbackFetch;
     }
 };
 

@@ -38,6 +38,7 @@ import { DraggableMarkers } from "./DraggableMarkers";
 import { LeafletFullScreenButton } from "./LeafletFullScreenButton";
 import { MapPrint } from "./MapPrint";
 import { PolygonDraw } from "./PolygonDraw";
+import { TrainLinesOverlay } from "./TrainLinesOverlay";
 
 /** Discard stale Overpass results when a newer refresh runs (e.g. `?sid=` hydrate updates zone mid-fetch). */
 let mapRefreshGeneration = 0;
@@ -385,6 +386,7 @@ export const Map = ({ className }: { className?: string }) => {
                     </div>
                 </div>
                 <PolygonDraw />
+                <TrainLinesOverlay />
                 <ScaleControl position="bottomleft" />
                 <MapPrint
                     position="topright"

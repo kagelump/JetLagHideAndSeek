@@ -59,6 +59,14 @@ export const permanentOverlay = persistentAtom<FeatureCollection | null>(
         decode: JSON.parse,
     },
 );
+export const showTrainLineOverlay = persistentAtom<boolean>(
+    "showTrainLineOverlay",
+    false,
+    {
+        encode: JSON.stringify,
+        decode: JSON.parse,
+    },
+);
 
 export const mapGeoJSON = atom<FeatureCollection<
     Polygon | MultiPolygon
