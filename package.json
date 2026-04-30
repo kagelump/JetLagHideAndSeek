@@ -4,6 +4,7 @@
     "version": "0.0.1",
     "scripts": {
         "dev": "astro dev",
+        "dev:app": "node scripts/dev-app.mjs",
         "build": "astro build",
         "build:all": "pnpm build && pnpm --dir server build",
         "start:stack": "node scripts/start-stack.mjs",

@@ -1,10 +1,23 @@
+import { resolve } from "node:path";
+
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
-import { resolve } from "node:path";
 
-import { blobExists, readBlob, writeBlob } from "./blobStorage.js";
+import {
+    blobExists,
+    readBlob,
+    readBlobInNamespace,
+    writeBlob,
+    writeBlobInNamespace,
+} from "./blobStorage.js";
 import { decompressDeflateBase64Url } from "./decompress.js";
+import {
+    deleteOverpassIndexEntry,
+    readOverpassIndexEntry,
+    upsertOverpassIndexEntry,
+} from "./overpassIndexStore.js";
+import { computeSidFromCanonicalUtf8, SID_PATTERN } from "./sid.js";
 import {
     appendTeamSnapshotLine,
     readTeamSnapshots,
@@ -14,13 +27,13 @@ import {
     TEAM_ID_REGEX,
     wireV1SnapshotSchema,
 } from "./wire.js";
-import { computeSidFromCanonicalUtf8, SID_PATTERN } from "./sid.js";
 
 export type CasServerOptions = {
     dataDir: string;
     maxCanonicalBytes: number;
     maxCompressedBodyBytes: number;
     maxTeamEntries: number;
+    maxOverpassIndexEntries: number;
     corsOrigin: boolean | string | RegExp | (boolean | string | RegExp)[];
     /** Serve the Astro static export (same machine = same-origin CAS API). */
     staticSite?: {
@@ -126,6 +139,124 @@ export async function buildApp(opts: CasServerOptions): Promise<FastifyInstance>
             }
             reply.header("Content-Type", "text/plain; charset=utf-8");
             return blob;
+        },
+    );
+
+    fastify.put<{
+        Params: { sid: string };
+        Body: string;
+    }>("/api/cas/blobs/overpass/:sid", async (request, reply) => {
+        const { sid } = request.params;
+        if (!SID_PATTERN.test(sid)) {
+            return reply.code(400).send({ error: "Invalid sid" });
+        }
+        const rawBody = request.body;
+        if (
+            Buffer.byteLength(rawBody ?? "", "utf8") >
+            opts.maxCompressedBodyBytes
+        ) {
+            return reply.code(413).send({ error: "Payload too large" });
+        }
+        let canonicalUtf8: string;
+        try {
+            canonicalUtf8 = decompressDeflateBase64Url(rawBody);
+        } catch {
+            return reply.code(400).send({ error: "Invalid compressed payload" });
+        }
+        if (
+            Buffer.byteLength(canonicalUtf8, "utf8") > opts.maxCanonicalBytes
+        ) {
+            return reply.code(413).send({ error: "Canonical payload too large" });
+        }
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(canonicalUtf8);
+        } catch {
+            return reply.code(400).send({ error: "Invalid JSON after decompress" });
+        }
+        const recomputed = computeSidFromCanonicalUtf8(canonicalize(parsed));
+        if (recomputed !== sid) {
+            return reply.code(400).send({ error: "sid mismatch" });
+        }
+        await writeBlobInNamespace(opts.dataDir, "overpass", sid, rawBody);
+        return { sid };
+    });
+
+    fastify.get<{ Params: { sid: string } }>(
+        "/api/cas/blobs/overpass/:sid",
+        async (request, reply) => {
+            const { sid } = request.params;
+            if (!SID_PATTERN.test(sid)) {
+                return reply.code(400).send({ error: "Invalid sid" });
+            }
+            const blob = await readBlobInNamespace(opts.dataDir, "overpass", sid);
+            if (blob === null) {
+                return reply.code(404).send({ error: "Not found" });
+            }
+            reply.header("Content-Type", "text/plain; charset=utf-8");
+            return blob;
+        },
+    );
+
+    fastify.get<{ Params: { requestHash: string } }>(
+        "/api/cas/index/overpass/:requestHash",
+        async (request, reply) => {
+            const { requestHash } = request.params;
+            if (!requestHash || requestHash.length < 8 || requestHash.length > 128) {
+                return reply.code(400).send({ error: "Invalid request hash" });
+            }
+            const entry = await readOverpassIndexEntry(
+                opts.dataDir,
+                requestHash,
+                Date.now(),
+                opts.maxOverpassIndexEntries,
+            );
+            if (!entry) {
+                return reply.code(404).send({ error: "Not found" });
+            }
+            return entry;
+        },
+    );
+
+    fastify.put<{
+        Params: { requestHash: string };
+        Body: { sid?: string; cachedAt?: number; expiresAt?: number };
+    }>("/api/cas/index/overpass/:requestHash", async (request, reply) => {
+        const { requestHash } = request.params;
+        if (!requestHash || requestHash.length < 8 || requestHash.length > 128) {
+            return reply.code(400).send({ error: "Invalid request hash" });
+        }
+        const { sid, cachedAt, expiresAt } = request.body ?? {};
+        if (!sid || typeof sid !== "string" || !SID_PATTERN.test(sid)) {
+            return reply.code(400).send({ error: "Invalid sid" });
+        }
+        if (
+            typeof cachedAt !== "number" ||
+            typeof expiresAt !== "number" ||
+            !Number.isFinite(cachedAt) ||
+            !Number.isFinite(expiresAt) ||
+            expiresAt <= cachedAt
+        ) {
+            return reply.code(400).send({ error: "Invalid cache metadata" });
+        }
+        await upsertOverpassIndexEntry(
+            opts.dataDir,
+            requestHash,
+            { sid, cachedAt, expiresAt },
+            opts.maxOverpassIndexEntries,
+        );
+        return reply.code(204).send();
+    });
+
+    fastify.delete<{ Params: { requestHash: string } }>(
+        "/api/cas/index/overpass/:requestHash",
+        async (request, reply) => {
+            const { requestHash } = request.params;
+            if (!requestHash || requestHash.length < 8 || requestHash.length > 128) {
+                return reply.code(400).send({ error: "Invalid request hash" });
+            }
+            await deleteOverpassIndexEntry(opts.dataDir, requestHash);
+            return reply.code(204).send();
         },
     );
 

@@ -46,6 +46,18 @@ export enum CacheType {
     PERMANENT_CACHE = "jlhs-map-generator-permanent-cache",
 }
 
+export type OverpassCacheSource = "local" | "cas" | "network";
+
+export interface OverpassCacheIndexEntry {
+    requestHash: string;
+    sid: string;
+    cachedAt: number;
+    expiresAt: number;
+    source: OverpassCacheSource;
+}
+
+export type OverpassCacheIndexMap = Record<string, OverpassCacheIndexEntry>;
+
 export interface CustomStation {
     id: string;
     name?: string;

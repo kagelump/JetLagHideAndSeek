@@ -7,9 +7,8 @@ import zlib from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
-
-import { canonicalize, wireV1SnapshotSchema } from "../src/wire.js";
 import { computeSidFromCanonicalUtf8 } from "../src/sid.js";
+import { canonicalize, wireV1SnapshotSchema } from "../src/wire.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -30,13 +29,12 @@ function fixtureBlob(): { sid: string; compressed: string } {
     return { sid, compressed };
 }
 
-describe("team snapshots API", () => {
+describe("overpass index API", () => {
     let dataDir: string;
     let app: Awaited<ReturnType<typeof buildApp>>;
-    const teamId = "abcdabcdabcdabcdabcdabcdabcdabcd";
 
     beforeEach(async () => {
-        dataDir = await mkdtemp(join(tmpdir(), "cas-team-"));
+        dataDir = await mkdtemp(join(tmpdir(), "cas-overpass-"));
         app = await buildApp({
             dataDir,
             maxCanonicalBytes: 1024 * 1024,
@@ -53,17 +51,7 @@ describe("team snapshots API", () => {
         await rm(dataDir, { recursive: true, force: true });
     });
 
-    it("POST requires existing blob", async () => {
-        const res = await app.inject({
-            method: "POST",
-            url: `/api/teams/${teamId}/snapshots`,
-            headers: { "content-type": "application/json" },
-            payload: JSON.stringify({ sid: "9Tt79VmedVVPOG5Z83f36Q" }),
-        });
-        expect(res.statusCode).toBe(404);
-    });
-
-    it("POST append then GET lists snapshots", async () => {
+    it("PUT then GET returns mapping", async () => {
         const { sid, compressed } = fixtureBlob();
         await app.inject({
             method: "PUT",
@@ -71,40 +59,58 @@ describe("team snapshots API", () => {
             headers: { "content-type": "text/plain; charset=utf-8" },
             payload: compressed,
         });
-
-        const post = await app.inject({
-            method: "POST",
-            url: `/api/teams/${teamId}/snapshots`,
+        const requestHash = "abc12345_request_hash";
+        const now = Date.now();
+        const put = await app.inject({
+            method: "PUT",
+            url: `/api/cas/index/overpass/${requestHash}`,
             headers: { "content-type": "application/json" },
-            payload: JSON.stringify({ sid }),
+            payload: JSON.stringify({
+                sid,
+                cachedAt: now,
+                expiresAt: now + 60_000,
+            }),
         });
-        expect(post.statusCode).toBe(204);
+        expect(put.statusCode).toBe(204);
 
-        const dup = await app.inject({
-            method: "POST",
-            url: `/api/teams/${teamId}/snapshots`,
-            headers: { "content-type": "application/json" },
-            payload: JSON.stringify({ sid }),
-        });
-        expect(dup.statusCode).toBe(204);
-
-        const list = await app.inject({
+        const get = await app.inject({
             method: "GET",
-            url: `/api/teams/${teamId}/snapshots`,
+            url: `/api/cas/index/overpass/${requestHash}`,
         });
-        expect(list.statusCode).toBe(200);
-        const body = JSON.parse(list.body) as {
-            snapshots: { sid: string }[];
-        };
-        expect(body.snapshots).toHaveLength(1);
-        expect(body.snapshots[0]!.sid).toBe(sid);
+        expect(get.statusCode).toBe(200);
+        const body = JSON.parse(get.body) as { sid: string };
+        expect(body.sid).toBe(sid);
     });
 
-    it("rejects invalid team id", async () => {
-        const res = await app.inject({
-            method: "GET",
-            url: `/api/teams/not!/snapshots`,
+    it("stores and retrieves overpass namespaced blobs", async () => {
+        const payload = {
+            version: 0.6,
+            generator: "Overpass API",
+            osm3s: { timestamp_osm_base: "2026-04-30T00:00:00Z" },
+            elements: [{ type: "node", id: 1, lat: 0, lon: 0 }],
+        };
+        const canonicalUtf8 = canonicalize(payload);
+        const sid = computeSidFromCanonicalUtf8(canonicalUtf8);
+        const deflated = zlib.deflateSync(Buffer.from(canonicalUtf8, "utf8"));
+        const compressed = deflated
+            .toString("base64")
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=/g, "");
+
+        const put = await app.inject({
+            method: "PUT",
+            url: `/api/cas/blobs/overpass/${sid}`,
+            headers: { "content-type": "text/plain; charset=utf-8" },
+            payload: compressed,
         });
-        expect(res.statusCode).toBe(400);
+        expect(put.statusCode).toBe(200);
+
+        const get = await app.inject({
+            method: "GET",
+            url: `/api/cas/blobs/overpass/${sid}`,
+        });
+        expect(get.statusCode).toBe(200);
+        expect(get.body).toBe(compressed);
     });
 });

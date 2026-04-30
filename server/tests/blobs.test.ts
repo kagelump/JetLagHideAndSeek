@@ -23,6 +23,7 @@ describe("CAS blobs API", () => {
             maxCanonicalBytes: 1024 * 1024,
             maxCompressedBodyBytes: 2 * 1024 * 1024,
             maxTeamEntries: 100,
+            maxOverpassIndexEntries: 1000,
             corsOrigin: true,
         });
         await app.ready();

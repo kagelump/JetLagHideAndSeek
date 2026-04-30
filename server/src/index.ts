@@ -28,12 +28,16 @@ async function main() {
     const staticPrefix =
         process.env.CAS_STATIC_PREFIX?.trim() || "/JetLagHideAndSeek/";
 
-    const maxCanonicalBytes = envInt("CAS_MAX_BLOB_BYTES", 5 * 1024 * 1024);
+    const maxCanonicalBytes = envInt("CAS_MAX_BLOB_BYTES", 20 * 1024 * 1024);
     const maxCompressedBodyBytes = Math.min(
         maxCanonicalBytes * 4,
         12 * 1024 * 1024,
     );
     const maxTeamEntries = envInt("CAS_MAX_TEAM_ENTRIES", 10_000);
+    const maxOverpassIndexEntries = envInt(
+        "CAS_MAX_OVERPASS_INDEX_ENTRIES",
+        20_000,
+    );
     const port = envInt("CAS_PORT", 8787);
 
     const app = await buildApp({
@@ -41,6 +45,7 @@ async function main() {
         maxCanonicalBytes,
         maxCompressedBodyBytes,
         maxTeamEntries,
+        maxOverpassIndexEntries,
         corsOrigin: parseCorsOrigin(),
         staticSite:
             staticDir && staticDir.length > 0

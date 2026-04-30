@@ -21,7 +21,18 @@ import {
     polyGeoJSON,
     showTrainLineOverlay,
 } from "@/lib/context";
-import { fetchTrainLines, trimTrainLinesToPlayableArea } from "@/maps/api";
+import { fetchTrainLines } from "@/maps/api";
+
+type TrimRequest = {
+    id: number;
+    lineFeatures: Array<Feature<LineString | MultiLineString>>;
+    stationFeatures: Array<Feature<Point>>;
+    playableArea: Feature<Polygon | MultiPolygon> | null;
+};
+
+type TrimResponse =
+    | { id: number; ok: true; features: Array<Feature<LineString | MultiLineString>> }
+    | { id: number; ok: false; error: string };
 
 const removeTrainLineLayers = (map: L.Map) => {
     map.eachLayer((layer: any) => {
@@ -94,11 +105,17 @@ export const TrainLinesOverlay = () => {
     const $additionalMapGeoLocations = useStore(additionalMapGeoLocations);
     const $mapGeoJSON = useStore(mapGeoJSON);
     const overlayGenerationRef = useRef(0);
+    const workerRef = useRef<Worker | null>(null);
+    const workerRequestIdRef = useRef(0);
+    const trimComputationSeqRef = useRef(0);
     const rawTrainLinesRef = useRef<{
         lineFeatures: Array<Feature<LineString | MultiLineString>>;
         stationFeatures: Array<Feature<Point>>;
     } | null>(null);
     const [rawDataVersion, setRawDataVersion] = useState(0);
+    const [trimmedLineFeatures, setTrimmedLineFeatures] = useState<
+        Array<Feature<LineString | MultiLineString>> | null
+    >(null);
 
     const zoneKey = useMemo(
         () =>
@@ -118,20 +135,13 @@ export const TrainLinesOverlay = () => {
     }, [$mapGeoJSON, $polyGeoJSON]);
 
     const renderTrainLineOverlay = (
-        rawLineFeatures: Array<Feature<LineString | MultiLineString>>,
-        stationFeatures: Array<Feature<Point>>,
-        area: Feature<Polygon | MultiPolygon> | null,
+        lineFeatures: Array<Feature<LineString | MultiLineString>>,
     ) => {
         if (!map || !$showTrainLineOverlay) return;
         removeTrainLineLayers(map);
-        const features = trimTrainLinesToPlayableArea(
-            rawLineFeatures,
-            stationFeatures,
-            area,
-        );
         const railGeoJSON: FeatureCollection<LineString> = {
             type: "FeatureCollection",
-            features: features as Array<Feature<LineString>>,
+            features: lineFeatures as Array<Feature<LineString>>,
         };
         const overlay = L.geoJSON(railGeoJSON as any, {
             interactive: false,
@@ -150,6 +160,60 @@ export const TrainLinesOverlay = () => {
     };
 
     useEffect(() => {
+        console.log("[train-overlay] worker init");
+        const worker = new Worker(
+            new URL("../workers/trainOverlay.worker.ts", import.meta.url),
+            {
+                type: "module",
+            },
+        );
+        workerRef.current = worker;
+        return () => {
+            console.log("[train-overlay] worker terminate");
+            workerRef.current = null;
+            worker.terminate();
+        };
+    }, []);
+
+    const trimInWorker = (request: Omit<TrimRequest, "id">) =>
+        new Promise<Array<Feature<LineString | MultiLineString>>>(
+            (resolve, reject) => {
+                const worker = workerRef.current;
+                if (!worker) {
+                    console.log("[train-overlay] worker unavailable, using raw lines");
+                    resolve(request.lineFeatures);
+                    return;
+                }
+                const id = ++workerRequestIdRef.current;
+                console.log("[train-overlay] dispatch trim", {
+                    id,
+                    lineFeatures: request.lineFeatures.length,
+                    stationFeatures: request.stationFeatures.length,
+                    hasPlayableArea: request.playableArea !== null,
+                });
+                const onMessage = (event: MessageEvent<TrimResponse>) => {
+                    if (event.data.id !== id) return;
+                    worker.removeEventListener("message", onMessage);
+                    if (event.data.ok) {
+                        console.log("[train-overlay] trim complete", {
+                            id,
+                            outputFeatures: event.data.features.length,
+                        });
+                        resolve(event.data.features);
+                    } else {
+                        console.warn("[train-overlay] trim failed", {
+                            id,
+                            error: event.data.error,
+                        });
+                        reject(new Error(event.data.error));
+                    }
+                };
+                worker.addEventListener("message", onMessage);
+                worker.postMessage({ id, ...request } satisfies TrimRequest);
+            },
+        );
+
+    useEffect(() => {
         if (!map) return;
 
         if (!$showTrainLineOverlay) {
@@ -161,9 +225,21 @@ export const TrainLinesOverlay = () => {
         const currentGeneration = ++overlayGenerationRef.current;
         const timer = setTimeout(async () => {
             try {
+                const fetchStartedAt = performance.now();
+                console.log("[train-overlay] fetch start", {
+                    generation: currentGeneration,
+                    zoneKey,
+                });
                 const trainLinesData = await fetchTrainLines();
                 if (overlayGenerationRef.current !== currentGeneration) return;
+                console.log("[train-overlay] fetch complete", {
+                    generation: currentGeneration,
+                    durationMs: Math.round(performance.now() - fetchStartedAt),
+                    lineFeatures: trainLinesData.lineFeatures.length,
+                    stationFeatures: trainLinesData.stationFeatures.length,
+                });
                 rawTrainLinesRef.current = trainLinesData;
+                setTrimmedLineFeatures(null);
                 setRawDataVersion((prev) => prev + 1);
             } catch (error) {
                 if (overlayGenerationRef.current !== currentGeneration) return;
@@ -178,12 +254,38 @@ export const TrainLinesOverlay = () => {
         if (!map || !$showTrainLineOverlay) return;
         const rawTrainLines = rawTrainLinesRef.current;
         if (!rawTrainLines) return;
-        renderTrainLineOverlay(
-            rawTrainLines.lineFeatures,
-            rawTrainLines.stationFeatures,
+        const currentGeneration = overlayGenerationRef.current;
+        const trimSeq = ++trimComputationSeqRef.current;
+        void trimInWorker({
+            lineFeatures: rawTrainLines.lineFeatures,
+            stationFeatures: rawTrainLines.stationFeatures,
             playableArea,
-        );
+        })
+            .then((features) => {
+                if (overlayGenerationRef.current !== currentGeneration) return;
+                if (trimComputationSeqRef.current !== trimSeq) return;
+                console.log("[train-overlay] trim accepted", {
+                    generation: currentGeneration,
+                    trimSeq,
+                    outputFeatures: features.length,
+                });
+                setTrimmedLineFeatures(features);
+            })
+            .catch((error) => {
+                if (overlayGenerationRef.current !== currentGeneration) return;
+                if (trimComputationSeqRef.current !== trimSeq) return;
+                console.warn("Train overlay worker fallback to raw lines", error);
+                setTrimmedLineFeatures(rawTrainLines.lineFeatures);
+            });
     }, [rawDataVersion, playableArea, map, $showTrainLineOverlay]);
+
+    useEffect(() => {
+        if (!map || !$showTrainLineOverlay || !trimmedLineFeatures) return;
+        console.log("[train-overlay] render overlay", {
+            features: trimmedLineFeatures.length,
+        });
+        renderTrainLineOverlay(trimmedLineFeatures);
+    }, [trimmedLineFeatures, map, $showTrainLineOverlay]);
 
     useEffect(() => {
         if (!map) return;

@@ -7,6 +7,8 @@ import type {
     AdditionalMapGeoLocations,
     CustomStation,
     OpenStreetMap,
+    OverpassCacheIndexEntry,
+    OverpassCacheIndexMap,
     StationCircle,
 } from "@/maps/api";
 import { extractStationLabel } from "@/maps/geo-utils";
@@ -383,6 +385,71 @@ export const liveSyncEnabled = persistentAtom<boolean>(
 export const currentSid = atom<string | null>(null);
 
 export const teamHistory = atom<{ sid: string; ts: number }[]>([]);
+
+const OVERPASS_INDEX_MAX_ENTRIES = 500;
+const OVERPASS_INDEX_DEFAULT_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+
+export const overpassRequestIndex = persistentAtom<OverpassCacheIndexMap>(
+    "overpassRequestIndex",
+    {},
+    {
+        encode: JSON.stringify,
+        decode: JSON.parse,
+    },
+);
+
+export function pruneOverpassRequestIndex(
+    index: OverpassCacheIndexMap,
+    now = Date.now(),
+    maxEntries = OVERPASS_INDEX_MAX_ENTRIES,
+): OverpassCacheIndexMap {
+    const freshEntries = Object.entries(index).filter(
+        ([, entry]) => entry.expiresAt > now,
+    );
+    freshEntries.sort((a, b) => b[1].cachedAt - a[1].cachedAt);
+    return Object.fromEntries(freshEntries.slice(0, maxEntries));
+}
+
+export function upsertOverpassRequestIndex(
+    requestHash: string,
+    entry: Omit<OverpassCacheIndexEntry, "requestHash">,
+): void {
+    const next = {
+        ...overpassRequestIndex.get(),
+        [requestHash]: { requestHash, ...entry },
+    };
+    overpassRequestIndex.set(pruneOverpassRequestIndex(next));
+}
+
+export function getOverpassRequestIndexEntry(
+    requestHash: string,
+    now = Date.now(),
+): OverpassCacheIndexEntry | null {
+    const index = overpassRequestIndex.get();
+    const entry = index[requestHash];
+    if (!entry) return null;
+    if (entry.expiresAt <= now) {
+        const rest = { ...index };
+        delete rest[requestHash];
+        overpassRequestIndex.set(pruneOverpassRequestIndex(rest, now));
+        return null;
+    }
+    return entry;
+}
+
+export function clearOverpassRequestIndex(): void {
+    overpassRequestIndex.set({});
+}
+
+export function invalidateOverpassRequestIndexEntry(requestHash: string): void {
+    const next = { ...overpassRequestIndex.get() };
+    delete next[requestHash];
+    overpassRequestIndex.set(next);
+}
+
+export function getDefaultOverpassIndexTtlMs(): number {
+    return OVERPASS_INDEX_DEFAULT_TTL_MS;
+}
 
 export const hidingZone = computed(
     [

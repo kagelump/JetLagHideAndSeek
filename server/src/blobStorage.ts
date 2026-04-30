@@ -1,15 +1,32 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+
+function blobPath(dataDir: string, sid: string, namespace = "wire"): string {
+    const shard = sid.slice(0, 2);
+    return join(dataDir, "blobs", namespace, shard, sid);
+}
 
 export async function writeBlob(
     dataDir: string,
     sid: string,
     payloadUtf8: string,
 ): Promise<void> {
-    const shard = sid.slice(0, 2);
-    const dir = join(dataDir, "blobs", shard);
+    const path = blobPath(dataDir, sid);
+    const dir = dirname(path);
     await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, sid), payloadUtf8, "utf8");
+    await writeFile(path, payloadUtf8, "utf8");
+}
+
+export async function writeBlobInNamespace(
+    dataDir: string,
+    namespace: string,
+    sid: string,
+    payloadUtf8: string,
+): Promise<void> {
+    const path = blobPath(dataDir, sid, namespace);
+    const dir = dirname(path);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path, payloadUtf8, "utf8");
 }
 
 export async function readBlob(
@@ -17,8 +34,19 @@ export async function readBlob(
     sid: string,
 ): Promise<string | null> {
     try {
-        const shard = sid.slice(0, 2);
-        return await readFile(join(dataDir, "blobs", shard, sid), "utf8");
+        return await readFile(blobPath(dataDir, sid), "utf8");
+    } catch {
+        return null;
+    }
+}
+
+export async function readBlobInNamespace(
+    dataDir: string,
+    namespace: string,
+    sid: string,
+): Promise<string | null> {
+    try {
+        return await readFile(blobPath(dataDir, sid, namespace), "utf8");
     } catch {
         return null;
     }
@@ -26,8 +54,20 @@ export async function readBlob(
 
 export async function blobExists(dataDir: string, sid: string): Promise<boolean> {
     try {
-        const shard = sid.slice(0, 2);
-        await access(join(dataDir, "blobs", shard, sid));
+        await access(blobPath(dataDir, sid));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export async function blobExistsInNamespace(
+    dataDir: string,
+    namespace: string,
+    sid: string,
+): Promise<boolean> {
+    try {
+        await access(blobPath(dataDir, sid, namespace));
         return true;
     } catch {
         return false;
