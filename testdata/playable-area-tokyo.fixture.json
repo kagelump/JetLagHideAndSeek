@@ -1,0 +1,19 @@
+{
+  "type": "Feature",
+  "properties": {
+    "name": "tokyo-playable-area-fixture",
+    "source": "manual-fixture"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [139.52, 35.48],
+        [139.96, 35.48],
+        [139.96, 35.88],
+        [139.52, 35.88],
+        [139.52, 35.48]
+      ]
+    ]
+  }
+}

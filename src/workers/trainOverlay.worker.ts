@@ -7,7 +7,10 @@ import type {
     Polygon,
 } from "geojson";
 
-import { trimTrainLinesToPlayableArea } from "./trainLineTrim";
+import { trimTrainLinesToPlayableArea } from "../maps/api/trainLineTrim";
+
+const workerStartedAt = performance.now();
+const workerElapsedMs = () => Math.round(performance.now() - workerStartedAt);
 
 type TrimRequest = {
     id: number;
@@ -25,6 +28,7 @@ self.onmessage = (event: MessageEvent<TrimRequest>) => {
     const startedAt = performance.now();
     console.log("[train-overlay-worker] start", {
         id,
+        workerElapsedMs: workerElapsedMs(),
         lineFeatures: lineFeatures.length,
         stationFeatures: stationFeatures.length,
         hasPlayableArea: playableArea !== null,
@@ -37,6 +41,7 @@ self.onmessage = (event: MessageEvent<TrimRequest>) => {
         );
         console.log("[train-overlay-worker] finish", {
             id,
+            workerElapsedMs: workerElapsedMs(),
             outputFeatures: features.length,
             durationMs: Math.round(performance.now() - startedAt),
         });
@@ -45,6 +50,7 @@ self.onmessage = (event: MessageEvent<TrimRequest>) => {
     } catch (error) {
         console.warn("[train-overlay-worker] error", {
             id,
+            workerElapsedMs: workerElapsedMs(),
             durationMs: Math.round(performance.now() - startedAt),
             error: String(error),
         });
