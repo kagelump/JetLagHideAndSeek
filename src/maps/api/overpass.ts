@@ -40,7 +40,11 @@ import {
     OVERPASS_API,
     OVERPASS_API_FALLBACK,
 } from "./constants";
-import { trimTrainLinesToPlayableArea } from "./trainLineTrim";
+import {
+    trainOverlayCorridorCollapseStats,
+    trimTrainLinesForOverlay,
+    trimTrainLinesToPlayableArea,
+} from "./trainLineTrim";
 import type {
     EncompassingTentacleQuestionSchema,
     HomeGameMatchingQuestions,
@@ -321,7 +325,18 @@ const toStationFeatures = (
     return stations;
 };
 
-export { trimTrainLinesToPlayableArea };
+export type {
+    TrainOverlayExtensionMode,
+    TrainOverlaySimplifyPreset,
+    TrainOverlayTrimOptions,
+    TrainOverlayTrimPerfSnapshot,
+} from "./trainLineTrim";
+
+export {
+    trainOverlayCorridorCollapseStats,
+    trimTrainLinesForOverlay,
+    trimTrainLinesToPlayableArea,
+};
 
 export type TrainLinesData = {
     lineFeatures: Array<Feature<LineString | MultiLineString>>;

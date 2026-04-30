@@ -9,8 +9,45 @@ import type {
 } from "geojson";
 import _ from "lodash";
 
-/** Degrees; ~35–45 m at mid-latitudes — favors overlay speed over vertex fidelity */
-const TRAIN_LINE_SIMPLIFY_TOLERANCE_DEG = 0.00035;
+/** Quantize step for corridor signatures (~90 m latitude at mid-latitudes). */
+const CORRIDOR_QUANTIZE_STEP_DEG = 0.0008;
+
+/** Endpoint must be within this distance of playable boundary to run station extension (boundaryOnly mode). */
+const BOUNDARY_NEAR_KM = 0.65;
+
+export type TrainOverlaySimplifyPreset = "balanced" | "fast" | "veryFast";
+
+export type TrainOverlayExtensionMode = "off" | "boundaryOnly" | "full";
+
+export type TrainOverlayTrimOptions = {
+    /** When true, worker returns a perf snapshot and logs phase timings (also enabled by RUN_PERF=1 in Vitest). */
+    debugPerf?: boolean;
+    simplifyPreset?: TrainOverlaySimplifyPreset;
+    extensionMode?: TrainOverlayExtensionMode;
+};
+
+export type TrainOverlayTrimPerfSnapshot = {
+    rawLineFeatures: number;
+    corridorDedupedLineFeatures: number;
+    simplifyPreset: TrainOverlaySimplifyPreset;
+    extensionMode: TrainOverlayExtensionMode;
+    outputFeatures: number;
+    outputCoordinatePairs: number;
+    segmentClipMs: number;
+    extendStationMs: number;
+    segmentClipCalls: number;
+    extendStationCalls: number;
+    extendStationSkippedNearBoundary: number;
+    edgeCount: number;
+    stationsScanned: number;
+    totalTrimMs: number;
+};
+
+const SIMPLIFY_TOLERANCE_BY_PRESET: Record<TrainOverlaySimplifyPreset, number> = {
+    balanced: 0.00035,
+    fast: 0.0009,
+    veryFast: 0.0015,
+};
 
 /** Spatial hash cell size in degrees (~2.2 km latitude). */
 const STATION_GRID_CELL_DEG = 0.02;
@@ -30,11 +67,12 @@ type TrimPerfStats = {
     extendStationMs: number;
     segmentClipCalls: number;
     extendStationCalls: number;
+    extendStationSkippedNearBoundary: number;
     edgeCount: number;
     stationsScanned: number;
 };
 
-const PERF_ENV_ENABLED =
+const perfEnvEnabled =
     typeof process !== "undefined" &&
     typeof process.env !== "undefined" &&
     process.env.RUN_PERF === "1";
@@ -44,11 +82,29 @@ const createPerfStats = (): TrimPerfStats => ({
     extendStationMs: 0,
     segmentClipCalls: 0,
     extendStationCalls: 0,
+    extendStationSkippedNearBoundary: 0,
     edgeCount: 0,
     stationsScanned: 0,
 });
 
 const nowMs = () => performance.now();
+
+type ResolvedTrimOptions = {
+    debugPerf: boolean;
+    simplifyPreset: TrainOverlaySimplifyPreset;
+    extensionMode: TrainOverlayExtensionMode;
+};
+
+const resolveTrimOptions = (
+    options: TrainOverlayTrimOptions | undefined,
+): ResolvedTrimOptions => ({
+    debugPerf: Boolean(options?.debugPerf),
+    simplifyPreset: options?.simplifyPreset ?? "fast",
+    extensionMode: options?.extensionMode ?? "off",
+});
+
+const shouldCollectPerfStats = (resolved: ResolvedTrimOptions): boolean =>
+    resolved.debugPerf || perfEnvEnabled;
 
 const bboxIntersects = (a: turf.BBox, b: turf.BBox): boolean =>
     !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]);
@@ -119,12 +175,13 @@ const getStationsNearLine = (
     return out;
 };
 
-const simplifyTrainLine = (
+const simplifyTrainLineWithTolerance = (
     line: Feature<LineString | MultiLineString>,
+    toleranceDeg: number,
 ): Feature<LineString | MultiLineString> => {
     try {
         const simplified = turf.simplify(line as any, {
-            tolerance: TRAIN_LINE_SIMPLIFY_TOLERANCE_DEG,
+            tolerance: toleranceDeg,
             highQuality: false,
         }) as Feature<LineString | MultiLineString>;
         simplified.properties = line.properties;
@@ -137,6 +194,137 @@ const simplifyTrainLine = (
     } catch {
         return line;
     }
+};
+
+const railIdentityKey = (props: Record<string, unknown>): string => {
+    const railway = props.railway ?? "";
+    const name = props.name ?? props["name:en"] ?? "";
+    const operator = props.operator ?? "";
+    const network = props.network ?? "";
+    const ref = props.ref ?? "";
+    return [railway, name, operator, network, ref].join("|");
+};
+
+const quantizeCoord = (lon: number, lat: number, stepDeg: number): [number, number] => [
+    Math.round(lon / stepDeg) * stepDeg,
+    Math.round(lat / stepDeg) * stepDeg,
+];
+
+const dedupeConsecutiveCoords = (points: Array<[number, number]>): Array<[number, number]> => {
+    const out: Array<[number, number]> = [];
+    for (const p of points) {
+        const prev = out[out.length - 1];
+        if (!prev || prev[0] !== p[0] || prev[1] !== p[1]) out.push(p);
+    }
+    return out;
+};
+
+const directionNeutralLineSignature = (
+    coords: number[][],
+    quantizeStepDeg: number,
+): string => {
+    const q = dedupeConsecutiveCoords(
+        coords.map(([lon, lat]) => quantizeCoord(lon, lat, quantizeStepDeg)),
+    );
+    if (q.length < 2) {
+        return q.map((c) => `${c[0].toFixed(5)},${c[1].toFixed(5)}`).join(";");
+    }
+    const first = q[0];
+    const last = q[q.length - 1];
+    const forward =
+        first[0] < last[0] ||
+        (first[0] === last[0] && first[1] < last[1]) ||
+        (first[0] === last[0] && first[1] === last[1]);
+    const seq = forward ? q : [...q].reverse();
+    return seq.map((c) => `${c[0].toFixed(5)},${c[1].toFixed(5)}`).join(";");
+};
+
+const corridorDedupeKeyForLine = (
+    line: Feature<LineString | MultiLineString>,
+    quantizeStepDeg: number,
+): string => {
+    const props = (line.properties ?? {}) as Record<string, unknown>;
+    const idKey = railIdentityKey(props);
+    if (line.geometry.type === "LineString") {
+        return `${idKey}@@${directionNeutralLineSignature(line.geometry.coordinates, quantizeStepDeg)}`;
+    }
+    const partSigs = line.geometry.coordinates
+        .filter((c) => c.length >= 2)
+        .map((c) => directionNeutralLineSignature(c, quantizeStepDeg))
+        .sort();
+    return `${idKey}@@${partSigs.join("||")}`;
+};
+
+const lineLengthKm = (line: Feature<LineString | MultiLineString>): number => {
+    try {
+        return turf.length(line, { units: "kilometers" });
+    } catch {
+        return 0;
+    }
+};
+
+/**
+ * Collapse near-duplicate corridors (e.g. paired tracks) using simplified geometry + quantized signatures.
+ */
+const collapseParallelCorridorLines = (
+    lines: Array<Feature<LineString | MultiLineString>>,
+    simplifyToleranceDeg: number,
+    quantizeStepDeg: number,
+): Array<Feature<LineString | MultiLineString>> => {
+    const bestByKey = new Map<string, Feature<LineString | MultiLineString>>();
+    for (const line of lines) {
+        const simplified = simplifyTrainLineWithTolerance(line, simplifyToleranceDeg);
+        const key = corridorDedupeKeyForLine(simplified, quantizeStepDeg);
+        const prev = bestByKey.get(key);
+        if (!prev || lineLengthKm(simplified) > lineLengthKm(prev)) {
+            bestByKey.set(key, simplified);
+        }
+    }
+    return [...bestByKey.values()];
+};
+
+const countCoordinatePairsInFeatures = (
+    features: Array<Feature<LineString | MultiLineString>>,
+): number => {
+    let n = 0;
+    for (const f of features) {
+        if (f.geometry.type === "LineString") {
+            n += f.geometry.coordinates.length;
+        } else {
+            for (const ring of f.geometry.coordinates) {
+                n += ring.length;
+            }
+        }
+    }
+    return n;
+};
+
+const minEndpointDistanceToBoundaryKm = (
+    segment: Feature<LineString>,
+    boundary: Feature<LineString | MultiLineString>,
+): number => {
+    const coords = segment.geometry.coordinates;
+    const a = turf.point(coords[0]);
+    const b = turf.point(coords[coords.length - 1]);
+    const na = turf.nearestPointOnLine(boundary as any, a, { units: "kilometers" });
+    const nb = turf.nearestPointOnLine(boundary as any, b, { units: "kilometers" });
+    return Math.min(
+        turf.distance(a, na, { units: "kilometers" }),
+        turf.distance(b, nb, { units: "kilometers" }),
+    );
+};
+
+const shouldRunStationExtension = (
+    mode: TrainOverlayExtensionMode,
+    segment: Feature<LineString>,
+    boundary: Feature<LineString | MultiLineString>,
+    perf: TrimPerfStats | null,
+): boolean => {
+    if (mode === "off") return false;
+    if (mode === "full") return true;
+    const near = minEndpointDistanceToBoundaryKm(segment, boundary) <= BOUNDARY_NEAR_KM;
+    if (!near && perf) perf.extendStationSkippedNearBoundary += 1;
+    return near;
 };
 
 const segmentClipInside = (
@@ -353,6 +541,7 @@ const trimLineFeature = (
     stationGrid: StationGrid,
     playableArea: Feature<Polygon | MultiPolygon>,
     boundary: Feature<LineString | MultiLineString>,
+    resolved: ResolvedTrimOptions,
     perf: TrimPerfStats | null,
 ) => {
     const lineParts =
@@ -369,17 +558,17 @@ const trimLineFeature = (
             stationGrid,
             STATION_LINE_BBOX_PAD_KM,
         );
-        const clippedSegments = segmentClipInside(
-            partLine,
-            playableArea,
-            boundary,
-            perf,
-        );
+        const clippedSegments = segmentClipInside(partLine, playableArea, boundary, perf);
         for (const segment of clippedSegments) {
-            if (nearbyStations.length < 3) {
+            const allowExtend =
+                nearbyStations.length >= 3 &&
+                shouldRunStationExtension(resolved.extensionMode, segment, boundary, perf);
+
+            if (!allowExtend) {
                 outputSegments.push(segment);
                 continue;
             }
+
             outputSegments.push(
                 extendSegmentToOutsideStation(
                     partLine,
@@ -395,38 +584,92 @@ const trimLineFeature = (
     return outputSegments;
 };
 
-export const trimTrainLinesToPlayableArea = (
+export const trimTrainLinesForOverlay = (
     lineFeatures: Array<Feature<LineString | MultiLineString>>,
     stationFeatures: Array<Feature<Point>>,
     playableArea: Feature<Polygon | MultiPolygon> | null,
-) => {
-    if (!playableArea) return lineFeatures;
+    options?: TrainOverlayTrimOptions,
+): {
+    features: Array<Feature<LineString | MultiLineString>>;
+    perf?: TrainOverlayTrimPerfSnapshot;
+} => {
+    const resolved = resolveTrimOptions(options);
+    const collectPerf = shouldCollectPerfStats(resolved);
+    const perf = collectPerf ? createPerfStats() : null;
+    const trimStartedAt = nowMs();
+
+    if (!playableArea) {
+        return { features: lineFeatures };
+    }
+
+    const tol = SIMPLIFY_TOLERANCE_BY_PRESET[resolved.simplifyPreset];
+    const rawLineFeatures = lineFeatures.length;
+    const dedupedLines = collapseParallelCorridorLines(
+        lineFeatures,
+        tol,
+        CORRIDOR_QUANTIZE_STEP_DEG,
+    );
+
     const playableBbox = turf.bbox(playableArea);
     const boundary = turf.polygonToLine(playableArea as any) as Feature<
         LineString | MultiLineString
     >;
     const stationGrid = buildStationGrid(stationFeatures);
-    const perf = PERF_ENV_ENABLED ? createPerfStats() : null;
-    const output = lineFeatures.flatMap((line) => {
+
+    const output = dedupedLines.flatMap((line) => {
         const lineBbox = turf.bbox(line);
         if (!bboxIntersects(lineBbox, playableBbox)) {
             return [];
         }
-        const simplifiedLine = simplifyTrainLine(line);
-        return trimLineFeature(simplifiedLine, stationGrid, playableArea, boundary, perf);
+        return trimLineFeature(line, stationGrid, playableArea, boundary, resolved, perf);
     });
-    if (perf) {
-        console.log("[train-line-trim-perf]", {
-            lineFeatures: lineFeatures.length,
-            stationFeatures: stationFeatures.length,
+
+    const totalTrimMs = nowMs() - trimStartedAt;
+
+    let perfSnapshot: TrainOverlayTrimPerfSnapshot | undefined;
+    if (collectPerf && perf) {
+        perfSnapshot = {
+            rawLineFeatures,
+            corridorDedupedLineFeatures: dedupedLines.length,
+            simplifyPreset: resolved.simplifyPreset,
+            extensionMode: resolved.extensionMode,
             outputFeatures: output.length,
+            outputCoordinatePairs: countCoordinatePairsInFeatures(output),
             segmentClipMs: Math.round(perf.segmentClipMs),
             extendStationMs: Math.round(perf.extendStationMs),
             segmentClipCalls: perf.segmentClipCalls,
             extendStationCalls: perf.extendStationCalls,
+            extendStationSkippedNearBoundary: perf.extendStationSkippedNearBoundary,
             edgeCount: perf.edgeCount,
             stationsScanned: perf.stationsScanned,
-        });
+            totalTrimMs: Math.round(totalTrimMs),
+        };
+        if (resolved.debugPerf || perfEnvEnabled) {
+            console.log("[train-line-trim-perf]", perfSnapshot);
+        }
     }
-    return output;
+
+    return { features: output, perf: perfSnapshot };
+};
+
+/** @deprecated Prefer trimTrainLinesForOverlay when perf/options are needed */
+export const trimTrainLinesToPlayableArea = (
+    lineFeatures: Array<Feature<LineString | MultiLineString>>,
+    stationFeatures: Array<Feature<Point>>,
+    playableArea: Feature<Polygon | MultiPolygon> | null,
+    options?: TrainOverlayTrimOptions,
+) =>
+    trimTrainLinesForOverlay(lineFeatures, stationFeatures, playableArea, options).features;
+
+/** Stats-only helper for blob analyzers (no playable polygon required). */
+export const trainOverlayCorridorCollapseStats = (
+    lineFeatures: Array<Feature<LineString | MultiLineString>>,
+    preset: TrainOverlaySimplifyPreset = "fast",
+): { rawLineFeatures: number; dedupedLineFeatures: number } => {
+    const tol = SIMPLIFY_TOLERANCE_BY_PRESET[preset];
+    const deduped = collapseParallelCorridorLines(lineFeatures, tol, CORRIDOR_QUANTIZE_STEP_DEG);
+    return {
+        rawLineFeatures: lineFeatures.length,
+        dedupedLineFeatures: deduped.length,
+    };
 };

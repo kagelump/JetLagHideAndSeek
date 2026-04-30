@@ -13,7 +13,8 @@
         "astro": "astro",
         "lint": "eslint --fix src && prettier . --write",
         "test": "vitest",
-        "test:server": "pnpm --dir server test"
+        "test:server": "pnpm --dir server test",
+        "analyze:train-blob": "ANALYZE_TRAIN_BLOB=1 vitest run tests/trainBlobAnalyze.test.ts"
     },
     "dependencies": {
         "@arcgis/core": "^4.32.10",

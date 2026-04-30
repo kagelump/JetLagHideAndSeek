@@ -7,7 +7,11 @@ import type {
     Polygon,
 } from "geojson";
 
-import { trimTrainLinesToPlayableArea } from "../maps/api/trainLineTrim";
+import {
+    trimTrainLinesForOverlay,
+    type TrainOverlayTrimOptions,
+    type TrainOverlayTrimPerfSnapshot,
+} from "../maps/api/trainLineTrim";
 
 const workerStartedAt = performance.now();
 const workerElapsedMs = () => Math.round(performance.now() - workerStartedAt);
@@ -17,14 +21,20 @@ type TrimRequest = {
     lineFeatures: Array<Feature<LineString | MultiLineString>>;
     stationFeatures: Array<Feature<Point>>;
     playableArea: Feature<Polygon | MultiPolygon> | null;
+    trimOptions?: TrainOverlayTrimOptions;
 };
 
 type TrimResponse =
-    | { id: number; ok: true; features: Array<Feature<LineString | MultiLineString>> }
+    | {
+          id: number;
+          ok: true;
+          features: Array<Feature<LineString | MultiLineString>>;
+          perf?: TrainOverlayTrimPerfSnapshot;
+      }
     | { id: number; ok: false; error: string };
 
 self.onmessage = (event: MessageEvent<TrimRequest>) => {
-    const { id, lineFeatures, stationFeatures, playableArea } = event.data;
+    const { id, lineFeatures, stationFeatures, playableArea, trimOptions } = event.data;
     const startedAt = performance.now();
     console.log("[train-overlay-worker] start", {
         id,
@@ -32,20 +42,23 @@ self.onmessage = (event: MessageEvent<TrimRequest>) => {
         lineFeatures: lineFeatures.length,
         stationFeatures: stationFeatures.length,
         hasPlayableArea: playableArea !== null,
+        trimOptions: trimOptions ?? null,
     });
     try {
-        const features = trimTrainLinesToPlayableArea(
+        const { features, perf } = trimTrainLinesForOverlay(
             lineFeatures,
             stationFeatures,
             playableArea,
+            trimOptions,
         );
         console.log("[train-overlay-worker] finish", {
             id,
             workerElapsedMs: workerElapsedMs(),
             outputFeatures: features.length,
             durationMs: Math.round(performance.now() - startedAt),
+            perf: perf ?? null,
         });
-        const response: TrimResponse = { id, ok: true, features };
+        const response: TrimResponse = { id, ok: true, features, perf };
         self.postMessage(response);
     } catch (error) {
         console.warn("[train-overlay-worker] error", {

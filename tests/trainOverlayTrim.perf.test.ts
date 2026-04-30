@@ -12,9 +12,10 @@ import osmtogeojson from "osmtogeojson";
 import { performance } from "perf_hooks";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { trimTrainLinesToPlayableArea } from "@/maps/api/trainLineTrim";
+import type { TrainOverlaySimplifyPreset } from "@/maps/api/trainLineTrim";
+import { trimTrainLinesForOverlay } from "@/maps/api/trainLineTrim";
 
 type OverpassElement = {
     type: string;
@@ -31,6 +32,22 @@ type OverpassBlob = {
 
 const shouldRunPerf = process.env.RUN_PERF === "1";
 const maybeDescribe = shouldRunPerf ? describe : describe.skip;
+
+const PRESETS_RAW = process.env.TRAIN_PERF_PRESETS ?? "balanced,fast,veryFast";
+const ALLOWED_PRESETS = new Set<TrainOverlaySimplifyPreset>([
+    "balanced",
+    "fast",
+    "veryFast",
+]);
+const PERF_PRESETS = PRESETS_RAW.split(",")
+    .map((s) => s.trim())
+    .filter((s): s is TrainOverlaySimplifyPreset =>
+        ALLOWED_PRESETS.has(s as TrainOverlaySimplifyPreset),
+);
+const PERF_PRESETS_FINAL =
+    PERF_PRESETS.length > 0
+        ? PERF_PRESETS
+        : (["balanced", "fast", "veryFast"] as const satisfies readonly TrainOverlaySimplifyPreset[]);
 
 const toStationFeatures = (elements: OverpassElement[]) => {
     const stations: Array<Feature<Point>> = [];
@@ -66,7 +83,8 @@ const countPolygonVertices = (
 
 maybeDescribe("train overlay trim perf", () => {
     it(
-        "profiles trim stages using tokyo overpass blob fixture",
+        "profiles trim stages for simplify presets",
+        { timeout: 600_000 },
         () => {
             const blobPath = resolve(process.cwd(), "testdata/blob");
             const playableAreaPath = resolve(
@@ -100,26 +118,34 @@ maybeDescribe("train overlay trim perf", () => {
             const lineCloneBytes = JSON.stringify(lineFeatures).length;
             const cloneProbeMs = performance.now() - cloneProbeStartedAt;
 
-            const trimStartedAt = performance.now();
-            const output = trimTrainLinesToPlayableArea(
-                lineFeatures,
-                stationFeatures,
-                playableArea,
-            );
-            const trimMs = performance.now() - trimStartedAt;
+            for (const simplifyPreset of PERF_PRESETS_FINAL) {
+                const trimStartedAt = performance.now();
+                const { features: output, perf } = trimTrainLinesForOverlay(
+                    lineFeatures,
+                    stationFeatures,
+                    playableArea,
+                    {
+                        simplifyPreset,
+                        extensionMode: "off",
+                        debugPerf: true,
+                    },
+                );
+                const trimMs = performance.now() - trimStartedAt;
 
-            console.log("[train-overlay-perf]", {
-                lineFeatures: lineFeatures.length,
-                stationFeatures: stationFeatures.length,
-                outputFeatures: output.length,
-                playablePolygonVertexCount: countPolygonVertices(playableArea),
-                osmtogeojsonMs: Math.round(toGeoJsonMs),
-                stationExtractionMs: Math.round(extractMs),
-                trimTotalMs: Math.round(trimMs),
-                lineCloneBytes,
-                cloneProbeMs: Math.round(cloneProbeMs),
-            });
+                expect(perf).toBeDefined();
+                console.log("[train-overlay-perf]", simplifyPreset, {
+                    lineFeatures: lineFeatures.length,
+                    stationFeatures: stationFeatures.length,
+                    outputFeatures: output.length,
+                    playablePolygonVertexCount: countPolygonVertices(playableArea),
+                    osmtogeojsonMs: Math.round(toGeoJsonMs),
+                    stationExtractionMs: Math.round(extractMs),
+                    trimTotalMs: Math.round(trimMs),
+                    lineCloneBytes,
+                    cloneProbeMs: Math.round(cloneProbeMs),
+                    perf,
+                });
+            }
         },
-        600_000,
     );
 });
