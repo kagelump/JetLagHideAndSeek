@@ -9,6 +9,22 @@ import type {
 } from "geojson";
 import _ from "lodash";
 
+/** Degrees; ~35–45 m at mid-latitudes — favors overlay speed over vertex fidelity */
+const TRAIN_LINE_SIMPLIFY_TOLERANCE_DEG = 0.00035;
+
+/** Spatial hash cell size in degrees (~2.2 km latitude). */
+const STATION_GRID_CELL_DEG = 0.02;
+
+/** Expand line bbox when collecting candidate stations (km). Must exceed station cutoff below. */
+const STATION_LINE_BBOX_PAD_KM = 2;
+
+/** Stations farther than this from the line never participate (matches prior behavior). */
+const STATION_MAX_DISTANCE_TO_LINE_KM = 1.5;
+
+const KM_PER_DEG_LAT = 111;
+
+type StationGrid = Map<string, Array<Feature<Point>>>;
+
 type TrimPerfStats = {
     segmentClipMs: number;
     extendStationMs: number;
@@ -33,6 +49,95 @@ const createPerfStats = (): TrimPerfStats => ({
 });
 
 const nowMs = () => performance.now();
+
+const bboxIntersects = (a: turf.BBox, b: turf.BBox): boolean =>
+    !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]);
+
+/** Axis-aligned bbox pad derived from km at bbox mid-latitude */
+const padBBoxKm = (bbox: turf.BBox, padKm: number): turf.BBox => {
+    const midLat = (bbox[1] + bbox[3]) / 2;
+    const cosLat = Math.cos((midLat * Math.PI) / 180);
+    const padLat = padKm / KM_PER_DEG_LAT;
+    const padLon = padKm / (KM_PER_DEG_LAT * Math.max(0.2, cosLat));
+    return [
+        bbox[0] - padLon,
+        bbox[1] - padLat,
+        bbox[2] + padLon,
+        bbox[3] + padLat,
+    ];
+};
+
+const stationDedupeKey = (station: Feature<Point>): string => {
+    const props = station.properties as Record<string, unknown> | undefined;
+    const id = props?.id;
+    if (typeof id === "string" || typeof id === "number") return String(id);
+    const [lon, lat] = station.geometry.coordinates;
+    return `${lon.toFixed(7)},${lat.toFixed(7)}`;
+};
+
+const buildStationGrid = (stations: Array<Feature<Point>>): StationGrid => {
+    const grid: StationGrid = new Map();
+    for (const station of stations) {
+        const [lon, lat] = station.geometry.coordinates;
+        const key = `${Math.floor(lon / STATION_GRID_CELL_DEG)},${Math.floor(
+            lat / STATION_GRID_CELL_DEG,
+        )}`;
+        let bucket = grid.get(key);
+        if (!bucket) {
+            bucket = [];
+            grid.set(key, bucket);
+        }
+        bucket.push(station);
+    }
+    return grid;
+};
+
+const getStationsNearLine = (
+    line: Feature<LineString>,
+    stationGrid: StationGrid,
+    padKm: number,
+): Array<Feature<Point>> => {
+    const paddedBox = padBBoxKm(turf.bbox(line), padKm);
+    const i0 = Math.floor(paddedBox[0] / STATION_GRID_CELL_DEG);
+    const i1 = Math.floor(paddedBox[2] / STATION_GRID_CELL_DEG);
+    const j0 = Math.floor(paddedBox[1] / STATION_GRID_CELL_DEG);
+    const j1 = Math.floor(paddedBox[3] / STATION_GRID_CELL_DEG);
+    const out: Array<Feature<Point>> = [];
+    const seen = new Set<string>();
+    for (let i = i0; i <= i1; i += 1) {
+        for (let j = j0; j <= j1; j += 1) {
+            const bucket = stationGrid.get(`${i},${j}`);
+            if (!bucket) continue;
+            for (const station of bucket) {
+                const dedupe = stationDedupeKey(station);
+                if (seen.has(dedupe)) continue;
+                seen.add(dedupe);
+                out.push(station);
+            }
+        }
+    }
+    return out;
+};
+
+const simplifyTrainLine = (
+    line: Feature<LineString | MultiLineString>,
+): Feature<LineString | MultiLineString> => {
+    try {
+        const simplified = turf.simplify(line as any, {
+            tolerance: TRAIN_LINE_SIMPLIFY_TOLERANCE_DEG,
+            highQuality: false,
+        }) as Feature<LineString | MultiLineString>;
+        simplified.properties = line.properties;
+        if (simplified.geometry.type === "LineString") {
+            if (simplified.geometry.coordinates.length < 2) return line;
+            return simplified;
+        }
+        const hasSegment = simplified.geometry.coordinates.some((ring) => ring.length >= 2);
+        return hasSegment ? simplified : line;
+    } catch {
+        return line;
+    }
+};
 
 const segmentClipInside = (
     line: Feature<LineString>,
@@ -149,7 +254,7 @@ const extendSegmentToOutsideStation = (
                     inside: turf.booleanPointInPolygon(station, playableArea as any),
                 };
             })
-            .filter((entry) => entry.stationDistanceToLineKm <= 1.5)
+            .filter((entry) => entry.stationDistanceToLineKm <= STATION_MAX_DISTANCE_TO_LINE_KM)
             .sort((a, b) => a.location - b.location);
 
         if (projectedStations.length < 3) return segment;
@@ -245,7 +350,7 @@ const extendSegmentToOutsideStation = (
 
 const trimLineFeature = (
     line: Feature<LineString | MultiLineString>,
-    stations: Array<Feature<Point>>,
+    stationGrid: StationGrid,
     playableArea: Feature<Polygon | MultiPolygon>,
     boundary: Feature<LineString | MultiLineString>,
     perf: TrimPerfStats | null,
@@ -259,6 +364,11 @@ const trimLineFeature = (
     for (const coords of lineParts) {
         if (coords.length < 2) continue;
         const partLine = turf.lineString(coords, line.properties);
+        const nearbyStations = getStationsNearLine(
+            partLine,
+            stationGrid,
+            STATION_LINE_BBOX_PAD_KM,
+        );
         const clippedSegments = segmentClipInside(
             partLine,
             playableArea,
@@ -266,11 +376,15 @@ const trimLineFeature = (
             perf,
         );
         for (const segment of clippedSegments) {
+            if (nearbyStations.length < 3) {
+                outputSegments.push(segment);
+                continue;
+            }
             outputSegments.push(
                 extendSegmentToOutsideStation(
                     partLine,
                     segment,
-                    stations,
+                    nearbyStations,
                     playableArea,
                     perf,
                 ),
@@ -287,13 +401,20 @@ export const trimTrainLinesToPlayableArea = (
     playableArea: Feature<Polygon | MultiPolygon> | null,
 ) => {
     if (!playableArea) return lineFeatures;
+    const playableBbox = turf.bbox(playableArea);
     const boundary = turf.polygonToLine(playableArea as any) as Feature<
         LineString | MultiLineString
     >;
+    const stationGrid = buildStationGrid(stationFeatures);
     const perf = PERF_ENV_ENABLED ? createPerfStats() : null;
-    const output = lineFeatures.flatMap((line) =>
-        trimLineFeature(line, stationFeatures, playableArea, boundary, perf),
-    );
+    const output = lineFeatures.flatMap((line) => {
+        const lineBbox = turf.bbox(line);
+        if (!bboxIntersects(lineBbox, playableBbox)) {
+            return [];
+        }
+        const simplifiedLine = simplifyTrainLine(line);
+        return trimLineFeature(simplifiedLine, stationGrid, playableArea, boundary, perf);
+    });
     if (perf) {
         console.log("[train-line-trim-perf]", {
             lineFeatures: lineFeatures.length,
