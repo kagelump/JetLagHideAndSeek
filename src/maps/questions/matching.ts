@@ -11,6 +11,7 @@ import osmtogeojson from "osmtogeojson";
 import { toast } from "react-toastify";
 
 import {
+    displayHidingZoneOperators,
     hiderMode,
     mapGeoJSON,
     mapGeoLocation,
@@ -445,6 +446,7 @@ export const hiderifyMatching = async (question: MatchingQuestion) => {
                 ? await findNodesOnTrainLine(question.selectedTrainLineId)
                 : await trainLineNodeFinder(
                       nearestSeekerTrainStation.properties.id,
+                      displayHidingZoneOperators.get(),
                   );
 
             const hiderId = parseInt(

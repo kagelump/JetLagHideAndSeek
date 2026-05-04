@@ -18,6 +18,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
     customInitPreference,
+    displayHidingZoneOperators,
     displayHidingZones,
     drawingQuestionKey,
     hiderMode,
@@ -79,6 +80,7 @@ export const MatchingQuestionComponent = ({
     const $customInitPref = useStore(customInitPreference);
     const $trainStations = useStore(trainStations);
     const $playAreaMode = useStore(playAreaMode);
+    const $displayHidingZoneOperators = useStore(displayHidingZoneOperators);
     const modeConfig = PLAY_AREA_MODES[$playAreaMode];
 
     const [customDialogOpen, setCustomDialogOpen] = React.useState(false);
@@ -209,7 +211,10 @@ export const MatchingQuestionComponent = ({
 
         setLoadingLineOptions(true);
         setLineOptionsError(null);
-        fetchStationTrainLineOptions(nearestTrainStationId)
+        fetchStationTrainLineOptions(
+            nearestTrainStationId,
+            $displayHidingZoneOperators,
+        )
             .then((options) => {
                 if (cancelled) return;
 
@@ -249,7 +254,12 @@ export const MatchingQuestionComponent = ({
         return () => {
             cancelled = true;
         };
-    }, [data.type, nearestTrainStationId, lineOptionsRetryKey]);
+    }, [
+        data.type,
+        nearestTrainStationId,
+        $displayHidingZoneOperators,
+        lineOptionsRetryKey,
+    ]);
 
     React.useEffect(() => {
         if (data.type !== "same-train-line") return;
@@ -285,25 +295,29 @@ export const MatchingQuestionComponent = ({
         setLineStationPreviewError(null);
         const nodesPromise = selectedTrainLineId
             ? findNodesOnTrainLine(selectedTrainLineId)
-            : trainLineNodeFinder(nearestTrainStationId!);
+            : trainLineNodeFinder(
+                  nearestTrainStationId!,
+                  $displayHidingZoneOperators,
+              );
         const lineLabelsPromise = selectedTrainLineId
             ? findStationLabelsOnTrainLine(
                   selectedTrainLineId,
                   modeConfig.stationNameStrategy,
               )
-            : fetchStationTrainLineOptions(nearestTrainStationId!).then(
-                  (options) => {
-                      const selectedLine = options.find((option) =>
-                          option.id.startsWith("relation/"),
-                      );
-                      return selectedLine
-                          ? findStationLabelsOnTrainLine(
-                                selectedLine.id,
-                                modeConfig.stationNameStrategy,
-                            )
-                          : [];
-                  },
-              );
+            : fetchStationTrainLineOptions(
+                  nearestTrainStationId!,
+                  $displayHidingZoneOperators,
+              ).then((options) => {
+                  const selectedLine = options.find((option) =>
+                      option.id.startsWith("relation/"),
+                  );
+                  return selectedLine
+                      ? findStationLabelsOnTrainLine(
+                            selectedLine.id,
+                            modeConfig.stationNameStrategy,
+                        )
+                      : [];
+              });
 
         Promise.all([nodesPromise, lineLabelsPromise])
             .then(([nodes, lineLabels]) => {
@@ -355,6 +369,7 @@ export const MatchingQuestionComponent = ({
         nearestTrainStationId,
         selectedTrainLineId,
         stationPoints,
+        $displayHidingZoneOperators,
         linePreviewRetryKey,
     ]);
 
@@ -427,7 +442,10 @@ export const MatchingQuestionComponent = ({
                                 questionModified();
                             }}
                             disabled={
-                                !data.drag || $isLoading || loadingLineOptions || !!lineOptionsError
+                                !data.drag ||
+                                $isLoading ||
+                                loadingLineOptions ||
+                                !!lineOptionsError
                             }
                         />
                     </SidebarMenuItem>
@@ -473,7 +491,10 @@ export const MatchingQuestionComponent = ({
                                 </Button>
                             </div>
                         ) : (
-                            <div className="mt-1 max-h-40 overflow-y-auto rounded-md border p-2" data-testid="station-preview">
+                            <div
+                                className="mt-1 max-h-40 overflow-y-auto rounded-md border p-2"
+                                data-testid="station-preview"
+                            >
                                 {lineStationPreview.length === 0 &&
                                 !loadingLineStationPreview ? (
                                     <span className="text-muted-foreground">
@@ -481,7 +502,9 @@ export const MatchingQuestionComponent = ({
                                     </span>
                                 ) : (
                                     lineStationPreview.map((name, index) => (
-                                        <div key={`${name}-${index}`}>{name}</div>
+                                        <div key={`${name}-${index}`}>
+                                            {name}
+                                        </div>
                                     ))
                                 )}
                             </div>

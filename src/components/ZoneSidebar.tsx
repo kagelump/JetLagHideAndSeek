@@ -469,7 +469,10 @@ export const ZoneSidebar = () => {
                                 ? await findNodesOnTrainLine(
                                       question.data.selectedTrainLineId,
                                   )
-                                : await trainLineNodeFinder(nid);
+                                : await trainLineNodeFinder(
+                                      nid,
+                                      $displayHidingZoneOperators,
+                                  );
                         } catch {
                             toast.warning(
                                 "Failed to load train line data; skipping this filter.",
@@ -486,8 +489,7 @@ export const ZoneSidebar = () => {
                             continue;
                         } else {
                             circles = circles.filter((circle) => {
-                                const idProp =
-                                    circle.properties.properties.id;
+                                const idProp = circle.properties.properties.id;
                                 if (!idProp || !idProp.includes("/"))
                                     return false;
                                 const id = parseInt(idProp.split("/")[1]);
@@ -497,8 +499,7 @@ export const ZoneSidebar = () => {
                                     : !nodes.includes(id);
                             });
                             if (question.data.same) {
-                                circles =
-                                    dedupeStationCirclesByLabel(circles);
+                                circles = dedupeStationCirclesByLabel(circles);
                             }
                         }
                     }

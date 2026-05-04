@@ -12,6 +12,7 @@ import {
 import {
     expandFiltersForOperatorNetwork,
     extractStationLabel,
+    matchesOperatorSelection,
     safeUnion,
 } from "@/maps/geo-utils";
 import type { APILocations } from "@/maps/schema";
@@ -111,7 +112,12 @@ export const getOverpassData = async (
 ) => {
     const encodedQuery = encodeURIComponent(query);
     const primaryUrl = `${OVERPASS_API}?data=${encodedQuery}`;
-    let response = await cacheFetch(primaryUrl, loadingText, cacheType, timeoutMs);
+    let response = await cacheFetch(
+        primaryUrl,
+        loadingText,
+        cacheType,
+        timeoutMs,
+    );
 
     if (!response.ok) {
         // Try the fallback, but store the result under the primary URL key so future requests are served from cache without needing to fail-over again.
@@ -301,7 +307,12 @@ const stationLineRefs = (tags: Record<string, unknown> = {}): string[] => {
     return _.uniq(
         ref
             .split(/[;/,]/)
-            .map((part) => part.trim().match(/^[^\d-]+/)?.[0]?.trim())
+            .map((part) =>
+                part
+                    .trim()
+                    .match(/^[^\d-]+/)?.[0]
+                    ?.trim(),
+            )
             .filter((part): part is string => !!part),
     );
 };
@@ -341,6 +352,7 @@ const disambiguateTrainLineLabels = (
 export const elementsToTrainLineOptions = (
     elements: any[],
     preferredRefs: string[] = [],
+    operatorFilter: string[] = [],
 ): TrainLineOption[] => {
     const options = new Map<string, TrainLineOption>();
     const scores = new Map<string, number>();
@@ -348,6 +360,11 @@ export const elementsToTrainLineOptions = (
     for (const element of elements) {
         const id = osmElementId(element);
         if (!id || !hasRailLineTags(element)) continue;
+        if (
+            operatorFilter.length > 0 &&
+            !matchesOperatorSelection(element.tags, operatorFilter)
+        )
+            continue;
         const score = trainLineRefScore(element, preferredRefs);
 
         const existing = options.get(id);
@@ -366,10 +383,8 @@ export const elementsToTrainLineOptions = (
     const sorted = [...options.values()].sort((a, b) => {
         const scoreDiff = (scores.get(a.id) ?? 1) - (scores.get(b.id) ?? 1);
         if (scoreDiff !== 0) return scoreDiff;
-        if (a.id.startsWith("relation/") && b.id.startsWith("way/"))
-            return -1;
-        if (a.id.startsWith("way/") && b.id.startsWith("relation/"))
-            return 1;
+        if (a.id.startsWith("relation/") && b.id.startsWith("way/")) return -1;
+        if (a.id.startsWith("way/") && b.id.startsWith("relation/")) return 1;
         return 0;
     });
 
@@ -476,6 +491,7 @@ export const extractTrainLineStationLabels = (
 
 export const fetchStationTrainLineOptions = async (
     stationOsmId: string,
+    operatorFilter: string[] = [],
 ): Promise<TrainLineOption[]> => {
     const station = parseOsmObjectId(stationOsmId, ["node"]);
     if (!station) return [];
@@ -493,7 +509,8 @@ out body;
         true,
     );
     const stationElement = stationData.elements?.find(
-        (element: any) => element?.type === "node" && element?.id === station.id,
+        (element: any) =>
+            element?.type === "node" && element?.id === station.id,
     );
     if (
         !Number.isFinite(stationElement?.lat) ||
@@ -524,6 +541,7 @@ out tags;
     return elementsToTrainLineOptions(
         data.elements ?? [],
         stationLineRefs(stationElement.tags),
+        operatorFilter,
     );
 };
 
@@ -586,8 +604,11 @@ export const findStationLabelsOnTrainLine = async (
     return extractTrainLineStationLabels(data, strategy);
 };
 
-export const trainLineNodeFinder = async (node: string): Promise<number[]> => {
-    const options = await fetchStationTrainLineOptions(node);
+export const trainLineNodeFinder = async (
+    node: string,
+    operatorFilter: string[] = [],
+): Promise<number[]> => {
+    const options = await fetchStationTrainLineOptions(node, operatorFilter);
     const selectedLine = options.find((option) =>
         option.id.startsWith("relation/"),
     );
