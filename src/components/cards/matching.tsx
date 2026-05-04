@@ -198,7 +198,8 @@ export const MatchingQuestionComponent = ({
             setLineOptions(autoOptions);
             setLoadingLineOptions(false);
             setLineOptionsError(null);
-            if (data.selectedTrainLineId) {
+            if (stationPoints.length === 0) return;
+            if (data.drag && data.selectedTrainLineId) {
                 data.selectedTrainLineId = undefined;
                 data.selectedTrainLineLabel = undefined;
                 questionModified();
@@ -221,6 +222,7 @@ export const MatchingQuestionComponent = ({
                 setLineOptions(nextOptions);
 
                 if (
+                    data.drag &&
                     data.selectedTrainLineId &&
                     !nextOptions[data.selectedTrainLineId]
                 ) {

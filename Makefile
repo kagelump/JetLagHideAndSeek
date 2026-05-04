@@ -1,6 +1,16 @@
-.PHONY: tailscale_serve tailscale_serve_reset
+.PHONY: test tailscale_serve tailscale_serve_reset
 
 TAILSCALE_PORT ?= 8787
+
+test:
+	@echo "Running unit tests..."
+	@pnpm vitest run
+	@echo ""
+	@echo "Running server tests..."
+	@pnpm --dir server test
+	@echo ""
+	@echo "Running e2e tests..."
+	@pnpm test:e2e
 
 tailscale_serve:
 	@command -v tailscale >/dev/null 2>&1 || { echo "tailscale CLI not found. Install Tailscale first."; exit 1; }

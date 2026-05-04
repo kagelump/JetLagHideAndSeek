@@ -429,6 +429,17 @@ export const ZoneSidebar = () => {
                         question.data.type === "same-length-station" ||
                         question.data.type === "same-train-line")
                 ) {
+                    if (
+                        question.data.type === "same-train-line" &&
+                        useCustomStations &&
+                        !includeDefaultStations
+                    ) {
+                        toast.warning(
+                            "'Same train line' isn't supported with custom-only station lists; skipping this filter.",
+                        );
+                        continue;
+                    }
+
                     const location = turf.point([
                         question.data.lng,
                         question.data.lat,
@@ -442,59 +453,52 @@ export const ZoneSidebar = () => {
                     );
 
                     if (question.data.type === "same-train-line") {
-                        // Custom-only lists don't have reliable OSM IDs
-                        if (useCustomStations && !includeDefaultStations) {
+                        const nid = nearestTrainStation.properties.id as
+                            | string
+                            | undefined;
+                        if (!nid || !nid.includes("/")) {
                             toast.warning(
-                                "'Same train line' isn't supported with custom-only station lists; skipping this filter.",
+                                "Nearest station has no OSM id; skipping 'same train line' filter.",
                             );
+                            continue;
+                        }
+
+                        let nodes: number[] = [];
+                        try {
+                            nodes = question.data.selectedTrainLineId
+                                ? await findNodesOnTrainLine(
+                                      question.data.selectedTrainLineId,
+                                  )
+                                : await trainLineNodeFinder(nid);
+                        } catch {
+                            toast.warning(
+                                "Failed to load train line data; skipping this filter.",
+                            );
+                            continue;
+                        }
+
+                        if (nodes.length === 0) {
+                            toast.warning(
+                                `No train line found for ${extractStationName(
+                                    nearestTrainStation,
+                                )}`,
+                            );
+                            continue;
                         } else {
-                            const nid = nearestTrainStation.properties.id as
-                                | string
-                                | undefined;
-                            if (!nid || !nid.includes("/")) {
-                                toast.warning(
-                                    "Nearest station has no OSM id; skipping 'same train line' filter.",
-                                );
-                                continue;
-                            }
+                            circles = circles.filter((circle) => {
+                                const idProp =
+                                    circle.properties.properties.id;
+                                if (!idProp || !idProp.includes("/"))
+                                    return false;
+                                const id = parseInt(idProp.split("/")[1]);
 
-                            let nodes: number[] = [];
-                            try {
-                                nodes = question.data.selectedTrainLineId
-                                    ? await findNodesOnTrainLine(
-                                          question.data.selectedTrainLineId,
-                                      )
-                                    : await trainLineNodeFinder(nid);
-                            } catch {
-                                toast.warning(
-                                    "Failed to load train line data; skipping this filter.",
-                                );
-                                continue;
-                            }
-
-                            if (nodes.length === 0) {
-                                toast.warning(
-                                    `No train line found for ${extractStationName(
-                                        nearestTrainStation,
-                                    )}`,
-                                );
-                                continue;
-                            } else {
-                                circles = circles.filter((circle) => {
-                                    const idProp =
-                                        circle.properties.properties.id;
-                                    if (!idProp || !idProp.includes("/"))
-                                        return false;
-                                    const id = parseInt(idProp.split("/")[1]);
-
-                                    return question.data.same
-                                        ? nodes.includes(id)
-                                        : !nodes.includes(id);
-                                });
-                                if (question.data.same) {
-                                    circles =
-                                        dedupeStationCirclesByLabel(circles);
-                                }
+                                return question.data.same
+                                    ? nodes.includes(id)
+                                    : !nodes.includes(id);
+                            });
+                            if (question.data.same) {
+                                circles =
+                                    dedupeStationCirclesByLabel(circles);
                             }
                         }
                     }

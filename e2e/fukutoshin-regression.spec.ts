@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import fixture from "../TEST_PLAN/playwright-same-train-line-fukutoshin-fixture.json" with { type: "json" };
+import fixture from "./fixtures/playwright-same-train-line-fukutoshin-fixture.json" with { type: "json" };
 
 import {
   buildCasBlob,
