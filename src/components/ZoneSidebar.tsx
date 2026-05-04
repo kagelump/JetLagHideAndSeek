@@ -55,7 +55,6 @@ import { cn } from "@/lib/utils";
 import {
     BLANK_GEOJSON,
     buildTransitGraphForStations,
-    findNodesOnTrainLine,
     findPlacesInZone,
     findPlacesSpecificInZone,
     findTentacleLocations,
@@ -65,11 +64,11 @@ import {
     QuestionSpecificLocation,
     type StationCircle,
     type StationPlace,
-    trainLineNodeFinder,
 } from "@/maps/api";
 import {
     extractStationLabel,
     extractStationName,
+    filterStationIdsByTransitLine,
     geoSpatialVoronoi,
     holedMask,
     isLikelyOsmElementId,
@@ -77,6 +76,8 @@ import {
     matchesOperatorSelection,
     mergeDuplicateStation,
     normalizeOsmText,
+    resolveAutoTransitLine,
+    resolveTransitLine,
     safeUnion,
 } from "@/maps/geo-utils";
 import type {
@@ -146,6 +147,7 @@ export const ZoneSidebar = () => {
     const $team = useStore(team);
     const $playAreaMode = useStore(playAreaMode);
     const $mapGeoLocation = useStore(mapGeoLocation);
+    const $transitGraph = useStore(transitGraph);
     const modeConfig = PLAY_AREA_MODES[$playAreaMode];
     const isTokyoZone = isTokyoTransitPassEligibleLocation($mapGeoLocation);
 
@@ -488,44 +490,53 @@ export const ZoneSidebar = () => {
                             continue;
                         }
 
-                        let nodes: number[] = [];
-                        try {
-                            nodes = question.data.selectedTrainLineId
-                                ? await findNodesOnTrainLine(
-                                      question.data.selectedTrainLineId,
-                                  )
-                                : await trainLineNodeFinder(
-                                      nid,
-                                      $displayHidingZoneOperators,
-                                  );
-                        } catch {
+                        const graph = $transitGraph;
+                        if (!graph) {
                             toast.warning(
-                                "Failed to load train line data; skipping this filter.",
+                                "Same transit line requires the hiding-zone transit graph; skipping this filter.",
                             );
                             continue;
                         }
 
-                        if (nodes.length === 0) {
+                        const resolution = question.data.selectedTrainLineId
+                            ? resolveTransitLine(
+                                  graph,
+                                  question.data.selectedTrainLineId,
+                              )
+                            : resolveAutoTransitLine(graph, nid);
+
+                        if (resolution.status !== "ok") {
                             toast.warning(
-                                `No train line found for ${extractStationName(
-                                    nearestTrainStation,
-                                )}`,
+                                resolution.status === "empty-line"
+                                    ? "No configured stations found for this transit line; skipping this filter."
+                                    : "Same transit line requires the hiding-zone transit graph; skipping this filter.",
                             );
                             continue;
-                        } else {
-                            circles = circles.filter((circle) => {
-                                const idProp = circle.properties.properties.id;
-                                if (!idProp || !idProp.includes("/"))
-                                    return false;
-                                const id = parseInt(idProp.split("/")[1]);
+                        }
 
-                                return question.data.same
-                                    ? nodes.includes(id)
-                                    : !nodes.includes(id);
-                            });
-                            if (question.data.same) {
-                                circles = dedupeStationCirclesByLabel(circles);
-                            }
+                        const memberIds = filterStationIdsByTransitLine(
+                            graph,
+                            resolution.line!.id,
+                            true,
+                        );
+
+                        if (memberIds.size === 0) {
+                            toast.warning(
+                                "No configured stations found for this transit line; skipping this filter.",
+                            );
+                            continue;
+                        }
+
+                        circles = circles.filter((circle) => {
+                            const idProp = circle.properties.properties.id;
+                            if (!idProp || !idProp.includes("/")) return false;
+
+                            return question.data.same
+                                ? memberIds.has(idProp)
+                                : !memberIds.has(idProp);
+                        });
+                        if (question.data.same && circles.length > 0) {
+                            circles = dedupeStationCirclesByLabel(circles);
                         }
                     }
 
