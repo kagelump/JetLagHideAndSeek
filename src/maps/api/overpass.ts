@@ -434,7 +434,7 @@ export const extractTrainLineStationLabels = (
         const parts = ref.split(";").map((part) => part.trim());
         return (
             parts.find((part) =>
-                lineRefs.some((lineRef) => part.startsWith(lineRef)),
+                lineRefs.some((lineRef: string) => part.startsWith(lineRef)),
             ) ?? ref
         );
     };
@@ -587,27 +587,23 @@ export const findStationLabelsOnTrainLine = async (
 };
 
 export const trainLineNodeFinder = async (node: string): Promise<number[]> => {
-    try {
-        const options = await fetchStationTrainLineOptions(node);
-        const selectedLine = options.find((option) =>
-            option.id.startsWith("relation/"),
-        );
-        if (selectedLine) {
-            return findNodesOnTrainLine(selectedLine.id);
-        }
+    const options = await fetchStationTrainLineOptions(node);
+    const selectedLine = options.find((option) =>
+        option.id.startsWith("relation/"),
+    );
+    if (selectedLine) {
+        return findNodesOnTrainLine(selectedLine.id);
+    }
 
-        const nodeId = node.split("/")[1];
-        const tagQuery = `
+    const nodeId = node.split("/")[1];
+    const tagQuery = `
 [out:json];
 node(${nodeId});
 wr(bn);
 out tags;
 `;
-        const tagData = await getOverpassData(
-            tagQuery,
-            "Finding train line...",
-        );
-        const query = `
+    const tagData = await getOverpassData(tagQuery, "Finding train line...");
+    const query = `
 [out:json];
 (
 ${tagData.elements
@@ -630,11 +626,8 @@ ${tagData.elements
 );
 out geom;
 `;
-        const data = await getOverpassData(query, "Finding train lines...");
-        return extractTrainLineNodeIds(data);
-    } catch {
-        return [];
-    }
+    const data = await getOverpassData(query, "Finding train lines...");
+    return extractTrainLineNodeIds(data);
 };
 
 export const findPlacesInZone = async (

@@ -77,6 +77,11 @@ import {
     normalizeOsmText,
     safeUnion,
 } from "@/maps/geo-utils";
+import type {
+    HomeGameMatchingQuestions,
+    HomeGameMeasuringQuestions,
+    Question,
+} from "@/maps/schema";
 
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -105,6 +110,20 @@ const getOsmTag = (
     properties: Record<string, unknown> | undefined,
     key: string,
 ) => properties?.[key];
+
+type HomeGamePoiQuestion =
+    | (Extract<Question, { id: "matching" }> & {
+          data: HomeGameMatchingQuestions;
+      })
+    | (Extract<Question, { id: "measuring" }> & {
+          data: HomeGameMeasuringQuestions;
+      });
+
+const isHomeGamePoiQuestion = (
+    question: Question,
+): question is HomeGamePoiQuestion =>
+    (question.id === "measuring" || question.id === "matching") &&
+    isHomeGamePoiType(question.data.type);
 
 export const ZoneSidebar = () => {
     const $displayHidingZones = useStore(displayHidingZones);
@@ -144,7 +163,8 @@ export const ZoneSidebar = () => {
             );
             if (!label) return true;
 
-            const key = normalizeOsmText(label);
+            const key = normalizeOsmText(String(label));
+            if (!key) return true;
             if (seen.has(key)) return false;
             seen.add(key);
             return true;
@@ -1429,10 +1449,7 @@ async function selectionProcess(
             continue;
         }
 
-        if (
-            (question.id === "measuring" || question.id === "matching") &&
-            isHomeGamePoiType(question.data.type)
-        ) {
+        if (isHomeGamePoiQuestion(question)) {
             const nearestQuestion = await nearestToQuestion(question.data);
 
             let radius = 30;
