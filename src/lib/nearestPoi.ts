@@ -44,7 +44,15 @@ export type NearestPoiResult =
           };
       }
     | {
-          status: "unsupported" | "unavailable" | "error";
+          status: "unsupported";
+      }
+    | {
+          status: "unavailable";
+          category?: string;
+      }
+    | {
+          status: "error";
+          category?: string;
       };
 
 export const HOME_GAME_POI_TYPES = [
@@ -61,9 +69,7 @@ export const HOME_GAME_POI_TYPES = [
     "park",
 ] as const;
 
-export const isHomeGamePoiType = (
-    type: string,
-): type is APILocations =>
+export const isHomeGamePoiType = (type: string): type is APILocations =>
     (HOME_GAME_POI_TYPES as readonly string[]).includes(type);
 
 export const fullPoiLocation = (type: string): APILocations | null => {
@@ -302,9 +308,9 @@ export async function resolveMatchingNearestPoi(
 
         return name
             ? { status: "found", category, name }
-            : { status: "unavailable" };
+            : { status: "unavailable", category };
     } catch {
-        return { status: "error" };
+        return { status: "error", category };
     }
 }
 
@@ -447,8 +453,8 @@ export async function resolveMeasuringNearestPoi(
                         )
                       : undefined,
               }
-            : { status: "unavailable" };
+            : { status: "unavailable", category };
     } catch {
-        return { status: "error" };
+        return { status: "error", category };
     }
 }

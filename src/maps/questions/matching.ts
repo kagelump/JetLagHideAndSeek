@@ -11,23 +11,22 @@ import osmtogeojson from "osmtogeojson";
 import { toast } from "react-toastify";
 
 import {
-    displayHidingZoneOperators,
     hiderMode,
     mapGeoJSON,
     mapGeoLocation,
     playAreaMode,
     polyGeoJSON,
+    trainStations,
+    transitGraph,
 } from "@/lib/context";
 import { PLAY_AREA_MODES } from "@/lib/playAreaModes";
 import {
     elementsToUniqueNamedPoints,
     findAdminBoundary,
-    findNodesOnTrainLine,
     findPlacesInZone,
     nearestToQuestion,
     overpassFilterForLocation,
     prettifyLocation,
-    trainLineNodeFinder,
 } from "@/maps/api";
 import {
     clippedVoronoiCells,
@@ -36,6 +35,8 @@ import {
     holedMask,
     mergeNearbyPoiPointsForLocation,
     modifyMapData,
+    resolveAutoTransitLine,
+    resolveTransitLine,
     safeUnion,
 } from "@/maps/geo-utils";
 import type {
@@ -427,37 +428,53 @@ export const hiderifyMatching = async (question: MatchingQuestion) => {
         ]);
         const seekerPoint = turf.point([question.lng, question.lat]);
 
-        const places = osmtogeojson(
-            await findPlacesInZone(
-                "[railway=station]",
-                "Finding train stations. This may take a while. Do not press any buttons while this is processing. Don't worry, it will be cached.",
-                "node",
-            ),
-        ) as FeatureCollection<Point>;
-
-        const nearestHiderTrainStation = turf.nearestPoint(hiderPoint, places);
-        const nearestSeekerTrainStation = turf.nearestPoint(
-            seekerPoint,
-            places,
+        const $trainStations = trainStations.get();
+        const stationPoints = turf.featureCollection(
+            $trainStations.map((s) => s.properties),
         );
 
-        if (question.type === "same-train-line") {
-            const nodes = question.selectedTrainLineId
-                ? await findNodesOnTrainLine(question.selectedTrainLineId)
-                : await trainLineNodeFinder(
-                      nearestSeekerTrainStation.properties.id,
-                      displayHidingZoneOperators.get(),
-                  );
+        let nearestHiderTrainStation: any;
+        let nearestSeekerTrainStation: any;
 
-            const hiderId = parseInt(
-                nearestHiderTrainStation.properties.id.split("/")[1],
+        if ($trainStations.length > 0) {
+            nearestHiderTrainStation = turf.nearestPoint(
+                hiderPoint,
+                stationPoints as any,
             );
+            nearestSeekerTrainStation = turf.nearestPoint(
+                seekerPoint,
+                stationPoints as any,
+            );
+        } else {
+            return question;
+        }
 
-            if (nodes.includes(hiderId)) {
-                question.same = true;
-            } else {
-                question.same = false;
+        if (question.type === "same-train-line") {
+            const graph = transitGraph.get();
+            if (!graph) {
+                return question;
             }
+
+            let resolution:
+                | ReturnType<typeof resolveTransitLine>
+                | ReturnType<typeof resolveAutoTransitLine>;
+            if (question.selectedTrainLineId) {
+                resolution = resolveTransitLine(
+                    graph,
+                    question.selectedTrainLineId,
+                );
+            } else {
+                const nid = nearestSeekerTrainStation.properties?.id as
+                    | string
+                    | undefined;
+                if (!nid) return question;
+                resolution = resolveAutoTransitLine(graph, nid);
+            }
+
+            if (resolution.status !== "ok") return question;
+
+            const hiderId = String(nearestHiderTrainStation.properties.id);
+            question.same = resolution.stationIds.includes(hiderId);
         }
 
         const mode = playAreaMode.get();

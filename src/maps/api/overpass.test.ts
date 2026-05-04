@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-    elementsToTrainLineOptions,
-    extractTrainLineNodeIds,
-    extractTrainLineStationLabels,
-} from "./overpass";
+import { elementsToTrainLineOptions } from "./overpass";
 
 describe("elementsToTrainLineOptions", () => {
     it("keeps exact rail way/relation choices and excludes network-only parents", () => {
@@ -334,110 +330,5 @@ describe("elementsToTrainLineOptions", () => {
             { id: "relation/1", label: "Line A" },
             { id: "relation/2", label: "Line B" },
         ]);
-    });
-});
-
-describe("extractTrainLineNodeIds", () => {
-    it("prefers station and stop-position nodes over track geometry nodes", () => {
-        const nodes = extractTrainLineNodeIds({
-            elements: [
-                {
-                    type: "node",
-                    id: 1,
-                    tags: {
-                        railway: "stop",
-                        public_transport: "stop_position",
-                    },
-                },
-                {
-                    type: "node",
-                    id: 2,
-                    tags: { railway: "station", public_transport: "station" },
-                },
-                {
-                    type: "node",
-                    id: 3,
-                    tags: { railway: "station", public_transport: "station" },
-                },
-                { type: "way", id: 10, nodes: [1, 2, 3, 4] },
-            ],
-        });
-
-        expect(nodes).toEqual([1, 2, 3]);
-    });
-
-    it("extracts and dedupes node ids from Overpass nodes and way node lists", () => {
-        const nodes = extractTrainLineNodeIds({
-            elements: [
-                { type: "node", id: 1, lat: 35, lon: 139 },
-                { type: "way", id: 10, nodes: [1, 2, 3] },
-                { type: "node", id: 2, lat: 35.1, lon: 139.1 },
-            ],
-        });
-
-        expect(nodes).toEqual([1, 2, 3]);
-    });
-
-    it("deduplicates node ids across multiple ways with overlapping nodes", () => {
-        const nodes = extractTrainLineNodeIds({
-            elements: [
-                { type: "node", id: 5 },
-                { type: "node", id: 5 },
-                { type: "way", id: 10, nodes: [5, 6, 7] },
-                { type: "way", id: 11, nodes: [6, 8, 9] },
-            ],
-        });
-
-        expect(nodes).toEqual([5, 6, 7, 8, 9]);
-    });
-});
-
-describe("extractTrainLineStationLabels", () => {
-    it("uses station nodes for the display list when stop positions are also present", () => {
-        const labels = extractTrainLineStationLabels(
-            {
-                elements: [
-                    {
-                        type: "node",
-                        id: 1,
-                        tags: {
-                            railway: "stop",
-                            public_transport: "stop_position",
-                            name: "Stop A",
-                            ref: "F01",
-                        },
-                    },
-                    {
-                        type: "node",
-                        id: 2,
-                        lat: 35,
-                        lon: 139,
-                        tags: {
-                            railway: "station",
-                            public_transport: "station",
-                            name: "駅A",
-                            "name:en": "Station A",
-                            ref: "F01",
-                        },
-                    },
-                    {
-                        type: "node",
-                        id: 3,
-                        lat: 35,
-                        lon: 139,
-                        tags: {
-                            railway: "station",
-                            public_transport: "station",
-                            name: "駅B",
-                            "name:en": "Station B",
-                            ref: "F02",
-                        },
-                    },
-                ],
-            },
-            "english-preferred",
-        );
-
-        expect(labels).toEqual(["Station A", "Station B"]);
     });
 });
