@@ -9,6 +9,7 @@ import type {
     OpenStreetMap,
     StationCircle,
 } from "@/maps/api";
+import type { TransitGraph } from "@/maps/geo-utils";
 import { extractStationLabel } from "@/maps/geo-utils";
 import {
     type DeepPartial,
@@ -19,11 +20,8 @@ import {
     type Units,
 } from "@/maps/schema";
 
-import {
-    detectPlayAreaMode,
-    normalizePlayAreaGeometry,
-} from "./playAreaMode";
-import { PLAY_AREA_MODES,type PlayAreaModeId } from "./playAreaModes";
+import { detectPlayAreaMode, normalizePlayAreaGeometry } from "./playAreaMode";
+import { PLAY_AREA_MODES, type PlayAreaModeId } from "./playAreaModes";
 
 function persistentJsonAtom<T>(key: string, initial: T) {
     return persistentAtom<T>(key, initial, {
@@ -73,9 +71,7 @@ export const playAreaMode = atom<PlayAreaModeId>("default");
 
 let playAreaModeRecomputeGeneration = 0;
 
-const updatePlayAreaMode = async (
-    resolver: () => Promise<PlayAreaModeId>,
-) => {
+const updatePlayAreaMode = async (resolver: () => Promise<PlayAreaModeId>) => {
     const generation = ++playAreaModeRecomputeGeneration;
     try {
         const mode = await resolver();
@@ -90,9 +86,7 @@ const updatePlayAreaMode = async (
     }
 };
 
-export const refreshPlayAreaModeFromGeometry = async (
-    playArea: unknown,
-) => {
+export const refreshPlayAreaModeFromGeometry = async (playArea: unknown) => {
     if (typeof window === "undefined") return;
     const normalized = normalizePlayAreaGeometry(playArea);
     if (!normalized) return;
@@ -131,10 +125,7 @@ export const refreshPlayAreaModeFromCurrentLocations = async () => {
     });
 };
 
-[
-    mapGeoLocation,
-    additionalMapGeoLocations,
-].forEach((s) => {
+[mapGeoLocation, additionalMapGeoLocations].forEach((s) => {
     onSet(s, () => {
         refreshPlayAreaModeFromCurrentLocations();
     });
@@ -278,12 +269,15 @@ export const displayHidingZonesStyle = persistentAtom<
 export const questionFinishedMapData = atom<any>(null);
 
 export const trainStations = atom<StationCircle[]>([]);
+export const transitGraph = atom<TransitGraph | null>(null);
 onSet(trainStations, ({ newValue }) => {
     const mode = playAreaMode.get();
     const strategy = PLAY_AREA_MODES[mode].stationNameStrategy;
     newValue.sort((a, b) => {
-        const aName = (extractStationLabel(a.properties, strategy) || "") as string;
-        const bName = (extractStationLabel(b.properties, strategy) || "") as string;
+        const aName = (extractStationLabel(a.properties, strategy) ||
+            "") as string;
+        const bName = (extractStationLabel(b.properties, strategy) ||
+            "") as string;
         return aName.localeCompare(bName);
     });
 });
@@ -385,9 +379,9 @@ export const casServerUrl = persistentAtom<string>("casServerUrl", "", {
     decode: (value: string) => value,
 });
 
-export const casServerStatus = atom<
-    "unknown" | "available" | "unavailable"
->("unknown");
+export const casServerStatus = atom<"unknown" | "available" | "unavailable">(
+    "unknown",
+);
 
 export const casServerEffectiveUrl = atom<string | null>(null);
 
@@ -521,10 +515,9 @@ export const alwaysUsePastebin = persistentJsonAtom<boolean>(
 export const showTutorial = persistentJsonAtom<boolean>("showTutorials", true);
 export const tutorialStep = atom<number>(0);
 
-export const customInitPreference = persistentJsonAtom<"ask" | "blank" | "prefill">(
-    "customInitPreference",
-    "ask",
-);
+export const customInitPreference = persistentJsonAtom<
+    "ask" | "blank" | "prefill"
+>("customInitPreference", "ask");
 
 export const allowGooglePlusCodes = persistentJsonAtom<boolean>(
     "allowGooglePlusCodes",

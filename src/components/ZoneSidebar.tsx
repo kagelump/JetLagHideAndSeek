@@ -39,6 +39,7 @@ import {
     questions,
     team,
     trainStations,
+    transitGraph,
     useCustomStations as useCustomStationsAtom,
 } from "@/lib/context";
 import { isHomeGamePoiType } from "@/lib/nearestPoi";
@@ -53,6 +54,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
     BLANK_GEOJSON,
+    buildTransitGraphForStations,
     findNodesOnTrainLine,
     findPlacesInZone,
     findPlacesSpecificInZone,
@@ -417,6 +419,29 @@ export const ZoneSidebar = () => {
                     }
                     return turf.booleanIntersects(circle, playableZone);
                 });
+
+            if (useCustomStations && !includeDefaultStations) {
+                transitGraph.set(null);
+            } else {
+                try {
+                    const stationPlaces = circles.map(
+                        (c) => c.properties as StationPlace,
+                    );
+                    const graph = await buildTransitGraphForStations(
+                        stationPlaces,
+                        {
+                            stationNameStrategy: modeConfig.stationNameStrategy,
+                            operatorFilter: $displayHidingZoneOperators,
+                        },
+                    );
+                    transitGraph.set(graph);
+                } catch {
+                    transitGraph.set(null);
+                    toast.warning(
+                        "Failed to build transit graph; same-transit-line features may be limited.",
+                    );
+                }
+            }
 
             for (const question of questions.get()) {
                 if (planningModeEnabled.get() && question.data.drag) {
