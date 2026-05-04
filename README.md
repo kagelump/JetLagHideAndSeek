@@ -7,7 +7,7 @@ A tool to trivially generate interactive maps for viewing hiding possibilities i
 - Thermometer
     - All
 - Matching
-     - Same occupancy of custom zone
+    - Same occupancy of custom zone
     - Same nearest of custom points
     - Same zone (i.e., same region or prefecture)
     - Same first letter of zone
@@ -133,6 +133,25 @@ pnpm test:e2e             # end-to-end tests (Playwright, requires start:app)
 E2E tests require Chromium (`npx playwright install chromium`). They run against `pnpm start:app` (or let the Playwright `webServer` config launch it).
 
 After making modifications, run `pnpm lint` to auto-format and check for errors.
+
+Git hooks are managed with [Husky](https://typicode.github.io/husky/) and [lint-staged](https://github.com/lint-staged/lint-staged). After `pnpm install`, the `prepare` script configures the hooks automatically.
+
+**Pre-commit** runs `pnpm exec lint-staged`, which lints and formats your staged files.
+
+**Pre-push** runs `pnpm run typecheck`, `pnpm vitest run`, and `pnpm --dir server test` to catch issues before pushing.
+
+To recover hooks after a clone or dependency change:
+
+```bash
+pnpm install   # runs `prepare` → `husky` to reinstall hooks
+```
+
+To skip hooks temporarily:
+
+```bash
+git commit --no-verify
+git push --no-verify
+```
 
 ## Contributors
 
