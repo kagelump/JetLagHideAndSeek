@@ -24,10 +24,7 @@ import {
     questions,
     triggerLocalRefresh,
 } from "@/lib/context";
-import {
-    isHomeGamePoiType,
-    toHomeGamePoiType,
-} from "@/lib/nearestPoi";
+import { isHomeGamePoiType, toHomeGamePoiType } from "@/lib/nearestPoi";
 import {
     findHomeGamePoiPointsInPlayZone,
     findTentacleLocations,
@@ -90,9 +87,9 @@ function candidateMarkerColor(questionColor: keyof typeof ICON_COLORS) {
 }
 
 function siteName(cell: Feature<Polygon | MultiPolygon>): string | null {
-    const props = cell.properties as
-        | { site?: { properties?: { name?: unknown } } }
-        | null;
+    const props = cell.properties as {
+        site?: { properties?: { name?: unknown } };
+    } | null;
     const name = props?.site?.properties?.name;
     return typeof name === "string" ? name : null;
 }
@@ -124,7 +121,10 @@ function spectrumLightness(
 }
 
 /** Stroke/fill HSL for one spectrum Voronoi cell — reuse for CircleMarkers so dots match cell fills. */
-function spectrumCellStrokeFill(rank: number, n: number): {
+function spectrumCellStrokeFill(
+    rank: number,
+    n: number,
+): {
     stroke: string;
     fill: string;
 } {
@@ -140,7 +140,9 @@ const PIN_VORONOI_STROKE = "hsl(175, 82%, 30%)";
 const PIN_VORONOI_FILL = "hsl(168, 72%, 42%)";
 
 /** Same ordering as `rankedCells` (localeCompare by POI name, fallback `\0${index}`). */
-function spectrumRankByFeatureIndex(points: FeatureCollection<Point>): number[] {
+function spectrumRankByFeatureIndex(
+    points: FeatureCollection<Point>,
+): number[] {
     const decorated = points.features.map((f, index) => ({
         index,
         sortKey: poiSortKey(f.properties?.name, index),
@@ -228,55 +230,55 @@ function VoronoiCells({
     return (
         <>
             {items.map(({ cell, rank, index }) => {
-                    const name = siteName(cell);
-                    const isTentacleSelected =
-                        !spectrum && !!selectedName && name === selectedName;
-                    const isPinCell =
-                        spectrum && !!pinSiteName && name === pinSiteName;
+                const name = siteName(cell);
+                const isTentacleSelected =
+                    !spectrum && !!selectedName && name === selectedName;
+                const isPinCell =
+                    spectrum && !!pinSiteName && name === pinSiteName;
 
-                    let stroke: string;
-                    let fill: string;
-                    let weight: number;
-                    let strokeOpacity: number;
-                    let fillOpacity: number;
+                let stroke: string;
+                let fill: string;
+                let weight: number;
+                let strokeOpacity: number;
+                let fillOpacity: number;
 
-                    if (!spectrum) {
-                        stroke = accentColor;
-                        fill = accentColor;
-                        weight = isTentacleSelected ? 1.5 : 0.6;
-                        strokeOpacity = 0.55;
-                        fillOpacity = isTentacleSelected ? 0.18 : 0.07;
-                    } else if (isPinCell) {
-                        stroke = PIN_VORONOI_STROKE;
-                        fill = PIN_VORONOI_FILL;
-                        weight = 2.4;
-                        strokeOpacity = 0.92;
-                        fillOpacity = 0.26;
-                    } else {
-                        ({ stroke, fill } = spectrumCellStrokeFill(
-                            rank,
-                            cells.length,
-                        ));
-                        weight = 0.65;
-                        strokeOpacity = 0.62;
-                        fillOpacity = 0.11;
-                    }
+                if (!spectrum) {
+                    stroke = accentColor;
+                    fill = accentColor;
+                    weight = isTentacleSelected ? 1.5 : 0.6;
+                    strokeOpacity = 0.55;
+                    fillOpacity = isTentacleSelected ? 0.18 : 0.07;
+                } else if (isPinCell) {
+                    stroke = PIN_VORONOI_STROKE;
+                    fill = PIN_VORONOI_FILL;
+                    weight = 2.4;
+                    strokeOpacity = 0.92;
+                    fillOpacity = 0.26;
+                } else {
+                    ({ stroke, fill } = spectrumCellStrokeFill(
+                        rank,
+                        cells.length,
+                    ));
+                    weight = 0.65;
+                    strokeOpacity = 0.62;
+                    fillOpacity = 0.11;
+                }
 
-                    return (
-                        <GeoJSON
-                            key={`v-${name ?? "_"}-${index}`}
-                            data={cell}
-                            interactive={false}
-                            style={{
-                                color: stroke,
-                                weight,
-                                opacity: strokeOpacity,
-                                fillColor: fill,
-                                fillOpacity,
-                            }}
-                        />
-                    );
-                })}
+                return (
+                    <GeoJSON
+                        key={`v-${name ?? "_"}-${index}`}
+                        data={cell}
+                        interactive={false}
+                        style={{
+                            color: stroke,
+                            weight,
+                            opacity: strokeOpacity,
+                            fillColor: fill,
+                            fillOpacity,
+                        }}
+                    />
+                );
+            })}
         </>
     );
 }
@@ -346,7 +348,8 @@ function TentacleTraditionalCandidates({
                     return null;
                 const name = feature.properties?.name ?? "POI";
                 const isSelected =
-                    selectedName !== null && feature.properties?.name === selectedName;
+                    selectedName !== null &&
+                    feature.properties?.name === selectedName;
                 const [lng, lat] = coords;
                 return (
                     <CircleMarker

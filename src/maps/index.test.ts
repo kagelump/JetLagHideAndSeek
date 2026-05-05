@@ -1,11 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/maps/geo-utils", () => ({}));
 
 vi.mock("@/maps/questions/radius", () => ({
-    adjustPerRadius: vi
-        .fn()
-        .mockImplementation(async (_q: any, d: any) => d),
+    adjustPerRadius: vi.fn().mockImplementation(async (_q: any, d: any) => d),
     hiderifyRadius: vi.fn().mockImplementation((q: any) => q),
     radiusPlanningPolygon: vi.fn().mockReturnValue({
         type: "Feature" as const,
@@ -27,9 +25,7 @@ vi.mock("@/maps/questions/thermometer", () => ({
 }));
 
 vi.mock("@/maps/questions/tentacles", () => ({
-    adjustPerTentacle: vi
-        .fn()
-        .mockImplementation(async (_q: any, d: any) => d),
+    adjustPerTentacle: vi.fn().mockImplementation(async (_q: any, d: any) => d),
     hiderifyTentacles: vi.fn().mockImplementation(async (q: any) => q),
     tentaclesPlanningPolygon: vi.fn().mockResolvedValue({
         type: "Feature" as const,
@@ -39,9 +35,7 @@ vi.mock("@/maps/questions/tentacles", () => ({
 }));
 
 vi.mock("@/maps/questions/matching", () => ({
-    adjustPerMatching: vi
-        .fn()
-        .mockImplementation(async (_q: any, d: any) => d),
+    adjustPerMatching: vi.fn().mockImplementation(async (_q: any, d: any) => d),
     hiderifyMatching: vi.fn().mockImplementation(async (q: any) => q),
     matchingPlanningPolygon: vi.fn().mockResolvedValue({
         type: "Feature" as const,
@@ -196,9 +190,7 @@ describe("Question Processing Pipeline", () => {
             mockCallback,
         );
 
-        expect(radiusPlanningPolygon).toHaveBeenCalledWith(
-            unlockedRadius.data,
-        );
+        expect(radiusPlanningPolygon).toHaveBeenCalledWith(unlockedRadius.data);
         expect(mockCallback).toHaveBeenCalledWith(
             expect.objectContaining({ type: "Feature" }),
             unlockedRadius,

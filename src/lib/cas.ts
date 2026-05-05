@@ -47,11 +47,14 @@ export async function putBlob(
     sid: string,
 ): Promise<void> {
     const root = normalizeCasBaseUrl(serverBaseUrl);
-    const res = await fetch(`${root}/api/cas/blobs/${encodeURIComponent(sid)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-        body: compressedBase64UrlPayload,
-    });
+    const res = await fetch(
+        `${root}/api/cas/blobs/${encodeURIComponent(sid)}`,
+        {
+            method: "PUT",
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+            body: compressedBase64UrlPayload,
+        },
+    );
     if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(text || `PUT blob failed: ${res.status}`);
@@ -116,4 +119,3 @@ export async function listTeamSnapshots(
     };
     return data.snapshots ?? [];
 }
-

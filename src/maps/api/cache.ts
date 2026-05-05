@@ -87,9 +87,10 @@ export const cacheFetch = async (
         console.log(e); // Probably a caches not supported error
 
         return fetch(url, {
-            signal: timeoutMs && timeoutMs > 0
-                ? AbortSignal.timeout(timeoutMs)
-                : undefined,
+            signal:
+                timeoutMs && timeoutMs > 0
+                    ? AbortSignal.timeout(timeoutMs)
+                    : undefined,
         });
     }
 };

@@ -218,8 +218,9 @@ export const Map = ({ className }: { className?: string }) => {
                 };
 
                 mapGeoData =
-                    (sanitizeGeoJSONForLeaflet(mapGeoData as GeoJSON) as typeof mapGeoData) ??
-                    mapGeoData;
+                    (sanitizeGeoJSONForLeaflet(
+                        mapGeoData as GeoJSON,
+                    ) as typeof mapGeoData) ?? mapGeoData;
 
                 map.eachLayer((layer: any) => {
                     if (layer.eliminationGeoJSON) {
@@ -251,7 +252,9 @@ export const Map = ({ className }: { className?: string }) => {
             } catch (error) {
                 console.log(error);
 
-                if (document.querySelectorAll(".Toastify__toast").length === 0) {
+                if (
+                    document.querySelectorAll(".Toastify__toast").length === 0
+                ) {
                     toast.error("No solutions found / error occurred");
                 }
             }

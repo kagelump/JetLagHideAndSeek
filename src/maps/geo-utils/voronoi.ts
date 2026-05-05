@@ -12,7 +12,10 @@ import type {
     Polygon,
 } from "geojson";
 
-import { dedupePolygonFeatureVertices, stripDuplicateVertices } from "@/maps/geo-utils/polygon-ring-dedupe";
+import {
+    dedupePolygonFeatureVertices,
+    stripDuplicateVertices,
+} from "@/maps/geo-utils/polygon-ring-dedupe";
 
 const scaleReference = turf.toMercator(turf.point([180, 90])); // I thought this would yield the same as turf.earthRadius * Math.pi, but it's slightly larger
 
@@ -100,12 +103,11 @@ export function repairIntersectedCell(
     if (!feature?.geometry) return null;
     const props = { ...(feature.properties ?? {}) };
 
-    const strippedIn =
-        stripDuplicateVertices(
-            turf.feature(feature.geometry, props) as Feature<
-                Polygon | MultiPolygon
-            >,
-        );
+    const strippedIn = stripDuplicateVertices(
+        turf.feature(feature.geometry, props) as Feature<
+            Polygon | MultiPolygon
+        >,
+    );
     if (!strippedIn.geometry) return null;
 
     const geom = turf.feature(strippedIn.geometry, props) as Feature<

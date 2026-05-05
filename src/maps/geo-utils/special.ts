@@ -10,7 +10,9 @@ export const extractStationName = (
     strategy: "english-preferred" | "native-preferred" = "english-preferred",
 ) => {
     if (strategy === "native-preferred") {
-        return stationPlace.properties.name || stationPlace.properties["name:en"];
+        return (
+            stationPlace.properties.name || stationPlace.properties["name:en"]
+        );
     }
     return stationPlace.properties["name:en"] || stationPlace.properties.name;
 };

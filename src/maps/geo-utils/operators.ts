@@ -15,7 +15,10 @@ import type {
 } from "geojson";
 
 import { BLANK_GEOJSON } from "@/maps/api";
-import { dedupePolygonFeatureVertices, stripDuplicateVertices } from "@/maps/geo-utils/polygon-ring-dedupe";
+import {
+    dedupePolygonFeatureVertices,
+    stripDuplicateVertices,
+} from "@/maps/geo-utils/polygon-ring-dedupe";
 
 export {
     clippedVoronoiCells,
@@ -58,10 +61,7 @@ export function sanitizeGeoJSONForLeaflet(
     }
     if (input.type === "Feature") {
         const g = input.geometry;
-        if (
-            g &&
-            (g.type === "Polygon" || g.type === "MultiPolygon")
-        ) {
+        if (g && (g.type === "Polygon" || g.type === "MultiPolygon")) {
             return stripDuplicateVerticesFromPolygonFeature(
                 input as Feature<Polygon | MultiPolygon>,
             );
@@ -114,17 +114,16 @@ export const modifyMapData = (
     const safeModifications =
         "features" in modifications ? safeUnion(modifications) : modifications;
 
-    const raw =
-        withinModifications ?
-            turf.intersect(
-                turf.featureCollection([safeUnion(mapData), safeModifications]),
-            )
-        :   turf.intersect(
-                turf.featureCollection([
-                    safeUnion(mapData),
-                    holedMask(safeModifications)!,
-                ]),
-            );
+    const raw = withinModifications
+        ? turf.intersect(
+              turf.featureCollection([safeUnion(mapData), safeModifications]),
+          )
+        : turf.intersect(
+              turf.featureCollection([
+                  safeUnion(mapData),
+                  holedMask(safeModifications)!,
+              ]),
+          );
     if (!raw) return raw;
     return stripDuplicateVerticesFromPolygonFeature(
         raw as Feature<Polygon | MultiPolygon>,

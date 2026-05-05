@@ -114,7 +114,7 @@ export function mergeNearbyPoiPoints(
         const representativeName =
             typeof rep.properties?.name === "string"
                 ? rep.properties.name
-                : names[0] ?? "POI cluster";
+                : (names[0] ?? "POI cluster");
 
         return turf.point(rep.geometry.coordinates, {
             ...(rep.properties ?? {}),

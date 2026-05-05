@@ -68,8 +68,7 @@ export function applyHidingZoneGeojson(geojson: Record<string, unknown>) {
     if (
         geojson.properties &&
         typeof geojson.properties === "object" &&
-        (geojson.properties as { isHidingZone?: boolean }).isHidingZone ===
-            true
+        (geojson.properties as { isHidingZone?: boolean }).isHidingZone === true
     ) {
         questions.set(
             questionsSchema.parse(
@@ -81,9 +80,7 @@ export function applyHidingZoneGeojson(geojson: Record<string, unknown>) {
         polyGeoJSON.set(null);
 
         if (geojson.alternateLocations) {
-            additionalMapGeoLocations.set(
-                geojson.alternateLocations as never,
-            );
+            additionalMapGeoLocations.set(geojson.alternateLocations as never);
         } else {
             additionalMapGeoLocations.set([]);
         }
@@ -109,9 +106,7 @@ export function applyHidingZoneGeojson(geojson: Record<string, unknown>) {
 
     const incomingPresets =
         geojson.presets ??
-        (
-            geojson.properties as { presets?: unknown } | undefined
-        )?.presets;
+        (geojson.properties as { presets?: unknown } | undefined)?.presets;
     if (incomingPresets && Array.isArray(incomingPresets)) {
         try {
             const normalized = (incomingPresets as any[])

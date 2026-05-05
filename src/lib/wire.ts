@@ -48,7 +48,8 @@ export function stripWireEnvelope(snapshot: WireV1Snapshot): {
     geo: Record<string, unknown>;
     team: { id: string; name: string } | null;
 } {
-    const { v: _v, team, ...rest } = snapshot;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { v, team, ...rest } = snapshot;
     return {
         geo: rest as Record<string, unknown>,
         team: team ?? null,

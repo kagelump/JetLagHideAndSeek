@@ -2,7 +2,8 @@ import * as turf from "@turf/turf";
 import type { Feature, MultiPolygon, Polygon } from "geojson";
 import { describe, expect, it } from "vitest";
 
-import { assertPolygonalFeatureHasCleanRings } from "../../../tests/leafletPolygonAssertions";
+import { assertPolygonalFeatureHasCleanRings } from "@/../tests/leafletPolygonAssertions";
+
 import {
     clippedVoronoiCells,
     finalizePolygonForLeaflet,
@@ -163,8 +164,11 @@ describe("repairIntersectedCell", () => {
         expect(turf.booleanValid(repaired!)).toBe(true);
         expect(turf.area(repaired!)).toBeGreaterThan(0);
         expect(
-            (repaired!.properties as { site?: { properties?: { name?: string } } })
-                ?.site?.properties?.name,
+            (
+                repaired!.properties as {
+                    site?: { properties?: { name?: string } };
+                }
+            )?.site?.properties?.name,
         ).toBe("TestSite");
     });
 
@@ -181,9 +185,7 @@ describe("repairIntersectedCell", () => {
         ]);
         const feature = repeatedVertex as Feature<Polygon | MultiPolygon>;
         expect(() => repairIntersectedCell(feature)).not.toThrow();
-        const repaired = repairIntersectedCell(
-            feature,
-        );
+        const repaired = repairIntersectedCell(feature);
         // Either cleaned geometry or dropped cell is acceptable; crash is not.
         expect(repaired === null || turf.area(repaired) >= 0).toBe(true);
     });

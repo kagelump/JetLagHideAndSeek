@@ -32,7 +32,11 @@ describe("normalizeOsmText", () => {
 
 describe("expandFiltersForOperatorNetwork", () => {
     test("returns baseFilter and alternatives unchanged with empty operatorFilter", () => {
-        const result = expandFiltersForOperatorNetwork("base", ["alt1", "alt2"], []);
+        const result = expandFiltersForOperatorNetwork(
+            "base",
+            ["alt1", "alt2"],
+            [],
+        );
         expect(result).toEqual({
             primaryLines: ["base"],
             alternativeLines: ["alt1", "alt2"],
@@ -40,12 +44,20 @@ describe("expandFiltersForOperatorNetwork", () => {
     });
 
     test("adds operator and network regex clauses with single operator", () => {
-        const result = expandFiltersForOperatorNetwork("base", ["alt"], ["JR East"]);
+        const result = expandFiltersForOperatorNetwork(
+            "base",
+            ["alt"],
+            ["JR East"],
+        );
         expect(result.primaryLines).toHaveLength(2);
         expect(result.alternativeLines).toHaveLength(2);
 
-        expect(result.primaryLines.some((l) => l.includes("[operator"))).toBe(true);
-        expect(result.primaryLines.some((l) => l.includes("[network"))).toBe(true);
+        expect(result.primaryLines.some((l) => l.includes("[operator"))).toBe(
+            true,
+        );
+        expect(result.primaryLines.some((l) => l.includes("[network"))).toBe(
+            true,
+        );
         for (const line of result.primaryLines) {
             expect(line).toContain("JR East");
         }
@@ -79,11 +91,19 @@ describe("expandFiltersForOperatorNetwork", () => {
     });
 
     test("escapes regex metacharacters in operator values", () => {
-        const a = expandFiltersForOperatorNetwork("base", ["alt"], ["JR (East)"]);
+        const a = expandFiltersForOperatorNetwork(
+            "base",
+            ["alt"],
+            ["JR (East)"],
+        );
         expect(a.primaryLines[0]).toContain("JR \\(East\\)");
         expect(a.primaryLines[1]).toContain("JR \\(East\\)");
 
-        const b = expandFiltersForOperatorNetwork("base", ["alt"], ["Tokyo+Metro"]);
+        const b = expandFiltersForOperatorNetwork(
+            "base",
+            ["alt"],
+            ["Tokyo+Metro"],
+        );
         expect(b.primaryLines[0]).toContain("Tokyo\\+Metro");
         expect(b.primaryLines[1]).toContain("Tokyo\\+Metro");
     });
@@ -97,7 +117,7 @@ describe("expandFiltersForOperatorNetwork", () => {
 
         expect(result.primaryLines).toHaveLength(2);
         expect(result.primaryLines[0]).toContain("JR East");
-        expect(result.primaryLines[0]).not.toContain("~\"^($)\"");
-        expect(result.primaryLines[0]).not.toContain("~\"^(|");
+        expect(result.primaryLines[0]).not.toContain('~"^($)"');
+        expect(result.primaryLines[0]).not.toContain('~"^(|');
     });
 });

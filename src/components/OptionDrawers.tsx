@@ -22,7 +22,6 @@ import {
 import { getBlob } from "@/lib/cas";
 import { discoverCasServer } from "@/lib/casDiscovery";
 import {
-    additionalMapGeoLocations,
     allowGooglePlusCodes,
     alwaysUsePastebin,
     animateMapMovements,
@@ -34,22 +33,14 @@ import {
     casServerUrl,
     currentSid,
     customInitPreference,
-    customPresets,
-    customStations,
     defaultCustomQuestions,
     defaultUnit,
-    disabledStations,
-    displayHidingZonesOptions,
     followMe,
     hiderMode,
-    hidingRadius,
     hidingRadiusUnits,
     hidingZone,
-    includeDefaultStations,
     leafletMapContext,
     liveSyncEnabled,
-    mapGeoJSON,
-    mapGeoLocation,
     pastebinApiKey,
     permanentOverlay,
     planningModeEnabled,
@@ -59,7 +50,6 @@ import {
     showTutorial,
     thunderforestApiKey,
     triggerLocalRefresh,
-    useCustomStations,
 } from "@/lib/context";
 import {
     cloneForWire,
@@ -325,10 +315,7 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
                         sidParam,
                     );
                     const json = await decompress(compressed);
-                    sidApplied = await maybeReplaceRef.current(
-                        json,
-                        sidParam,
-                    );
+                    sidApplied = await maybeReplaceRef.current(json, sidParam);
                 } catch (e) {
                     toast.error(
                         `Could not load shared game state (${sidParam}): ${e}`,
@@ -343,7 +330,11 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
             if (hidingZoneOld !== null) {
                 try {
                     loadHidingZoneFromJsonString(atob(hidingZoneOld));
-                    window.history.replaceState({}, "", window.location.pathname);
+                    window.history.replaceState(
+                        {},
+                        "",
+                        window.location.pathname,
+                    );
                 } catch (e) {
                     toast.error(`Invalid hiding zone settings: ${e}`);
                 }
@@ -412,7 +403,9 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
                                 shareUrl = `${baseUrl}?${SID_URL_PARAM}=${encodeURIComponent(sid)}`;
                             }
                         } catch (e) {
-                            toast.warn(`Could not sync to game state server: ${e}`);
+                            toast.warn(
+                                `Could not sync to game state server: ${e}`,
+                            );
                         }
                     }
 
@@ -610,8 +603,8 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
                                     )}
                                 />
                                 <p className="text-xs text-gray-500">
-                                    {formatBytes(localStorageUsageBytes)} used of{" "}
-                                    {formatBytes(localStorageQuotaBytes)} (
+                                    {formatBytes(localStorageUsageBytes)} used
+                                    of {formatBytes(localStorageQuotaBytes)} (
                                     {(
                                         (localStorageUsageBytes /
                                             localStorageQuotaBytes) *

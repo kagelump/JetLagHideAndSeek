@@ -21,10 +21,7 @@ type TeamPanelProps = {
     onLoadCasWire: (canonicalJson: string, sid: string) => Promise<boolean>;
 };
 
-export const TeamPanel = ({
-    optionsOpen,
-    onLoadCasWire,
-}: TeamPanelProps) => {
+export const TeamPanel = ({ optionsOpen, onLoadCasWire }: TeamPanelProps) => {
     const $team = useStore(team);
     const $casStatus = useStore(casServerStatus);
     const $effectiveUrl = useStore(casServerEffectiveUrl);
@@ -229,9 +226,7 @@ export const TeamPanel = ({
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() =>
-                                        setLeaveConfirm(true)
-                                    }
+                                    onClick={() => setLeaveConfirm(true)}
                                 >
                                     Leave Team
                                 </Button>

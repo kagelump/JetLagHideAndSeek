@@ -11,9 +11,10 @@ import {
 } from "./radius";
 
 vi.mock("@/maps/geo-utils", async () => {
-    const actual = await vi.importActual<typeof import("@/maps/geo-utils")>(
-        "@/maps/geo-utils",
-    );
+    const actual =
+        await vi.importActual<typeof import("@/maps/geo-utils")>(
+            "@/maps/geo-utils",
+        );
     return {
         ...actual,
         arcBuffer: vi.fn(),
@@ -66,11 +67,7 @@ describe("adjustPerRadius", () => {
         const result = await adjustPerRadius(question, mapData);
 
         expect(arcBuffer).toHaveBeenCalledTimes(1);
-        expect(modifyMapData).toHaveBeenCalledWith(
-            mapData,
-            mockCircle,
-            true,
-        );
+        expect(modifyMapData).toHaveBeenCalledWith(mapData, mockCircle, true);
         expect(result).toBe(mockCircle);
     });
 
@@ -120,11 +117,7 @@ describe("adjustPerRadius", () => {
 
         const result = await adjustPerRadius(question, mapData);
 
-        expect(modifyMapData).toHaveBeenCalledWith(
-            mapData,
-            mockCircle,
-            false,
-        );
+        expect(modifyMapData).toHaveBeenCalledWith(mapData, mockCircle, false);
         expect(result).toBe(mockSubtraction);
     });
 

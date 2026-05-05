@@ -6,9 +6,10 @@ vi.mock("@/maps/api", () => ({
 }));
 
 vi.mock("./playAreaMode", async () => {
-    const actual = await vi.importActual<typeof import("./playAreaMode")>(
-        "./playAreaMode",
-    );
+    const actual =
+        await vi.importActual<typeof import("./playAreaMode")>(
+            "./playAreaMode",
+        );
     return {
         ...actual,
         detectPlayAreaMode: vi.fn(async () => "japan"),
@@ -27,14 +28,18 @@ import {
 import { detectPlayAreaMode } from "./playAreaMode";
 
 const stubWindow = () => {
-    (globalThis as typeof globalThis & {
-        window: unknown;
-        localStorage: unknown;
-    }).window = {};
-    (globalThis as typeof globalThis & {
-        window: unknown;
-        localStorage: unknown;
-    }).localStorage = {
+    (
+        globalThis as typeof globalThis & {
+            window: unknown;
+            localStorage: unknown;
+        }
+    ).window = {};
+    (
+        globalThis as typeof globalThis & {
+            window: unknown;
+            localStorage: unknown;
+        }
+    ).localStorage = {
         getItem: vi.fn(),
         setItem: vi.fn(),
         removeItem: vi.fn(),

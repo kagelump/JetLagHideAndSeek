@@ -2,7 +2,8 @@ import * as turf from "@turf/turf";
 import type { Feature, MultiPolygon, Polygon } from "geojson";
 import { describe, expect, it } from "vitest";
 
-import { assertPolygonalFeatureHasCleanRings } from "../../../tests/leafletPolygonAssertions";
+import { assertPolygonalFeatureHasCleanRings } from "@/../tests/leafletPolygonAssertions";
+
 import {
     dedupeConsecutiveRingPositions,
     dedupePolygonFeatureVertices,
@@ -21,8 +22,7 @@ describe("dedupeConsecutiveRingPositions", () => {
         ]);
         for (let i = 1; i < ring.length; i++) {
             expect(
-                ring[i - 1][0] === ring[i][0] &&
-                    ring[i - 1][1] === ring[i][1],
+                ring[i - 1][0] === ring[i][0] && ring[i - 1][1] === ring[i][1],
             ).toBe(false);
         }
         expect(ring[0]).toEqual(ring[ring.length - 1]);
@@ -39,8 +39,7 @@ describe("dedupeConsecutiveRingPositions", () => {
         ]);
         for (let i = 1; i < ring.length; i++) {
             expect(
-                ring[i - 1][0] === ring[i][0] &&
-                    ring[i - 1][1] === ring[i][1],
+                ring[i - 1][0] === ring[i][0] && ring[i - 1][1] === ring[i][1],
             ).toBe(false);
         }
         const body = ring.slice(0, -1).map((p) => `${p[0]},${p[1]}`);

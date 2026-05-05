@@ -25,10 +25,7 @@ import {
 } from "@/lib/context";
 import { CacheType, clearCache } from "@/maps/api";
 import { lngLatToText } from "@/maps/geo-utils";
-import type {
-    CustomTentacleQuestion,
-    Question,
-} from "@/maps/schema";
+import type { CustomTentacleQuestion, Question } from "@/maps/schema";
 
 import { LatitudeLongitude } from "./LatLngPicker";
 import { Dialog, DialogContent } from "./ui/dialog";
