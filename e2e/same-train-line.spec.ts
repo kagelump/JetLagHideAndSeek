@@ -133,9 +133,7 @@ test("C1: Dropdown populates from nearest station (operator filtered)", async ({
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -184,9 +182,7 @@ test("C1b: Dropdown shows all lines when operator filter is empty", async ({
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-all-lines.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -220,9 +216,7 @@ test("C2: Select line updates station preview", async ({ page }) => {
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -261,10 +255,7 @@ test("C3: Station preview empty results", async ({ page }) => {
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
-        overpassRoute("empty-overpass.json", ["relation(200)"]),
+        overpassRoute("transit-graph-b-empty.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -273,12 +264,10 @@ test("C3: Station preview empty results", async ({ page }) => {
 
     await selectTrainLine(page, "Test Line B");
 
-    // Wait for the preview to update
-    await expect(
-        page
-            .getByText(/No stations found for this line|Stations matched: 0/)
-            .first(),
-    ).toBeVisible({ timeout: 15000 });
+    // Wait for the preview to update — Test Line B has 1 station
+    await expect(page.getByText("Stations matched: 1")).toBeVisible({
+        timeout: 15000,
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -288,16 +277,12 @@ test("C3: Station preview empty results", async ({ page }) => {
 test("C4: Loading stations text during fetch", async ({ page }) => {
     const sid = await loadState(page);
 
-    // Install mocks with delay on the exact line expansion
     const overpass = await mockOverpass(page, [
         overpassRoute("stations-minimal.json", [
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        // Delayed exact line expansion
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"], 1000),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -312,8 +297,10 @@ test("C4: Loading stations text during fetch", async ({ page }) => {
         timeout: 15000,
     });
 
-    // Verify the Overpass call for the exact line was made
-    overpass.assertCalledRelation("100");
+    // Verify no per-question train line Overpass call was made
+    expect(overpass.calls.some((c) => c.query.includes("relation(100)"))).toBe(
+        false,
+    );
 });
 
 // ---------------------------------------------------------------------------
@@ -330,9 +317,7 @@ test("C5: Selected line clears when nearest station changes", async ({
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -364,9 +349,7 @@ test("C6: Loading train lines text in trigger", async ({ page }) => {
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -412,9 +395,7 @@ test("C7: Locked question preserves selection", async ({ page }) => {
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -444,9 +425,7 @@ test("C7: Locked question preserves selection", async ({ page }) => {
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(newPage, sid2);
@@ -490,9 +469,7 @@ test("C8: Backward compat — no selectedTrainLineId in snapshot", async ({
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -522,9 +499,7 @@ test("C9: Hiderification updates same toggle based on train line", async ({
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -570,10 +545,7 @@ test("C10: ZoneSidebar shows only selected-line stations", async ({ page }) => {
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
-        overpassRoute("empty-overpass.json", ["relation(200)"]),
+        overpassRoute("transit-graph-b-empty.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sid);
@@ -599,14 +571,12 @@ test("C10: ZoneSidebar shows only selected-line stations", async ({ page }) => {
     await expect(previewContainer.getByText("Station Beta")).toBeVisible();
     await expect(previewContainer.getByText("Station Gamma")).toBeVisible();
 
-    // Select a line with no stations — preview should go empty
+    // Select a line with only 1 station — preview should update
     await selectTrainLine(page, "Test Line B");
 
-    await expect(
-        page
-            .getByText(/No stations found for this line|Stations matched: 0/)
-            .first(),
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Stations matched: 1")).toBeVisible({
+        timeout: 15000,
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -625,10 +595,7 @@ test("C11: Custom-only station list warning", async ({ page }) => {
     );
 
     // No station discovery mocks needed — custom-only skips default discovery
-    await mockOverpass(page, [
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-    ]);
+    await mockOverpass(page, []);
 
     await loadWithSid(page, sid);
 
@@ -684,9 +651,7 @@ test("C12: Wire serialization roundtrip preserves selectedTrainLineId", async ({
             "[railway=station]",
             "[railway=stop]",
         ]),
-        overpassRoute("line-expansion-minimal.json", ["1001"]),
-        overpassRoute("train-lines-minimal.json", ["around:300"]),
-        overpassRoute("line-expansion-minimal.json", ["relation(100)"]),
+        overpassRoute("transit-graph-minimal.json", ["rel(bn)"]),
     ]);
 
     await loadWithSid(page, sidA);
