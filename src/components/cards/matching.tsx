@@ -44,6 +44,7 @@ import {
 import {
     determineMatchingBoundary,
     findMatchingPlaces,
+    sanitizeMatchingQuestionDataOnTypeChange,
 } from "@/maps/questions/matching";
 import {
     determineUnionizedStrings,
@@ -439,7 +440,18 @@ export const MatchingQuestionComponent = ({
                         (data as any).geo = [];
                         toast.info("Please draw the points on the map.");
                     }
-                    data.type = pendingCustomType;
+                    const cleaned = sanitizeMatchingQuestionDataOnTypeChange(
+                        data,
+                        pendingCustomType,
+                        {
+                            defaultAdminLevel:
+                                modeConfig.defaultMatchingAdminLevel,
+                        },
+                    );
+                    Object.keys(data).forEach((k) => {
+                        if (!(k in cleaned)) delete (data as any)[k];
+                    });
+                    Object.assign(data, cleaned);
                     questionModified();
                     setCustomDialogOpen(false);
                 }}
@@ -470,7 +482,18 @@ export const MatchingQuestionComponent = ({
                             toast.info("Please draw the points on the map.");
                         }
                     }
-                    data.type = pendingCustomType;
+                    const cleaned = sanitizeMatchingQuestionDataOnTypeChange(
+                        data,
+                        pendingCustomType,
+                        {
+                            defaultAdminLevel:
+                                modeConfig.defaultMatchingAdminLevel,
+                        },
+                    );
+                    Object.keys(data).forEach((k) => {
+                        if (!(k in cleaned)) delete (data as any)[k];
+                    });
+                    Object.assign(data, cleaned);
                     questionModified();
                     setCustomDialogOpen(false);
                 }}
@@ -579,30 +602,37 @@ export const MatchingQuestionComponent = ({
                                     }
                                 }
                             }
-                            // The category should be defined such that no error is thrown if this is a zone question.
-                            if (!(data as any).cat) {
-                                (data as any).cat = {
-                                    adminLevel:
-                                        modeConfig.defaultMatchingAdminLevel,
-                                };
-                            }
-                            questionModified((data.type = value));
+                            const cleaned =
+                                sanitizeMatchingQuestionDataOnTypeChange(
+                                    data,
+                                    value,
+                                    {
+                                        defaultAdminLevel:
+                                            modeConfig.defaultMatchingAdminLevel,
+                                    },
+                                );
+                            Object.keys(data).forEach((k) => {
+                                if (!(k in cleaned)) delete (data as any)[k];
+                            });
+                            Object.assign(data, cleaned);
+                            questionModified();
                             return;
                         }
 
-                        if (value === "same-length-station") {
-                            data.lengthComparison = "same";
-                            data.same = true;
-                        }
-
-                        // The category should be defined such that no error is thrown if this is a zone question.
-                        if (!(data as any).cat) {
-                            (data as any).cat = {
-                                adminLevel:
-                                    modeConfig.defaultMatchingAdminLevel,
-                            };
-                        }
-                        questionModified((data.type = value));
+                        const cleaned =
+                            sanitizeMatchingQuestionDataOnTypeChange(
+                                data,
+                                value,
+                                {
+                                    defaultAdminLevel:
+                                        modeConfig.defaultMatchingAdminLevel,
+                                },
+                            );
+                        Object.keys(data).forEach((k) => {
+                            if (!(k in cleaned)) delete (data as any)[k];
+                        });
+                        Object.assign(data, cleaned);
+                        questionModified();
                     }}
                     disabled={!data.drag || $isLoading}
                 />

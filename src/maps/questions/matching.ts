@@ -44,6 +44,7 @@ import type {
     HomeGameMatchingQuestions,
     MatchingQuestion,
 } from "@/maps/schema";
+import { matchingQuestionSchema } from "@/maps/schema";
 
 export const findMatchingPlaces = async (question: MatchingQuestion) => {
     switch (question.type) {
@@ -546,6 +547,31 @@ export const hiderifyMatching = async (question: MatchingQuestion) => {
 
     return question;
 };
+
+export function sanitizeMatchingQuestionDataOnTypeChange(
+    data: Record<string, unknown>,
+    newType: string,
+    opts?: { defaultAdminLevel?: number },
+): Record<string, unknown> {
+    const input = { ...data, type: newType };
+    const result = matchingQuestionSchema.parse(input) as Record<
+        string,
+        unknown
+    >;
+
+    if ((newType === "zone" || newType === "letter-zone") && !("cat" in data)) {
+        result.cat = { adminLevel: opts?.defaultAdminLevel ?? 3 } as Record<
+            string,
+            unknown
+        >;
+    }
+    if (newType === "same-length-station") {
+        result.lengthComparison = result.lengthComparison || "same";
+        result.same = true;
+    }
+
+    return result;
+}
 
 export const matchingPlanningPolygon = async (question: MatchingQuestion) => {
     try {
