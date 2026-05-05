@@ -154,7 +154,6 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
     const $casServerUrl = useStore(casServerUrl);
     const $casStatus = useStore(casServerStatus);
     const $liveSyncEnabled = useStore(liveSyncEnabled);
-    const hasSyncedInitialUnit = useRef(false);
     const [isOptionsOpen, setOptionsOpen] = useState(false);
     const [clientMounted, setClientMounted] = useState(false);
     const [replaceStateOpen, setReplaceStateOpen] = useState(false);
@@ -257,17 +256,6 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
             toast.error(`Could not load session (${sid}): ${e}`);
         }
     }, [maybeReplaceThenApply]);
-
-    useEffect(() => {
-        const currentDefault = $defaultUnit;
-
-        if (!hasSyncedInitialUnit.current) {
-            hasSyncedInitialUnit.current = true;
-            if (hidingRadiusUnits.get() !== currentDefault) {
-                hidingRadiusUnits.set(currentDefault);
-            }
-        }
-    }, [$defaultUnit]);
 
     useEffect(() => {
         initLiveSync();

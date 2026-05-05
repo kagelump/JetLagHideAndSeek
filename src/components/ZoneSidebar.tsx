@@ -18,6 +18,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar-r";
 import {
+    additionalMapGeoLocations,
     animateMapMovements,
     autoZoom,
     customStations as customStationsAtom,
@@ -28,6 +29,8 @@ import {
     displayHidingZonesStyle,
     hidingRadius,
     hidingRadiusUnits,
+    hidingZoneData,
+    type HidingZoneDataSourceInputs,
     includeDefaultStations as includeDefaultStationsAtom,
     isLoading,
     leafletMapContext,
@@ -35,6 +38,7 @@ import {
     mergeDuplicates as mergeDuplicatesAtom,
     planningModeEnabled,
     playAreaMode,
+    polyGeoJSON,
     questionFinishedMapData,
     questions,
     team,
@@ -42,6 +46,10 @@ import {
     transitGraph,
     useCustomStations as useCustomStationsAtom,
 } from "@/lib/context";
+import {
+    buildHidingZoneRuntimeData,
+    sourceInputsMatch,
+} from "@/lib/hidingZoneRuntimeData";
 import { isHomeGamePoiType } from "@/lib/nearestPoi";
 import { PLAY_AREA_MODES } from "@/lib/playAreaModes";
 import {
@@ -147,7 +155,10 @@ export const ZoneSidebar = () => {
     const $team = useStore(team);
     const $playAreaMode = useStore(playAreaMode);
     const $mapGeoLocation = useStore(mapGeoLocation);
+    const $additionalMapGeoLocations = useStore(additionalMapGeoLocations);
+    const $polyGeoJSON = useStore(polyGeoJSON);
     const $transitGraph = useStore(transitGraph);
+    const $hidingZoneData = useStore(hidingZoneData);
     const modeConfig = PLAY_AREA_MODES[$playAreaMode];
     const isTokyoZone = isTokyoTransitPassEligibleLocation($mapGeoLocation);
 
@@ -207,6 +218,41 @@ export const ZoneSidebar = () => {
         $isLoading ||
         !canFetchDefaultStations ||
         operatorSelectOptions.length === 0;
+
+    const mapLocationSource = {
+        type: $mapGeoLocation.type,
+        geometry: $mapGeoLocation.geometry,
+        properties: {
+            osm_type: $mapGeoLocation.properties.osm_type,
+            osm_id: $mapGeoLocation.properties.osm_id,
+            extent: $mapGeoLocation.properties.extent,
+            country: $mapGeoLocation.properties.country,
+            state: $mapGeoLocation.properties.state,
+            osm_key: $mapGeoLocation.properties.osm_key,
+            countrycode: $mapGeoLocation.properties.countrycode,
+            osm_value: $mapGeoLocation.properties.osm_value,
+            name: $mapGeoLocation.properties.name,
+            type: $mapGeoLocation.properties.type,
+        },
+    };
+
+    const buildCurrentSourceInputs = (): HidingZoneDataSourceInputs => ({
+        playArea: {
+            polyGeoJSON: $polyGeoJSON,
+            mapGeoLocation: mapLocationSource,
+            additionalMapGeoLocations: $additionalMapGeoLocations,
+        },
+        questions: questions.get(),
+        radius: $hidingRadius,
+        radiusUnits: $hidingRadiusUnits,
+        zoneOptions: $displayHidingZonesOptions,
+        zoneOperators: $displayHidingZoneOperators,
+        useCustomStations,
+        customStations: $customStations,
+        includeDefaultStations,
+        mergeDuplicates,
+        stationNameStrategy: modeConfig.stationNameStrategy,
+    });
 
     const removeHidingZones = () => {
         if (!map) return;
@@ -277,6 +323,18 @@ export const ZoneSidebar = () => {
 
         const initializeHidingZones = async () => {
             isLoading.set(true);
+            const sourceInputs = buildCurrentSourceInputs();
+
+            if (
+                $hidingZoneData &&
+                sourceInputsMatch($hidingZoneData.sourceInputs, sourceInputs)
+            ) {
+                setOperatorFilterStats(null);
+                transitGraph.set($hidingZoneData.transitGraph);
+                setStations(structuredClone($hidingZoneData.stationCircles));
+                isLoading.set(false);
+                return;
+            }
 
             const needsDefault = !useCustomStations || includeDefaultStations;
             if (needsDefault && $displayHidingZonesOptions.length === 0) {
@@ -422,7 +480,10 @@ export const ZoneSidebar = () => {
                     return turf.booleanIntersects(circle, playableZone);
                 });
 
+            let activeTransitGraph = $transitGraph;
+
             if (useCustomStations && !includeDefaultStations) {
+                activeTransitGraph = null;
                 transitGraph.set(null);
             } else {
                 try {
@@ -436,8 +497,10 @@ export const ZoneSidebar = () => {
                             operatorFilter: $displayHidingZoneOperators,
                         },
                     );
+                    activeTransitGraph = graph;
                     transitGraph.set(graph);
                 } catch {
+                    activeTransitGraph = null;
                     transitGraph.set(null);
                     toast.warning(
                         "Failed to build transit graph; same-transit-line features may be limited.",
@@ -490,7 +553,7 @@ export const ZoneSidebar = () => {
                             continue;
                         }
 
-                        const graph = $transitGraph;
+                        const graph = activeTransitGraph;
                         if (!graph) {
                             toast.warning(
                                 "Same transit line requires the hiding-zone transit graph; skipping this filter.",
@@ -619,6 +682,12 @@ export const ZoneSidebar = () => {
                 }
             }
 
+            const runtimeData = buildHidingZoneRuntimeData(
+                circles,
+                activeTransitGraph,
+                sourceInputs,
+            );
+            hidingZoneData.set(runtimeData);
             setStations(circles);
             isLoading.set(false);
         };
@@ -642,6 +711,14 @@ export const ZoneSidebar = () => {
         $customStations,
         mergeDuplicates,
         $displayHidingZoneOperators,
+        $hidingZoneData,
+        $hidingRadiusUnits,
+        $customStations,
+        $transitGraph,
+        $polyGeoJSON,
+        $mapGeoLocation,
+        $additionalMapGeoLocations,
+        modeConfig.stationNameStrategy,
     ]);
 
     useEffect(() => {

@@ -3,18 +3,19 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
     customPresets,
     defaultUnit,
-    displayHidingZones,
     displayHidingZoneOperators,
+    displayHidingZones,
     displayHidingZonesOptions,
     displayHidingZonesStyle,
     hidingRadius,
     hidingRadiusUnits,
     hidingZone,
-    mapGeoLocation,
-    polyGeoJSON,
+    hidingZoneData,
+    mergeDuplicates,
     questions,
     saveCustomPreset,
-    team,
+    trainStations,
+    transitGraph,
 } from "@/lib/context";
 import {
     applyHidingZoneGeojson,
@@ -26,6 +27,8 @@ import {
     stripWireEnvelope,
     wireV1SnapshotSchema,
 } from "@/lib/wire";
+import type { StationCircle } from "@/maps/api";
+import type { TransitGraph } from "@/maps/geo-utils";
 import type { Questions } from "@/maps/schema";
 
 const basePayload = {
@@ -52,7 +55,89 @@ afterEach(() => {
     hidingRadius.set(0.5);
     hidingRadiusUnits.set("miles");
     displayHidingZonesStyle.set("zones");
+    displayHidingZones.set(false);
+    displayHidingZonesOptions.set(["[railway=station]"]);
+    displayHidingZoneOperators.set([]);
+    mergeDuplicates.set(false);
+    hidingZoneData.set(null);
+    trainStations.set([]);
+    transitGraph.set(null);
 });
+
+const stationCircle: StationCircle = {
+    type: "Feature",
+    geometry: {
+        type: "Polygon",
+        coordinates: [
+            [
+                [139, 35],
+                [139.001, 35],
+                [139.001, 35.001],
+                [139, 35.001],
+                [139, 35],
+            ],
+        ],
+    },
+    properties: {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [139, 35] },
+        properties: {
+            id: "node/1001",
+            name: "Station Alpha",
+            operator: "Test Metro",
+        },
+    },
+};
+
+const graph: TransitGraph = {
+    stationsById: {
+        "node/1001": {
+            id: "node/1001",
+            label: "Station Alpha",
+            coordinates: [139, 35],
+            operator: "Test Metro",
+        },
+    },
+    linesById: {
+        "relation/100": {
+            id: "relation/100",
+            label: "Test Line A",
+            operator: "Test Metro",
+        },
+    },
+    stationLineIds: { "node/1001": ["relation/100"] },
+    lineStationIds: { "relation/100": ["node/1001"] },
+};
+
+const sourceInputs = {
+    playArea: {
+        polyGeoJSON: null,
+        mapGeoLocation: {
+            type: basePayload.type,
+            geometry: basePayload.geometry,
+            properties: {
+                osm_type: basePayload.properties.osm_type,
+                osm_id: basePayload.properties.osm_id,
+                osm_key: basePayload.properties.osm_key,
+                countrycode: basePayload.properties.countrycode,
+                osm_value: basePayload.properties.osm_value,
+                name: basePayload.properties.name,
+                type: basePayload.properties.type,
+            },
+        },
+        additionalMapGeoLocations: [],
+    },
+    questions: [],
+    radius: 600,
+    radiusUnits: "meters" as const,
+    zoneOptions: ["[railway=station]"],
+    zoneOperators: ["Test Metro"],
+    useCustomStations: false,
+    customStations: [],
+    includeDefaultStations: false,
+    mergeDuplicates: true,
+    stationNameStrategy: "english-preferred",
+};
 
 describe("CAS game state settings", () => {
     it("includes unit and hiding-zone display settings in the wire payload", () => {
@@ -60,6 +145,13 @@ describe("CAS game state settings", () => {
         hidingRadius.set(1.25);
         hidingRadiusUnits.set("meters");
         displayHidingZonesStyle.set("no-overlap");
+        mergeDuplicates.set(true);
+        hidingZoneData.set({
+            v: 1,
+            stationCircles: [stationCircle],
+            transitGraph: graph,
+            sourceInputs,
+        });
 
         const wire = buildWireV1Envelope(hidingZone.get());
 
@@ -68,6 +160,12 @@ describe("CAS game state settings", () => {
             hidingRadius: 1.25,
             hidingRadiusUnits: "meters",
             displayHidingZonesStyle: "no-overlap",
+            mergeDuplicates: true,
+            hidingZoneData: {
+                v: 1,
+                stationCircles: [stationCircle],
+                transitGraph: graph,
+            },
         });
     });
 
@@ -85,6 +183,13 @@ describe("CAS game state settings", () => {
                 hidingRadius: 2.75,
                 hidingRadiusUnits: "meters",
                 displayHidingZonesStyle: "no-overlap",
+                mergeDuplicates: true,
+                hidingZoneData: {
+                    v: 1,
+                    stationCircles: [stationCircle],
+                    transitGraph: graph,
+                    sourceInputs,
+                },
             }),
         );
 
@@ -92,6 +197,43 @@ describe("CAS game state settings", () => {
         expect(hidingRadius.get()).toBe(2.75);
         expect(hidingRadiusUnits.get()).toBe("meters");
         expect(displayHidingZonesStyle.get()).toBe("no-overlap");
+        expect(mergeDuplicates.get()).toBe(true);
+        expect(hidingZoneData.get()?.stationCircles).toEqual([stationCircle]);
+        expect(trainStations.get()).toEqual([stationCircle]);
+        expect(transitGraph.get()).toEqual(graph);
+    });
+
+    it("repairs legacy Tokyo Metro Daypass payloads saved as 600 miles", () => {
+        applyWireV1Payload(
+            JSON.stringify({
+                v: 1,
+                ...basePayload,
+                hidingRadius: 600,
+                hidingRadiusUnits: "miles",
+                zoneOptions: ["[railway=station]", "[railway=stop]"],
+                zoneOperators: [
+                    "東京地下鉄",
+                    "東京地下鉄;東京都交通局",
+                    "西武鉄道;東京地下鉄",
+                    "東日本旅客鉄道;東京地下鉄",
+                    "東急電鉄;東京地下鉄",
+                    "東京地下鉄;埼玉高速鉄道",
+                    "東京メトロ半蔵門線",
+                    "東京メト",
+                    "東京急行電鉄;東京地下鉄",
+                    "小田急電鉄;東京地下鉄",
+                    "東武鉄道;東京地下鉄",
+                    "東京メトロ",
+                ],
+                displayHidingZones: true,
+                displayHidingZonesStyle: "no-overlap",
+                useCustomStations: false,
+                includeDefaultStations: false,
+            }),
+        );
+
+        expect(hidingRadius.get()).toBe(600);
+        expect(hidingRadiusUnits.get()).toBe("meters");
     });
 
     it("leaves local settings intact for legacy payloads without the new keys", () => {
@@ -318,21 +460,27 @@ describe("wire/CAS full round-trip", () => {
             throw new Error("Expected same-train-line question");
         }
         expect(restoredQuestion.data.selectedTrainLineId).toBe("way/456");
-        expect(restoredQuestion.data.selectedTrainLineLabel).toBe("Yamanote Line");
+        expect(restoredQuestion.data.selectedTrainLineLabel).toBe(
+            "Yamanote Line",
+        );
     });
 
     it("roundtrip preserves custom presets", () => {
         customPresets.set([]);
         applyHidingZoneGeojson(basePayload);
-        saveCustomPreset({ name: "RoundtripTest", type: "custom", data: { x: 1 } });
+        saveCustomPreset({
+            name: "RoundtripTest",
+            type: "custom",
+            data: { x: 1 },
+        });
 
         const wire = buildWireV1Envelope(hidingZone.get());
         customPresets.set([]);
         applyWireV1Payload(JSON.stringify(wire));
 
-        expect(customPresets.get().some((p) => p.name === "RoundtripTest")).toBe(
-            true,
-        );
+        expect(
+            customPresets.get().some((p) => p.name === "RoundtripTest"),
+        ).toBe(true);
     });
 
     it("applyHidingZoneGeojson with isHidingZone flag processes questions", () => {

@@ -12,18 +12,27 @@ import {
     displayHidingZonesStyle,
     hidingRadius,
     hidingRadiusUnits,
+    hidingZoneData,
     includeDefaultStations,
     mapGeoJSON,
     mapGeoLocation,
+    mergeDuplicates,
     permanentOverlay,
+    playAreaMode,
     polyGeoJSON,
     questions,
     refreshPlayAreaModeFromCurrentLocations,
     refreshPlayAreaModeFromGeometry,
+    setSuppressPlayAreaModeRefresh,
     team,
+    trainStations,
+    transitGraph,
     useCustomStations,
 } from "@/lib/context";
+import { parseHidingZoneRuntimeData } from "@/lib/hidingZoneRuntimeData";
 import { normalizePlayAreaGeometry } from "@/lib/playAreaMode";
+import { PLAY_AREA_MODES, type PlayAreaModeId } from "@/lib/playAreaModes";
+import { TOKYO_METRO_DAYPASS_PROFILE } from "@/lib/transitPasses";
 import {
     stripWireEnvelope,
     teamSchema,
@@ -55,6 +64,33 @@ const isDisplayHidingZonesStyle = (
     typeof value === "string" &&
     (DISPLAY_HIDING_ZONES_STYLE_VALUES as readonly string[]).includes(value);
 
+const isPlayAreaModeId = (value: unknown): value is PlayAreaModeId =>
+    typeof value === "string" && value in PLAY_AREA_MODES;
+
+const sameStringArray = (a: unknown, b: readonly string[]) =>
+    Array.isArray(a) &&
+    a.length === b.length &&
+    a.every((value, idx) => value === b[idx]);
+
+const shouldRepairTokyoMetroDaypassRadiusUnits = (
+    geojson: Record<string, unknown>,
+) =>
+    geojson.hidingRadius === TOKYO_METRO_DAYPASS_PROFILE.radius &&
+    geojson.hidingRadiusUnits === "miles" &&
+    sameStringArray(
+        geojson.zoneOptions,
+        TOKYO_METRO_DAYPASS_PROFILE.zoneOptions,
+    ) &&
+    sameStringArray(
+        geojson.zoneOperators,
+        TOKYO_METRO_DAYPASS_PROFILE.operators,
+    ) &&
+    geojson.displayHidingZones === true &&
+    geojson.displayHidingZonesStyle ===
+        TOKYO_METRO_DAYPASS_PROFILE.displayStyle &&
+    geojson.useCustomStations === false &&
+    geojson.includeDefaultStations === false;
+
 export function applyWireV1Payload(jsonText: string) {
     const snap = wireV1SnapshotSchema.parse(JSON.parse(jsonText));
     const { geo, team: teamPayload } = stripWireEnvelope(snap);
@@ -64,44 +100,70 @@ export function applyWireV1Payload(jsonText: string) {
 
 export function applyHidingZoneGeojson(geojson: Record<string, unknown>) {
     const playAreaGeometry = normalizePlayAreaGeometry(geojson);
+    const incomingPlayAreaMode = isPlayAreaModeId(geojson.playAreaMode)
+        ? geojson.playAreaMode
+        : null;
 
-    if (
-        geojson.properties &&
-        typeof geojson.properties === "object" &&
-        (geojson.properties as { isHidingZone?: boolean }).isHidingZone === true
-    ) {
-        questions.set(
-            questionsSchema.parse(
-                (geojson.properties as { questions?: unknown }).questions ?? [],
-            ),
-        );
-        mapGeoLocation.set(geojson as never);
-        mapGeoJSON.set(null);
-        polyGeoJSON.set(null);
+    if (incomingPlayAreaMode) {
+        setSuppressPlayAreaModeRefresh(true);
+    }
+    try {
+        if (
+            geojson.properties &&
+            typeof geojson.properties === "object" &&
+            (geojson.properties as { isHidingZone?: boolean }).isHidingZone ===
+                true
+        ) {
+            questions.set(
+                questionsSchema.parse(
+                    (geojson.properties as { questions?: unknown }).questions ??
+                        [],
+                ),
+            );
+            mapGeoLocation.set(geojson as never);
+            mapGeoJSON.set(null);
+            polyGeoJSON.set(null);
 
-        if (geojson.alternateLocations) {
-            additionalMapGeoLocations.set(geojson.alternateLocations as never);
+            if (geojson.alternateLocations) {
+                additionalMapGeoLocations.set(
+                    geojson.alternateLocations as never,
+                );
+            } else {
+                additionalMapGeoLocations.set([]);
+            }
+
+            if (incomingPlayAreaMode) {
+                playAreaMode.set(incomingPlayAreaMode);
+            } else if (playAreaGeometry) {
+                void refreshPlayAreaModeFromGeometry(playAreaGeometry);
+            } else {
+                void refreshPlayAreaModeFromCurrentLocations();
+            }
+        } else if (geojson.questions) {
+            questions.set(questionsSchema.parse(geojson.questions));
+            const clone = { ...geojson };
+            delete clone.questions;
+            mapGeoJSON.set(clone as never);
+            polyGeoJSON.set(clone as never);
+            if (incomingPlayAreaMode) {
+                playAreaMode.set(incomingPlayAreaMode);
+            } else {
+                void refreshPlayAreaModeFromGeometry(clone);
+            }
         } else {
-            additionalMapGeoLocations.set([]);
+            questions.set([]);
+            mapGeoJSON.set(geojson as never);
+            polyGeoJSON.set(geojson as never);
+            if (incomingPlayAreaMode) {
+                playAreaMode.set(incomingPlayAreaMode);
+            } else {
+                void refreshPlayAreaModeFromGeometry(geojson);
+            }
         }
-
-        if (playAreaGeometry) {
-            void refreshPlayAreaModeFromGeometry(playAreaGeometry);
-        } else {
-            void refreshPlayAreaModeFromCurrentLocations();
+    } finally {
+        if (incomingPlayAreaMode) {
+            setSuppressPlayAreaModeRefresh(false);
         }
-    } else if (geojson.questions) {
-        questions.set(questionsSchema.parse(geojson.questions));
-        const clone = { ...geojson };
-        delete clone.questions;
-        mapGeoJSON.set(clone as never);
-        polyGeoJSON.set(clone as never);
-        void refreshPlayAreaModeFromGeometry(clone);
-    } else {
-        questions.set([]);
-        mapGeoJSON.set(geojson as never);
-        polyGeoJSON.set(geojson as never);
-        void refreshPlayAreaModeFromGeometry(geojson);
     }
 
     const incomingPresets =
@@ -148,7 +210,11 @@ export function applyHidingZoneGeojson(geojson: Record<string, unknown>) {
     }
 
     if (isUnit(geojson.hidingRadiusUnits)) {
-        hidingRadiusUnits.set(geojson.hidingRadiusUnits);
+        hidingRadiusUnits.set(
+            shouldRepairTokyoMetroDaypassRadiusUnits(geojson)
+                ? TOKYO_METRO_DAYPASS_PROFILE.radiusUnits
+                : geojson.hidingRadiusUnits,
+        );
     }
 
     if (isUnit(geojson.defaultUnit)) {
@@ -201,6 +267,20 @@ export function applyHidingZoneGeojson(geojson: Record<string, unknown>) {
 
     if (typeof geojson.includeDefaultStations === "boolean") {
         includeDefaultStations.set(geojson.includeDefaultStations);
+    }
+
+    if (typeof geojson.mergeDuplicates === "boolean") {
+        mergeDuplicates.set(geojson.mergeDuplicates);
+    }
+
+    const runtimeData = parseHidingZoneRuntimeData(geojson.hidingZoneData);
+    hidingZoneData.set(runtimeData);
+    if (runtimeData) {
+        trainStations.set(runtimeData.stationCircles);
+        transitGraph.set(runtimeData.transitGraph);
+    } else {
+        trainStations.set([]);
+        transitGraph.set(null);
     }
 
     if (geojson.permanentOverlay) {

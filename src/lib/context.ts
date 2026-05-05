@@ -70,6 +70,11 @@ export const polyGeoJSON = persistentJsonAtom<FeatureCollection<
 export const playAreaMode = atom<PlayAreaModeId>("default");
 
 let playAreaModeRecomputeGeneration = 0;
+let suppressPlayAreaModeRefresh = false;
+
+export const setSuppressPlayAreaModeRefresh = (value: boolean) => {
+    suppressPlayAreaModeRefresh = value;
+};
 
 const updatePlayAreaMode = async (resolver: () => Promise<PlayAreaModeId>) => {
     const generation = ++playAreaModeRecomputeGeneration;
@@ -127,6 +132,7 @@ export const refreshPlayAreaModeFromCurrentLocations = async () => {
 
 [mapGeoLocation, additionalMapGeoLocations].forEach((s) => {
     onSet(s, () => {
+        if (suppressPlayAreaModeRefresh) return;
         refreshPlayAreaModeFromCurrentLocations();
     });
 });
@@ -137,8 +143,6 @@ if (typeof window !== "undefined") {
         const poly = polyGeoJSON.get();
         if (poly !== null) {
             void refreshPlayAreaModeFromGeometry(poly);
-        } else {
-            void refreshPlayAreaModeFromCurrentLocations();
         }
     }, 0);
 }
@@ -270,6 +274,28 @@ export const questionFinishedMapData = atom<any>(null);
 
 export const trainStations = atom<StationCircle[]>([]);
 export const transitGraph = atom<TransitGraph | null>(null);
+export type HidingZoneDataSourceInputs = {
+    playArea: unknown;
+    questions: Questions;
+    radius: number;
+    radiusUnits: Units;
+    zoneOptions: string[];
+    zoneOperators: string[];
+    useCustomStations: boolean;
+    customStations: CustomStation[];
+    includeDefaultStations: boolean;
+    mergeDuplicates: boolean;
+    stationNameStrategy: string;
+};
+
+export type HidingZoneRuntimeData = {
+    v: 1;
+    stationCircles: StationCircle[];
+    transitGraph: TransitGraph | null;
+    sourceInputs: HidingZoneDataSourceInputs;
+};
+
+export const hidingZoneData = atom<HidingZoneRuntimeData | null>(null);
 onSet(trainStations, ({ newValue }) => {
     const mode = playAreaMode.get();
     const strategy = PLAY_AREA_MODES[mode].stationNameStrategy;
@@ -409,6 +435,9 @@ export const hidingZone = computed(
         useCustomStations,
         customStations,
         includeDefaultStations,
+        mergeDuplicates,
+        playAreaMode,
+        hidingZoneData,
         customPresets,
         permanentOverlay,
         team,
@@ -429,6 +458,9 @@ export const hidingZone = computed(
         useCustom,
         $customStations,
         includeDefault,
+        mergeDupes,
+        $playAreaMode,
+        $hidingZoneData,
         presets,
         $permanentOverlay,
         $team,
@@ -451,6 +483,9 @@ export const hidingZone = computed(
                 useCustomStations: useCustom,
                 customStations: $customStations,
                 includeDefaultStations: includeDefault,
+                mergeDuplicates: mergeDupes,
+                playAreaMode: $playAreaMode,
+                hidingZoneData: $hidingZoneData,
                 presets: structuredClone(presets),
                 permanentOverlay: $permanentOverlay,
                 defaultUnit: unit,
@@ -472,6 +507,9 @@ export const hidingZone = computed(
             useCustomStations: useCustom,
             customStations: $customStations,
             includeDefaultStations: includeDefault,
+            mergeDuplicates: mergeDupes,
+            playAreaMode: $playAreaMode,
+            hidingZoneData: $hidingZoneData,
             presets: structuredClone(presets),
             permanentOverlay: $permanentOverlay,
             defaultUnit: unit,

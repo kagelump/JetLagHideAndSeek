@@ -57,10 +57,134 @@ const baseSeed = (
     useCustomStations: false,
     customStations: [],
     includeDefaultStations: false,
+    mergeDuplicates: false,
+    playAreaMode: "default",
     presets: [],
     permanentOverlay: null,
     ...topOverrides,
 });
+
+const stationCircle = (id: string, name: string, lng: number, lat: number) => ({
+    type: "Feature",
+    geometry: {
+        type: "Polygon",
+        coordinates: [
+            [
+                [lng - 0.002, lat - 0.002],
+                [lng + 0.002, lat - 0.002],
+                [lng + 0.002, lat + 0.002],
+                [lng - 0.002, lat + 0.002],
+                [lng - 0.002, lat - 0.002],
+            ],
+        ],
+    },
+    properties: {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lng, lat] },
+        properties: {
+            id,
+            name,
+            "name:en": name,
+            ref:
+                id === "node/1001"
+                    ? "A-01"
+                    : id === "node/1002"
+                      ? "A-02"
+                      : "A-03",
+            network: "Test Metro",
+            operator: "Test Metro",
+        },
+    },
+});
+
+const cachedTransitGraph = {
+    stationsById: {
+        "node/1001": {
+            id: "node/1001",
+            label: "Station Alpha",
+            coordinates: [139.0, 35.0],
+            network: "Test Metro",
+            operator: "Test Metro",
+        },
+        "node/1002": {
+            id: "node/1002",
+            label: "Station Beta",
+            coordinates: [139.1, 35.1],
+            network: "Test Metro",
+            operator: "Test Metro",
+        },
+        "node/1003": {
+            id: "node/1003",
+            label: "Station Gamma",
+            coordinates: [139.2, 35.2],
+            network: "Test Metro",
+            operator: "Test Metro",
+        },
+    },
+    linesById: {
+        "relation/100": {
+            id: "relation/100",
+            label: "Test Line A",
+            network: "Test Metro",
+            operator: "Test Metro",
+        },
+    },
+    stationLineIds: {
+        "node/1001": ["relation/100"],
+        "node/1002": ["relation/100"],
+        "node/1003": ["relation/100"],
+    },
+    lineStationIds: {
+        "relation/100": ["node/1001", "node/1002", "node/1003"],
+    },
+};
+
+const withCachedHidingZoneData = (seed: ReturnType<typeof baseSeed>) => {
+    const { ...geo } = seed;
+    const stationCircles = [
+        stationCircle("node/1001", "Station Alpha", 139.0, 35.0),
+        stationCircle("node/1002", "Station Beta", 139.1, 35.1),
+        stationCircle("node/1003", "Station Gamma", 139.2, 35.2),
+    ];
+
+    return {
+        ...seed,
+        hidingZoneData: {
+            v: 1,
+            stationCircles,
+            transitGraph: cachedTransitGraph,
+            sourceInputs: {
+                playArea: {
+                    polyGeoJSON: null,
+                    mapGeoLocation: {
+                        type: geo.type,
+                        geometry: geo.geometry,
+                        properties: {
+                            osm_type: geo.properties.osm_type,
+                            osm_id: geo.properties.osm_id,
+                            extent: geo.properties.extent,
+                            country: geo.properties.country,
+                            countrycode: geo.properties.countrycode,
+                            name: geo.properties.name,
+                            type: geo.properties.type,
+                        },
+                    },
+                    additionalMapGeoLocations: [],
+                },
+                questions: geo.properties.questions,
+                radius: geo.hidingRadius,
+                radiusUnits: geo.hidingRadiusUnits,
+                zoneOptions: geo.zoneOptions,
+                zoneOperators: geo.zoneOperators,
+                useCustomStations: geo.useCustomStations,
+                customStations: geo.customStations,
+                includeDefaultStations: geo.includeDefaultStations,
+                mergeDuplicates: false,
+                stationNameStrategy: "english-preferred",
+            },
+        },
+    };
+};
 
 async function loadState(
     page: any,
@@ -166,6 +290,59 @@ test("C1: Dropdown populates from nearest station (operator filtered)", async ({
         expect(opt).not.toContain("route_master");
         expect(opt).not.toContain("-->");
     }
+});
+
+test("C1c: Cached hiding-zone data loads without station Overpass", async ({
+    page,
+}) => {
+    const seedSnapshot = withCachedHidingZoneData(baseSeed());
+    const { sid, compressedPayload } = await buildCasBlob(seedSnapshot);
+    await seedOrMockCasBlob(sid, compressedPayload);
+
+    await page.goto("/JetLagHideAndSeek/");
+    await clearPwaState(page);
+
+    const stationOverpassCalls: string[] = [];
+    await page.route("https://overpass-api.de/api/interpreter**", (route) => {
+        const url = new URL(route.request().url());
+        const query = decodeURIComponent(url.searchParams.get("data") ?? "");
+        if (query.includes("[railway=station]") || query.includes("rel(bn)")) {
+            stationOverpassCalls.push(query);
+            return route.abort();
+        }
+        return route.fulfill({
+            body: JSON.stringify({ version: 0.6, elements: [] }),
+            contentType: "application/json",
+        });
+    });
+    await page.route(
+        "https://overpass.private.coffee/api/interpreter**",
+        (route) => {
+            const url = new URL(route.request().url());
+            const query = decodeURIComponent(
+                url.searchParams.get("data") ?? "",
+            );
+            if (
+                query.includes("[railway=station]") ||
+                query.includes("rel(bn)")
+            ) {
+                stationOverpassCalls.push(query);
+                return route.abort();
+            }
+            return route.fulfill({
+                body: JSON.stringify({ version: 0.6, elements: [] }),
+                contentType: "application/json",
+            });
+        },
+    );
+
+    await loadWithSid(page, sid);
+
+    await expect(trainLineCombobox(page)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Stations matched: 3")).toBeVisible({
+        timeout: 15000,
+    });
+    expect(stationOverpassCalls).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------
