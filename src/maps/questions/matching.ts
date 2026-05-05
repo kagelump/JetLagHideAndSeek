@@ -20,6 +20,7 @@ import {
     transitGraph,
 } from "@/lib/context";
 import { PLAY_AREA_MODES } from "@/lib/playAreaModes";
+import type { StationCircle } from "@/maps/api";
 import {
     elementsToUniqueNamedPoints,
     findAdminBoundary,
@@ -28,6 +29,7 @@ import {
     overpassFilterForLocation,
     prettifyLocation,
 } from "@/maps/api";
+import type { TransitGraph } from "@/maps/geo-utils";
 import {
     clippedVoronoiCells,
     finalizePolygonForLeaflet,
@@ -352,6 +354,46 @@ export const determineMatchingBoundary = _.memoize(
         }),
 );
 
+export function buildStationLineBoundary(
+    question: MatchingQuestion,
+    graph: TransitGraph | null,
+    stations: StationCircle[],
+): FeatureCollection<Polygon | MultiPolygon> | null {
+    if (!graph || stations.length === 0) return null;
+
+    let lineId: string | undefined;
+
+    if (question.selectedTrainLineId) {
+        lineId = question.selectedTrainLineId;
+    } else {
+        const pointsFc = turf.featureCollection(
+            stations.map((s) => s.properties),
+        );
+        const pinPoint = turf.point([question.lng, question.lat]);
+        const nearest = turf.nearestPoint(pinPoint, pointsFc as any);
+        const nid = nearest?.properties?.id as string | undefined;
+        if (!nid) return null;
+
+        const resolution = resolveAutoTransitLine(graph, nid);
+        if (resolution.status !== "ok" || !resolution.line) return null;
+        lineId = resolution.line.id;
+    }
+
+    if (!lineId) return null;
+
+    const matchingIds = new Set(graph.lineStationIds[lineId] ?? []);
+
+    const matchingCircles = stations.filter((s) =>
+        matchingIds.has(s.properties.properties.id as string),
+    );
+
+    if (matchingCircles.length === 0) return null;
+
+    return turf.featureCollection(
+        matchingCircles as Feature<Polygon | MultiPolygon>[],
+    );
+}
+
 export const adjustPerMatching = async (
     question: MatchingQuestion,
     mapData: any,
@@ -363,6 +405,14 @@ export const adjustPerMatching = async (
             question,
             mapData as FeatureCollection<Polygon | MultiPolygon>,
         );
+        if (!boundary) return mapData;
+        return modifyMapData(mapData, boundary, question.same);
+    }
+
+    if (question.type === "same-train-line") {
+        const $graph = transitGraph.get();
+        const $stations = trainStations.get();
+        const boundary = buildStationLineBoundary(question, $graph, $stations);
         if (!boundary) return mapData;
         return modifyMapData(mapData, boundary, question.same);
     }
@@ -574,6 +624,14 @@ export function sanitizeMatchingQuestionDataOnTypeChange(
 }
 
 export const matchingPlanningPolygon = async (question: MatchingQuestion) => {
+    if (question.type === "same-train-line") {
+        const $graph = transitGraph.get();
+        const $stations = trainStations.get();
+        const boundary = buildStationLineBoundary(question, $graph, $stations);
+        if (!boundary) return false;
+        return turf.polygonToLine(boundary);
+    }
+
     try {
         const boundary = await determineMatchingBoundary(question);
 

@@ -1,10 +1,71 @@
 import * as turf from "@turf/turf";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import type { StationCircle } from "@/maps/api";
+import type { TransitGraph } from "@/maps/geo-utils";
+
+vi.mock("@/lib/context", () => {
+    const atom = (value: unknown = undefined) => ({ get: () => value });
+    return {
+        hiderMode: atom(false),
+        mapGeoJSON: atom(null),
+        mapGeoLocation: atom(null),
+        playAreaMode: atom("normal"),
+        polyGeoJSON: atom(null),
+        trainStations: atom([]),
+        transitGraph: atom(null),
+    };
+});
 
 import {
+    buildStationLineBoundary,
     pointInPolygonSafe,
     sanitizeMatchingQuestionDataOnTypeChange,
 } from "./matching";
+
+function makeTransitGraph(): TransitGraph {
+    return {
+        stationsById: {
+            "node/1": {
+                id: "node/1",
+                label: "Hiroo",
+                coordinates: [139.7222, 35.6512],
+            },
+            "node/2": {
+                id: "node/2",
+                label: "Roppongi",
+                coordinates: [139.7311, 35.6628],
+            },
+            "node/3": {
+                id: "node/3",
+                label: "Ebisu",
+                coordinates: [139.7101, 35.6467],
+            },
+        },
+        linesById: {
+            "relation/hibiya": {
+                id: "relation/hibiya",
+                label: "Hibiya Line",
+            },
+        },
+        stationLineIds: {
+            "node/1": ["relation/hibiya"],
+            "node/2": ["relation/hibiya"],
+            "node/3": [],
+        },
+        lineStationIds: {
+            "relation/hibiya": ["node/1", "node/2"],
+        },
+    };
+}
+
+function stationCircle(id: string, lng: number, lat: number): StationCircle {
+    const stationPoint = turf.point([lng, lat], { id, name: id });
+    return turf.circle([lng, lat], 0.1, {
+        units: "kilometers",
+        properties: stationPoint,
+    }) as StationCircle;
+}
 
 describe("pointInPolygonSafe", () => {
     it("returns true for valid containing polygon", () => {
@@ -33,6 +94,58 @@ describe("pointInPolygonSafe", () => {
             ],
         ]);
         expect(pointInPolygonSafe(pt, poly)).toBe(false);
+    });
+});
+
+describe("buildStationLineBoundary", () => {
+    it("builds the selected line boundary for same answers", () => {
+        const boundary = buildStationLineBoundary(
+            {
+                type: "same-train-line",
+                lat: 35.6512,
+                lng: 139.7222,
+                drag: false,
+                same: true,
+                color: "black",
+                collapsed: false,
+                selectedTrainLineId: "relation/hibiya",
+            },
+            makeTransitGraph(),
+            [
+                stationCircle("node/1", 139.7222, 35.6512),
+                stationCircle("node/2", 139.7311, 35.6628),
+                stationCircle("node/3", 139.7101, 35.6467),
+            ],
+        );
+
+        expect(
+            boundary?.features.map((s) => s.properties.properties.id),
+        ).toEqual(["node/1", "node/2"]);
+    });
+
+    it("still builds the selected line boundary for different answers", () => {
+        const boundary = buildStationLineBoundary(
+            {
+                type: "same-train-line",
+                lat: 35.6512,
+                lng: 139.7222,
+                drag: false,
+                same: false,
+                color: "black",
+                collapsed: false,
+                selectedTrainLineId: "relation/hibiya",
+            },
+            makeTransitGraph(),
+            [
+                stationCircle("node/1", 139.7222, 35.6512),
+                stationCircle("node/2", 139.7311, 35.6628),
+                stationCircle("node/3", 139.7101, 35.6467),
+            ],
+        );
+
+        expect(
+            boundary?.features.map((s) => s.properties.properties.id),
+        ).toEqual(["node/1", "node/2"]);
     });
 });
 
