@@ -24,7 +24,10 @@ export async function readBlob(
     }
 }
 
-export async function blobExists(dataDir: string, sid: string): Promise<boolean> {
+export async function blobExists(
+    dataDir: string,
+    sid: string,
+): Promise<boolean> {
     try {
         const shard = sid.slice(0, 2);
         await access(join(dataDir, "blobs", shard, sid));

@@ -62,7 +62,14 @@ function makeLockedQ() {
     return {
         id: "radius" as const,
         key: 1,
-        data: { lat: 35, lng: 135, drag: false, radius: 50, unit: "miles" as const, within: true },
+        data: {
+            lat: 35,
+            lng: 135,
+            drag: false,
+            radius: 50,
+            unit: "miles" as const,
+            within: true,
+        },
     };
 }
 
@@ -70,7 +77,14 @@ function makeUnlockedQ() {
     return {
         id: "radius" as const,
         key: 2,
-        data: { lat: 35, lng: 135, drag: true, radius: 50, unit: "miles" as const, within: true },
+        data: {
+            lat: 35,
+            lng: 135,
+            drag: true,
+            radius: 50,
+            unit: "miles" as const,
+            within: true,
+        },
     };
 }
 

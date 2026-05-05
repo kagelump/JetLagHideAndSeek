@@ -2,10 +2,10 @@
 
 ## Files
 
-| Path | Role |
-|------|------|
-| `app-icon-master.png` | **Source of truth** — square PNG (1024×1024) with transparency; edit this when the brand changes. |
-| `../../public/*.png`, `../../public/favicon.ico` | Generated deployable icons for web + PWA (do not edit by hand). |
+| Path                                             | Role                                                                                              |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `app-icon-master.png`                            | **Source of truth** — square PNG (1024×1024) with transparency; edit this when the brand changes. |
+| `../../public/*.png`, `../../public/favicon.ico` | Generated deployable icons for web + PWA (do not edit by hand).                                   |
 
 ## Regenerate `public/` from the master
 

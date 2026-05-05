@@ -2,13 +2,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import type { Feature, FeatureCollection, Polygon } from "geojson";
-import * as turf from "@turf/turf";
 import { describe, expect, it } from "vitest";
 
-import { safeUnion } from "@/maps/geo-utils";
-import { applyQuestionsToMapGeoData } from "@/maps";
-import { questionsSchema } from "@/maps/schema";
 import { canonicalize } from "@/lib/wire";
+import { applyQuestionsToMapGeoData } from "@/maps";
+import { safeUnion } from "@/maps/geo-utils";
+import { questionsSchema } from "@/maps/schema";
 
 import wireFixture from "./fixtures/wire-v1.json";
 
@@ -18,13 +17,15 @@ function makeSquare(offset: number): Feature<Polygon> {
         properties: {},
         geometry: {
             type: "Polygon",
-            coordinates: [[
-                [offset, offset],
-                [offset + 0.01, offset],
-                [offset + 0.01, offset + 0.01],
-                [offset, offset + 0.01],
-                [offset, offset],
-            ]],
+            coordinates: [
+                [
+                    [offset, offset],
+                    [offset + 0.01, offset],
+                    [offset + 0.01, offset + 0.01],
+                    [offset, offset + 0.01],
+                    [offset, offset],
+                ],
+            ],
         },
     };
 }
@@ -46,14 +47,16 @@ describe.skip("benchmarks", () => {
         const parsed = questionsSchema.parse(questions);
         const mapData: FeatureCollection = {
             type: "FeatureCollection",
-            features: [{
-                type: "Feature",
-                properties: {},
-                geometry: {
-                    type: "Point",
-                    coordinates: [139.0, 35.0],
+            features: [
+                {
+                    type: "Feature",
+                    properties: {},
+                    geometry: {
+                        type: "Point",
+                        coordinates: [139.0, 35.0],
+                    },
                 },
-            }],
+            ],
         };
 
         const start = performance.now();
@@ -65,7 +68,9 @@ describe.skip("benchmarks", () => {
     it("safeUnion on 100 overlapping polygons (<1s)", () => {
         const squares: FeatureCollection<Polygon> = {
             type: "FeatureCollection",
-            features: Array.from({ length: 100 }, (_, i) => makeSquare(i * 0.001)),
+            features: Array.from({ length: 100 }, (_, i) =>
+                makeSquare(i * 0.001),
+            ),
         };
 
         const start = performance.now();

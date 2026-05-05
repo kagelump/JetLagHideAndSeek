@@ -4,16 +4,16 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import zlib from "node:zlib";
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
-
+import { computeSidFromCanonicalUtf8 } from "../src/sid.js";
 import {
     canonicalize,
     type WireV1Snapshot,
     wireV1SnapshotSchema,
 } from "../src/wire.js";
-import { computeSidFromCanonicalUtf8 } from "../src/sid.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -148,7 +148,8 @@ describe("team snapshots API", () => {
         const snap2 = wireV1SnapshotSchema.parse(modified);
         const canonical2 = canonicalize(snap2);
         const sid2 = computeSidFromCanonicalUtf8(canonical2);
-        const compressed2 = zlib.deflateSync(Buffer.from(canonical2, "utf8"))
+        const compressed2 = zlib
+            .deflateSync(Buffer.from(canonical2, "utf8"))
             .toString("base64")
             .replace(/\+/g, "-")
             .replace(/\//g, "_")

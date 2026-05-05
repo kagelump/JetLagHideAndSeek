@@ -316,9 +316,7 @@ describe("determineUnionizedStrings", () => {
         const allLiterals: z.ZodLiteral<any>[] = [];
 
         for (const opt of matchingQuestionSchema._def.options) {
-            allLiterals.push(
-                ...determineUnionizedStrings(opt.shape.type),
-            );
+            allLiterals.push(...determineUnionizedStrings(opt.shape.type));
         }
 
         const values = allLiterals.map((r) => (r._def as any).value);
@@ -359,9 +357,7 @@ describe("determineUnionizedStrings", () => {
         const allLiterals: z.ZodLiteral<any>[] = [];
 
         for (const opt of measuringQuestionSchema._def.options) {
-            allLiterals.push(
-                ...determineUnionizedStrings(opt.shape.type),
-            );
+            allLiterals.push(...determineUnionizedStrings(opt.shape.type));
         }
 
         const values = allLiterals.map((r) => (r._def as any).value);

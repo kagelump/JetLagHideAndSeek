@@ -43,4 +43,14 @@ export default [
             "simple-import-sort/exports": "error",
         },
     },
+    {
+        files: ["server/**/*.{js,ts}"],
+        rules: {
+            "import-alias/import-alias": "off",
+        },
+    },
+    {
+        files: ["scripts/**/*.mjs"],
+        languageOptions: { globals: globals.node },
+    },
 ];

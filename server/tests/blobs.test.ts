@@ -4,16 +4,18 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import zlib from "node:zlib";
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
-import { canonicalize, wireV1SnapshotSchema } from "../src/wire.js";
 import { computeSidFromCanonicalUtf8 } from "../src/sid.js";
+import { canonicalize, wireV1SnapshotSchema } from "../src/wire.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function deflateBase64Url(str: string): string {
-    return zlib.deflateSync(Buffer.from(str, "utf8"))
+    return zlib
+        .deflateSync(Buffer.from(str, "utf8"))
         .toString("base64")
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
@@ -79,7 +81,6 @@ describe("CAS blobs API", () => {
         );
         const snap = wireV1SnapshotSchema.parse(JSON.parse(raw));
         const canonicalUtf8 = canonicalize(snap);
-        const sid = computeSidFromCanonicalUtf8(canonicalUtf8);
         const deflated = zlib.deflateSync(Buffer.from(canonicalUtf8, "utf8"));
         const compressed = deflated
             .toString("base64")
@@ -227,7 +228,12 @@ describe("CAS blobs API", () => {
 
         // Now PUT a different body at the same SID path
         const differentBody = deflateBase64Url(
-            canonicalize({ v: 1, type: "Feature", geometry: { type: "Point", coordinates: [0, 0] }, properties: {} }),
+            canonicalize({
+                v: 1,
+                type: "Feature",
+                geometry: { type: "Point", coordinates: [0, 0] },
+                properties: {},
+            }),
         );
         const res = await app.inject({
             method: "PUT",

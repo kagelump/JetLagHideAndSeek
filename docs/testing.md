@@ -4,11 +4,11 @@
 
 The project has three test suites:
 
-| Suite | Runner | Location | Scope | Command |
-|-------|--------|----------|-------|---------|
-| Frontend unit/integration | Vitest | `tests/`, `src/**/*.test.ts` | Pure functions, stores, schemas, CAS client, pipelines | `pnpm test` |
-| Server integration | Vitest | `server/tests/` | Fastify routes, SID computation, blob CRUD, teams | `pnpm --dir server test` |
-| E2E | Playwright | `e2e/` | Full browser, Overpass mocking, same-train-line matching | `pnpm test:e2e` |
+| Suite                     | Runner     | Location                     | Scope                                                    | Command                  |
+| ------------------------- | ---------- | ---------------------------- | -------------------------------------------------------- | ------------------------ |
+| Frontend unit/integration | Vitest     | `tests/`, `src/**/*.test.ts` | Pure functions, stores, schemas, CAS client, pipelines   | `pnpm test`              |
+| Server integration        | Vitest     | `server/tests/`              | Fastify routes, SID computation, blob CRUD, teams        | `pnpm --dir server test` |
+| E2E                       | Playwright | `e2e/`                       | Full browser, Overpass mocking, same-train-line matching | `pnpm test:e2e`          |
 
 Vitest configs (`vitest.config.ts` root and `server/vitest.config.ts`) ensure frontend and server tests are isolated. The root config excludes `server/` and `e2e/` directories. Playwright uses `playwright.config.ts` with the `webServer` option to launch `pnpm start:app`.
 
@@ -51,13 +51,15 @@ import { casServerStatus, questions } from "@/lib/context";
 import { afterEach } from "vitest";
 
 afterEach(() => {
-  casServerStatus.set("unknown");
-  // reset other atoms as needed
+    casServerStatus.set("unknown");
+    // reset other atoms as needed
 });
 
 it("example", () => {
-  questions.set([/* seed questions */]);
-  // test logic
+    questions.set([
+        /* seed questions */
+    ]);
+    // test logic
 });
 ```
 
@@ -71,11 +73,11 @@ import { getTestStorage, useTestStorageEngine } from "@nanostores/persistent";
 useTestStorageEngine(); // call before importing context
 
 it("saves presets", async () => {
-  const mod = await import("@/lib/context");
-  mod.customPresets.set([]);
-  // ... test logic
-  const raw = getTestStorage()["customPresets"];
-  expect(raw).toBeTruthy();
+    const mod = await import("@/lib/context");
+    mod.customPresets.set([]);
+    // ... test logic
+    const raw = getTestStorage()["customPresets"];
+    expect(raw).toBeTruthy();
 });
 ```
 
@@ -83,10 +85,14 @@ To pre-populate storage for recovery tests:
 
 ```ts
 it("recovers from pre-populated storage", async () => {
-  getTestStorage()["customPresets"] = JSON.stringify([{/*...*/}]);
-  vi.resetModules();
-  const mod = await import("@/lib/context");
-  // atoms will initialize from pre-populated test storage
+    getTestStorage()["customPresets"] = JSON.stringify([
+        {
+            /*...*/
+        },
+    ]);
+    vi.resetModules();
+    const mod = await import("@/lib/context");
+    // atoms will initialize from pre-populated test storage
 });
 ```
 
@@ -101,27 +107,30 @@ let app: Awaited<ReturnType<typeof buildApp>>;
 let dataDir: string;
 
 beforeEach(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "test-"));
-  app = await buildApp({ dataDir, /* ... */ });
-  await app.ready();
+    dataDir = await mkdtemp(join(tmpdir(), "test-"));
+    app = await buildApp({ dataDir /* ... */ });
+    await app.ready();
 });
 
 afterEach(async () => {
-  await app.close();
-  await rm(dataDir, { recursive: true, force: true });
+    await app.close();
+    await rm(dataDir, { recursive: true, force: true });
 });
 
 it("PUT and GET roundtrip", async () => {
-  const putRes = await app.inject({
-    method: "PUT",
-    url: `/api/cas/blobs/${sid}`,
-    headers: { "content-type": "text/plain; charset=utf-8" },
-    payload: compressedPayload,
-  });
-  expect(putRes.statusCode).toBe(200);
+    const putRes = await app.inject({
+        method: "PUT",
+        url: `/api/cas/blobs/${sid}`,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+        payload: compressedPayload,
+    });
+    expect(putRes.statusCode).toBe(200);
 
-  const getRes = await app.inject({ method: "GET", url: `/api/cas/blobs/${sid}` });
-  expect(getRes.statusCode).toBe(200);
+    const getRes = await app.inject({
+        method: "GET",
+        url: `/api/cas/blobs/${sid}`,
+    });
+    expect(getRes.statusCode).toBe(200);
 });
 ```
 
@@ -149,11 +158,17 @@ Wire fixtures in `tests/fixtures/` have companion `.sid.txt` files containing ex
 
 ```ts
 it("wire-v1 produces deterministic SID", () => {
-  const raw = readFileSync(join(__dirname, "../fixtures/wire-v1.json"), "utf8");
-  const snap = wireV1SnapshotSchema.parse(JSON.parse(raw));
-  const sid = computeSidFromCanonicalUtf8(canonicalize(snap));
-  const expected = readFileSync(join(__dirname, "../fixtures/wire-v1.sid.txt"), "utf8").trim();
-  expect(sid).toBe(expected);
+    const raw = readFileSync(
+        join(__dirname, "../fixtures/wire-v1.json"),
+        "utf8",
+    );
+    const snap = wireV1SnapshotSchema.parse(JSON.parse(raw));
+    const sid = computeSidFromCanonicalUtf8(canonicalize(snap));
+    const expected = readFileSync(
+        join(__dirname, "../fixtures/wire-v1.sid.txt"),
+        "utf8",
+    ).trim();
+    expect(sid).toBe(expected);
 });
 ```
 
@@ -162,6 +177,7 @@ it("wire-v1 produces deterministic SID", () => {
 See [testing-mocks.md](./testing-mocks.md) for the full mock strategy guide.
 
 Key points:
+
 - **URL resolution:** `use.baseURL` is `/JetLagHideAndSeek/`. Use relative paths for `page.goto()` to preserve the prefix (e.g., `page.goto("?sid=" + sid)`).
 - **PWA state:** Clear before each test via `clearPwaState(page)`. Clears localStorage, sessionStorage, caches, and unregisters service workers — all in-browser in a single `page.evaluate()`.
 - **CAS seeding:** Use `seedOrMockCasBlob(sid, payload)` before navigating to the SID URL.
@@ -172,18 +188,21 @@ Key points:
 ## Adding a New Test
 
 **For frontend unit tests:**
+
 1. Add the test file to `tests/` or co-locate with the source under `src/`
 2. Use Vitest conventions (`describe`, `it`, `expect`)
 3. Import from `@/lib/context` for state, `@/lib/wire` for wire operations
 4. Reset atoms in `afterEach` to avoid cross-test contamination
 
 **For server tests:**
+
 1. Add to `server/tests/`
 2. Build the app in `beforeEach` with a temp directory
 3. Tear down in `afterEach` with `app.close()` and `rm()`
 4. Use `.js` extensions for imports
 
 **For E2E tests:**
+
 1. Add to `e2e/`
 2. Seed CAS blobs before navigation, install Overpass mocks before navigation
 3. Use the helpers from `e2e/helpers.ts`

@@ -5,14 +5,14 @@
 This project uses six distinct mock strategies depending on the test context.
 This document covers each in detail with patterns, pitfalls, and examples.
 
-| Strategy | Context | Library |
-|----------|---------|---------|
-| [Fetch mocking](#fetch-mocking) | Frontend unit tests | `vi.stubGlobal` / `vi.mock` |
-| [localStorage mocking](#localstorage-mocking) | Frontend unit tests | `@nanostores/persistent` test engine |
-| [Atom seeding](#atom-seeding) | Frontend unit tests | `atom.set()` + `afterEach` reset |
-| [Fastify inject](#fastify-inject) | Server integration tests | `buildApp()` + `app.inject()` |
-| [Overpass mocking (Playwright)](#overpass-mocking-playwright) | E2E tests | `page.route()` + fixture files |
-| [CAS blob seeding (Playwright)](#cas-blob-seeding-playwright) | E2E tests | `PUT /api/cas/blobs/:sid` |
+| Strategy                                                      | Context                  | Library                              |
+| ------------------------------------------------------------- | ------------------------ | ------------------------------------ |
+| [Fetch mocking](#fetch-mocking)                               | Frontend unit tests      | `vi.stubGlobal` / `vi.mock`          |
+| [localStorage mocking](#localstorage-mocking)                 | Frontend unit tests      | `@nanostores/persistent` test engine |
+| [Atom seeding](#atom-seeding)                                 | Frontend unit tests      | `atom.set()` + `afterEach` reset     |
+| [Fastify inject](#fastify-inject)                             | Server integration tests | `buildApp()` + `app.inject()`        |
+| [Overpass mocking (Playwright)](#overpass-mocking-playwright) | E2E tests                | `page.route()` + fixture files       |
+| [CAS blob seeding (Playwright)](#cas-blob-seeding-playwright) | E2E tests                | `PUT /api/cas/blobs/:sid`            |
 
 ---
 
@@ -55,12 +55,14 @@ const { putBlobMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/cas", async () => {
-    const actual = await vi.importActual<typeof import("@/lib/cas")>("@/lib/cas");
+    const actual =
+        await vi.importActual<typeof import("@/lib/cas")>("@/lib/cas");
     return { ...actual, putBlob: putBlobMock };
 });
 ```
 
 **Pitfalls:**
+
 - `vi.mock()` is hoisted above imports. Use `vi.hoisted()` for variables referenced inside the factory.
 - Stubs persist across tests in the same file unless reset with `mockReset()` or `mockRestore()`.
 - `vi.stubGlobal("fetch", ...)` needs `vi.unstubAllGlobals()` in `afterEach` to avoid leaking.
@@ -99,6 +101,7 @@ describe("customPresets", () => {
 ```
 
 **Pitfalls:**
+
 - `useTestStorageEngine()` must be called at module level, **before** any `persistentAtom` is created. Importing `@/lib/context` creates persistent atoms, so defer the import with dynamic `import()`.
 - Use `vi.resetModules()` + dynamic re-import when testing recovery from different storage states.
 - `getTestStorage()` returns a mutable object. Modifications persist until cleared.
@@ -111,7 +114,11 @@ Import the atom, call `.set()` with seed data, and reset in `afterEach`:
 
 ```ts
 import { afterEach } from "vitest";
-import { casServerStatus, casServerEffectiveUrl, questions } from "@/lib/context";
+import {
+    casServerStatus,
+    casServerEffectiveUrl,
+    questions,
+} from "@/lib/context";
 
 afterEach(() => {
     casServerStatus.set("unknown");
@@ -121,7 +128,11 @@ afterEach(() => {
 
 it("example", async () => {
     questions.set([
-        { id: "radius", key: 0, data: { lat: 0, lng: 0, drag: false, radius: 10 } },
+        {
+            id: "radius",
+            key: 0,
+            data: { lat: 0, lng: 0, drag: false, radius: 10 },
+        },
     ]);
     casServerStatus.set("available");
 
@@ -130,6 +141,7 @@ it("example", async () => {
 ```
 
 **Pitfalls:**
+
 - Atoms are global singletons. Always reset in `afterEach` to avoid cross-test contamination.
 - `persistentAtom.set()` also writes to `localStorage`. Use the test storage engine (see above) if you need clean storage.
 - Some atoms have computed dependencies. Check `context.ts` for `computed()` atoms that derive from your seeded atoms.
@@ -181,6 +193,7 @@ describe("CAS blobs API", () => {
 `app.inject()` returns a `Response`-like object with `statusCode`, `body`, `headers`, and `json()`. It does not make real HTTP calls — it injects directly into the Fastify router.
 
 **Pitfalls:**
+
 - Always close the app and remove the temp directory. Leaked temp dirs accumulate on disk.
 - The `maxCanonicalBytes` / `maxCompressedBodyBytes` settings must be large enough for your test payloads.
 - Server tests use `.js` extensions in imports (compiled output convention).
@@ -205,8 +218,8 @@ import { mockOverpass, overpassRoute } from "./helpers";
 const overpass = await mockOverpass(page, [
     // Most specific contracts first
     overpassRoute("fukutoshin-nearest-station.json", ["1951953898"]),
-    overpassRoute("fukutoshin-exact-line.json",     ["5375678"]),
-    overpassRoute("fukutoshin-line-options.json",    ["around:300"]),
+    overpassRoute("fukutoshin-exact-line.json", ["5375678"]),
+    overpassRoute("fukutoshin-line-options.json", ["around:300"]),
     overpassRoute("fukutoshin-station-discovery.json", [
         "[railway=station]",
         "[railway=stop]",
@@ -226,11 +239,11 @@ const overpass = await mockOverpass(page, [
 
 Fragments are plain substrings matched against the decoded Overpass QL query string after `decodeURIComponent()`. Examples:
 
-| Fragment | Would match |
-|----------|-------------|
-| `1951953898` | `node(1951953898);out body;` |
-| `5375678` | `relation(5375678)->.line;` |
-| `around:300` | `rel(around:300,35.7,139.7)[route~...]` |
+| Fragment            | Would match                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| `1951953898`        | `node(1951953898);out body;`                                    |
+| `5375678`           | `relation(5375678)->.line;`                                     |
+| `around:300`        | `rel(around:300,35.7,139.7)[route~...]`                         |
 | `[railway=station]` | `node["railway"="station"]` — **won't match** because of quotes |
 
 **Important:** The fragment `[railway=station]` does NOT match `["railway"="station"]` because the quotes differ. The app's exact-line query uses quoted form, while station discovery uses the raw form. This prevents cross-contamination between contracts.
@@ -240,7 +253,7 @@ Fragments are plain substrings matched against the decoded Overpass QL query str
 Contracts are tested in the order they appear in the array. Place more specific contracts first:
 
 ```
-1. Most specific (e.g., concrete node IDs) 
+1. Most specific (e.g., concrete node IDs)
 2. Semi-specific (e.g., geographic radius queries)
 3. Broad (e.g., tag-based filters matching many queries)
 ```
@@ -271,7 +284,9 @@ This adds an 800ms delay before fulfilling, allowing the test to assert "Loading
 
 ```ts
 await expect(page.getByText("Loading stations...")).toBeVisible();
-await expect(page.getByText("Stations matched: 3")).toBeVisible({ timeout: 10000 });
+await expect(page.getByText("Stations matched: 3")).toBeVisible({
+    timeout: 10000,
+});
 ```
 
 ### Creating Fixtures
@@ -280,10 +295,16 @@ Overpass fixtures are JSON files in `e2e/fixtures/`. Each is a standard Overpass
 
 ```json
 {
-  "version": 0.6,
-  "elements": [
-    { "type": "node", "id": 1001, "lat": 35.0, "lon": 139.0, "tags": { "railway": "station", "name": "Station Alpha" } }
-  ]
+    "version": 0.6,
+    "elements": [
+        {
+            "type": "node",
+            "id": 1001,
+            "lat": 35.0,
+            "lon": 139.0,
+            "tags": { "railway": "station", "name": "Station Alpha" }
+        }
+    ]
 }
 ```
 
@@ -299,13 +320,13 @@ Hand-crafted fixtures should include only the OSM elements the test needs. Keep 
 
 ### Known Overpass Queries in the App
 
-| Purpose | Query pattern | Key fragments |
-|---------|---------------|---------------|
-| Station discovery | `node[...][...](bbox);` | `[railway=station]`, operator/network tags |
-| Nearest station body | `node(id); out body;` | Numeric node ID |
-| Line options | `rel(around:300,lat,lon)[route~...]; way(around:100,...)[...];` | `around:300`, `route~` |
-| Exact line expansion | `relation(id)->.line; way(r.line)->...; node(w.lineWays)...` | Numeric relation ID |
-| Auto-detect fallback | `node(id); wr(bn); out tags;` | Node ID + `wr(bn)` |
+| Purpose              | Query pattern                                                   | Key fragments                              |
+| -------------------- | --------------------------------------------------------------- | ------------------------------------------ |
+| Station discovery    | `node[...][...](bbox);`                                         | `[railway=station]`, operator/network tags |
+| Nearest station body | `node(id); out body;`                                           | Numeric node ID                            |
+| Line options         | `rel(around:300,lat,lon)[route~...]; way(around:100,...)[...];` | `around:300`, `route~`                     |
+| Exact line expansion | `relation(id)->.line; way(r.line)->...; node(w.lineWays)...`    | Numeric relation ID                        |
+| Auto-detect fallback | `node(id); wr(bn); out tags;`                                   | Node ID + `wr(bn)`                         |
 
 ---
 
@@ -329,6 +350,7 @@ const { sid, compressedPayload } = await buildCasBlob(snapshot);
 ```
 
 `buildCasBlob()` does:
+
 1. Validates against the wire-v1 schema
 2. Canonicalizes (deep key sort, strip undefined, JSON.stringify)
 3. Computes SHA-256 → first 16 bytes → base64url SID
@@ -354,6 +376,7 @@ await page.goto("?sid=" + sid);
 ```
 
 **Pitfalls:**
+
 - The server must be running and reachable on `http://localhost:8787`.
 - The snapshot must be a valid wire-v1 envelope (`{ v: 1, ... }`). Invalid snapshots will fail schema validation.
 - SIDs are deterministic for the same input — this is tested in C12.
@@ -372,6 +395,7 @@ await clearPwaState(page);
 ```
 
 `clearPwaState()` runs a single `page.evaluate()` that clears:
+
 - `localStorage`
 - `sessionStorage`
 - All Cache Storage caches (via `caches.delete()`)

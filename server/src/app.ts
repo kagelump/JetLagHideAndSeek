@@ -1,20 +1,14 @@
+import { resolve } from "node:path";
+
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
-import { resolve } from "node:path";
 
 import { blobExists, readBlob, writeBlob } from "./blobStorage.js";
 import { decompressDeflateBase64Url } from "./decompress.js";
-import {
-    appendTeamSnapshotLine,
-    readTeamSnapshots,
-} from "./teamStore.js";
-import {
-    canonicalize,
-    TEAM_ID_REGEX,
-    wireV1SnapshotSchema,
-} from "./wire.js";
 import { computeSidFromCanonicalUtf8, SID_PATTERN } from "./sid.js";
+import { appendTeamSnapshotLine, readTeamSnapshots } from "./teamStore.js";
+import { canonicalize, TEAM_ID_REGEX, wireV1SnapshotSchema } from "./wire.js";
 
 export type CasServerOptions = {
     dataDir: string;
@@ -40,7 +34,9 @@ function normalizeStaticPrefix(raw: string): string {
     return p;
 }
 
-export async function buildApp(opts: CasServerOptions): Promise<FastifyInstance> {
+export async function buildApp(
+    opts: CasServerOptions,
+): Promise<FastifyInstance> {
     const fastify = Fastify({
         logger: true,
         bodyLimit: opts.maxCompressedBodyBytes,
@@ -86,18 +82,22 @@ export async function buildApp(opts: CasServerOptions): Promise<FastifyInstance>
         try {
             canonicalUtf8 = decompressDeflateBase64Url(rawBody);
         } catch {
-            return reply.code(400).send({ error: "Invalid compressed payload" });
+            return reply
+                .code(400)
+                .send({ error: "Invalid compressed payload" });
         }
-        if (
-            Buffer.byteLength(canonicalUtf8, "utf8") > opts.maxCanonicalBytes
-        ) {
-            return reply.code(413).send({ error: "Canonical snapshot too large" });
+        if (Buffer.byteLength(canonicalUtf8, "utf8") > opts.maxCanonicalBytes) {
+            return reply
+                .code(413)
+                .send({ error: "Canonical snapshot too large" });
         }
         let parsed: unknown;
         try {
             parsed = JSON.parse(canonicalUtf8);
         } catch {
-            return reply.code(400).send({ error: "Invalid JSON after decompress" });
+            return reply
+                .code(400)
+                .send({ error: "Invalid JSON after decompress" });
         }
         const snapResult = wireV1SnapshotSchema.safeParse(parsed);
         if (!snapResult.success) {

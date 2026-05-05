@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-env node */
 /**
  * Starts the CAS server with the built Astro app served from the same origin.
  * Expects `pnpm build` and `pnpm --dir server build` (use `pnpm start:app` for build + start).
@@ -22,9 +23,7 @@ if (!existsSync(serverEntry)) {
 }
 
 if (!existsSync(indexHtml)) {
-    console.error(
-        "Missing frontend build at dist/index.html. Run: pnpm build",
-    );
+    console.error("Missing frontend build at dist/index.html. Run: pnpm build");
     process.exit(1);
 }
 

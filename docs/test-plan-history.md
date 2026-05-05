@@ -7,13 +7,13 @@ This document summarizes what was done.
 
 ## Phases Completed
 
-| Phase | Scope | Result |
-|-------|-------|--------|
-| 1 | Critical risk: live sync, CAS client, question pipelines, question-type logic | 83 new tests |
-| 2 | Important coverage: server API edges, state hydration, presets CRUD, wire roundtrip | Additional tests |
-| 3 | Quick wins: schema roundtrip, utilities, station/label helpers, server units | Additional tests |
-| 4 | Long-term: golden SID snapshots, benchmarks (skipped), accessibility (deferred), PWA | 4 wire fixtures + golden SIDs |
-| 5 | Playwright E2E: 13 same-train-line tests including C13 Fukutoshin regression | 13 E2E tests, 11 fixture files |
+| Phase | Scope                                                                                | Result                         |
+| ----- | ------------------------------------------------------------------------------------ | ------------------------------ |
+| 1     | Critical risk: live sync, CAS client, question pipelines, question-type logic        | 83 new tests                   |
+| 2     | Important coverage: server API edges, state hydration, presets CRUD, wire roundtrip  | Additional tests               |
+| 3     | Quick wins: schema roundtrip, utilities, station/label helpers, server units         | Additional tests               |
+| 4     | Long-term: golden SID snapshots, benchmarks (skipped), accessibility (deferred), PWA | 4 wire fixtures + golden SIDs  |
+| 5     | Playwright E2E: 13 same-train-line tests including C13 Fukutoshin regression         | 13 E2E tests, 11 fixture files |
 
 ## Final Test Counts
 
@@ -23,13 +23,13 @@ This document summarizes what was done.
 
 ## Key Architectural Decisions (from Phase 5)
 
-| Decision | Rationale |
-|----------|-----------|
-| Overpass mocked by query-structure fragments, not URL | URL-encoded strings fragile across environments |
-| SIDs derived at runtime from canonicalize() | Never hardcode derived data; fixture snapshot is source of truth |
-| CAS blob seeding via real PUT | Exercises full stack; no mock server needed |
-| No data-testid unless getByRole/getByText can't reach | Lean; follows Testing Library philosophy |
-| PWA state cleared fully before each test | localStorage + sessionStorage + CacheStorage + service workers |
+| Decision                                              | Rationale                                                        |
+| ----------------------------------------------------- | ---------------------------------------------------------------- |
+| Overpass mocked by query-structure fragments, not URL | URL-encoded strings fragile across environments                  |
+| SIDs derived at runtime from canonicalize()           | Never hardcode derived data; fixture snapshot is source of truth |
+| CAS blob seeding via real PUT                         | Exercises full stack; no mock server needed                      |
+| No data-testid unless getByRole/getByText can't reach | Lean; follows Testing Library philosophy                         |
+| PWA state cleared fully before each test              | localStorage + sessionStorage + CacheStorage + service workers   |
 
 ## Mock Patterns Established
 
