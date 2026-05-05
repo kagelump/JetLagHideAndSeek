@@ -13,15 +13,16 @@ function envInt(name: string, fallback: number): number {
 function parseCorsOrigin(): boolean | string | (boolean | string)[] {
     const raw = process.env.CAS_CORS_ORIGINS;
     if (!raw || raw === "*") return true;
-    const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    const parts = raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
     if (parts.length === 1) return parts[0]!;
     return parts;
 }
 
 async function main() {
-    const dataDir = resolve(
-        process.env.CAS_DATA_DIR ?? "./data",
-    );
+    const dataDir = resolve(process.env.CAS_DATA_DIR ?? "./data");
     await mkdir(dataDir, { recursive: true });
 
     const staticDir = process.env.CAS_STATIC_DIR?.trim();
@@ -35,6 +36,7 @@ async function main() {
     );
     const maxTeamEntries = envInt("CAS_MAX_TEAM_ENTRIES", 10_000);
     const port = envInt("CAS_PORT", 8787);
+    const host = process.env.CAS_HOST?.trim() || "0.0.0.0";
 
     const app = await buildApp({
         dataDir,
@@ -48,7 +50,7 @@ async function main() {
                 : null,
     });
 
-    await app.listen({ port, host: "0.0.0.0" });
+    await app.listen({ port, host });
 }
 
 main().catch((err) => {
