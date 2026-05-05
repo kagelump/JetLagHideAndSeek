@@ -87,6 +87,8 @@ To remove the Tailscale serve config later:
 make tailscale_serve_reset
 ```
 
+For a host-managed deployment on Ubuntu Server or a VPS, see [`docs/deployment.md`](docs/deployment.md) and [`server/README.md`](server/README.md). That path uses `systemd` plus `nginx` and keeps the Node process on `127.0.0.1` behind the proxy.
+
 ## Contributing
 
 This project has evolved significantly, encompassing nearly 20,000 lines of code. Many intricate features have been developed, so therefore contributions are very much welcome. If you find a bug, please either file an issue or create a pull request. Furthermore, enhancements/feature requests are necessary to keep developing this project, so developments of those would also be appreciated. Here is a list of some suggestions for those wanting to help develop this tool:

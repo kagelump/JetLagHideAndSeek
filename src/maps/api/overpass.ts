@@ -1,6 +1,5 @@
 import * as turf from "@turf/turf";
 import type { Feature, FeatureCollection, MultiPolygon, Point } from "geojson";
-import _ from "lodash";
 import osmtogeojson from "osmtogeojson";
 import { toast } from "react-toastify";
 
@@ -11,7 +10,7 @@ import {
 } from "@/lib/context";
 import {
     expandFiltersForOperatorNetwork,
-    extractStationLabel,
+    matchesOperatorSelection,
     safeUnion,
 } from "@/maps/geo-utils";
 import type { APILocations } from "@/maps/schema";
@@ -111,7 +110,12 @@ export const getOverpassData = async (
 ) => {
     const encodedQuery = encodeURIComponent(query);
     const primaryUrl = `${OVERPASS_API}?data=${encodedQuery}`;
-    let response = await cacheFetch(primaryUrl, loadingText, cacheType, timeoutMs);
+    let response = await cacheFetch(
+        primaryUrl,
+        loadingText,
+        cacheType,
+        timeoutMs,
+    );
 
     if (!response.ok) {
         // Try the fallback, but store the result under the primary URL key so future requests are served from cache without needing to fail-over again.
@@ -217,8 +221,6 @@ export interface TrainLineOption {
     label: string;
 }
 
-type OsmObjectType = "node" | "way" | "relation";
-
 const RAIL_ROUTE_VALUES = new Set([
     "train",
     "subway",
@@ -236,19 +238,6 @@ const RAILWAY_VALUES = new Set([
     "monorail",
     "narrow_gauge",
 ]);
-
-const parseOsmObjectId = (
-    osmId: string,
-    allowedTypes: OsmObjectType[],
-): { type: OsmObjectType; id: number } | null => {
-    const match = /^(node|way|relation)\/(\d+)$/.exec(osmId);
-    if (!match) return null;
-
-    const type = match[1] as OsmObjectType;
-    if (!allowedTypes.includes(type)) return null;
-
-    return { type, id: Number(match[2]) };
-};
 
 const osmElementId = (element: any): string | null => {
     if (
@@ -294,18 +283,6 @@ const trainLineLabel = (element: any): string => {
     return osmElementId(element) ?? "Unknown train line";
 };
 
-const stationLineRefs = (tags: Record<string, unknown> = {}): string[] => {
-    const ref = tags.ref;
-    if (typeof ref !== "string") return [];
-
-    return _.uniq(
-        ref
-            .split(/[;/,]/)
-            .map((part) => part.trim().match(/^[^\d-]+/)?.[0]?.trim())
-            .filter((part): part is string => !!part),
-    );
-};
-
 const trainLineRefScore = (
     element: any,
     preferredRefs: string[] = [],
@@ -341,6 +318,7 @@ const disambiguateTrainLineLabels = (
 export const elementsToTrainLineOptions = (
     elements: any[],
     preferredRefs: string[] = [],
+    operatorFilter: string[] = [],
 ): TrainLineOption[] => {
     const options = new Map<string, TrainLineOption>();
     const scores = new Map<string, number>();
@@ -348,6 +326,11 @@ export const elementsToTrainLineOptions = (
     for (const element of elements) {
         const id = osmElementId(element);
         if (!id || !hasRailLineTags(element)) continue;
+        if (
+            operatorFilter.length > 0 &&
+            !matchesOperatorSelection(element.tags, operatorFilter)
+        )
+            continue;
         const score = trainLineRefScore(element, preferredRefs);
 
         const existing = options.get(id);
@@ -366,268 +349,12 @@ export const elementsToTrainLineOptions = (
     const sorted = [...options.values()].sort((a, b) => {
         const scoreDiff = (scores.get(a.id) ?? 1) - (scores.get(b.id) ?? 1);
         if (scoreDiff !== 0) return scoreDiff;
-        if (a.id.startsWith("relation/") && b.id.startsWith("way/"))
-            return -1;
-        if (a.id.startsWith("way/") && b.id.startsWith("relation/"))
-            return 1;
+        if (a.id.startsWith("relation/") && b.id.startsWith("way/")) return -1;
+        if (a.id.startsWith("way/") && b.id.startsWith("relation/")) return 1;
         return 0;
     });
 
     return disambiguateTrainLineLabels(sorted);
-};
-
-export const extractTrainLineNodeIds = (data: any): number[] => {
-    const nodes: number[] = [];
-    const stationOrStopNodes = (data.elements ?? [])
-        .filter(
-            (element: any) =>
-                element?.type === "node" &&
-                Number.isFinite(element.id) &&
-                (element.tags?.railway === "station" ||
-                    element.tags?.public_transport === "stop_position"),
-        )
-        .map((element: any) => element.id);
-    if (stationOrStopNodes.length > 0) return _.uniq(stationOrStopNodes);
-
-    const geoJSON = osmtogeojson(data);
-
-    geoJSON.features.forEach((feature: any) => {
-        if (feature?.id?.startsWith("node/")) {
-            nodes.push(parseInt(feature.id.split("/")[1]));
-        }
-    });
-
-    (data.elements ?? []).forEach((element: any) => {
-        if (element?.type === "node" && Number.isFinite(element.id)) {
-            nodes.push(element.id);
-        } else if (element?.type === "way" && Array.isArray(element.nodes)) {
-            nodes.push(...element.nodes);
-        }
-    });
-
-    return _.uniq(nodes);
-};
-
-export const extractTrainLineStationLabels = (
-    data: any,
-    strategy: "english-preferred" | "native-preferred" = "english-preferred",
-): string[] => {
-    const stationElements = (data.elements ?? []).filter(
-        (element: any) =>
-            element?.type === "node" &&
-            element.tags?.railway === "station" &&
-            (element.tags.name || element.tags["name:en"]),
-    );
-    const fallbackElements = (data.elements ?? []).filter(
-        (element: any) =>
-            element?.type === "node" &&
-            element.tags?.public_transport === "stop_position" &&
-            (element.tags.name || element.tags["name:en"]),
-    );
-    const elements =
-        stationElements.length > 0 ? stationElements : fallbackElements;
-    const lineRefs = (data.elements ?? [])
-        .map((element: any) => element?.tags?.ref)
-        .filter((ref: unknown): ref is string => typeof ref === "string");
-    const sortRef = (ref: unknown) => {
-        if (typeof ref !== "string") return "";
-        const parts = ref.split(";").map((part) => part.trim());
-        return (
-            parts.find((part) =>
-                lineRefs.some((lineRef: string) => part.startsWith(lineRef)),
-            ) ?? ref
-        );
-    };
-    const fallbackRefByLabel = new Map<string, string>();
-    for (const element of fallbackElements) {
-        const label = element.tags?.["name:en"] ?? element.tags?.name;
-        const ref = element.tags?.ref;
-        if (typeof label === "string" && typeof ref === "string") {
-            fallbackRefByLabel.set(label, ref);
-        }
-    }
-
-    const labels = elements
-        .map((element: any) => ({
-            label: extractStationLabel(
-                {
-                    properties: element.tags,
-                    geometry: { coordinates: [element.lon, element.lat] },
-                },
-                strategy,
-            ),
-            ref:
-                element.tags?.ref ??
-                fallbackRefByLabel.get(
-                    element.tags?.["name:en"] ?? element.tags?.name,
-                ),
-        }))
-        .filter((station: { label?: string }) => !!station.label)
-        .sort((a: { ref?: string }, b: { ref?: string }) =>
-            sortRef(a.ref).localeCompare(sortRef(b.ref), undefined, {
-                numeric: true,
-                sensitivity: "base",
-            }),
-        )
-        .map((station: { label: string }) => station.label);
-
-    return Array.from(new Set(labels));
-};
-
-export const fetchStationTrainLineOptions = async (
-    stationOsmId: string,
-): Promise<TrainLineOption[]> => {
-    const station = parseOsmObjectId(stationOsmId, ["node"]);
-    if (!station) return [];
-
-    const stationQuery = `
-[out:json];
-node(${station.id});
-out body;
-`;
-    const stationData = await getOverpassData(
-        stationQuery,
-        "Finding train lines...",
-        CacheType.CACHE,
-        undefined,
-        true,
-    );
-    const stationElement = stationData.elements?.find(
-        (element: any) => element?.type === "node" && element?.id === station.id,
-    );
-    if (
-        !Number.isFinite(stationElement?.lat) ||
-        !Number.isFinite(stationElement?.lon)
-    ) {
-        return [];
-    }
-
-    const query = `
-[out:json];
-(
-rel(around:300, ${stationElement.lat}, ${stationElement.lon})["route"~"^(${[
-        ...RAIL_ROUTE_VALUES,
-    ].join("|")})$"];
-way(around:100, ${stationElement.lat}, ${stationElement.lon})["railway"~"^(${[
-        ...RAILWAY_VALUES,
-    ].join("|")})$"];
-);
-out tags;
-`;
-    const data = await getOverpassData(
-        query,
-        "Finding train lines...",
-        CacheType.CACHE,
-        undefined,
-        true,
-    );
-    return elementsToTrainLineOptions(
-        data.elements ?? [],
-        stationLineRefs(stationElement.tags),
-    );
-};
-
-const exactTrainLineQuery = (lineOsmId: string): string | null => {
-    const line = parseOsmObjectId(lineOsmId, ["way", "relation"]);
-    if (!line) return null;
-
-    if (line.type === "way") {
-        return `
-[out:json];
-way(${line.id});
-(._;>;);
-out geom;
-`;
-    }
-
-    return `
-[out:json];
-relation(${line.id})->.line;
-way(r.line)->.lineWays;
-node(w.lineWays)->.lineWayNodes;
-node(r.line)->.lineRelationNodes;
-rel(bn.lineRelationNodes)["public_transport"="stop_area"]->.stopAreas;
-node(r.stopAreas)["railway"="station"]->.stopAreaStations;
-(.line; .lineWays; .lineWayNodes; .lineRelationNodes; .stopAreas; .stopAreaStations;);
-out geom;
-`;
-};
-
-export const findNodesOnTrainLine = async (
-    lineOsmId: string,
-): Promise<number[]> => {
-    const query = exactTrainLineQuery(lineOsmId);
-    if (!query) return [];
-
-    const data = await getOverpassData(
-        query,
-        "Finding train line...",
-        CacheType.CACHE,
-        undefined,
-        true,
-    );
-    return extractTrainLineNodeIds(data);
-};
-
-export const findStationLabelsOnTrainLine = async (
-    lineOsmId: string,
-    strategy: "english-preferred" | "native-preferred" = "english-preferred",
-): Promise<string[]> => {
-    const query = exactTrainLineQuery(lineOsmId);
-    if (!query) return [];
-
-    const data = await getOverpassData(
-        query,
-        "Finding train line...",
-        CacheType.CACHE,
-        undefined,
-        true,
-    );
-    return extractTrainLineStationLabels(data, strategy);
-};
-
-export const trainLineNodeFinder = async (node: string): Promise<number[]> => {
-    const options = await fetchStationTrainLineOptions(node);
-    const selectedLine = options.find((option) =>
-        option.id.startsWith("relation/"),
-    );
-    if (selectedLine) {
-        return findNodesOnTrainLine(selectedLine.id);
-    }
-
-    const nodeId = node.split("/")[1];
-    const tagQuery = `
-[out:json];
-node(${nodeId});
-wr(bn);
-out tags;
-`;
-    const tagData = await getOverpassData(tagQuery, "Finding train line...");
-    const query = `
-[out:json];
-(
-${tagData.elements
-    .map((element: any) => {
-        if (
-            !element.tags.name &&
-            !element.tags["name:en"] &&
-            !element.tags.network
-        )
-            return "";
-        let query = "";
-        if (element.tags.name) query += `wr["name"="${element.tags.name}"];`;
-        if (element.tags["name:en"])
-            query += `wr["name:en"="${element.tags["name:en"]}"];`;
-        if (element.tags["network"])
-            query += `wr["network"="${element.tags["network"]}"];`;
-        return query;
-    })
-    .join("\n")}
-);
-out geom;
-`;
-    const data = await getOverpassData(query, "Finding train lines...");
-    return extractTrainLineNodeIds(data);
 };
 
 export const findPlacesInZone = async (

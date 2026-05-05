@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-    elementsToTrainLineOptions,
-    extractTrainLineNodeIds,
-    extractTrainLineStationLabels,
-} from "./overpass";
+import { elementsToTrainLineOptions } from "./overpass";
 
 describe("elementsToTrainLineOptions", () => {
     it("keeps exact rail way/relation choices and excludes network-only parents", () => {
@@ -68,9 +64,7 @@ describe("elementsToTrainLineOptions", () => {
             },
         ]);
 
-        expect(options).toEqual([
-            { id: "relation/2", label: "Line A" },
-        ]);
+        expect(options).toEqual([{ id: "relation/2", label: "Line A" }]);
     });
 
     it("strips direction patterns like (Wakoshi --> Shibuya) from labels", () => {
@@ -161,9 +155,7 @@ describe("elementsToTrainLineOptions", () => {
             },
         ]);
 
-        expect(options).toEqual([
-            { id: "relation/1", label: "Local Line" },
-        ]);
+        expect(options).toEqual([{ id: "relation/1", label: "Local Line" }]);
     });
 
     it("returns empty array for empty elements", () => {
@@ -179,9 +171,7 @@ describe("elementsToTrainLineOptions", () => {
             },
         ]);
 
-        expect(options).toEqual([
-            { id: "way/1", label: "JR East" },
-        ]);
+        expect(options).toEqual([{ id: "way/1", label: "JR East" }]);
     });
 
     it("falls back to OSM id when no name, name:en, or ref present", () => {
@@ -193,9 +183,7 @@ describe("elementsToTrainLineOptions", () => {
             },
         ]);
 
-        expect(options).toEqual([
-            { id: "way/1", label: "way/1" },
-        ]);
+        expect(options).toEqual([{ id: "way/1", label: "way/1" }]);
     });
 
     it("accepts ways with railway tag but no route tag", () => {
@@ -207,9 +195,7 @@ describe("elementsToTrainLineOptions", () => {
             },
         ]);
 
-        expect(options).toEqual([
-            { id: "way/1", label: "Tram" },
-        ]);
+        expect(options).toEqual([{ id: "way/1", label: "Tram" }]);
     });
 
     it("excludes elements with only a network tag and no route or railway", () => {
@@ -242,106 +228,107 @@ describe("elementsToTrainLineOptions", () => {
             { id: "relation/1", label: "Same Line (relation/1)" },
         ]);
     });
-});
 
-describe("extractTrainLineNodeIds", () => {
-    it("prefers station and stop-position nodes over track geometry nodes", () => {
-        const nodes = extractTrainLineNodeIds({
-            elements: [
+    it("operatorFilter: includes line with matching operator tag", () => {
+        const options = elementsToTrainLineOptions(
+            [
                 {
-                    type: "node",
+                    type: "relation",
                     id: 1,
-                    tags: { railway: "stop", public_transport: "stop_position" },
-                },
-                {
-                    type: "node",
-                    id: 2,
-                    tags: { railway: "station", public_transport: "station" },
-                },
-                {
-                    type: "node",
-                    id: 3,
-                    tags: { railway: "station", public_transport: "station" },
-                },
-                { type: "way", id: 10, nodes: [1, 2, 3, 4] },
-            ],
-        });
-
-        expect(nodes).toEqual([1, 2, 3]);
-    });
-
-    it("extracts and dedupes node ids from Overpass nodes and way node lists", () => {
-        const nodes = extractTrainLineNodeIds({
-            elements: [
-                { type: "node", id: 1, lat: 35, lon: 139 },
-                { type: "way", id: 10, nodes: [1, 2, 3] },
-                { type: "node", id: 2, lat: 35.1, lon: 139.1 },
-            ],
-        });
-
-        expect(nodes).toEqual([1, 2, 3]);
-    });
-
-    it("deduplicates node ids across multiple ways with overlapping nodes", () => {
-        const nodes = extractTrainLineNodeIds({
-            elements: [
-                { type: "node", id: 5 },
-                { type: "node", id: 5 },
-                { type: "way", id: 10, nodes: [5, 6, 7] },
-                { type: "way", id: 11, nodes: [6, 8, 9] },
-            ],
-        });
-
-        expect(nodes).toEqual([5, 6, 7, 8, 9]);
-    });
-});
-
-describe("extractTrainLineStationLabels", () => {
-    it("uses station nodes for the display list when stop positions are also present", () => {
-        const labels = extractTrainLineStationLabels(
-            {
-                elements: [
-                    {
-                        type: "node",
-                        id: 1,
-                        tags: {
-                            railway: "stop",
-                            public_transport: "stop_position",
-                            name: "Stop A",
-                            ref: "F01",
-                        },
+                    tags: {
+                        route: "subway",
+                        name: "Line A",
+                        operator: "Test Metro",
                     },
-                    {
-                        type: "node",
-                        id: 2,
-                        lat: 35,
-                        lon: 139,
-                        tags: {
-                            railway: "station",
-                            public_transport: "station",
-                            name: "駅A",
-                            "name:en": "Station A",
-                            ref: "F01",
-                        },
-                    },
-                    {
-                        type: "node",
-                        id: 3,
-                        lat: 35,
-                        lon: 139,
-                        tags: {
-                            railway: "station",
-                            public_transport: "station",
-                            name: "駅B",
-                            "name:en": "Station B",
-                            ref: "F02",
-                        },
-                    },
-                ],
-            },
-            "english-preferred",
+                },
+            ],
+            [],
+            ["Test Metro"],
         );
 
-        expect(labels).toEqual(["Station A", "Station B"]);
+        expect(options).toEqual([{ id: "relation/1", label: "Line A" }]);
+    });
+
+    it("operatorFilter: includes line with matching network tag", () => {
+        const options = elementsToTrainLineOptions(
+            [
+                {
+                    type: "relation",
+                    id: 1,
+                    tags: {
+                        route: "subway",
+                        name: "Line A",
+                        network: "Test Metro",
+                    },
+                },
+            ],
+            [],
+            ["Test Metro"],
+        );
+
+        expect(options).toEqual([{ id: "relation/1", label: "Line A" }]);
+    });
+
+    it("operatorFilter: excludes line with non-matching operator", () => {
+        const options = elementsToTrainLineOptions(
+            [
+                {
+                    type: "relation",
+                    id: 1,
+                    tags: {
+                        route: "subway",
+                        name: "Line A",
+                        operator: "Test Metro",
+                    },
+                },
+                {
+                    type: "relation",
+                    id: 2,
+                    tags: {
+                        route: "train",
+                        name: "Line B",
+                        operator: "Test Railway",
+                        network: "Test Railway",
+                    },
+                },
+            ],
+            [],
+            ["Test Metro"],
+        );
+
+        expect(options).toEqual([{ id: "relation/1", label: "Line A" }]);
+    });
+
+    it("operatorFilter: empty filter returns all valid lines", () => {
+        const options = elementsToTrainLineOptions(
+            [
+                {
+                    type: "relation",
+                    id: 1,
+                    tags: {
+                        route: "subway",
+                        name: "Line A",
+                        operator: "Test Metro",
+                    },
+                },
+                {
+                    type: "relation",
+                    id: 2,
+                    tags: {
+                        route: "train",
+                        name: "Line B",
+                        operator: "Test Railway",
+                        network: "Test Railway",
+                    },
+                },
+            ],
+            [],
+            [],
+        );
+
+        expect(options).toEqual([
+            { id: "relation/1", label: "Line A" },
+            { id: "relation/2", label: "Line B" },
+        ]);
     });
 });

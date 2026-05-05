@@ -4,4 +4,5 @@ export * from "./geo";
 export * from "./geocode";
 export * from "./importers";
 export * from "./overpass";
+export * from "./transitGraph";
 export * from "./types";

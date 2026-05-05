@@ -7,7 +7,6 @@ import { toast } from "react-toastify";
 import CustomInitDialog from "@/components/CustomInitDialog";
 import { LatitudeLongitude } from "@/components/LatLngPicker";
 import PresetsDialog from "@/components/PresetsDialog";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -26,6 +25,7 @@ import {
     questionModified,
     questions,
     trainStations,
+    transitGraph,
     triggerLocalRefresh,
 } from "@/lib/context";
 import {
@@ -36,15 +36,15 @@ import {
 import { PLAY_AREA_MODES } from "@/lib/playAreaModes";
 import { cn } from "@/lib/utils";
 import {
-    fetchStationTrainLineOptions,
-    findNodesOnTrainLine,
-    findStationLabelsOnTrainLine,
-    trainLineNodeFinder,
-} from "@/maps/api";
-import { extractStationLabel } from "@/maps/geo-utils";
+    extractStationLabel,
+    getLinesForStation,
+    resolveAutoTransitLine,
+    resolveTransitLine,
+} from "@/maps/geo-utils";
 import {
     determineMatchingBoundary,
     findMatchingPlaces,
+    sanitizeMatchingQuestionDataOnTypeChange,
 } from "@/maps/questions/matching";
 import {
     determineUnionizedStrings,
@@ -79,6 +79,7 @@ export const MatchingQuestionComponent = ({
     const $customInitPref = useStore(customInitPreference);
     const $trainStations = useStore(trainStations);
     const $playAreaMode = useStore(playAreaMode);
+    const $transitGraph = useStore(transitGraph);
     const modeConfig = PLAY_AREA_MODES[$playAreaMode];
 
     const [customDialogOpen, setCustomDialogOpen] = React.useState(false);
@@ -99,13 +100,6 @@ export const MatchingQuestionComponent = ({
     >([]);
     const [loadingLineStationPreview, setLoadingLineStationPreview] =
         React.useState(false);
-    const [lineOptionsError, setLineOptionsError] = React.useState<
-        string | null
-    >(null);
-    const [lineStationPreviewError, setLineStationPreviewError] =
-        React.useState<string | null>(null);
-    const [lineOptionsRetryKey, setLineOptionsRetryKey] = React.useState(0);
-    const [linePreviewRetryKey, setLinePreviewRetryKey] = React.useState(0);
     const stationPoints = React.useMemo(
         () => $trainStations.map((station) => station.properties),
         [$trainStations],
@@ -189,174 +183,59 @@ export const MatchingQuestionComponent = ({
     React.useEffect(() => {
         if (data.type !== "same-train-line") return;
 
-        let cancelled = false;
+        const graph = $transitGraph;
         const autoOptions: Record<string, string> = {
             [AUTO_TRAIN_LINE]: AUTO_TRAIN_LINE_LABEL,
         };
 
-        if (!nearestTrainStationId?.startsWith("node/")) {
+        if (!graph || !nearestTrainStationId?.startsWith("node/")) {
             setLineOptions(autoOptions);
             setLoadingLineOptions(false);
-            setLineOptionsError(null);
-            if (stationPoints.length === 0) return;
-            if (data.drag && data.selectedTrainLineId) {
-                data.selectedTrainLineId = undefined;
-                data.selectedTrainLineLabel = undefined;
-                questionModified();
-            }
             return;
         }
 
-        setLoadingLineOptions(true);
-        setLineOptionsError(null);
-        fetchStationTrainLineOptions(nearestTrainStationId)
-            .then((options) => {
-                if (cancelled) return;
-
-                const nextOptions = {
-                    ...autoOptions,
-                    ...Object.fromEntries(
-                        options.map((option) => [option.id, option.label]),
-                    ),
-                };
-                setLineOptions(nextOptions);
-
-                if (
-                    data.drag &&
-                    data.selectedTrainLineId &&
-                    !nextOptions[data.selectedTrainLineId]
-                ) {
-                    data.selectedTrainLineId = undefined;
-                    data.selectedTrainLineLabel = undefined;
-                    questionModified();
-                }
-            })
-            .catch((err) => {
-                if (!cancelled) {
-                    setLineOptionsError(
-                        err instanceof Error
-                            ? err.message
-                            : "Failed to load train lines",
-                    );
-                }
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoadingLineOptions(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
+        const lines = getLinesForStation(graph, nearestTrainStationId);
+        const nextOptions = {
+            ...autoOptions,
+            ...Object.fromEntries(lines.map((l) => [l.id, l.label])),
         };
-    }, [data.type, nearestTrainStationId, lineOptionsRetryKey]);
+        setLineOptions(nextOptions);
+        setLoadingLineOptions(false);
+
+        if (
+            data.drag &&
+            data.selectedTrainLineId &&
+            !nextOptions[data.selectedTrainLineId]
+        ) {
+            data.selectedTrainLineId = undefined;
+            data.selectedTrainLineLabel = undefined;
+            questionModified();
+        }
+    }, [data.type, nearestTrainStationId, $transitGraph]);
 
     React.useEffect(() => {
         if (data.type !== "same-train-line") return;
 
-        let cancelled = false;
-
-        const stationLabelByNodeId = new Map<number, string>();
-        for (const station of stationPoints) {
-            const stationId = station.properties?.id;
-            if (!stationId?.startsWith("node/")) continue;
-
-            const nodeId = Number(stationId.split("/")[1]);
-            if (!Number.isFinite(nodeId)) continue;
-
-            stationLabelByNodeId.set(
-                nodeId,
-                extractStationLabel(station, modeConfig.stationNameStrategy),
-            );
-        }
-
-        if (
-            stationLabelByNodeId.size === 0 ||
-            (!selectedTrainLineId &&
-                !nearestTrainStationId?.startsWith("node/"))
-        ) {
+        const graph = $transitGraph;
+        if (!graph) {
             setLineStationPreview([]);
             setLoadingLineStationPreview(false);
-            setLineStationPreviewError(null);
             return;
         }
 
-        setLoadingLineStationPreview(true);
-        setLineStationPreviewError(null);
-        const nodesPromise = selectedTrainLineId
-            ? findNodesOnTrainLine(selectedTrainLineId)
-            : trainLineNodeFinder(nearestTrainStationId!);
-        const lineLabelsPromise = selectedTrainLineId
-            ? findStationLabelsOnTrainLine(
-                  selectedTrainLineId,
-                  modeConfig.stationNameStrategy,
-              )
-            : fetchStationTrainLineOptions(nearestTrainStationId!).then(
-                  (options) => {
-                      const selectedLine = options.find((option) =>
-                          option.id.startsWith("relation/"),
-                      );
-                      return selectedLine
-                          ? findStationLabelsOnTrainLine(
-                                selectedLine.id,
-                                modeConfig.stationNameStrategy,
-                            )
-                          : [];
-                  },
-              );
+        const resolution = selectedTrainLineId
+            ? resolveTransitLine(graph, selectedTrainLineId)
+            : nearestTrainStationId
+              ? resolveAutoTransitLine(graph, nearestTrainStationId)
+              : { status: "missing-station" as const, stationLabels: [] };
 
-        Promise.all([nodesPromise, lineLabelsPromise])
-            .then(([nodes, lineLabels]) => {
-                if (cancelled) return;
-
-                const matchedLabels =
-                    lineLabels.length > 0
-                        ? lineLabels
-                        : Array.from(
-                              new Set(
-                                  Array.from(new Set(nodes)).flatMap(
-                                      (nodeId) => {
-                                          const label =
-                                              stationLabelByNodeId.get(nodeId);
-                                          return label ? [label] : [];
-                                      },
-                                  ),
-                              ),
-                          ).sort((a, b) =>
-                              a.localeCompare(b, undefined, {
-                                  numeric: true,
-                                  sensitivity: "base",
-                              }),
-                          );
-                setLineStationPreview(matchedLabels);
-            })
-            .catch((err) => {
-                if (!cancelled) {
-                    setLineStationPreview([]);
-                    setLineStationPreviewError(
-                        err instanceof Error
-                            ? err.message
-                            : "Failed to load station preview",
-                    );
-                }
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoadingLineStationPreview(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [
-        data.type,
-        modeConfig.stationNameStrategy,
-        nearestTrainStationId,
-        selectedTrainLineId,
-        stationPoints,
-        linePreviewRetryKey,
-    ]);
+        if (resolution.status === "ok") {
+            setLineStationPreview(resolution.stationLabels);
+        } else {
+            setLineStationPreview([]);
+        }
+        setLoadingLineStationPreview(false);
+    }, [data.type, nearestTrainStationId, selectedTrainLineId, $transitGraph]);
 
     switch (data.type) {
         case "zone":
@@ -406,14 +285,26 @@ export const MatchingQuestionComponent = ({
                     <SidebarMenuItem className={MENU_ITEM_CLASSNAME}>
                         <Select
                             trigger={
-                                lineOptionsError
-                                    ? "Error loading — tap Retry"
-                                    : loadingLineOptions
-                                      ? "Loading train lines..."
-                                      : (data.selectedTrainLineLabel ??
-                                        "Train line")
+                                loadingLineOptions
+                                    ? "Loading train lines..."
+                                    : (data.selectedTrainLineLabel ??
+                                      "Train line")
                             }
-                            options={lineOptions}
+                            options={(() => {
+                                if (
+                                    !data.drag &&
+                                    data.selectedTrainLineId &&
+                                    !lineOptions[data.selectedTrainLineId]
+                                ) {
+                                    return {
+                                        ...lineOptions,
+                                        [data.selectedTrainLineId]:
+                                            data.selectedTrainLineLabel ??
+                                            data.selectedTrainLineId,
+                                    };
+                                }
+                                return lineOptions;
+                            })()}
                             value={data.selectedTrainLineId ?? AUTO_TRAIN_LINE}
                             onValueChange={(value) => {
                                 if (value === AUTO_TRAIN_LINE) {
@@ -427,72 +318,48 @@ export const MatchingQuestionComponent = ({
                                 questionModified();
                             }}
                             disabled={
-                                !data.drag || $isLoading || loadingLineOptions || !!lineOptionsError
+                                !data.drag ||
+                                $isLoading ||
+                                loadingLineOptions ||
+                                !$transitGraph
                             }
                         />
                     </SidebarMenuItem>
-                    {lineOptionsError && (
-                        <div className="px-2 pb-1">
-                            <div className="text-xs text-red-500 mb-1">
-                                {lineOptionsError}
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                    setLineOptionsRetryKey((k) => k + 1)
-                                }
-                                disabled={!data.drag || $isLoading}
-                            >
-                                Retry
-                            </Button>
+                    {!$transitGraph && (
+                        <div className="px-2 text-xs text-red-500">
+                            Same transit line requires hiding-zone transit
+                            stops. Configure hiding zones with default transit
+                            stops to use this question.
                         </div>
                     )}
                     <div className="px-2 text-xs">
                         <div className="font-medium">
-                            {lineStationPreviewError
-                                ? "Error loading stations"
-                                : loadingLineStationPreview
-                                  ? "Loading stations..."
-                                  : `Stations matched: ${lineStationPreview.length}`}
+                            {loadingLineStationPreview
+                                ? "Loading stations..."
+                                : `Stations matched: ${lineStationPreview.length}`}
                         </div>
-                        {lineStationPreviewError ? (
-                            <div className="mt-1 space-y-1">
-                                <div className="text-xs text-red-500">
-                                    {lineStationPreviewError}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                        setLinePreviewRetryKey((k) => k + 1)
-                                    }
-                                    disabled={!data.drag || $isLoading}
-                                >
-                                    Retry
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="mt-1 max-h-40 overflow-y-auto rounded-md border p-2" data-testid="station-preview">
-                                {lineStationPreview.length === 0 &&
-                                !loadingLineStationPreview ? (
-                                    <span className="text-muted-foreground">
-                                        No stations found for this line
-                                    </span>
-                                ) : (
-                                    lineStationPreview.map((name, index) => (
-                                        <div key={`${name}-${index}`}>{name}</div>
-                                    ))
-                                )}
-                            </div>
-                        )}
+                        <div
+                            className="mt-1 max-h-40 overflow-y-auto rounded-md border p-2"
+                            data-testid="station-preview"
+                        >
+                            {lineStationPreview.length === 0 &&
+                            !loadingLineStationPreview ? (
+                                <span className="text-muted-foreground">
+                                    No stations found for this line
+                                </span>
+                            ) : (
+                                lineStationPreview.map((name, index) => (
+                                    <div key={`${name}-${index}`}>{name}</div>
+                                ))
+                            )}
+                        </div>
                     </div>
-                    <span className="px-2 text-center text-orange-500">
-                        Warning: The train line data is based on OpenStreetMap
-                        and may have fewer train stations than expected. If you
-                        are using this tool, ensure that the other players are
-                        also using this tool.
-                    </span>
+                    {$transitGraph && (
+                        <span className="px-2 text-center text-orange-500">
+                            Train line data comes from the configured
+                            OpenStreetMap hiding-zone transit graph.
+                        </span>
+                    )}
                 </>
             );
             break;
@@ -573,7 +440,18 @@ export const MatchingQuestionComponent = ({
                         (data as any).geo = [];
                         toast.info("Please draw the points on the map.");
                     }
-                    data.type = pendingCustomType;
+                    const cleaned = sanitizeMatchingQuestionDataOnTypeChange(
+                        data,
+                        pendingCustomType,
+                        {
+                            defaultAdminLevel:
+                                modeConfig.defaultMatchingAdminLevel,
+                        },
+                    );
+                    Object.keys(data).forEach((k) => {
+                        if (!(k in cleaned)) delete (data as any)[k];
+                    });
+                    Object.assign(data, cleaned);
                     questionModified();
                     setCustomDialogOpen(false);
                 }}
@@ -604,7 +482,18 @@ export const MatchingQuestionComponent = ({
                             toast.info("Please draw the points on the map.");
                         }
                     }
-                    data.type = pendingCustomType;
+                    const cleaned = sanitizeMatchingQuestionDataOnTypeChange(
+                        data,
+                        pendingCustomType,
+                        {
+                            defaultAdminLevel:
+                                modeConfig.defaultMatchingAdminLevel,
+                        },
+                    );
+                    Object.keys(data).forEach((k) => {
+                        if (!(k in cleaned)) delete (data as any)[k];
+                    });
+                    Object.assign(data, cleaned);
                     questionModified();
                     setCustomDialogOpen(false);
                 }}
@@ -713,30 +602,37 @@ export const MatchingQuestionComponent = ({
                                     }
                                 }
                             }
-                            // The category should be defined such that no error is thrown if this is a zone question.
-                            if (!(data as any).cat) {
-                                (data as any).cat = {
-                                    adminLevel:
-                                        modeConfig.defaultMatchingAdminLevel,
-                                };
-                            }
-                            questionModified((data.type = value));
+                            const cleaned =
+                                sanitizeMatchingQuestionDataOnTypeChange(
+                                    data,
+                                    value,
+                                    {
+                                        defaultAdminLevel:
+                                            modeConfig.defaultMatchingAdminLevel,
+                                    },
+                                );
+                            Object.keys(data).forEach((k) => {
+                                if (!(k in cleaned)) delete (data as any)[k];
+                            });
+                            Object.assign(data, cleaned);
+                            questionModified();
                             return;
                         }
 
-                        if (value === "same-length-station") {
-                            data.lengthComparison = "same";
-                            data.same = true;
-                        }
-
-                        // The category should be defined such that no error is thrown if this is a zone question.
-                        if (!(data as any).cat) {
-                            (data as any).cat = {
-                                adminLevel:
-                                    modeConfig.defaultMatchingAdminLevel,
-                            };
-                        }
-                        questionModified((data.type = value));
+                        const cleaned =
+                            sanitizeMatchingQuestionDataOnTypeChange(
+                                data,
+                                value,
+                                {
+                                    defaultAdminLevel:
+                                        modeConfig.defaultMatchingAdminLevel,
+                                },
+                            );
+                        Object.keys(data).forEach((k) => {
+                            if (!(k in cleaned)) delete (data as any)[k];
+                        });
+                        Object.assign(data, cleaned);
+                        questionModified();
                     }}
                     disabled={!data.drag || $isLoading}
                 />

@@ -14,7 +14,7 @@
         "test": "vitest",
         "test:server": "pnpm --dir server test",
         "icons:generate": "python3 scripts/generate-app-icons.py",
-        "test:e2e": "playwright test",
+        "test:e2e": "lsof -ti:8787 | xargs kill -9 2>/dev/null || true; playwright test",
         "typecheck": "astro check",
         "prepare": "husky"
     },

@@ -11,20 +11,21 @@ pnpm dev
 
 Defaults:
 
-- Listens on `0.0.0.0:8787`
+- Listens on `0.0.0.0:8787` unless `CAS_HOST` overrides the bind address
 - Data directory `./data` (override with `CAS_DATA_DIR`)
 
 ## Environment
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `CAS_DATA_DIR` | `./data` | Root for `blobs/` and `teams/` |
-| `CAS_PORT` | `8787` | HTTP port |
-| `CAS_MAX_BLOB_BYTES` | `5242880` | Max canonical (UTF-8) snapshot size after decompress |
-| `CAS_MAX_TEAM_ENTRIES` | `10000` | Max lines per team JSONL log |
-| `CAS_CORS_ORIGINS` | `*` | Comma-separated origins or `*` |
-| `CAS_STATIC_DIR` | _(unset)_ | Absolute path to Astro **`dist/`** (folder that contains `index.html`; asset URLs still use `base`). When set, this server also hosts the PWA (same origin as `/api/...`). |
-| `CAS_STATIC_PREFIX` | `/JetLagHideAndSeek/` | URL prefix for static files; must match [`base` in `astro.config.mjs`](../astro.config.mjs). |
+| Variable               | Default               | Purpose                                                                                                                                                                    |
+| ---------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CAS_DATA_DIR`         | `./data`              | Root for `blobs/` and `teams/`                                                                                                                                             |
+| `CAS_PORT`             | `8787`                | HTTP port                                                                                                                                                                  |
+| `CAS_HOST`             | `0.0.0.0`             | Bind address for the HTTP listener                                                                                                                                         |
+| `CAS_MAX_BLOB_BYTES`   | `5242880`             | Max canonical (UTF-8) snapshot size after decompress                                                                                                                       |
+| `CAS_MAX_TEAM_ENTRIES` | `10000`               | Max lines per team JSONL log                                                                                                                                               |
+| `CAS_CORS_ORIGINS`     | `*`                   | Comma-separated origins or `*`                                                                                                                                             |
+| `CAS_STATIC_DIR`       | _(unset)_             | Absolute path to Astro **`dist/`** (folder that contains `index.html`; asset URLs still use `base`). When set, this server also hosts the PWA (same origin as `/api/...`). |
+| `CAS_STATIC_PREFIX`    | `/JetLagHideAndSeek/` | URL prefix for static files; must match [`base` in `astro.config.mjs`](../astro.config.mjs).                                                                               |
 
 ## End-to-end (API + PWA on one port)
 
@@ -83,8 +84,11 @@ Team IDs are capability tokens (`16–32` chars `[A-Za-z0-9_-]`).
 
 1. `pnpm install && pnpm build`
 2. Build the frontend (`pnpm build` at repo root) and set `CAS_STATIC_DIR` to `.../dist` (keep `CAS_STATIC_PREFIX` aligned with Astro `base`) so one Node process serves both the PWA and `/api/*`.
-3. Run `node dist/index.js` under systemd (see `systemd/jetlag-cas.service`).
-4. Put a TLS reverse proxy (Caddy/nginx) in front; no extra “mount static + API” split is required if `CAS_STATIC_DIR` is set.
+3. Run `node dist/index.js` under `systemd` (see `systemd/jetlag-cas.service`).
+4. Put `nginx` in front and bind the Node process to `127.0.0.1` with `CAS_HOST` so the application itself never needs to accept public traffic.
+5. If the machine is a tailnet-only Ubuntu host, expose `nginx` through Tailscale rather than opening public internet ports.
+
+See [`docs/deployment.md`](../docs/deployment.md) for the full nginx and Tailscale deployment recipe.
 
 ## Garbage collection
 
