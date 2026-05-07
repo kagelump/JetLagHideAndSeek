@@ -2,7 +2,7 @@ module.exports = {
     preset: "jest-expo",
     setupFiles: ["./jest.setup.ts"],
     transformIgnorePatterns: [
-        "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|nativewind|react-native-toast-message|nanostores|@nanostores/.*|@turf/.*|d3-.*|osmtogeojson)",
+        "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|nativewind|react-native-toast-message|nanostores|@nanostores/.*|@turf/.*|d3-.*|internmap|delaunator|robust-predicates|osmtogeojson|@sentry/.*)",
     ],
     testMatch: ["**/__tests__/**/*.test.{ts,tsx}"],
     modulePaths: ["<rootDir>/../node_modules"],
