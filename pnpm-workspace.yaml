@@ -1,3 +1,5 @@
 packages:
-    - "."
-    - "mobile"
+  - .
+  - mobile
+  - mobile_v2
+nodeLinker: hoisted

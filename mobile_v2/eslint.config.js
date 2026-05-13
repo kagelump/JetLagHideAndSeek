@@ -1,0 +1,30 @@
+const pluginJs = require("@eslint/js");
+const pluginReact = require("eslint-plugin-react");
+const globals = require("globals");
+const tseslint = require("typescript-eslint");
+
+module.exports = [
+    { ignores: ["node_modules/**", ".expo/**", "dist/**"] },
+    pluginJs.configs.recommended,
+    ...tseslint.configs.recommended,
+    pluginReact.configs.flat.recommended,
+    {
+        files: ["**/*.{js,ts,tsx}"],
+        languageOptions: {
+            globals: {
+                ...globals.es2022,
+                ...globals.node,
+            },
+        },
+        settings: {
+            react: {
+                version: "19",
+            },
+        },
+        rules: {
+            "react/react-in-jsx-scope": "off",
+            "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-require-imports": "off",
+        },
+    },
+];

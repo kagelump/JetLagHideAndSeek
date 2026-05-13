@@ -1,0 +1,47 @@
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import type { ComponentType } from "react";
+import { useMemo, useRef, useState } from "react";
+import { StyleSheet } from "react-native";
+
+import { MainDrawer } from "@/features/sheet/MainDrawer";
+import { SheetRouteName } from "@/features/sheet/sheetRoutes";
+import { colors } from "@/theme/colors";
+
+const Sheet = BottomSheet as ComponentType<any>;
+const SheetView = BottomSheetView as ComponentType<any>;
+
+export function AppBottomSheet() {
+    const sheetRef = useRef(null);
+    const snapPoints = useMemo(() => ["18%", "42%", "88%"], []);
+    const [route, setRoute] = useState<SheetRouteName>("main");
+
+    return (
+        <Sheet
+            ref={sheetRef}
+            index={1}
+            snapPoints={snapPoints}
+            enableDynamicSizing={false}
+            handleIndicatorStyle={styles.handleIndicator}
+            backgroundStyle={styles.sheetBackground}
+        >
+            <SheetView style={styles.content}>
+                <MainDrawer route={route} onNavigate={setRoute} />
+            </SheetView>
+        </Sheet>
+    );
+}
+
+const styles = StyleSheet.create({
+    content: {
+        flex: 1,
+        paddingBottom: 32,
+    },
+    handleIndicator: {
+        backgroundColor: "#b8b1a4",
+        width: 44,
+    },
+    sheetBackground: {
+        backgroundColor: colors.panel,
+        borderRadius: 8,
+    },
+});
