@@ -6,70 +6,12 @@ So the best route is:
 
 > **Create a clean Expo SDK 54 `mobile_v2/` app, then selectively borrow proven native/project plumbing and shared geometry from the existing mobile branch while rewriting the app surface and state shape around an Apple Maps-style bottom-sheet app.**
 
-## Hard-earned setup notes for `mobile_v2`
-
-If creating a fresh `mobile_v2/` app, **start on Expo SDK 54 from the first scaffold command**. Do not scaffold SDK 55 and downgrade afterward.
-
-Recommended clean slate:
-
-```bash
-cd /Users/ryantseng/projects/JetLagHideAndSeek
-rm -rf mobile_v2
-pnpm dlx create-expo-app@latest mobile_v2 --template default@sdk-54 --no-install
-```
-
-Then immediately:
-
-```yaml
-# pnpm-workspace.yaml
-packages:
-  - .
-  - mobile
-  - mobile_v2
-nodeLinker: hoisted
-```
-
-Install from the monorepo root:
-
-```bash
-pnpm install
-```
-
-Use Expo 54-compatible package installs only:
-
-```bash
-cd mobile_v2
-pnpm exec expo install @gorhom/bottom-sheet react-native-gesture-handler react-native-reanimated react-native-safe-area-context react-native-screens
-```
-
-For iOS native builds on this machine, set UTF-8 locale for CocoaPods:
-
-```bash
-LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device
-```
-
-If `pod install` needs to update CocoaPods specs, it writes under `~/.cocoapods` and may need approval outside the sandbox.
-
 ### Do not repeat these mistakes
 
-1. **Do not use SDK 55 unless Xcode is upgraded.**
-   SDK 55 currently requires a much newer Xcode than Xcode 16.2. On Xcode 16.2, native builds failed inside `expo-modules-core` Swift files with `@MainActor` / actor-isolation errors.
-
-2. **Do not scaffold SDK 55 and then downgrade in place.**
-   Downgrading left nested SDK 55-era packages under hoisted pnpm paths, including stale `react-dom@19.2.0` and `react-native-screens@4.23.0` copies. Metro then produced runtime errors such as:
-
-   ```text
-   Incompatible React versions:
-     react: 19.1.0
-     react-dom: 19.2.0
-
-   Tried to register two views with the same name RNSScreen
-   ```
-
-3. **Do not run Expo native commands from the monorepo root.**
+1. **Do not run Expo native commands from the monorepo root.**
    Run from `mobile_v2/`, or use `pnpm --dir mobile_v2 ...`. Running from the wrong package can make Expo look for a root `App` file or generate accidental root-level `ios/` and `app.json` files.
 
-4. **Do not keep generated native files from the wrong SDK.**
+2. **Do not keep generated native files from the wrong SDK.**
    If the SDK changes before the first real commit, delete/regenerate the native project cleanly:
 
    ```bash
@@ -77,7 +19,7 @@ If `pod install` needs to update CocoaPods specs, it writes under `~/.cocoapods`
    LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform ios --clean
    ```
 
-5. **Avoid nested duplicate native packages in Metro.**
+3. **Avoid nested duplicate native packages in Metro.**
    If using pnpm hoisting, add a `metro.config.js` early that pins native singletons (`react`, `react-dom`, `react-native`, `react-native-screens`, `react-native-safe-area-context`, `react-native-gesture-handler`, `react-native-reanimated`) to the workspace root and disables hierarchical lookup. This should be a safety net, not a substitute for clean SDK 54 scaffolding.
 
 ## The mental model
@@ -129,7 +71,7 @@ mobile_v2/
     index.tsx
 
   src/
-    app/
+    screens/
       MapAppScreen.tsx
 
     state/
@@ -336,16 +278,20 @@ Milestone 1 implementation checklist:
 1. Scaffold SDK 54 cleanly.
 2. Add mobile_v2 to pnpm-workspace.yaml.
 3. Install dependencies from the monorepo root.
-4. Add @gorhom/bottom-sheet using Expo/SDK-54-compatible versions.
+4. Add @gorhom/bottom-sheet and expo-dev-client using Expo/SDK-54-compatible versions.
 5. Replace generated starter routes/components with the shell.
 6. Add a Metro singleton config if pnpm creates nested native package copies.
 7. Verify:
    pnpm --dir mobile_v2 exec expo config --type public
    pnpm --dir mobile_v2 exec tsc --noEmit
    pnpm --dir mobile_v2 lint
-8. For iOS native:
+8. For iOS simulator:
+   cd mobile_v2
+   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --simulator "iPhone 16"
+9. For physical iOS device:
    cd mobile_v2
    LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device
+   pnpm exec expo start --dev-client -c
 ```
 
 ### Milestone 2: real map, no questions
