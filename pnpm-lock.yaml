@@ -313,12 +313,18 @@ importers:
       '@gorhom/bottom-sheet':
         specifier: ^5.2.8
         version: 5.2.8(@types/react@19.1.17)(react-native-gesture-handler@2.28.0(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native-reanimated@4.1.6(@babel/core@7.28.3)(react-native-worklets@0.7.4(@babel/core@7.28.3)(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      '@maplibre/maplibre-react-native':
+        specifier: ^10.4.2
+        version: 10.4.2(@expo/config-plugins@55.0.8)(@types/geojson@7946.0.16)(@types/react@19.1.17)(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       expo:
         specifier: ~54.0.34
         version: 54.0.34(@babel/core@7.28.3)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       expo-dev-client:
         specifier: ~6.0.21
         version: 6.0.21(expo@54.0.34)
+      expo-location:
+        specifier: ~19.0.8
+        version: 19.0.8(expo@54.0.34)
       expo-router:
         specifier: ~6.0.23
         version: 6.0.23(b3c4cb2120b6e84fa05025b1dbc72d45)
@@ -344,9 +350,21 @@ importers:
         specifier: ~4.16.0
         version: 4.16.0(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
     devDependencies:
+      '@testing-library/react-native':
+        specifier: ^13.0.0
+        version: 13.3.3(jest@29.7.0(@types/node@22.15.19))(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react-test-renderer@19.1.0(react@19.1.0))(react@19.1.0)
+      '@types/jest':
+        specifier: ^29.5.0
+        version: 29.5.14
       '@types/react':
         specifier: ~19.1.10
         version: 19.1.17
+      jest-expo:
+        specifier: ~54.0.0
+        version: 54.0.17(@babel/core@7.28.3)(expo@54.0.34)(jest@29.7.0(@types/node@22.15.19))(react-native@0.81.5(@babel/core@7.28.3)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      react-test-renderer:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
       typescript:
         specifier: ~5.9.2
         version: 5.9.3

@@ -16,6 +16,10 @@ config.resolver.nodeModulesPaths = [
 
 config.resolver.extraNodeModules = {
     "@gorhom/bottom-sheet": path.resolve(rootNodeModules, "@gorhom/bottom-sheet"),
+    "@maplibre/maplibre-react-native": path.resolve(
+        rootNodeModules,
+        "@maplibre/maplibre-react-native",
+    ),
     react: path.resolve(rootNodeModules, "react"),
     "react-dom": path.resolve(rootNodeModules, "react-dom"),
     "react-native": path.resolve(rootNodeModules, "react-native"),

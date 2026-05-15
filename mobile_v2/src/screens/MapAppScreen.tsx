@@ -1,7 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View } from "react-native";
 
-import { NativeMapPlaceholder } from "@/features/map/NativeMapPlaceholder";
+import { NativeMap } from "@/features/map/NativeMap";
 import { AppBottomSheet } from "@/features/sheet/AppBottomSheet";
 import { colors } from "@/theme/colors";
 
@@ -9,7 +9,7 @@ export function MapAppScreen() {
     return (
         <View style={styles.screen}>
             <StatusBar style="dark" />
-            <NativeMapPlaceholder />
+            <NativeMap />
             <AppBottomSheet />
         </View>
     );
