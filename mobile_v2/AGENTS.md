@@ -112,6 +112,11 @@ put that state in a focused feature/store and let the map render derived data.
 - Bboxes are `[west, south, east, north]`.
 - `ShapeSource`/layer children should stay before marker-like overlays. MapLibre
   RN can behave badly when native children are ordered casually.
+- Be conservative with MapLibre RN style expressions on iOS. Feature-driven
+  colors such as `["to-color", ["get", "color"], fallback]` are known to work,
+  but complex numeric expressions on circle styles have crashed native MapLibre.
+  Prefer separate filtered layers with literal numeric radii/widths when the
+  visual states are bounded.
 - `NativeMap` fits the play area into the upper map area using
   `getTopViewportFitPadding`. If sheet snap points or top chrome change, revisit
   `src/features/map/camera.ts`.
@@ -122,6 +127,10 @@ put that state in a focused feature/store and let the map render derived data.
 - Hiding-zone circles are geographic polygons generated from station points and
   radius meters, then merged before rendering. Do not use MapLibre pixel-radius
   circles for hiding-zone eligibility areas.
+- Assert hiding-zone polygon correctness in Jest by inspecting the generated
+  GeoJSON and `ShapeSource.shape` props. Maestro should cover the user settings
+  workflow and can capture screenshots for agent/debug review, but it should not
+  be the source of truth for polygon geometry.
 
 ## Bottom Sheet Rules
 
@@ -163,8 +172,19 @@ put that state in a focused feature/store and let the map render derived data.
   that is still contributed by another selected preset.
 - Radius display units are `m`, `km`, and `mi`; `HidingZoneProvider` stores the
   canonical value in meters.
+- Route and station overlay colors should come from generated preset route
+  colors. Stations may be contributed by more than one selected route, so render
+  multiple colors as concentric station rings instead of choosing a single
+  arbitrary transfer color.
 - ODPT generated data is checked in, but raw GTFS zips live in ignored
   `data/odpt/cache/`.
+- Some GTFS feeds, including cached Tokyo Metro data seen during development,
+  may omit `shapes.txt` or route `shape_id` values. Preserve the fallback that
+  derives route geometry from ordered `stop_times` so generated route lines do
+  not silently become empty while colors still exist.
+- `data/odpt/scripts/fetch-odpt.mjs --cache-only` is useful for regenerating
+  checked-in preset JSON from ignored cached GTFS zips when network access or
+  `ODPT_KEY` is unavailable.
 - Keep `data/odpt/NOTICE.md` and `data/odpt/sources.md` current when adding or
   refreshing ODPT providers. Generated JSON also carries an attribution block.
 - `pnpm --dir mobile_v2 data:odpt` requires network access and `ODPT_KEY` for
