@@ -1,10 +1,18 @@
 const pluginJs = require("@eslint/js");
+const eslintConfigPrettier = require("eslint-config-prettier");
 const pluginReact = require("eslint-plugin-react");
 const globals = require("globals");
 const tseslint = require("typescript-eslint");
 
 module.exports = [
     { ignores: ["node_modules/**", ".expo/**", "dist/**"] },
+    {
+        settings: {
+            react: {
+                version: "19",
+            },
+        },
+    },
     pluginJs.configs.recommended,
     ...tseslint.configs.recommended,
     pluginReact.configs.flat.recommended,
@@ -16,11 +24,6 @@ module.exports = [
                 ...globals.node,
             },
         },
-        settings: {
-            react: {
-                version: "19",
-            },
-        },
         rules: {
             "react/react-in-jsx-scope": "off",
             "react/display-name": "off",
@@ -29,4 +32,5 @@ module.exports = [
             "@typescript-eslint/no-require-imports": "off",
         },
     },
+    eslintConfigPrettier,
 ];

@@ -8,6 +8,9 @@
         "preview": "astro preview",
         "astro": "astro",
         "lint": "eslint --fix src && prettier . --write",
+        "lint:mobile": "pnpm --dir mobile_v2 lint",
+        "format:mobile": "pnpm --dir mobile_v2 format",
+        "check:mobile": "pnpm --dir mobile_v2 check",
         "test": "vitest"
     },
     "dependencies": {
