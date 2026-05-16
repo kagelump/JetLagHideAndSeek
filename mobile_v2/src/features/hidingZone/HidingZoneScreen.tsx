@@ -82,6 +82,7 @@ export function HidingZoneScreen() {
                     </View>
                 </View>
                 <Text
+                    accessibilityLabel={`Stored as ${Math.round(radiusMeters)} m`}
                     style={styles.metadata}
                     testID="hiding-zone-radius-meters"
                 >
@@ -89,7 +90,12 @@ export function HidingZoneScreen() {
                 </Text>
             </View>
 
-            <View style={styles.card} testID="current-hiding-zone-card">
+            <View
+                accessible
+                accessibilityLabel={`${selectedPresetIds.length} preset${selectedPresetIds.length === 1 ? "" : "s"} selected; ${selectedStations.length} station${selectedStations.length === 1 ? "" : "s"}`}
+                style={styles.card}
+                testID="current-hiding-zone-card"
+            >
                 <Text style={styles.cardLabel}>Current</Text>
                 <Text style={styles.currentName}>
                     {selectedPresetIds.length} preset
@@ -162,6 +168,7 @@ function PresetRow({
 }) {
     return (
         <Pressable
+            accessibilityLabel={`${preset.label}, ${isSelected ? "Remove" : "Add"}`}
             accessibilityRole="button"
             onPress={onToggle}
             style={({ pressed }) => [

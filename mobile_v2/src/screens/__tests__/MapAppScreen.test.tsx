@@ -4,9 +4,12 @@ import osmtogeojson from "osmtogeojson";
 import type { ReactElement } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { hidingZonePresets } from "@/features/hidingZone/hidingZoneData";
 import { clearPlayAreaMemoryCache } from "@/features/map/playAreaBoundary";
 
 import { MapAppScreen } from "../MapAppScreen";
+
+const EARTH_RADIUS_METERS = 6371008.8;
 
 jest.mock("osmtogeojson", () => ({
     __esModule: true,
@@ -39,6 +42,75 @@ const osakaBoundary = {
     type: "FeatureCollection",
 };
 
+function getMapShapeSource(screen: ReturnType<typeof render>, id: string) {
+    const source = screen
+        .getAllByTestId("map-shape-source")
+        .find((shapeSource) => shapeSource.props.id === id);
+
+    expect(source).toBeTruthy();
+    return source!;
+}
+
+function projectedRingArea(
+    coordinates: number[][],
+    originLatitude: number,
+): number {
+    const originLatitudeRadians = (originLatitude * Math.PI) / 180;
+    let area = 0;
+
+    for (let index = 0; index < coordinates.length - 1; index += 1) {
+        const [lonA, latA] = coordinates[index];
+        const [lonB, latB] = coordinates[index + 1];
+        const xA =
+            EARTH_RADIUS_METERS *
+            ((lonA * Math.PI) / 180) *
+            Math.cos(originLatitudeRadians);
+        const yA = EARTH_RADIUS_METERS * ((latA * Math.PI) / 180);
+        const xB =
+            EARTH_RADIUS_METERS *
+            ((lonB * Math.PI) / 180) *
+            Math.cos(originLatitudeRadians);
+        const yB = EARTH_RADIUS_METERS * ((latB * Math.PI) / 180);
+
+        area += xA * yB - xB * yA;
+    }
+
+    return Math.abs(area) / 2;
+}
+
+function polygonAreaMeters(feature: any, originLatitude: number): number {
+    if (feature.geometry.type === "Polygon") {
+        const [outerRing, ...holes] = feature.geometry.coordinates;
+        return (
+            projectedRingArea(outerRing, originLatitude) -
+            holes.reduce(
+                (area: number, ring: number[][]) =>
+                    area + projectedRingArea(ring, originLatitude),
+                0,
+            )
+        );
+    }
+
+    if (feature.geometry.type === "MultiPolygon") {
+        return feature.geometry.coordinates.reduce(
+            (area: number, polygon: number[][][]) =>
+                area +
+                polygonAreaMeters(
+                    {
+                        geometry: {
+                            coordinates: polygon,
+                            type: "Polygon",
+                        },
+                    },
+                    originLatitude,
+                ),
+            0,
+        );
+    }
+
+    return 0;
+}
+
 function renderWithSafeArea(ui: ReactElement) {
     return render(
         <SafeAreaProvider
@@ -70,6 +142,22 @@ describe("MapAppScreen", () => {
         expect(screen.getByTestId("native-map")).toBeTruthy();
         expect(screen.getByTestId("bottom-sheet")).toBeTruthy();
         expect(screen.getByText("Game Setup")).toBeTruthy();
+    });
+
+    it("starts with empty hiding-zone map sources", () => {
+        const screen = renderWithSafeArea(<MapAppScreen />);
+
+        expect(
+            getMapShapeSource(screen, "hiding-zone-area").props.shape.features,
+        ).toHaveLength(0);
+        expect(
+            getMapShapeSource(screen, "hiding-zone-routes").props.shape
+                .features,
+        ).toHaveLength(0);
+        expect(
+            getMapShapeSource(screen, "hiding-zone-stations").props.shape
+                .features,
+        ).toHaveLength(0);
     });
 
     it("keeps bottom-sheet navigation working", () => {
@@ -112,16 +200,39 @@ describe("MapAppScreen", () => {
         ).toEqual(["Stored as ", 600, " m"]);
     });
 
-    it("adds a hiding-zone preset and renders overlay layers", async () => {
+    it("adds a hiding-zone preset and renders consistent map sources", async () => {
         const screen = renderWithSafeArea(<MapAppScreen />);
+        const tokyoMetro = hidingZonePresets.find(
+            (preset) => preset.id === "tokyo-metro",
+        );
+
+        expect(tokyoMetro).toBeTruthy();
 
         fireEvent.press(screen.getByTestId("main-settings-row"));
         fireEvent.press(screen.getByTestId("settings-hiding-zone-row"));
         fireEvent.press(screen.getByTestId("hiding-zone-preset-tokyo-metro"));
 
         await waitFor(() => {
+            const zoneShape = getMapShapeSource(screen, "hiding-zone-area")
+                .props.shape;
+            const routeShape = getMapShapeSource(screen, "hiding-zone-routes")
+                .props.shape;
+            const stationShape = getMapShapeSource(
+                screen,
+                "hiding-zone-stations",
+            ).props.shape;
+
             expect(screen.getByText("1 preset selected")).toBeTruthy();
             expect(screen.getByText("Remove")).toBeTruthy();
+            expect(zoneShape.features).toHaveLength(1);
+            expect(["Polygon", "MultiPolygon"]).toContain(
+                zoneShape.features[0].geometry.type,
+            );
+            expect(zoneShape.features[0].properties.radiusMeters).toBe(600);
+            expect(routeShape.features).toHaveLength(tokyoMetro!.routes.length);
+            expect(stationShape.features).toHaveLength(
+                tokyoMetro!.stations.length,
+            );
             expect(
                 screen
                     .getAllByTestId("map-fill-layer")
@@ -137,6 +248,49 @@ describe("MapAppScreen", () => {
                             layer.props.id === "hiding-zone-stations-circle",
                     ),
             ).toBe(true);
+        });
+    });
+
+    it("updates rendered hiding-zone polygon area when the radius changes", async () => {
+        const screen = renderWithSafeArea(<MapAppScreen />);
+        const tokyoMetro = hidingZonePresets.find(
+            (preset) => preset.id === "tokyo-metro",
+        );
+
+        expect(tokyoMetro).toBeTruthy();
+
+        fireEvent.press(screen.getByTestId("main-settings-row"));
+        fireEvent.press(screen.getByTestId("settings-hiding-zone-row"));
+        fireEvent.press(screen.getByTestId("hiding-zone-preset-tokyo-metro"));
+
+        await waitFor(() => {
+            expect(
+                getMapShapeSource(screen, "hiding-zone-area").props.shape
+                    .features,
+            ).toHaveLength(1);
+        });
+
+        const initialFeature = getMapShapeSource(screen, "hiding-zone-area")
+            .props.shape.features[0];
+        const initialArea = polygonAreaMeters(
+            initialFeature,
+            tokyoMetro!.stations[0].lat,
+        );
+
+        fireEvent.press(screen.getByTestId("hiding-zone-unit-km"));
+        fireEvent.changeText(
+            screen.getByTestId("hiding-zone-radius-input"),
+            "1",
+        );
+
+        await waitFor(() => {
+            const updatedFeature = getMapShapeSource(screen, "hiding-zone-area")
+                .props.shape.features[0];
+
+            expect(updatedFeature.properties.radiusMeters).toBe(1000);
+            expect(
+                polygonAreaMeters(updatedFeature, tokyoMetro!.stations[0].lat),
+            ).toBeGreaterThan(initialArea);
         });
     });
 

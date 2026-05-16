@@ -8,6 +8,8 @@ import {
 } from "../hidingZone";
 import type { HidingZonePreset } from "../hidingZoneTypes";
 
+const EARTH_RADIUS_METERS = 6371008.8;
+
 const preset: HidingZonePreset = {
     bbox: [139.6, 35.6, 139.8, 35.8],
     defaultColor: "#009BBF",
@@ -25,6 +27,76 @@ const preset: HidingZonePreset = {
         },
     ],
 };
+
+function collectCoordinates(geometry: any): number[][] {
+    if (geometry.type === "Polygon") {
+        return geometry.coordinates.flat();
+    }
+    if (geometry.type === "MultiPolygon") {
+        return geometry.coordinates.flat(2);
+    }
+    return [];
+}
+
+function projectedRingArea(
+    coordinates: number[][],
+    originLatitude: number,
+): number {
+    const originLatitudeRadians = (originLatitude * Math.PI) / 180;
+    let area = 0;
+
+    for (let index = 0; index < coordinates.length - 1; index += 1) {
+        const [lonA, latA] = coordinates[index];
+        const [lonB, latB] = coordinates[index + 1];
+        const xA =
+            EARTH_RADIUS_METERS *
+            ((lonA * Math.PI) / 180) *
+            Math.cos(originLatitudeRadians);
+        const yA = EARTH_RADIUS_METERS * ((latA * Math.PI) / 180);
+        const xB =
+            EARTH_RADIUS_METERS *
+            ((lonB * Math.PI) / 180) *
+            Math.cos(originLatitudeRadians);
+        const yB = EARTH_RADIUS_METERS * ((latB * Math.PI) / 180);
+
+        area += xA * yB - xB * yA;
+    }
+
+    return Math.abs(area) / 2;
+}
+
+function polygonAreaMeters(feature: any, originLatitude: number): number {
+    if (feature.geometry.type === "Polygon") {
+        const [outerRing, ...holes] = feature.geometry.coordinates;
+        return (
+            projectedRingArea(outerRing, originLatitude) -
+            holes.reduce(
+                (area: number, ring: number[][]) =>
+                    area + projectedRingArea(ring, originLatitude),
+                0,
+            )
+        );
+    }
+
+    if (feature.geometry.type === "MultiPolygon") {
+        return feature.geometry.coordinates.reduce(
+            (area: number, polygon: number[][][]) =>
+                area +
+                polygonAreaMeters(
+                    {
+                        geometry: {
+                            coordinates: polygon,
+                            type: "Polygon",
+                        },
+                    },
+                    originLatitude,
+                ),
+            0,
+        );
+    }
+
+    return 0;
+}
 
 describe("hidingZone helpers", () => {
     it("detects bbox intersections", () => {
@@ -66,11 +138,59 @@ describe("hidingZone helpers", () => {
         ]);
     });
 
-    it("builds empty or merged hiding-zone feature collections", () => {
+    it("builds empty hiding-zone feature collections", () => {
         expect(buildHidingZoneFeatureCollection([], 600).features).toEqual([]);
+    });
 
+    it("builds a finite polygon around a selected station", () => {
         const zone = buildHidingZoneFeatureCollection(preset.stations, 600);
+        const feature = zone.features[0];
+        const coordinates = collectCoordinates(feature.geometry);
+        const lons = coordinates.map(([lon]) => lon);
+        const lats = coordinates.map(([, lat]) => lat);
+        const area = polygonAreaMeters(feature, preset.stations[0].lat);
+        const expectedArea = Math.PI * 600 * 600;
+
         expect(zone.features).toHaveLength(1);
-        expect(zone.features[0].properties.radiusMeters).toBe(600);
+        expect(feature.geometry.type).toBe("Polygon");
+        expect(feature.properties.radiusMeters).toBe(600);
+        expect(coordinates.length).toBeGreaterThan(4);
+        expect(
+            coordinates.every(([lon, lat]) =>
+                [lon, lat].every(Number.isFinite),
+            ),
+        ).toBe(true);
+        expect(Math.min(...lons)).toBeLessThan(preset.stations[0].lon);
+        expect(Math.max(...lons)).toBeGreaterThan(preset.stations[0].lon);
+        expect(Math.min(...lats)).toBeLessThan(preset.stations[0].lat);
+        expect(Math.max(...lats)).toBeGreaterThan(preset.stations[0].lat);
+        expect(area).toBeGreaterThan(expectedArea * 0.85);
+        expect(area).toBeLessThan(expectedArea * 1.15);
+    });
+
+    it("merges multiple station buffers and grows when radius increases", () => {
+        const nearbyStations = [
+            preset.stations[0],
+            {
+                id: "station-b",
+                lat: 35.681,
+                lon: 139.766,
+                name: "Station B",
+                routeIds: ["route-b"],
+            },
+        ];
+
+        const zone600 = buildHidingZoneFeatureCollection(nearbyStations, 600);
+        const zone1000 = buildHidingZoneFeatureCollection(nearbyStations, 1000);
+        const feature600 = zone600.features[0];
+        const feature1000 = zone1000.features[0];
+
+        expect(zone600.features).toHaveLength(1);
+        expect(["Polygon", "MultiPolygon"]).toContain(feature600.geometry.type);
+        expect(feature600.properties.radiusMeters).toBe(600);
+        expect(feature1000.properties.radiusMeters).toBe(1000);
+        expect(
+            polygonAreaMeters(feature1000, nearbyStations[0].lat),
+        ).toBeGreaterThan(polygonAreaMeters(feature600, nearbyStations[0].lat));
     });
 });

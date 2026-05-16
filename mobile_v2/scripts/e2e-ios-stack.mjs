@@ -74,6 +74,7 @@ async function waitForMetro() {
 async function runMaestro() {
     mkdirSync(join(artifactsDir, "smoke"), { recursive: true });
     mkdirSync(join(artifactsDir, "play-area"), { recursive: true });
+    mkdirSync(join(artifactsDir, "hiding-zone"), { recursive: true });
 
     await runCommand("maestro", [
         "test",
@@ -86,6 +87,12 @@ async function runMaestro() {
         "--debug-output",
         join(artifactsDir, "play-area"),
         "e2e/play-area.yaml",
+    ]);
+    await runCommand("maestro", [
+        "test",
+        "--debug-output",
+        join(artifactsDir, "hiding-zone"),
+        "e2e/hiding-zone.yaml",
     ]);
 }
 

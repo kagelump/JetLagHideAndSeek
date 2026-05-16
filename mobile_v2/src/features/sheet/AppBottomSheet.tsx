@@ -5,6 +5,7 @@ import { StyleSheet } from "react-native";
 
 import { MainDrawer } from "@/features/sheet/MainDrawer";
 import { SheetRouteName } from "@/features/sheet/sheetRoutes";
+import { useHidingZone } from "@/state/hidingZoneStore";
 import { colors } from "@/theme/colors";
 
 const Sheet = BottomSheet as ComponentType<any>;
@@ -17,6 +18,17 @@ export function AppBottomSheet() {
     const snapPoints = useMemo(() => ["18%", "42%", "88%"], []);
     const [route, setRoute] = useState<SheetRouteName>("main");
     const currentIndexRef = useRef(1);
+    const {
+        radiusDisplayValue,
+        radiusMeters,
+        radiusUnit,
+        selectedPresetIds,
+        selectedStations,
+    } = useHidingZone();
+    const hidingZoneAccessibilityLabel =
+        route === "hiding-zone"
+            ? `Hiding zone settings; radius ${radiusDisplayValue} ${radiusUnit}; stored as ${Math.round(radiusMeters)} m; ${selectedPresetIds.length} preset${selectedPresetIds.length === 1 ? "" : "s"} selected; ${selectedStations.length} station${selectedStations.length === 1 ? "" : "s"}`
+            : undefined;
 
     useEffect(() => {
         const target = route === "play-area" || route === "hiding-zone" ? 2 : 1;
@@ -37,7 +49,11 @@ export function AppBottomSheet() {
                 currentIndexRef.current = index;
             }}
         >
-            <SheetView style={styles.content}>
+            <SheetView
+                accessible={route === "hiding-zone"}
+                accessibilityLabel={hidingZoneAccessibilityLabel}
+                style={styles.content}
+            >
                 <MainDrawer route={route} onNavigate={setRoute} />
             </SheetView>
         </Sheet>
