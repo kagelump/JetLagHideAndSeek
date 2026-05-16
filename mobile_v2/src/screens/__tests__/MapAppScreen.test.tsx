@@ -109,7 +109,7 @@ describe("MapAppScreen", () => {
 
         await waitFor(() => {
             expect(screen.getAllByText("Osaka").length).toBeGreaterThan(0);
-            expect(screen.getByText("Fit Osaka")).toBeTruthy();
+            expect(screen.getByText("🗺️")).toBeTruthy();
             expect(screen.getByText("Relation 358674")).toBeTruthy();
         });
     });
@@ -156,7 +156,7 @@ describe("MapAppScreen", () => {
             expect(
                 screen.getAllByText("Tokyo 23 Wards").length,
             ).toBeGreaterThan(0);
-            expect(screen.getByText("Fit Tokyo 23 Wards")).toBeTruthy();
+            expect(screen.getByText("🗺️")).toBeTruthy();
         });
     });
 });

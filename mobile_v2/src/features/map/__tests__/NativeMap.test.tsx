@@ -39,8 +39,8 @@ describe("NativeMap", () => {
 
         expect(screen.getByTestId("native-map")).toBeTruthy();
         expect(screen.getByText("Tokyo 23 Wards")).toBeTruthy();
-        expect(screen.getByText("Fit Tokyo 23 Wards")).toBeTruthy();
-        expect(screen.getByText("Locate me")).toBeTruthy();
+        expect(screen.getByText("🗺️")).toBeTruthy();
+        expect(screen.getByText("📍")).toBeTruthy();
         expect(screen.getByTestId("map-shape-source").props.id).toBe(
             "play-area-boundary-19631009",
         );
@@ -71,7 +71,7 @@ describe("NativeMap", () => {
     it("locates the user and flies the camera to the mocked coordinate", async () => {
         const screen = renderWithSafeArea(<NativeMap />);
 
-        fireEvent.press(screen.getByText("Locate me"));
+        fireEvent.press(screen.getByText("📍"));
 
         await waitFor(() => {
             expect(
