@@ -40,6 +40,7 @@
         "@types/react": "~19.1.10",
         "eslint": "^9.19.0",
         "eslint-config-prettier": "^10.0.1",
+        "eslint-plugin-rn-a11y": "^1.9.0",
         "jest-expo": "~54.0.0",
         "prettier": "3.5.3",
         "react-test-renderer": "19.1.0",

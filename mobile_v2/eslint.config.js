@@ -1,6 +1,7 @@
 const pluginJs = require("@eslint/js");
 const eslintConfigPrettier = require("eslint-config-prettier");
 const pluginReact = require("eslint-plugin-react");
+const pluginRnA11y = require("eslint-plugin-rn-a11y");
 const globals = require("globals");
 const tseslint = require("typescript-eslint");
 
@@ -16,6 +17,20 @@ module.exports = [
     pluginJs.configs.recommended,
     ...tseslint.configs.recommended,
     pluginReact.configs.flat.recommended,
+    {
+        plugins: { "rn-a11y": pluginRnA11y },
+        rules: {
+            "rn-a11y/has-valid-accessibility-actions": "error",
+            "rn-a11y/no-deprecated-props": "error",
+            "rn-a11y/no-accessibilityLabel-for-testing": "warn",
+            "rn-a11y/no-nested-touchables": "error",
+            "rn-a11y/no-long-alt": "warn",
+            "rn-a11y/no-same-label-and-hint": "error",
+            "rn-a11y/image-has-accessible": "warn",
+            "rn-a11y/no-use-inverted-virtualizedList": "warn",
+            "rn-a11y/touchable-text-has-role": "error",
+        },
+    },
     {
         files: ["**/*.{js,ts,tsx}"],
         languageOptions: {
