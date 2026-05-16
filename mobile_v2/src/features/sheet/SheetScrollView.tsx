@@ -27,7 +27,7 @@ export function SheetScrollView({
 
 const styles = StyleSheet.create({
     content: {
-        paddingBottom: 40,
+        paddingBottom: 160,
     },
     scroll: {
         flex: 1,
