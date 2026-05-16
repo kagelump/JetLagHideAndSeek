@@ -12,8 +12,7 @@ appId: com.hinoka.hideandseek.v2
       commands:
           - tapOn: "Continue"
 - extendedWaitUntil:
-      visible: "Hide & Seek"
+      visible: "Tokyo 23 Wards"
       timeout: 60000
-- assertVisible: "Tokyo 23 Wards"
-- assertVisible: "Fit Tokyo 23 Wards"
-- assertVisible: "Locate me"
+- assertVisible:
+      id: "main-settings-row"

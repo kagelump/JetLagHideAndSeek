@@ -1,5 +1,7 @@
 import {
     Camera,
+    CircleLayer,
+    FillLayer,
     LineLayer,
     MapView,
     setAccessToken,
@@ -16,6 +18,7 @@ import {
 
 import { colors } from "@/theme/colors";
 
+import { useHidingZone } from "@/state/hidingZoneStore";
 import {
     type CameraHandle,
     fitCameraToBbox,
@@ -30,6 +33,8 @@ setAccessToken(null);
 const MLMapView = MapView as ComponentType<any>;
 const MLCamera = Camera as ComponentType<any>;
 const MLShapeSource = ShapeSource as ComponentType<any>;
+const MLCircleLayer = CircleLayer as ComponentType<any>;
+const MLFillLayer = FillLayer as ComponentType<any>;
 const MLLineLayer = LineLayer as ComponentType<any>;
 const MLUserLocation = UserLocation as ComponentType<any>;
 
@@ -37,6 +42,7 @@ export function NativeMap() {
     const cameraRef = useRef<CameraHandle | null>(null);
     const insets = useSafeAreaInsets();
     const { height } = useSafeAreaFrame();
+    const { routeFeatures, stationFeatures, zoneFeatures } = useHidingZone();
     const { playArea } = usePlayArea();
     const mapStyle = useMemo(() => buildOsmRasterStyleJson(), []);
     const fitPadding = useMemo(
@@ -75,6 +81,57 @@ export function NativeMap() {
                     }}
                 />
 
+                <MLShapeSource id="hiding-zone-area" shape={zoneFeatures}>
+                    <MLFillLayer
+                        id="hiding-zone-area-fill"
+                        style={{
+                            fillColor: colors.tint,
+                            fillOpacity: 0.16,
+                        }}
+                    />
+                    <MLLineLayer
+                        id="hiding-zone-area-outline"
+                        style={{
+                            lineColor: colors.tint,
+                            lineOpacity: 0.55,
+                            lineWidth: 1.5,
+                        }}
+                    />
+                </MLShapeSource>
+
+                <MLShapeSource id="hiding-zone-routes" shape={routeFeatures}>
+                    <MLLineLayer
+                        id="hiding-zone-routes-line"
+                        style={{
+                            lineCap: "round",
+                            lineColor: [
+                                "coalesce",
+                                ["get", "color"],
+                                colors.tint,
+                            ],
+                            lineJoin: "round",
+                            lineOpacity: 0.9,
+                            lineWidth: 4,
+                        }}
+                    />
+                </MLShapeSource>
+
+                <MLShapeSource
+                    id="hiding-zone-stations"
+                    shape={stationFeatures}
+                >
+                    <MLCircleLayer
+                        id="hiding-zone-stations-circle"
+                        style={{
+                            circleColor: colors.white,
+                            circleOpacity: 0.95,
+                            circleRadius: 4,
+                            circleStrokeColor: colors.tint,
+                            circleStrokeWidth: 2,
+                        }}
+                    />
+                </MLShapeSource>
+
                 <MLShapeSource
                     id={`play-area-boundary-${playArea.osmId}`}
                     shape={playArea.boundary}
@@ -98,7 +155,7 @@ export function NativeMap() {
                 ) : null}
             </MLMapView>
 
-            <View style={[styles.topBar, { paddingTop: insets.top  }]}>
+            <View style={[styles.topBar, { paddingTop: insets.top }]}>
                 <Text style={styles.title}>{playArea.label}</Text>
             </View>
 

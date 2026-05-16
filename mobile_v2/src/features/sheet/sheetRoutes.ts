@@ -3,4 +3,5 @@ export type SheetRouteName =
     | "questions"
     | "add-question"
     | "settings"
-    | "play-area";
+    | "play-area"
+    | "hiding-zone";

@@ -26,7 +26,7 @@ E2E notes:
 
 - Maestro is installed at `~/.maestro/bin/maestro`; add it to `PATH` if `maestro` is not found.
 - Start Metro first: `pnpm --dir mobile_v2 exec expo start --dev-client --host localhost --port 8081 -c`.
-- The smoke flow handles Expo dev-client first-run prompts conditionally, then asserts visible map UI (`Hide & Seek`, `Tokyo 23 Wards`, `Fit Tokyo 23 Wards`, `Locate me`) rather than the bottom drawer because the dev menu can cover the drawer.
+- The smoke flow handles Expo dev-client first-run prompts conditionally, then asserts the map has loaded the default `Tokyo 23 Wards` label and the main settings row is targetable. The map controls are icon-only, so Maestro should not assert old visible copy such as `Fit Tokyo 23 Wards` or `Locate me`.
 
 ## Milestone 3: Play-Area Settings
 
@@ -47,7 +47,7 @@ Bottom-sheet and E2E accessibility notes:
 
 - The Play Area route snaps the bottom sheet to the large snap point before Maestro looks for controls.
 - Maestro/XCUITest sees the native accessibility hierarchy, not the React tree. A visible empty `TextInput` may not expose its `testID` as a targetable iOS node.
-- The direct relation ID field therefore uses an accessible `Pressable` wrapper with `testID="play-area-relation-id-input"` that focuses the real `TextInput`; unit tests target the inner text input.
+- The direct relation ID field has React/Jest test IDs on both the wrapper and the inner text input, but the current Maestro flow uses visible coordinate taps because iOS does not expose those nested nodes reliably through XCUITest.
 - The iOS number pad does not reliably support Maestro `hideKeyboard`. The play-area flow taps the visible Apply button directly after entering text.
 
 E2E stack helper:
@@ -60,4 +60,33 @@ Testing added in this milestone:
 - Boundary loading/cache unit tests for bundled Tokyo, mocked Osaka conversion, invalid IDs, and AsyncStorage cache hits.
 - Photon result mapping tests for relation filtering and deduplication.
 - Component tests for Settings → Play Area navigation, direct Osaka apply, invalid input, and fetch failure retaining Tokyo.
-- Maestro flow at `mobile_v2/e2e/play-area.yaml` that changes the play area to Osaka via relation `358674` and asserts `Osaka`, `Fit Osaka`, bbox, and cache metadata.
+- Maestro flow at `mobile_v2/e2e/play-area.yaml` that changes the play area to Osaka via relation `358674` and asserts the visible `Osaka` state change.
+
+## Milestone 4: Hiding-Zone Presets
+
+Milestone 4 adds Settings → Hiding Zones and map overlays for selected transit presets. The app now wraps the map and bottom sheet in both `PlayAreaProvider` and `HidingZoneProvider`; hiding-zone state is still in memory only.
+
+Tokyo Metro and Toei Subway presets are generated from ODPT GTFS files. The refresh script and config live under `mobile_v2/data/odpt/`:
+
+- `config.yaml` defines source URLs and output paths.
+- `scripts/fetch-odpt.mjs` reads `ODPT_KEY` from the environment or `~/.env`, downloads GTFS zips into ignored `data/odpt/cache/`, parses the relevant GTFS tables, and writes `generated/hiding-zone-presets.json`.
+- `NOTICE.md` and `sources.md` carry ODPT/provider attribution, source links, and license/usage-rule notes. Keep these with any generated data changes.
+
+Runtime behavior:
+
+- Presets are suggested when the preset bbox intersects the current play-area bbox; suggestions are not auto-selected.
+- Preset selection is additive. Selected stations are deduplicated by stable generated station IDs.
+- Radius defaults to 600 meters. The UI can display meters, kilometers, or miles, but `HidingZoneProvider` stores meters internally.
+- `NativeMap` renders selected route lines, selected station points, and a merged hiding-zone fill generated with Turf circle/union helpers.
+
+Testing added in this milestone:
+
+- Unit tests for bbox suggestion logic, radius conversion, selected-station deduplication, and hiding-zone GeoJSON generation.
+- Component tests for Hiding Zones navigation, Tokyo preset suggestions, preset selection, radius unit conversion, and map overlay layer rendering.
+- MapLibre Jest mocks now include `FillLayer` and `CircleLayer`.
+
+Native/dependency setup matters:
+
+- Hiding-zone geometry uses `@turf/circle`, `@turf/helpers`, and `@turf/union`.
+- ODPT processing uses `fflate` for GTFS zip extraction and the built-in Node fetch API. Refreshing ODPT data requires network access and an `ODPT_KEY` for Tokyo Metro.
+- `pnpm --dir mobile_v2 data:odpt` rewrites generated data. Run formatting afterward because generated JSON is checked in.

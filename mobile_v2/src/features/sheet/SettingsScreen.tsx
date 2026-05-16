@@ -38,6 +38,25 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     </View>
                     <Text style={styles.chevron}>›</Text>
                 </Pressable>
+
+                <Pressable
+                    accessibilityLabel="Open Hiding Zones settings"
+                    accessibilityRole="button"
+                    onPress={() => onNavigate("hiding-zone")}
+                    style={({ pressed }) => [
+                        styles.action,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                    testID="settings-hiding-zone-row"
+                >
+                    <View style={styles.actionCopy}>
+                        <Text style={styles.actionTitle}>Hiding Zones</Text>
+                        <Text style={styles.actionDescription}>
+                            Eligible transit stations for the hiding zone.
+                        </Text>
+                    </View>
+                    <Text style={styles.chevron}>›</Text>
+                </Pressable>
             </View>
         </View>
     );

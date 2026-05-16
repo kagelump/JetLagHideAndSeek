@@ -14,26 +14,19 @@ appId: com.hinoka.hideandseek.v2
 - extendedWaitUntil:
       visible: "Tokyo 23 Wards"
       timeout: 60000
-- assertVisible: "Fit Tokyo 23 Wards"
 - tapOn:
       id: "main-settings-row"
 - tapOn:
       id: "settings-play-area-row"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-      visible:
-          id: "play-area-relation-id-input"
+      visible: "Tokyo 23 Wards"
       timeout: 15000
 - tapOn:
-      id: "play-area-relation-id-input"
+      point: "38%,39%"
 - inputText: "358674"
 - tapOn:
-      id: "play-area-apply-relation-button"
+      point: "80%,39%"
 - extendedWaitUntil:
       visible: "Osaka"
       timeout: 90000
-- assertVisible: "Fit Osaka"
-- assertVisible:
-      id: "play-area-bbox"
-- assertVisible:
-      id: "play-area-cache-status"

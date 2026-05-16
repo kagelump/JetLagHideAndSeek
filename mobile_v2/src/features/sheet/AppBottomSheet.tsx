@@ -19,7 +19,7 @@ export function AppBottomSheet() {
     const currentIndexRef = useRef(1);
 
     useEffect(() => {
-        const target = route === "play-area" ? 2 : 1;
+        const target = route === "play-area" || route === "hiding-zone" ? 2 : 1;
         if (target > currentIndexRef.current) {
             sheetRef.current?.snapToIndex?.(target);
         }

@@ -64,6 +64,8 @@ jest.mock("@maplibre/maplibre-react-native", () => {
 
     return {
         Camera,
+        CircleLayer: createMapComponent("map-circle-layer"),
+        FillLayer: createMapComponent("map-fill-layer"),
         LineLayer: createMapComponent("map-line-layer"),
         MapView: createMapComponent("map-view"),
         ShapeSource: createMapComponent("map-shape-source"),

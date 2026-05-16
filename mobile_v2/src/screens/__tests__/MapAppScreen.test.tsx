@@ -94,6 +94,70 @@ describe("MapAppScreen", () => {
         fireEvent.press(screen.getByTestId("main-settings-row"));
         expect(screen.getByText("Game Settings")).toBeTruthy();
         expect(screen.getByTestId("settings-play-area-row")).toBeTruthy();
+        expect(screen.getByTestId("settings-hiding-zone-row")).toBeTruthy();
+    });
+
+    it("suggests Tokyo hiding-zone presets without auto-selecting them", () => {
+        const screen = renderWithSafeArea(<MapAppScreen />);
+
+        fireEvent.press(screen.getByTestId("main-settings-row"));
+        fireEvent.press(screen.getByTestId("settings-hiding-zone-row"));
+
+        expect(screen.getByText("Suggested presets")).toBeTruthy();
+        expect(screen.getByText("Tokyo Metro")).toBeTruthy();
+        expect(screen.getByText("Toei Subway")).toBeTruthy();
+        expect(screen.getByText("0 presets selected")).toBeTruthy();
+        expect(
+            screen.getByTestId("hiding-zone-radius-meters").props.children,
+        ).toEqual(["Stored as ", 600, " m"]);
+    });
+
+    it("adds a hiding-zone preset and renders overlay layers", async () => {
+        const screen = renderWithSafeArea(<MapAppScreen />);
+
+        fireEvent.press(screen.getByTestId("main-settings-row"));
+        fireEvent.press(screen.getByTestId("settings-hiding-zone-row"));
+        fireEvent.press(screen.getByTestId("hiding-zone-preset-tokyo-metro"));
+
+        await waitFor(() => {
+            expect(screen.getByText("1 preset selected")).toBeTruthy();
+            expect(screen.getByText("Remove")).toBeTruthy();
+            expect(
+                screen
+                    .getAllByTestId("map-fill-layer")
+                    .some(
+                        (layer) => layer.props.id === "hiding-zone-area-fill",
+                    ),
+            ).toBe(true);
+            expect(
+                screen
+                    .getAllByTestId("map-circle-layer")
+                    .some(
+                        (layer) =>
+                            layer.props.id === "hiding-zone-stations-circle",
+                    ),
+            ).toBe(true);
+        });
+    });
+
+    it("changes radius units while preserving backend meters", () => {
+        const screen = renderWithSafeArea(<MapAppScreen />);
+
+        fireEvent.press(screen.getByTestId("main-settings-row"));
+        fireEvent.press(screen.getByTestId("settings-hiding-zone-row"));
+        fireEvent.press(screen.getByTestId("hiding-zone-unit-km"));
+
+        expect(screen.getByTestId("hiding-zone-radius-input").props.value).toBe(
+            "0.60",
+        );
+
+        fireEvent.changeText(
+            screen.getByTestId("hiding-zone-radius-input"),
+            "1",
+        );
+        expect(
+            screen.getByTestId("hiding-zone-radius-meters").props.children,
+        ).toEqual(["Stored as ", 1000, " m"]);
     });
 
     it("applies an Osaka play area from a direct OSM relation ID", async () => {

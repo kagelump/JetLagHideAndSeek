@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { HidingZoneScreen } from "@/features/hidingZone/HidingZoneScreen";
 import { PlayAreaScreen } from "@/features/playArea/PlayAreaScreen";
 import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import { SheetRouteName } from "@/features/sheet/sheetRoutes";
@@ -32,6 +33,10 @@ const routeContent: Record<SheetRouteName, { title: string; detail: string }> =
             detail: "Choose the boundary for the game map.",
             title: "Play Area",
         },
+        "hiding-zone": {
+            detail: "Select eligible transit stations for the hiding zone.",
+            title: "Hiding Zones",
+        },
     };
 
 export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
@@ -51,6 +56,15 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
             <View style={styles.container}>
                 <BackButton onPress={() => onNavigate("settings")} />
                 <PlayAreaScreen />
+            </View>
+        );
+    }
+
+    if (route === "hiding-zone") {
+        return (
+            <View style={styles.container}>
+                <BackButton onPress={() => onNavigate("settings")} />
+                <HidingZoneScreen />
             </View>
         );
     }

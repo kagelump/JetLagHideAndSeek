@@ -10,14 +10,16 @@ patterns wholesale.
 - Entry points: `app/_layout.tsx` wraps the app in gesture/safe-area providers,
   and `app/index.tsx` renders `src/screens/MapAppScreen.tsx`.
 - Main screen: `MapAppScreen` composes `NativeMap` and `AppBottomSheet` inside
-  `PlayAreaProvider`.
-- Current milestone: MapLibre map plus Settings -> Play Area. Question state,
-  copy/paste wire format, and persistence of the selected play area are still
-  future work.
+  `PlayAreaProvider` and `HidingZoneProvider`.
+- Current milestone: MapLibre map plus Settings -> Play Area and Settings ->
+  Hiding Zones. Question state, copy/paste wire format, and persistence of the
+  selected play area/hiding zones are still future work.
 - Default play area: Tokyo 23 Wards, OSM relation `19631009`, loaded from
   `assets/default-zones/tokyo.json`.
 - Deterministic E2E play-area fixture: Osaka, OSM relation `358674`, loaded from
   `assets/default-zones/osaka.json`.
+- Hiding-zone presets: Tokyo Metro and Toei Subway, generated from ODPT GTFS
+  data in `data/odpt/generated/hiding-zone-presets.json`.
 
 ## Commands
 
@@ -31,6 +33,7 @@ pnpm --dir mobile_v2 typecheck
 pnpm --dir mobile_v2 check
 pnpm --dir mobile_v2 test
 pnpm --dir mobile_v2 test -- NativeMap.test.tsx
+pnpm --dir mobile_v2 data:odpt
 ```
 
 For local app work:
@@ -76,7 +79,11 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm --dir mobile_v2 exec expo run:ios --dev
   user location, GeoJSON boundary loading, and play-area math.
 - `src/features/sheet/`: one persistent bottom sheet and sheet-route UI.
 - `src/features/playArea/`: Play Area settings UI and Photon search mapping.
+- `src/features/hidingZone/`: Hiding Zones settings UI, preset data adapters,
+  radius/unit helpers, and derived GeoJSON overlays.
 - `src/state/`: React state providers. Keep them mobile-specific.
+- `data/odpt/`: ODPT source config, fetch script, attribution docs, ignored
+  download cache, and checked-in processed preset JSON.
 - `src/theme/colors.ts`: shared color tokens for the mobile app.
 - `src/types/`: local ambient types for JSON and third-party packages.
 - `docs/implementation_notes.md`: milestone-specific native, map, and E2E
@@ -112,6 +119,9 @@ put that state in a focused feature/store and let the map render derived data.
   tests. This makes native ref behavior easier to mock.
 - Use bundled fixtures for deterministic tests where possible. Networked
   Overpass/Photon paths should be mocked in Jest.
+- Hiding-zone circles are geographic polygons generated from station points and
+  radius meters, then merged before rendering. Do not use MapLibre pixel-radius
+  circles for hiding-zone eligibility areas.
 
 ## Bottom Sheet Rules
 
@@ -142,6 +152,23 @@ put that state in a focused feature/store and let the map render derived data.
   integer strings only.
 - Store distances internally in meters when settings/questions land, even if
   display units become km or miles.
+
+## Hiding Zone Rules
+
+- Hiding-zone state is currently in memory only. Do not imply persistence in UI
+  or tests yet.
+- Preset suggestions use bbox intersection with the current play-area bbox.
+  Suggestions are not auto-selected.
+- Preset selection is additive. Removing one preset should not remove a station
+  that is still contributed by another selected preset.
+- Radius display units are `m`, `km`, and `mi`; `HidingZoneProvider` stores the
+  canonical value in meters.
+- ODPT generated data is checked in, but raw GTFS zips live in ignored
+  `data/odpt/cache/`.
+- Keep `data/odpt/NOTICE.md` and `data/odpt/sources.md` current when adding or
+  refreshing ODPT providers. Generated JSON also carries an attribution block.
+- `pnpm --dir mobile_v2 data:odpt` requires network access and `ODPT_KEY` for
+  Tokyo Metro.
 
 ## Testing Expectations
 
@@ -188,8 +215,10 @@ Practical rules:
   not just the screenshot.
 - Put E2E selectors on stable native-accessible interaction targets.
 - For iOS `TextInput`, especially when empty, a visible input may not expose the
-  expected `testID`; use an accessible wrapper that focuses the real input when
-  needed. `PlayAreaScreen` uses this pattern for the direct relation ID field.
+  expected `testID`. If a visible control cannot be targeted by ID in Maestro,
+  prefer a stable native-accessible parent; otherwise use carefully documented
+  coordinate taps as a last resort. The current Play Area flow uses coordinate
+  taps for the direct relation ID field and Apply button.
 - Keep unit-test IDs and E2E IDs aligned in intent, but do not assume a Jest
   `getByTestId` pass guarantees Maestro can find the same node.
 - Avoid unnecessary generic keyboard actions in Maestro. iOS number pads may not
@@ -206,9 +235,9 @@ surface, and Maestro as the integration test for that surface.
 ## Current Sharp Edges
 
 - The docs and E2E flows historically asserted visible map control text such as
-  `Fit Tokyo 23 Wards` and `Locate me`. If controls become icon-only, make sure
-  tests and Maestro selectors move to accessible labels or stable IDs in the
-  same change.
+  `Fit Tokyo 23 Wards` and `Locate me`. The current controls are icon-only, so
+  keep Maestro focused on stable sheet rows and visible play-area state unless
+  native-accessible labels are added to the map buttons.
 - Photon and Overpass are live services. Keep happy-path unit tests independent
   of those networks, and reserve live checks for manual verification.
 - Native dependency changes can require prebuild plus a dev-client rebuild even

@@ -3,6 +3,7 @@ import * as Location from "expo-location";
 import type { ReactElement } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { HidingZoneProvider } from "@/state/hidingZoneStore";
 import { PlayAreaProvider } from "@/state/playAreaStore";
 
 import { NativeMap } from "../NativeMap";
@@ -24,7 +25,9 @@ function renderWithSafeArea(ui: ReactElement) {
                 insets: { bottom: 34, left: 0, right: 0, top: 47 },
             }}
         >
-            <PlayAreaProvider>{ui as any}</PlayAreaProvider>
+            <PlayAreaProvider>
+                <HidingZoneProvider>{ui as any}</HidingZoneProvider>
+            </PlayAreaProvider>
         </SafeAreaProvider>,
     );
 }
@@ -41,12 +44,22 @@ describe("NativeMap", () => {
         expect(screen.getByText("Tokyo 23 Wards")).toBeTruthy();
         expect(screen.getByText("🗺️")).toBeTruthy();
         expect(screen.getByText("📍")).toBeTruthy();
-        expect(screen.getByTestId("map-shape-source").props.id).toBe(
-            "play-area-boundary-19631009",
-        );
-        expect(screen.getByTestId("map-line-layer").props.id).toBe(
-            "play-area-boundary-line-19631009",
-        );
+        expect(
+            screen
+                .getAllByTestId("map-shape-source")
+                .some(
+                    (source) =>
+                        source.props.id === "play-area-boundary-19631009",
+                ),
+        ).toBe(true);
+        expect(
+            screen
+                .getAllByTestId("map-line-layer")
+                .some(
+                    (layer) =>
+                        layer.props.id === "play-area-boundary-line-19631009",
+                ),
+        ).toBe(true);
     });
 
     it("fits the camera when the map finishes loading", () => {

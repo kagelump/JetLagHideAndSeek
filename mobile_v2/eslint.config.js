@@ -6,7 +6,16 @@ const globals = require("globals");
 const tseslint = require("typescript-eslint");
 
 module.exports = [
-    { ignores: ["node_modules/**", ".expo/**", "dist/**"] },
+    {
+        ignores: [
+            "node_modules/**",
+            ".expo/**",
+            "dist/**",
+            "data/odpt/cache/**",
+            "data/odpt/odpt_api.htm",
+            "data/odpt/odpt_api_files/**",
+        ],
+    },
     {
         settings: {
             react: {
