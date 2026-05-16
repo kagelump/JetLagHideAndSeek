@@ -29,6 +29,7 @@ const attribution = {
 
 async function main() {
     const env = await loadEnv();
+    const cacheOnly = process.argv.includes("--cache-only");
     const config = YAML.parse(await readFile(configPath, "utf8"));
     const cacheDir = resolve(odptDir, config.cacheDir ?? "cache");
     await mkdir(cacheDir, { recursive: true });
@@ -43,8 +44,12 @@ async function main() {
         }
 
         const zipPath = resolve(cacheDir, `${source.id}.zip`);
-        const zipBytes = await download(url);
-        await writeFile(zipPath, zipBytes);
+        const zipBytes = cacheOnly
+            ? await readFile(zipPath)
+            : await download(url);
+        if (!cacheOnly) {
+            await writeFile(zipPath, zipBytes);
+        }
         presets.push(processGtfsZip(source, zipBytes));
     }
 
@@ -132,11 +137,16 @@ export function processGtfsTables(source, tables) {
     }
 
     const routeStopIds = new Map();
+    const stopTimesByTripId = new Map();
     for (const stopTime of tables.stopTimes) {
         const trip = tripsById.get(stopTime.trip_id);
         if (!trip || !stopTime.stop_id || !stopsById.has(stopTime.stop_id)) {
             continue;
         }
+        getArray(stopTimesByTripId, stopTime.trip_id).push({
+            sequence: Number(stopTime.stop_sequence ?? 0),
+            stopId: stopTime.stop_id,
+        });
         getSet(routeStopIds, trip.route_id).add(stopTime.stop_id);
     }
 
@@ -193,11 +203,20 @@ export function processGtfsTables(source, tables) {
                     .map((point) => point.coordinate),
             )
             .filter((line) => line.length >= 2);
+        const routeCoordinates =
+            coordinates.length > 0
+                ? coordinates
+                : buildRouteCoordinatesFromStops(
+                      routeId,
+                      tripsById,
+                      stopTimesByTripId,
+                      stopsById,
+                  );
 
         routes.push({
             color: normalizeColor(route.route_color, source.defaultColor),
             geometry: {
-                coordinates,
+                coordinates: routeCoordinates,
                 type: "MultiLineString",
             },
             id: routeId,
@@ -284,6 +303,39 @@ export function parseCsv(text) {
                 headers.map((header, index) => [header, record[index] ?? ""]),
             ),
         );
+}
+
+function buildRouteCoordinatesFromStops(
+    routeId,
+    tripsById,
+    stopTimesByTripId,
+    stopsById,
+) {
+    const linesBySignature = new Map();
+
+    for (const trip of tripsById.values()) {
+        if (trip.route_id !== routeId) continue;
+
+        const stopTimes = [...(stopTimesByTripId.get(trip.trip_id) ?? [])]
+            .sort((a, b) => a.sequence - b.sequence)
+            .filter((stopTime) => stopsById.has(stopTime.stopId));
+        if (stopTimes.length < 2) continue;
+
+        const signature = stopTimes
+            .map((stopTime) => stopTime.stopId)
+            .join("|");
+        if (linesBySignature.has(signature)) continue;
+
+        linesBySignature.set(
+            signature,
+            stopTimes.map((stopTime) => {
+                const stop = stopsById.get(stopTime.stopId);
+                return [Number(stop.stop_lon), Number(stop.stop_lat)];
+            }),
+        );
+    }
+
+    return [...linesBySignature.values()];
 }
 
 function stationKey(stopId, lng, lat) {

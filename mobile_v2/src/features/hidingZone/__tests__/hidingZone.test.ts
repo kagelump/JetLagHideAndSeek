@@ -1,6 +1,8 @@
 import {
     bboxIntersects,
     buildHidingZoneFeatureCollection,
+    buildRouteFeatureCollection,
+    buildStationFeatureCollection,
     fromMeters,
     getSelectedStations,
     getSuggestedPresetIds,
@@ -16,7 +18,22 @@ const preset: HidingZonePreset = {
     id: "tokyo-metro",
     label: "Tokyo Metro",
     operator: "TokyoMetro",
-    routes: [],
+    routes: [
+        {
+            color: "#FF9500",
+            geometry: {
+                coordinates: [
+                    [
+                        [139.76, 35.68],
+                        [139.77, 35.69],
+                    ],
+                ],
+                type: "MultiLineString",
+            },
+            id: "route-a",
+            name: "Route A",
+        },
+    ],
     stations: [
         {
             id: "station-a",
@@ -133,7 +150,71 @@ describe("hidingZone helpers", () => {
         expect(getSelectedStations([preset, duplicatePreset])).toEqual([
             {
                 ...preset.stations[0],
+                routeColors: ["#FF9500", "#009BBF"],
                 routeIds: ["route-a", "route-b"],
+            },
+        ]);
+    });
+
+    it("preserves route colors and falls back only when a route color is absent", () => {
+        const presetWithFallbackRoute: HidingZonePreset = {
+            ...preset,
+            routes: [
+                ...preset.routes,
+                {
+                    color: "",
+                    geometry: {
+                        coordinates: [
+                            [
+                                [139.75, 35.67],
+                                [139.78, 35.7],
+                            ],
+                        ],
+                        type: "MultiLineString",
+                    },
+                    id: "route-fallback",
+                    name: "Fallback Route",
+                },
+            ],
+        };
+
+        const routeFeatures = buildRouteFeatureCollection([
+            presetWithFallbackRoute,
+        ]);
+
+        expect(routeFeatures.features).toHaveLength(2);
+        expect(routeFeatures.features[0].properties.color).toBe("#FF9500");
+        expect(routeFeatures.features[1].properties.color).toBe(
+            preset.defaultColor,
+        );
+    });
+
+    it("expands station features into route-colored rings", () => {
+        const stationFeatures = buildStationFeatureCollection([
+            {
+                ...preset.stations[0],
+                routeColors: ["#FF9500", "#F62E36"],
+                routeIds: ["route-a", "route-b"],
+            },
+        ]);
+
+        expect(stationFeatures.features).toHaveLength(2);
+        expect(
+            stationFeatures.features.map((feature) => feature.properties),
+        ).toEqual([
+            {
+                color: "#FF9500",
+                id: "station-a",
+                name: "Station A",
+                ringCount: 2,
+                ringIndex: 0,
+            },
+            {
+                color: "#F62E36",
+                id: "station-a",
+                name: "Station A",
+                ringCount: 2,
+                ringIndex: 1,
             },
         ]);
     });

@@ -16,6 +16,7 @@ import type {
 } from "./hidingZoneTypes";
 
 const METERS_PER_MILE = 1609.344;
+const STATION_FALLBACK_COLOR = "#1f6f78";
 
 export function bboxIntersects(a: Bbox, b: Bbox): boolean {
     const [aWest, aSouth, aEast, aNorth] = a;
@@ -79,15 +80,33 @@ export function getSelectedStations(
 ): TransitStation[] {
     const stations = new Map<string, TransitStation>();
     for (const preset of presets) {
+        const routeColorById = new Map(
+            preset.routes.map((route) => [
+                route.id,
+                route.color || preset.defaultColor,
+            ]),
+        );
         for (const station of preset.stations) {
+            const routeColors = getStationRouteColors(
+                station.routeIds,
+                routeColorById,
+                preset.defaultColor,
+            );
             const existing = stations.get(station.id);
             if (existing) {
                 existing.routeIds = [
                     ...new Set([...existing.routeIds, ...station.routeIds]),
                 ].sort();
+                existing.routeColors = [
+                    ...new Set([
+                        ...(existing.routeColors ?? []),
+                        ...routeColors,
+                    ]),
+                ];
             } else {
                 stations.set(station.id, {
                     ...station,
+                    routeColors,
                     routeIds: [...station.routeIds].sort(),
                 });
             }
@@ -120,17 +139,27 @@ export function buildStationFeatureCollection(
     stations: TransitStation[],
 ): StationFeatureCollection {
     return {
-        features: stations.map((station) => ({
-            geometry: {
-                coordinates: [station.lon, station.lat],
-                type: "Point" as const,
-            },
-            properties: {
-                id: station.id,
-                name: station.name,
-            },
-            type: "Feature" as const,
-        })),
+        features: stations.flatMap((station) => {
+            const routeColors =
+                station.routeColors && station.routeColors.length > 0
+                    ? station.routeColors
+                    : [STATION_FALLBACK_COLOR];
+
+            return routeColors.map((color, ringIndex) => ({
+                geometry: {
+                    coordinates: [station.lon, station.lat],
+                    type: "Point" as const,
+                },
+                properties: {
+                    color,
+                    id: station.id,
+                    name: station.name,
+                    ringCount: routeColors.length,
+                    ringIndex,
+                },
+                type: "Feature" as const,
+            }));
+        }),
         type: "FeatureCollection",
     };
 }
@@ -174,4 +203,21 @@ function formatRadiusValue(value: number): string {
     }
     if (value >= 10) return value.toFixed(1);
     return value.toFixed(2);
+}
+
+function getStationRouteColors(
+    routeIds: string[],
+    routeColorById: Map<string, string>,
+    fallbackColor: string,
+): string[] {
+    return [
+        ...new Set(
+            routeIds.map(
+                (routeId) =>
+                    routeColorById.get(routeId) ||
+                    fallbackColor ||
+                    STATION_FALLBACK_COLOR,
+            ),
+        ),
+    ];
 }

@@ -31,3 +31,10 @@ appId: com.hinoka.hideandseek.v2
 - eraseText
 - inputText: "1"
 - assertVisible: "Hiding zone settings; radius 1 km; stored as 1000 m; 1 preset selected; 185 stations"
+- tapOn:
+      point: "50%,24%"
+- swipe:
+      start: "50%,15%"
+      end: "50%,85%"
+      duration: 500
+- takeScreenshot: e2e/artifacts/hiding-zone/hiding-zone-map

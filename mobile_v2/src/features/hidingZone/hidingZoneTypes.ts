@@ -24,6 +24,7 @@ export type TransitStation = {
     lat: number;
     lon: number;
     name: string;
+    routeColors?: string[];
     routeIds: string[];
 };
 
@@ -45,8 +46,11 @@ export type RouteFeatureProperties = {
 };
 
 export type StationFeatureProperties = {
+    color: string;
     id: string;
     name: string;
+    ringCount: number;
+    ringIndex: number;
 };
 
 export type ZoneFeatureProperties = {

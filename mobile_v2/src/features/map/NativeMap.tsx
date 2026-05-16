@@ -37,6 +37,7 @@ const MLCircleLayer = CircleLayer as ComponentType<any>;
 const MLFillLayer = FillLayer as ComponentType<any>;
 const MLLineLayer = LineLayer as ComponentType<any>;
 const MLUserLocation = UserLocation as ComponentType<any>;
+const MAX_STATION_COLOR_RINGS = 6;
 
 export function NativeMap() {
     const cameraRef = useRef<CameraHandle | null>(null);
@@ -105,7 +106,7 @@ export function NativeMap() {
                         style={{
                             lineCap: "round",
                             lineColor: [
-                                "coalesce",
+                                "to-color",
                                 ["get", "color"],
                                 colors.tint,
                             ],
@@ -120,16 +121,27 @@ export function NativeMap() {
                     id="hiding-zone-stations"
                     shape={stationFeatures}
                 >
-                    <MLCircleLayer
-                        id="hiding-zone-stations-circle"
-                        style={{
-                            circleColor: colors.white,
-                            circleOpacity: 0.95,
-                            circleRadius: 4,
-                            circleStrokeColor: colors.tint,
-                            circleStrokeWidth: 2,
-                        }}
-                    />
+                    {Array.from(
+                        { length: MAX_STATION_COLOR_RINGS },
+                        (_, index) => MAX_STATION_COLOR_RINGS - index - 1,
+                    ).map((ringIndex) => (
+                        <MLCircleLayer
+                            filter={["==", ["get", "ringIndex"], ringIndex]}
+                            id={`hiding-zone-stations-ring-${ringIndex}`}
+                            key={ringIndex}
+                            style={{
+                                circleColor: [
+                                    "to-color",
+                                    ["get", "color"],
+                                    colors.tint,
+                                ],
+                                circleOpacity: 0.95,
+                                circleRadius: 5 + ringIndex * 3,
+                                circleStrokeColor: colors.white,
+                                circleStrokeWidth: 1.5,
+                            }}
+                        />
+                    ))}
                 </MLShapeSource>
 
                 <MLShapeSource

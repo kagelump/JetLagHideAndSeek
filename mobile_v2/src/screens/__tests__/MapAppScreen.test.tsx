@@ -51,6 +51,24 @@ function getMapShapeSource(screen: ReturnType<typeof render>, id: string) {
     return source!;
 }
 
+function getMapLineLayer(screen: ReturnType<typeof render>, id: string) {
+    const layer = screen
+        .getAllByTestId("map-line-layer")
+        .find((lineLayer) => lineLayer.props.id === id);
+
+    expect(layer).toBeTruthy();
+    return layer!;
+}
+
+function getMapCircleLayer(screen: ReturnType<typeof render>, id: string) {
+    const layer = screen
+        .getAllByTestId("map-circle-layer")
+        .find((circleLayer) => circleLayer.props.id === id);
+
+    expect(layer).toBeTruthy();
+    return layer!;
+}
+
 function projectedRingArea(
     coordinates: number[][],
     originLatitude: number,
@@ -230,22 +248,83 @@ describe("MapAppScreen", () => {
             );
             expect(zoneShape.features[0].properties.radiusMeters).toBe(600);
             expect(routeShape.features).toHaveLength(tokyoMetro!.routes.length);
-            expect(stationShape.features).toHaveLength(
-                tokyoMetro!.stations.length,
+            expect(
+                routeShape.features.map((feature: any) => ({
+                    color: feature.properties.color,
+                    id: feature.properties.id,
+                })),
+            ).toEqual(
+                tokyoMetro!.routes.map((route) => ({
+                    color: route.color,
+                    id: route.id,
+                })),
             );
+            expect(
+                routeShape.features.some(
+                    (feature: any) =>
+                        feature.properties.color !== tokyoMetro!.defaultColor,
+                ),
+            ).toBe(true);
+            expect(
+                routeShape.features.every(
+                    (feature: any) => feature.geometry.coordinates.length > 0,
+                ),
+            ).toBe(true);
+            expect(
+                getMapLineLayer(screen, "hiding-zone-routes-line").props.style
+                    .lineColor,
+            ).toEqual(["to-color", ["get", "color"], "#1f6f78"]);
+            expect(
+                new Set(
+                    stationShape.features.map(
+                        (feature: any) => feature.properties.id,
+                    ),
+                ).size,
+            ).toBe(tokyoMetro!.stations.length);
+            expect(
+                stationShape.features.every(
+                    (feature: any) =>
+                        typeof feature.properties.color === "string" &&
+                        feature.properties.color.startsWith("#") &&
+                        feature.properties.ringCount >= 1 &&
+                        feature.properties.ringIndex >= 0,
+                ),
+            ).toBe(true);
+            expect(
+                stationShape.features.some(
+                    (feature: any) =>
+                        feature.properties.color !== tokyoMetro!.defaultColor,
+                ),
+            ).toBe(true);
+            expect(
+                screen
+                    .getAllByTestId("map-circle-layer")
+                    .filter((layer) =>
+                        String(layer.props.id).startsWith(
+                            "hiding-zone-stations-ring-",
+                        ),
+                    ),
+            ).toHaveLength(6);
+            const firstStationRing = getMapCircleLayer(
+                screen,
+                "hiding-zone-stations-ring-0",
+            );
+            expect(firstStationRing.props.style.circleColor).toEqual([
+                "to-color",
+                ["get", "color"],
+                "#1f6f78",
+            ]);
+            expect(firstStationRing.props.filter).toEqual([
+                "==",
+                ["get", "ringIndex"],
+                0,
+            ]);
+            expect(firstStationRing.props.style.circleRadius).toBe(5);
             expect(
                 screen
                     .getAllByTestId("map-fill-layer")
                     .some(
                         (layer) => layer.props.id === "hiding-zone-area-fill",
-                    ),
-            ).toBe(true);
-            expect(
-                screen
-                    .getAllByTestId("map-circle-layer")
-                    .some(
-                        (layer) =>
-                            layer.props.id === "hiding-zone-stations-circle",
                     ),
             ).toBe(true);
         });
