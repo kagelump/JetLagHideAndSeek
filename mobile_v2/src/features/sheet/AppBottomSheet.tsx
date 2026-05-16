@@ -1,6 +1,13 @@
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import type { ComponentType } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { StyleSheet } from "react-native";
 
 import { MainDrawer } from "@/features/sheet/MainDrawer";
@@ -11,7 +18,18 @@ import { colors } from "@/theme/colors";
 const Sheet = BottomSheet as ComponentType<any>;
 const SheetView = BottomSheetView as ComponentType<any>;
 
-export function AppBottomSheet() {
+export type BottomSheetHandle = {
+    snapToIndex: (index: number) => void;
+};
+
+type AppBottomSheetProps = {
+    onIndexChange?: (index: number) => void;
+};
+
+export const AppBottomSheet = forwardRef<
+    BottomSheetHandle,
+    AppBottomSheetProps
+>(function AppBottomSheet({ onIndexChange }, ref) {
     const sheetRef = useRef<{ snapToIndex?: (index: number) => void } | null>(
         null,
     );
@@ -30,6 +48,12 @@ export function AppBottomSheet() {
             ? `Hiding zone settings; radius ${radiusDisplayValue} ${radiusUnit}; stored as ${Math.round(radiusMeters)} m; ${selectedPresetIds.length} preset${selectedPresetIds.length === 1 ? "" : "s"} selected; ${selectedStations.length} station${selectedStations.length === 1 ? "" : "s"}`
             : undefined;
 
+    useImperativeHandle(ref, () => ({
+        snapToIndex(index: number) {
+            sheetRef.current?.snapToIndex?.(index);
+        },
+    }));
+
     useEffect(() => {
         const target = route === "play-area" || route === "hiding-zone" ? 2 : 1;
         if (target > currentIndexRef.current) {
@@ -47,6 +71,7 @@ export function AppBottomSheet() {
             backgroundStyle={styles.sheetBackground}
             onChange={(index: number) => {
                 currentIndexRef.current = index;
+                onIndexChange?.(index);
             }}
         >
             <SheetView
@@ -58,7 +83,7 @@ export function AppBottomSheet() {
             </SheetView>
         </Sheet>
     );
-}
+});
 
 const styles = StyleSheet.create({
     content: {

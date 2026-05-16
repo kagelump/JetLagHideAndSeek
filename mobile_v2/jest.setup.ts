@@ -83,13 +83,18 @@ jest.mock("@gorhom/bottom-sheet", () => {
     const React = require("react");
     const { View } = require("react-native");
 
-    const BottomSheet = React.forwardRef(({ children, ...props }, ref) =>
-        React.createElement(
+    const bottomSheetMethods = {
+        snapToIndex: jest.fn(),
+    };
+
+    const BottomSheet = React.forwardRef(({ children, ...props }, ref) => {
+        React.useImperativeHandle(ref, () => bottomSheetMethods);
+        return React.createElement(
             View,
             { ...props, ref, testID: "bottom-sheet" },
             children,
-        ),
-    );
+        );
+    });
 
     return {
         __esModule: true,
@@ -100,5 +105,6 @@ jest.mock("@gorhom/bottom-sheet", () => {
                 children,
             ),
         default: BottomSheet,
+        __bottomSheetMethods: bottomSheetMethods,
     };
 });

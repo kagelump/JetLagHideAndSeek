@@ -39,7 +39,11 @@ const MLLineLayer = LineLayer as ComponentType<any>;
 const MLUserLocation = UserLocation as ComponentType<any>;
 const MAX_STATION_COLOR_RINGS = 6;
 
-export function NativeMap() {
+type NativeMapProps = {
+    onPress?: () => void;
+};
+
+export function NativeMap({ onPress }: NativeMapProps) {
     const cameraRef = useRef<CameraHandle | null>(null);
     const insets = useSafeAreaInsets();
     const { height } = useSafeAreaFrame();
@@ -71,6 +75,7 @@ export function NativeMap() {
                 logoEnabled={false}
                 mapStyle={mapStyle}
                 onDidFinishLoadingMap={fitPlayArea}
+                onPress={onPress}
                 style={styles.map}
                 testID="native-map"
             >
