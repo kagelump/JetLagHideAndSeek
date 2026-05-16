@@ -1,4 +1,173 @@
-# mobile_v2 Agent Notes
+# mobile_v2 Agent Guide
+
+This file is for agents working inside `mobile_v2/`. The app is an Expo SDK 54
+React Native rewrite of the Hide & Seek mapper, built around a native map and an
+Apple Maps-style bottom sheet. Keep changes mobile-first; do not port web UI
+patterns wholesale.
+
+## Project Snapshot
+
+- Entry points: `app/_layout.tsx` wraps the app in gesture/safe-area providers,
+  and `app/index.tsx` renders `src/screens/MapAppScreen.tsx`.
+- Main screen: `MapAppScreen` composes `NativeMap` and `AppBottomSheet` inside
+  `PlayAreaProvider`.
+- Current milestone: MapLibre map plus Settings -> Play Area. Question state,
+  copy/paste wire format, and persistence of the selected play area are still
+  future work.
+- Default play area: Tokyo 23 Wards, OSM relation `19631009`, loaded from
+  `assets/default-zones/tokyo.json`.
+- Deterministic E2E play-area fixture: Osaka, OSM relation `358674`, loaded from
+  `assets/default-zones/osaka.json`.
+
+## Commands
+
+Run commands from the repo root with `pnpm --dir mobile_v2 ...` unless you have
+already `cd`'d into `mobile_v2`.
+
+```bash
+pnpm --dir mobile_v2 lint
+pnpm --dir mobile_v2 format:check
+pnpm --dir mobile_v2 typecheck
+pnpm --dir mobile_v2 check
+pnpm --dir mobile_v2 test
+pnpm --dir mobile_v2 test -- NativeMap.test.tsx
+```
+
+For local app work:
+
+```bash
+pnpm --dir mobile_v2 exec expo start --dev-client --host localhost --port 8081 -c
+```
+
+For the iOS E2E stack:
+
+```bash
+pnpm --dir mobile_v2 test:e2e:ios:stack
+```
+
+That helper starts Metro, runs the Maestro smoke and play-area flows, writes
+debug artifacts under `mobile_v2/e2e/artifacts/`, and stops Metro. A simulator
+must already be available; the known target has been `iPhone 16 Pro - iOS 18.3`.
+
+## Native Build Rules
+
+- Expo Go will not work. This app uses native modules, especially
+  `@maplibre/maplibre-react-native` and AsyncStorage, so use a dev build.
+- Do not run Expo native commands from the monorepo root. Use `mobile_v2/` or
+  `pnpm --dir mobile_v2`.
+- After adding or changing native dependencies or Expo plugins, regenerate and
+  rebuild the native app:
+
+```bash
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm --dir mobile_v2 exec expo prebuild --platform ios --clean
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm --dir mobile_v2 exec expo run:ios --device "iPhone 16 Pro" --no-bundler
+```
+
+- `app.json` must keep the MapLibre plugin. Location copy lives in
+  `ios.infoPlist.NSLocationWhenInUseUsageDescription`.
+- `babel.config.js` must keep `react-native-reanimated/plugin` last.
+- `metro.config.js` pins native singletons through the workspace root because
+  the monorepo uses hoisted pnpm dependencies. If a new native package starts
+  resolving duplicate copies, update Metro intentionally.
+
+## Source Layout
+
+- `src/features/map/`: MapLibre rendering, camera helpers, OSM raster style,
+  user location, GeoJSON boundary loading, and play-area math.
+- `src/features/sheet/`: one persistent bottom sheet and sheet-route UI.
+- `src/features/playArea/`: Play Area settings UI and Photon search mapping.
+- `src/state/`: React state providers. Keep them mobile-specific.
+- `src/theme/colors.ts`: shared color tokens for the mobile app.
+- `src/types/`: local ambient types for JSON and third-party packages.
+- `docs/implementation_notes.md`: milestone-specific native, map, and E2E
+  notes. Update it when you learn a new durable setup/debugging fact.
+
+## Architecture Direction
+
+The intended shape is:
+
+```text
+mobile app state -> derived map render state -> NativeMap layers
+                 -> AppBottomSheet route screens
+```
+
+Prefer mobile-specific state and adapters over importing legacy web context.
+The web app can be a reference for domain logic, but avoid bringing over
+Leaflet, sidebar, browser-storage, or root-controller assumptions.
+
+Keep `MapAppScreen` as a coordinator. Avoid turning it into the owner of every
+mode, form, network request, and map side effect. If a new workflow has state,
+put that state in a focused feature/store and let the map render derived data.
+
+## MapLibre and Geometry Rules
+
+- MapLibre coordinates are `[longitude, latitude]`.
+- Bboxes are `[west, south, east, north]`.
+- `ShapeSource`/layer children should stay before marker-like overlays. MapLibre
+  RN can behave badly when native children are ordered casually.
+- `NativeMap` fits the play area into the upper map area using
+  `getTopViewportFitPadding`. If sheet snap points or top chrome change, revisit
+  `src/features/map/camera.ts`.
+- Keep map camera behavior in small helpers (`camera.ts`) and test it with unit
+  tests. This makes native ref behavior easier to mock.
+- Use bundled fixtures for deterministic tests where possible. Networked
+  Overpass/Photon paths should be mocked in Jest.
+
+## Bottom Sheet Rules
+
+- Use one persistent `@gorhom/bottom-sheet` for primary navigation.
+- Keep fixed snap points paired with `enableDynamicSizing={false}`; v5 can
+  otherwise create surprising near-zero snap behavior.
+- Current routes live in `src/features/sheet/sheetRoutes.ts`.
+- Routes that need more space, such as `play-area`, should snap to the large
+  index before E2E tries to interact with their controls.
+- Use modals sparingly. Prefer same-sheet routes unless the interaction is a
+  destructive confirmation or an import/review flow.
+- Drawer screens with content that may overflow the sheet height must use
+  `SheetScrollView` (`src/features/sheet/SheetScrollView.tsx`) instead of a
+  plain `ScrollView`. It provides consistent bottom padding (`40px`) and
+  `keyboardShouldPersistTaps="handled"` by default. Pass per-screen styles
+  via `style` and `contentContainerStyle` props; do not duplicate `flex: 1`
+  or `paddingBottom` since the component owns those.
+
+## Play Area Rules
+
+- `loadPlayAreaByRelationId` handles bundled Tokyo, bundled Osaka, memory cache,
+  AsyncStorage cache, and Overpass fetch in that order.
+- The selected play area is currently in memory only. Do not imply persistence
+  in UI or tests until milestone 4 state persistence exists.
+- `searchPlayAreas` queries Photon and keeps relation results only
+  (`osm_type === "R"`). Tests should exercise mapping/deduping without network.
+- When accepting direct relation IDs, keep validation strict: positive safe
+  integer strings only.
+- Store distances internally in meters when settings/questions land, even if
+  display units become km or miles.
+
+## Testing Expectations
+
+For most code changes, run at least:
+
+```bash
+pnpm --dir mobile_v2 test
+pnpm --dir mobile_v2 typecheck
+```
+
+For UI, state, or config changes, prefer the full:
+
+```bash
+pnpm --dir mobile_v2 check
+```
+
+For native accessibility, bottom-sheet, MapLibre, or app-start changes, run the
+Maestro stack when the simulator/dev build is available:
+
+```bash
+pnpm --dir mobile_v2 test:e2e:ios:stack
+```
+
+Jest setup already mocks MapLibre, Gorhom bottom sheet, Reanimated,
+AsyncStorage, and `expo-location` in `jest.setup.ts`. Extend those mocks in one
+place instead of recreating ad hoc mocks in each test.
 
 ## React Native E2E and Accessibility
 
@@ -8,7 +177,7 @@ queries, and screenshots.
 
 Keep these separate when debugging E2E:
 
-- The React tree is what unit tests such as React Native Testing Library see.
+- The React tree is what React Native Testing Library sees.
 - The native view/accessibility tree is what Maestro and XCUITest see.
 - A screenshot only proves pixels rendered; it does not prove the element is
   targetable by native automation.
@@ -17,20 +186,30 @@ Practical rules:
 
 - If Maestro says an element is missing, inspect the debug hierarchy artifact,
   not just the screenshot.
-- Treat bottom sheets, portals, scroll views, maps, native modules, and
-  keyboards as translation zones where JSX and native accessibility often
-  diverge.
-- Put E2E selectors on stable native-accessible interaction targets. For iOS
-  `TextInput`, especially when empty, a visible input may not expose the
+- Put E2E selectors on stable native-accessible interaction targets.
+- For iOS `TextInput`, especially when empty, a visible input may not expose the
   expected `testID`; use an accessible wrapper that focuses the real input when
-  needed.
+  needed. `PlayAreaScreen` uses this pattern for the direct relation ID field.
 - Keep unit-test IDs and E2E IDs aligned in intent, but do not assume a Jest
   `getByTestId` pass guarantees Maestro can find the same node.
 - Avoid unnecessary generic keyboard actions in Maestro. iOS number pads may not
   expose a standard dismiss action; if the next control is visible, tap it
   directly.
+- If replacing text labels with icon-only buttons, provide stable
+  accessibility labels and update both Jest and Maestro assertions together.
 
-Accessibility lint is useful as a guardrail for this. It can catch missing
-labels, roles, and bad accessibility prop usage, but it cannot prove that iOS
-will expose a specific node through XCUITest. Use lint as the typecheck for the
-interaction surface, and Maestro as the integration test for that surface.
+Accessibility lint is useful as a guardrail. It can catch missing labels, roles,
+and bad accessibility prop usage, but it cannot prove that iOS exposes a
+specific node through XCUITest. Use lint as the typecheck for the interaction
+surface, and Maestro as the integration test for that surface.
+
+## Current Sharp Edges
+
+- The docs and E2E flows historically asserted visible map control text such as
+  `Fit Tokyo 23 Wards` and `Locate me`. If controls become icon-only, make sure
+  tests and Maestro selectors move to accessible labels or stable IDs in the
+  same change.
+- Photon and Overpass are live services. Keep happy-path unit tests independent
+  of those networks, and reserve live checks for manual verification.
+- Native dependency changes can require prebuild plus a dev-client rebuild even
+  when TypeScript and Jest pass.
