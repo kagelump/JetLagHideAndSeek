@@ -10,16 +10,19 @@
         "lint": "eslint .",
         "typecheck": "tsc --noEmit",
         "test": "jest",
-        "test:e2e:ios": "maestro test e2e/smoke.yaml"
+        "test:e2e:ios": "maestro test e2e/smoke.yaml && maestro test e2e/play-area.yaml",
+        "test:e2e:ios:stack": "node scripts/e2e-ios-stack.mjs"
     },
     "dependencies": {
         "@gorhom/bottom-sheet": "^5.2.8",
         "@maplibre/maplibre-react-native": "^10.4.2",
+        "@react-native-async-storage/async-storage": "2.2.0",
         "expo": "~54.0.34",
         "expo-dev-client": "~6.0.21",
         "expo-location": "~19.0.8",
         "expo-router": "~6.0.23",
         "expo-status-bar": "~3.0.9",
+        "osmtogeojson": "3.0.0-beta.5",
         "react": "19.1.0",
         "react-native": "0.81.5",
         "react-native-gesture-handler": "~2.28.0",
@@ -31,9 +34,10 @@
         "@testing-library/react-native": "^13.0.0",
         "@types/jest": "^29.5.0",
         "@types/react": "~19.1.10",
+        "eslint": "^9.19.0",
         "jest-expo": "~54.0.0",
         "react-test-renderer": "19.1.0",
-        "typescript": "~5.9.2"
+        "typescript": "~5.9.3"
     },
     "private": true
 }

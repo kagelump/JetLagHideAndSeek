@@ -1,6 +1,6 @@
 I’d do this as a **mobile app rewrite, not a mobile app port**.
 
-The current `mobile` branch already has a serious Expo/React Native app scaffold: Expo Router, React Native 0.81, MapLibre RN, Gorhom bottom sheet, AsyncStorage, NativeWind, Sentry/PostHog, and Nanostores are already wired in.  It also already made the important native choice: **MapLibre RN**, which means Expo Go will not work; you need a dev build via `expo run:ios` / `expo run:android`. 
+The current `mobile` branch already has a serious Expo/React Native app scaffold: Expo Router, React Native 0.81, MapLibre RN, Gorhom bottom sheet, AsyncStorage, NativeWind, Sentry/PostHog, and Nanostores are already wired in. It also already made the important native choice: **MapLibre RN**, which means Expo Go will not work; you need a dev build via `expo run:ios` / `expo run:android`.
 
 So the best route is:
 
@@ -14,19 +14,19 @@ So the best route is:
 2. **Do not keep generated native files from the wrong SDK.**
    If the SDK changes before the first real commit, delete/regenerate the native project cleanly:
 
-   ```bash
-   cd mobile_v2
-   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform ios --clean
-   ```
+    ```bash
+    cd mobile_v2
+    LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform ios --clean
+    ```
 
 3. **Avoid nested duplicate native packages in Metro.**
    If using pnpm hoisting, add a `metro.config.js` early that pins native singletons (`react`, `react-dom`, `react-native`, `react-native-screens`, `react-native-safe-area-context`, `react-native-gesture-handler`, `react-native-reanimated`) to the workspace root and disables hierarchical lookup. This should be a safety net, not a substitute for clean SDK 54 scaffolding.
 
 ## The mental model
 
-Your notes describe the right mobile shape: **map as the persistent canvas, bottom drawer as the app**, with a main drawer, stacked question/settings drawers, and copy/paste modals.  That is much more mobile-native than trying to shrink the web app’s left/right sidebars.
+Your notes describe the right mobile shape: **map as the persistent canvas, bottom drawer as the app**, with a main drawer, stacked question/settings drawers, and copy/paste modals. That is much more mobile-native than trying to shrink the web app’s left/right sidebars.
 
-The existing web app is an Astro shell with React islands, Nanostores, Leaflet, and sidebars. Its flow is basically: user edits Nanostores, `Map.tsx` recomputes Leaflet layers, then sidebars react to final map data.  That architecture is useful to understand, but the **view/controller layer should not be copied**.
+The existing web app is an Astro shell with React islands, Nanostores, Leaflet, and sidebars. Its flow is basically: user edits Nanostores, `Map.tsx` recomputes Leaflet layers, then sidebars react to final map data. That architecture is useful to understand, but the **view/controller layer should not be copied**.
 
 ## What I would keep
 
@@ -39,26 +39,26 @@ Keep these from the mobile branch:
    Do not use Leaflet-in-WebView for this version. MapLibre RN is the right choice for “idiomatic app patterns,” native map gestures, native layers, and Apple Maps-like UI.
 
 3. **Pure game/domain logic**
-   Reuse `src/maps/schema.ts`, the question schemas, and the pure geometry functions under `src/maps/`. The old app already separates most map math into `src/maps`, with question families like radius, thermometer, tentacles, matching, and measuring. 
+   Reuse `src/maps/schema.ts`, the question schemas, and the pure geometry functions under `src/maps/`. The old app already separates most map math into `src/maps`, with question families like radius, thermometer, tentacles, matching, and measuring.
 
 4. **Mobile storage lessons**
-   The mobile branch’s AsyncStorage/Nanostores bridge is worth keeping or learning from. It configures `@nanostores/persistent` before importing atoms, mirrors AsyncStorage into memory, and exposes `storageReady` so first render sees persisted values.  The root layout already waits for `storageReady` before rendering. 
+   The mobile branch’s AsyncStorage/Nanostores bridge is worth keeping or learning from. It configures `@nanostores/persistent` before importing atoms, mirrors AsyncStorage into memory, and exposes `storageReady` so first render sees persisted values. The root layout already waits for `storageReady` before rendering.
 
 5. **Map layer ordering and coordinate rules**
-   The mobile branch notes are important: MapLibre uses `[longitude, latitude]`, while some legacy stores use `[latitude, longitude]`; also, `ShapeSource`/layers must come before `MarkerView` siblings or MapLibre RN can silently drop sources.  
+   The mobile branch notes are important: MapLibre uses `[longitude, latitude]`, while some legacy stores use `[latitude, longitude]`; also, `ShapeSource`/layers must come before `MarkerView` siblings or MapLibre RN can silently drop sources.
 
 ## What I would rewrite
 
 Rewrite these from scratch:
 
 1. **`AppMapView`**
-   The current mobile entry point just renders `AppMapView`.  But `AppMapView` currently owns map refs, sheet visibility, settings visibility, question editing, custom POI mode, polygon drawing, pick-location state, hiding-zone prompts, and layer orchestration.  That is too much controller logic in one screen for the clean version.
+   The current mobile entry point just renders `AppMapView`. But `AppMapView` currently owns map refs, sheet visibility, settings visibility, question editing, custom POI mode, polygon drawing, pick-location state, hiding-zone prompts, and layer orchestration. That is too much controller logic in one screen for the clean version.
 
 2. **`QuestionsPanel`, `MapConfigPanel`, `SettingsSheet`**
    Treat these as references, not imports. They probably encode useful behavior, but they are not the Apple Maps-style information architecture you want.
 
 3. **Mobile state shape**
-   Do not blindly re-export the entire web `src/lib/context.ts` into mobile. The current mobile branch does that after installing its AsyncStorage engine.  It is pragmatic, but not clean. For the rewrite, define a mobile-first app state and create adapters into shared geometry code.
+   Do not blindly re-export the entire web `src/lib/context.ts` into mobile. The current mobile branch does that after installing its AsyncStorage engine. It is pragmatic, but not clean. For the rewrite, define a mobile-first app state and create adapters into shared geometry code.
 
 ## Target architecture
 
@@ -138,14 +138,14 @@ Recommended sheet routes:
 
 ```ts
 type SheetRoute =
-  | { name: "main" }
-  | { name: "questions" }
-  | { name: "question-detail"; questionKey: number }
-  | { name: "add-question" }
-  | { name: "settings" }
-  | { name: "play-area" }
-  | { name: "ui-settings" }
-  | { name: "copy-paste" };
+    | { name: "main" }
+    | { name: "questions" }
+    | { name: "question-detail"; questionKey: number }
+    | { name: "add-question" }
+    | { name: "settings" }
+    | { name: "play-area" }
+    | { name: "ui-settings" }
+    | { name: "copy-paste" };
 ```
 
 Then your bottom sheet acts like a little navigation stack:
@@ -188,40 +188,40 @@ Question Detail → "Pick on map"
   sheet reopens to same question
 ```
 
-The current mobile branch already has a version of this pick-mode flow, but I’d reimplement it as a reusable state machine rather than embedding it in the root map component. 
+The current mobile branch already has a version of this pick-mode flow, but I’d reimplement it as a reusable state machine rather than embedding it in the root map component.
 
 ## Data model first
 
-Before building lots of UI, define the canonical state. Your notes already identify the right top-level wire chunks: play area, UI settings, question state, and a special “new question” payload. 
+Before building lots of UI, define the canonical state. Your notes already identify the right top-level wire chunks: play area, UI settings, question state, and a special “new question” payload.
 
 I’d make the mobile internal state close to the wire format:
 
 ```ts
 type AppStateV1 = {
-  version: 1;
-  playArea: {
-    source:
-      | { kind: "osm-relation"; osmId: number; label?: string }
-      | { kind: "custom-polygon"; geojson: GeoJSON.FeatureCollection };
-    bbox?: [number, number, number, number]; // [west, south, east, north]
-    polygon?: GeoJSON.FeatureCollection;
-    presets: TransitPreset[];
-    transitOperators: TransitOperatorFilter[];
-  };
+    version: 1;
+    playArea: {
+        source:
+            | { kind: "osm-relation"; osmId: number; label?: string }
+            | { kind: "custom-polygon"; geojson: GeoJSON.FeatureCollection };
+        bbox?: [number, number, number, number]; // [west, south, east, north]
+        polygon?: GeoJSON.FeatureCollection;
+        presets: TransitPreset[];
+        transitOperators: TransitOperatorFilter[];
+    };
 
-  ui: {
-    units: "m" | "km" | "mi";
-    thunderforestApiKey?: string;
-    thunderforestEnabled: boolean;
-    hiderMode: boolean;
-  };
+    ui: {
+        units: "m" | "km" | "mi";
+        thunderforestApiKey?: string;
+        thunderforestEnabled: boolean;
+        hiderMode: boolean;
+    };
 
-  questions: QuestionState[];
+    questions: QuestionState[];
 
-  metadata: {
-    createdAt: string;
-    updatedAt: string;
-  };
+    metadata: {
+        createdAt: string;
+        updatedAt: string;
+    };
 };
 ```
 
@@ -229,21 +229,21 @@ Then define a separate envelope for the special “new question” sharing case:
 
 ```ts
 type WireEnvelope =
-  | {
-      kind: "app-state";
-      version: 1;
-      payload: AppStateV1;
-    }
-  | {
-      kind: "new-question";
-      version: 1;
-      payload: QuestionState;
-    };
+    | {
+          kind: "app-state";
+          version: 1;
+          payload: AppStateV1;
+      }
+    | {
+          kind: "new-question";
+          version: 1;
+          payload: QuestionState;
+      };
 ```
 
-Use Zod for both. Do not rely on “whatever JSON happens to parse.” The existing app already uses Zod for question schema, so this fits the project’s current style. 
+Use Zod for both. Do not rely on “whatever JSON happens to parse.” The existing app already uses Zod for question schema, so this fits the project’s current style.
 
-Also: store all distances internally in meters, even if the UI displays miles/km. Your note already says that is the desired default. 
+Also: store all distances internally in meters, even if the UI displays miles/km. Your note already says that is the desired default.
 
 ## Build order
 
@@ -374,15 +374,15 @@ Only now pull in the heavy geometry.
 Create a pure function:
 
 ```ts
-function computeMapRenderState(appState: AppStateV1): MapRenderState
+function computeMapRenderState(appState: AppStateV1): MapRenderState;
 ```
 
 Then a hook:
 
 ```ts
 function useMapRenderState() {
-  const appState = useAppState();
-  return useMemo(() => computeMapRenderState(appState), [appState]);
+    const appState = useAppState();
+    return useMemo(() => computeMapRenderState(appState), [appState]);
 }
 ```
 
@@ -444,16 +444,13 @@ That keeps the mobile app from inheriting web concepts like Leaflet context, sid
 
 ## Bottom-sheet details
 
-Use `@gorhom/bottom-sheet`, since it is already in the branch. The branch notes call out an important gotcha: with v5, if using fixed snap points, set `enableDynamicSizing={false}` to avoid weird near-zero snap behavior. 
+Use `@gorhom/bottom-sheet`, since it is already in the branch. The branch notes call out an important gotcha: with v5, if using fixed snap points, set `enableDynamicSizing={false}` to avoid weird near-zero snap behavior.
 
 Use one of these patterns:
 
 ```tsx
-<BottomSheet
-  snapPoints={["18%", "42%", "88%"]}
-  enableDynamicSizing={false}
->
-  <SheetNavigator />
+<BottomSheet snapPoints={["18%", "42%", "88%"]} enableDynamicSizing={false}>
+    <SheetNavigator />
 </BottomSheet>
 ```
 

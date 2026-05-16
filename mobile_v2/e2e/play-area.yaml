@@ -1,0 +1,39 @@
+appId: com.hinoka.hideandseek.v2
+---
+- launchApp
+- runFlow:
+      when:
+          visible: "Open"
+      commands:
+          - tapOn: "Open"
+- runFlow:
+      when:
+          visible: "Continue"
+      commands:
+          - tapOn: "Continue"
+- extendedWaitUntil:
+      visible: "Tokyo 23 Wards"
+      timeout: 60000
+- assertVisible: "Fit Tokyo 23 Wards"
+- tapOn:
+      id: "main-settings-row"
+- tapOn:
+      id: "settings-play-area-row"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+      visible:
+          id: "play-area-relation-id-input"
+      timeout: 15000
+- tapOn:
+      id: "play-area-relation-id-input"
+- inputText: "358674"
+- tapOn:
+      id: "play-area-apply-relation-button"
+- extendedWaitUntil:
+      visible: "Osaka"
+      timeout: 90000
+- assertVisible: "Fit Osaka"
+- assertVisible:
+      id: "play-area-bbox"
+- assertVisible:
+      id: "play-area-cache-status"

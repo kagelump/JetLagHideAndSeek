@@ -3,6 +3,8 @@ import * as Location from "expo-location";
 import type { ReactElement } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { PlayAreaProvider } from "@/state/playAreaStore";
+
 import { NativeMap } from "../NativeMap";
 
 const { __cameraMethods } = jest.requireMock(
@@ -22,7 +24,7 @@ function renderWithSafeArea(ui: ReactElement) {
                 insets: { bottom: 34, left: 0, right: 0, top: 47 },
             }}
         >
-            {ui as any}
+            <PlayAreaProvider>{ui as any}</PlayAreaProvider>
         </SafeAreaProvider>,
     );
 }
@@ -37,13 +39,13 @@ describe("NativeMap", () => {
 
         expect(screen.getByTestId("native-map")).toBeTruthy();
         expect(screen.getByText("Tokyo 23 Wards")).toBeTruthy();
-        expect(screen.getByText("Fit Tokyo")).toBeTruthy();
+        expect(screen.getByText("Fit Tokyo 23 Wards")).toBeTruthy();
         expect(screen.getByText("Locate me")).toBeTruthy();
         expect(screen.getByTestId("map-shape-source").props.id).toBe(
-            "tokyo-boundary",
+            "play-area-boundary-19631009",
         );
         expect(screen.getByTestId("map-line-layer").props.id).toBe(
-            "tokyo-boundary-line",
+            "play-area-boundary-line-19631009",
         );
     });
 
@@ -72,7 +74,9 @@ describe("NativeMap", () => {
         fireEvent.press(screen.getByText("Locate me"));
 
         await waitFor(() => {
-            expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalled();
+            expect(
+                Location.requestForegroundPermissionsAsync,
+            ).toHaveBeenCalled();
             expect(__cameraMethods.setCamera).toHaveBeenCalledWith({
                 animationDuration: 700,
                 animationMode: "flyTo",

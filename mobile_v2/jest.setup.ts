@@ -13,6 +13,28 @@ jest.mock("expo-location", () => ({
         .mockResolvedValue({ status: "granted" }),
 }));
 
+jest.mock("@react-native-async-storage/async-storage", () => {
+    let store = {};
+    return {
+        __esModule: true,
+        default: {
+            clear: jest.fn(() => {
+                store = {};
+                return Promise.resolve();
+            }),
+            getItem: jest.fn((key) => Promise.resolve(store[key] ?? null)),
+            removeItem: jest.fn((key) => {
+                delete store[key];
+                return Promise.resolve();
+            }),
+            setItem: jest.fn((key, value) => {
+                store[key] = value;
+                return Promise.resolve();
+            }),
+        },
+    };
+});
+
 jest.mock("@maplibre/maplibre-react-native", () => {
     const React = require("react");
     const { View } = require("react-native");
@@ -60,7 +82,11 @@ jest.mock("@gorhom/bottom-sheet", () => {
     const { View } = require("react-native");
 
     const BottomSheet = React.forwardRef(({ children, ...props }, ref) =>
-        React.createElement(View, { ...props, ref, testID: "bottom-sheet" }, children),
+        React.createElement(
+            View,
+            { ...props, ref, testID: "bottom-sheet" },
+            children,
+        ),
     );
 
     return {

@@ -56,12 +56,14 @@ describe("camera helpers", () => {
     });
 
     it("calculates padding for fitting the play area above the drawer", () => {
-        expect(getTopViewportFitPadding({ height: 844, topInset: 47 })).toEqual({
-            paddingBottom: 405,
-            paddingLeft: 40,
-            paddingRight: 40,
-            paddingTop: 167,
-        });
+        expect(getTopViewportFitPadding({ height: 844, topInset: 47 })).toEqual(
+            {
+                paddingBottom: 405,
+                paddingLeft: 40,
+                paddingRight: 40,
+                paddingTop: 167,
+            },
+        );
     });
 
     it("flies a camera to a coordinate", () => {

@@ -15,10 +15,17 @@ config.resolver.nodeModulesPaths = [
 ];
 
 config.resolver.extraNodeModules = {
-    "@gorhom/bottom-sheet": path.resolve(rootNodeModules, "@gorhom/bottom-sheet"),
+    "@gorhom/bottom-sheet": path.resolve(
+        rootNodeModules,
+        "@gorhom/bottom-sheet",
+    ),
     "@maplibre/maplibre-react-native": path.resolve(
         rootNodeModules,
         "@maplibre/maplibre-react-native",
+    ),
+    "@react-native-async-storage/async-storage": path.resolve(
+        rootNodeModules,
+        "@react-native-async-storage/async-storage",
     ),
     react: path.resolve(rootNodeModules, "react"),
     "react-dom": path.resolve(rootNodeModules, "react-dom"),
@@ -35,7 +42,10 @@ config.resolver.extraNodeModules = {
         rootNodeModules,
         "react-native-safe-area-context",
     ),
-    "react-native-screens": path.resolve(rootNodeModules, "react-native-screens"),
+    "react-native-screens": path.resolve(
+        rootNodeModules,
+        "react-native-screens",
+    ),
 };
 
 module.exports = config;

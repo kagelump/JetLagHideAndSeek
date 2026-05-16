@@ -21,8 +21,7 @@ export type UserCoordinateResult =
 export async function requestUserCoordinate(
     locationModule: LocationModule = Location,
 ): Promise<UserCoordinateResult> {
-    const { status } =
-        await locationModule.requestForegroundPermissionsAsync();
+    const { status } = await locationModule.requestForegroundPermissionsAsync();
 
     if (status !== "granted") {
         return { coordinate: null, status };

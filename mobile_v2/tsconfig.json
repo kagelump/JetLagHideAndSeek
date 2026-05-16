@@ -5,22 +5,10 @@
         "baseUrl": ".",
         "jsx": "react-jsx",
         "paths": {
-            "@/*": [
-                "src/*"
-            ]
+            "@/*": ["src/*"]
         },
-        "typeRoots": [
-            "./node_modules/@types",
-            "../node_modules/@types"
-        ],
-        "types": [
-            "jest"
-        ]
+        "typeRoots": ["./node_modules/@types", "../node_modules/@types"],
+        "types": ["jest"]
     },
-    "include": [
-        "app/**/*.ts",
-        "app/**/*.tsx",
-        "src/**/*.ts",
-        "src/**/*.tsx"
-    ]
+    "include": ["app/**/*.ts", "app/**/*.tsx", "src/**/*.ts", "src/**/*.tsx"]
 }

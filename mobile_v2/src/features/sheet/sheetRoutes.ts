@@ -1,1 +1,6 @@
-export type SheetRouteName = "main" | "questions" | "add-question" | "settings";
+export type SheetRouteName =
+    | "main"
+    | "questions"
+    | "add-question"
+    | "settings"
+    | "play-area";

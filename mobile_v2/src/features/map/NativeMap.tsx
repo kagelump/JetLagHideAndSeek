@@ -8,13 +8,7 @@ import {
 } from "@maplibre/maplibre-react-native";
 import { useCallback, useMemo, useRef } from "react";
 import type { ComponentType } from "react";
-import {
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import {
     useSafeAreaFrame,
     useSafeAreaInsets,
@@ -28,8 +22,8 @@ import {
     getTopViewportFitPadding,
 } from "./camera";
 import { buildOsmRasterStyleJson } from "./mapStyle";
-import { defaultPlayArea } from "./playArea";
 import { useUserLocation } from "./useUserLocation";
+import { usePlayArea } from "@/state/playAreaStore";
 
 setAccessToken(null);
 
@@ -43,6 +37,7 @@ export function NativeMap() {
     const cameraRef = useRef<CameraHandle | null>(null);
     const insets = useSafeAreaInsets();
     const { height } = useSafeAreaFrame();
+    const { playArea } = usePlayArea();
     const mapStyle = useMemo(() => buildOsmRasterStyleJson(), []);
     const fitPadding = useMemo(
         () =>
@@ -55,9 +50,11 @@ export function NativeMap() {
     const { handleLocationUpdate, hasLocationPermission, locateUser } =
         useUserLocation(cameraRef);
 
-    const fitTokyo = useCallback(() => {
-        fitCameraToBbox(cameraRef.current, defaultPlayArea.bbox, fitPadding);
-    }, [fitPadding]);
+    const fitPlayArea = useCallback(() => {
+        fitCameraToBbox(cameraRef.current, playArea.bbox, fitPadding);
+    }, [fitPadding, playArea.bbox]);
+
+    const fitLabel = `Fit ${playArea.label}`;
 
     return (
         <View style={styles.container}>
@@ -66,24 +63,24 @@ export function NativeMap() {
                 compassEnabled
                 logoEnabled={false}
                 mapStyle={mapStyle}
-                onDidFinishLoadingMap={fitTokyo}
+                onDidFinishLoadingMap={fitPlayArea}
                 style={styles.map}
                 testID="native-map"
             >
                 <MLCamera
                     ref={cameraRef}
                     defaultSettings={{
-                        centerCoordinate: defaultPlayArea.center,
+                        centerCoordinate: playArea.center,
                         zoomLevel: 4,
                     }}
                 />
 
                 <MLShapeSource
-                    id="tokyo-boundary"
-                    shape={defaultPlayArea.boundary}
+                    id={`play-area-boundary-${playArea.osmId}`}
+                    shape={playArea.boundary}
                 >
                     <MLLineLayer
-                        id="tokyo-boundary-line"
+                        id={`play-area-boundary-line-${playArea.osmId}`}
                         style={{
                             lineColor: colors.tint,
                             lineOpacity: 0.95,
@@ -103,7 +100,7 @@ export function NativeMap() {
 
             <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
                 <Text style={styles.title}>Hide & Seek</Text>
-                <Text style={styles.subtitle}>{defaultPlayArea.label}</Text>
+                <Text style={styles.subtitle}>{playArea.label}</Text>
             </View>
 
             <View
@@ -114,7 +111,7 @@ export function NativeMap() {
                     },
                 ]}
             >
-                <MapControl label="Fit Tokyo" onPress={fitTokyo} />
+                <MapControl label={fitLabel} onPress={fitPlayArea} />
                 <MapControl label="Locate me" onPress={locateUser} />
             </View>
         </View>

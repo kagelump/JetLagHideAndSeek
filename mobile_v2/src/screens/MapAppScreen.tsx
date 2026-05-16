@@ -3,15 +3,18 @@ import { StyleSheet, View } from "react-native";
 
 import { NativeMap } from "@/features/map/NativeMap";
 import { AppBottomSheet } from "@/features/sheet/AppBottomSheet";
+import { PlayAreaProvider } from "@/state/playAreaStore";
 import { colors } from "@/theme/colors";
 
 export function MapAppScreen() {
     return (
-        <View style={styles.screen}>
-            <StatusBar style="dark" />
-            <NativeMap />
-            <AppBottomSheet />
-        </View>
+        <PlayAreaProvider>
+            <View style={styles.screen}>
+                <StatusBar style="dark" />
+                <NativeMap />
+                <AppBottomSheet />
+            </View>
+        </PlayAreaProvider>
     );
 }
 

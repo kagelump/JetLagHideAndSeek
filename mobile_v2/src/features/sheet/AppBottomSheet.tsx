@@ -1,6 +1,8 @@
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import BottomSheet, {
+    BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import type { ComponentType } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 
 import { MainDrawer } from "@/features/sheet/MainDrawer";
@@ -11,9 +13,19 @@ const Sheet = BottomSheet as ComponentType<any>;
 const SheetView = BottomSheetView as ComponentType<any>;
 
 export function AppBottomSheet() {
-    const sheetRef = useRef(null);
+    const sheetRef = useRef<{ snapToIndex?: (index: number) => void } | null>(
+        null,
+    );
     const snapPoints = useMemo(() => ["18%", "42%", "88%"], []);
     const [route, setRoute] = useState<SheetRouteName>("main");
+    const currentIndexRef = useRef(1);
+
+    useEffect(() => {
+        const target = route === "play-area" ? 2 : 1;
+        if (target > currentIndexRef.current) {
+            sheetRef.current?.snapToIndex?.(target);
+        }
+    }, [route]);
 
     return (
         <Sheet
@@ -23,6 +35,9 @@ export function AppBottomSheet() {
             enableDynamicSizing={false}
             handleIndicatorStyle={styles.handleIndicator}
             backgroundStyle={styles.sheetBackground}
+            onChange={(index: number) => {
+                currentIndexRef.current = index;
+            }}
         >
             <SheetView style={styles.content}>
                 <MainDrawer route={route} onNavigate={setRoute} />
@@ -33,6 +48,7 @@ export function AppBottomSheet() {
 
 const styles = StyleSheet.create({
     content: {
+        bottom: 0,
         flex: 1,
         paddingBottom: 32,
     },

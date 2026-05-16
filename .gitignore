@@ -31,3 +31,6 @@ mobile/.expo/
 mobile/android/
 mobile/ios/
 mobile/eas.json
+
+# Testing Artifacts
+mobile_v2/e2e/artifacts/

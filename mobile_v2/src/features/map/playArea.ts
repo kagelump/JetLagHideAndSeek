@@ -11,6 +11,14 @@ export type DefaultPlayArea = {
     osmType: "R";
 };
 
+export type PlayArea = DefaultPlayArea;
+
+export type PlayAreaCacheSource =
+    | "bundled"
+    | "fetched"
+    | "memory"
+    | "persisted";
+
 const tokyoBoundary = tokyoBoundaryJson as unknown as GeoJsonFeatureCollection;
 
 export function calculateBbox(boundary: GeoJsonFeatureCollection): Bbox {
@@ -27,7 +35,9 @@ export function calculateBbox(boundary: GeoJsonFeatureCollection): Bbox {
     }
 
     if (coords.length === 0) {
-        throw new Error("Cannot calculate bbox for an empty play-area boundary.");
+        throw new Error(
+            "Cannot calculate bbox for an empty play-area boundary.",
+        );
     }
 
     return coords.reduce<Bbox>(
@@ -53,6 +63,8 @@ export const defaultPlayArea: DefaultPlayArea = {
     osmId: 19631009,
     osmType: "R",
 };
+
+export const knownPlayAreaPresets: PlayArea[] = [defaultPlayArea];
 
 function collectPositions(value: unknown, output: Position[]) {
     if (!Array.isArray(value)) return;

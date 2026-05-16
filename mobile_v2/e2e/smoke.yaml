@@ -2,16 +2,18 @@ appId: com.hinoka.hideandseek.v2
 ---
 - launchApp
 - runFlow:
-    when:
-      visible: "Open"
-    commands:
-      - tapOn: "Open"
+      when:
+          visible: "Open"
+      commands:
+          - tapOn: "Open"
 - runFlow:
-    when:
-      visible: "Continue"
-    commands:
-      - tapOn: "Continue"
-- assertVisible: "Hide & Seek"
+      when:
+          visible: "Continue"
+      commands:
+          - tapOn: "Continue"
+- extendedWaitUntil:
+      visible: "Hide & Seek"
+      timeout: 60000
 - assertVisible: "Tokyo 23 Wards"
-- assertVisible: "Fit Tokyo"
+- assertVisible: "Fit Tokyo 23 Wards"
 - assertVisible: "Locate me"
