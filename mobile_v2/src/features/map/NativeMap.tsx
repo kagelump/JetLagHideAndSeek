@@ -98,9 +98,8 @@ export function NativeMap() {
                 ) : null}
             </MLMapView>
 
-            <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
-                <Text style={styles.title}>Hide & Seek</Text>
-                <Text style={styles.subtitle}>{playArea.label}</Text>
+            <View style={[styles.topBar, { paddingTop: insets.top  }]}>
+                <Text style={styles.title}>{playArea.label}</Text>
             </View>
 
             <View

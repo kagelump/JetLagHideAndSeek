@@ -56,6 +56,6 @@ const styles = StyleSheet.create({
     },
     sheetBackground: {
         backgroundColor: colors.panel,
-        borderRadius: 8,
+        borderRadius: 32,
     },
 });
