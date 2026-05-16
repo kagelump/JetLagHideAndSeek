@@ -12,6 +12,7 @@ import {
     type PlayAreaSearchResult,
     searchPlayAreas,
 } from "@/features/playArea/playAreaSearch";
+import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import { usePlayArea } from "@/state/playAreaStore";
 import { colors } from "@/theme/colors";
 
@@ -70,7 +71,10 @@ export function PlayAreaScreen() {
     };
 
     return (
-        <View style={styles.container}>
+        <SheetScrollView
+            style={styles.container}
+            contentContainerStyle={styles.scrollContent}
+        >
             <Text style={styles.eyebrow}>Play Area</Text>
             <Text style={styles.title}>Map Boundary</Text>
             <Text style={styles.detail}>
@@ -190,7 +194,7 @@ export function PlayAreaScreen() {
                     </Pressable>
                 ))}
             </View>
-        </View>
+        </SheetScrollView>
     );
 }
 
@@ -269,8 +273,8 @@ const styles = StyleSheet.create({
         fontSize: 28,
         lineHeight: 28,
     },
-    container: {
-        paddingBottom: 40,
+    container: {},
+    scrollContent: {
         paddingHorizontal: 20,
         paddingTop: 6,
     },
