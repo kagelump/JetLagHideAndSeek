@@ -54,7 +54,7 @@ export function NativeMap() {
         fitCameraToBbox(cameraRef.current, playArea.bbox, fitPadding);
     }, [fitPadding, playArea.bbox]);
 
-    const fitLabel = `Fit ${playArea.label}`;
+    const fitLabel = "🗺️";
 
     return (
         <View style={styles.container}>
@@ -112,7 +112,7 @@ export function NativeMap() {
                 ]}
             >
                 <MapControl label={fitLabel} onPress={fitPlayArea} />
-                <MapControl label="Locate me" onPress={locateUser} />
+                <MapControl label="📍" onPress={locateUser} />
             </View>
         </View>
     );
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     },
     controlLabel: {
         color: colors.ink,
-        fontSize: 13,
+        fontSize: 20,
         fontWeight: "800",
     },
     controls: {
