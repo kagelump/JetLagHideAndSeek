@@ -19,6 +19,7 @@ export function SheetScrollView({
             style={[styles.scroll, style]}
             contentContainerStyle={[styles.content, contentContainerStyle]}
             keyboardShouldPersistTaps="handled"
+            scrollIndicatorInsets={{ right: 4 }}
         >
             {children}
         </ScrollView>

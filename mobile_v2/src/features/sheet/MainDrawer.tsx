@@ -51,20 +51,14 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
         );
     }
 
-    if (route === "play-area") {
+    if (route === "play-area" || route === "hiding-zone") {
+        const Screen = route === "play-area" ? PlayAreaScreen : HidingZoneScreen;
         return (
-            <View style={styles.container}>
-                <BackButton onPress={() => onNavigate("settings")} />
-                <PlayAreaScreen />
-            </View>
-        );
-    }
-
-    if (route === "hiding-zone") {
-        return (
-            <View style={styles.container}>
-                <BackButton onPress={() => onNavigate("settings")} />
-                <HidingZoneScreen />
+            <View style={styles.fullContainer}>
+                <View style={styles.backButtonRow}>
+                    <BackButton onPress={() => onNavigate("settings")} />
+                </View>
+                <Screen />
             </View>
         );
     }
@@ -196,6 +190,12 @@ const styles = StyleSheet.create({
         alignSelf: "flex-start",
         marginBottom: 8,
         paddingVertical: 4,
+    },
+    backButtonRow: {
+        paddingHorizontal: 20,
+    },
+    fullContainer: {
+        flex: 1,
     },
     backText: {
         color: colors.tint,
