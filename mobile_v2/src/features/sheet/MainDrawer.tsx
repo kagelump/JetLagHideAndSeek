@@ -23,6 +23,17 @@ import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";
 import { colors } from "@/theme/colors";
 
 const SHEET_WIDTH = Dimensions.get("window").width;
+const TRANSITION_MS = 300;
+
+type TransitionDirection = "forward" | "back";
+
+type SheetTransition = {
+    direction: TransitionDirection;
+    from: SheetRouteName;
+    id: number;
+    isAnimating: boolean;
+    to: SheetRouteName;
+};
 
 type MainDrawerProps = {
     route: SheetRouteName;
@@ -58,16 +69,19 @@ const routeContent: Record<SheetRouteName, { title: string; detail: string }> =
     };
 
 export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
-    const backTarget = getBackTarget(route);
-    const directionRef = useRef<"forward" | "back">("forward");
-    const [leavingRoute, setLeavingRoute] = useState<SheetRouteName | null>(
-        null,
-    );
-    const prevRouteRef = useRef(route);
+    const [displayedRoute, setDisplayedRoute] = useState(route);
+    const displayedRouteRef = useRef(route);
+    const [transition, setTransition] = useState<SheetTransition | null>(null);
+    const transitionIdRef = useRef(0);
+    const startedTransitionIdRef = useRef<number | null>(null);
+    const currentRoute = transition?.to ?? displayedRoute;
+    const backTarget = getBackTarget(currentRoute);
     const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const leavingX = useSharedValue(0);
     const enteringX = useSharedValue(0);
+    const transitionId = transition?.id ?? null;
+    const transitionDirection = transition?.direction ?? null;
 
     const leavingStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: leavingX.value }],
@@ -77,42 +91,84 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
         transform: [{ translateX: enteringX.value }],
     }));
 
-    const handleNavigate = useCallback(
-        (to: SheetRouteName) => {
+    const beginTransition = useCallback(
+        (from: SheetRouteName, to: SheetRouteName) => {
+            if (to === from) return;
             if (cleanupTimerRef.current) {
                 clearTimeout(cleanupTimerRef.current);
                 cleanupTimerRef.current = null;
             }
-            const dir = getNavDirection(route, to);
-            directionRef.current = dir;
-            setLeavingRoute(route);
-            enteringX.value = dir === "forward" ? SHEET_WIDTH : -SHEET_WIDTH;
+
+            const dir = getNavDirection(from, to);
+            const id = transitionIdRef.current + 1;
+            transitionIdRef.current = id;
+            startedTransitionIdRef.current = null;
+
+            leavingX.value = 0;
+            enteringX.value = getEnteringStartX(dir);
+            displayedRouteRef.current = to;
+            setDisplayedRoute(to);
+            setTransition({
+                direction: dir,
+                from,
+                id,
+                isAnimating: false,
+                to,
+            });
+        },
+        [enteringX, leavingX],
+    );
+
+    const handleNavigate = useCallback(
+        (to: SheetRouteName) => {
+            const from = displayedRouteRef.current;
+            if (to === from) return;
+            beginTransition(from, to);
             onNavigate(to);
         },
-        [route, onNavigate],
+        [beginTransition, onNavigate],
     );
 
     useEffect(() => {
-        if (route === prevRouteRef.current) return;
-        prevRouteRef.current = route;
-        const isBack = directionRef.current === "back";
+        if (route === displayedRouteRef.current) return;
+        beginTransition(displayedRouteRef.current, route);
+    }, [beginTransition, route]);
+
+    useEffect(() => {
+        if (transitionDirection === null || transitionId === null) return;
+        if (startedTransitionIdRef.current === transitionId) return;
+        startedTransitionIdRef.current = transitionId;
+
+        const isBack = transitionDirection === "back";
+
+        leavingX.value = 0;
+        enteringX.value = getEnteringStartX(transitionDirection);
+        setTransition((current) =>
+            current?.id === transitionId
+                ? { ...current, isAnimating: true }
+                : current,
+        );
 
         leavingX.value = withTiming(isBack ? SHEET_WIDTH : -SHEET_WIDTH, {
-            duration: 300,
+            duration: TRANSITION_MS,
         });
-        enteringX.value = withTiming(0, { duration: 300 });
+        enteringX.value = withTiming(0, { duration: TRANSITION_MS });
 
         cleanupTimerRef.current = setTimeout(() => {
-            setLeavingRoute(null);
-        }, 300);
+            setTransition((current) =>
+                current?.id === transitionId ? null : current,
+            );
+        }, TRANSITION_MS);
+    }, [enteringX, leavingX, transitionDirection, transitionId]);
 
+    useEffect(() => {
         return () => {
             if (cleanupTimerRef.current) {
                 clearTimeout(cleanupTimerRef.current);
                 cleanupTimerRef.current = null;
             }
         };
-    }, [route]);
+    }, []);
 
     useEffect(() => {
         if (!backTarget) return;
@@ -141,14 +197,38 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
 
     return (
         <View style={styles.transitionContainer}>
-            {leavingRoute ? (
-                <Animated.View style={[styles.animatedFill, leavingStyle]}>
-                    {renderRouteContent(leavingRoute, handleNavigate)}
+            {transition ? (
+                <Animated.View
+                    key={`leaving-${transition.id}-${transition.from}`}
+                    style={[
+                        styles.animatedFill,
+                        getLeavingLayerStyle(transition.direction),
+                        transition.isAnimating ? leavingStyle : null,
+                    ]}
+                >
+                    {renderRouteContent(transition.from, handleNavigate)}
                 </Animated.View>
             ) : null}
 
-            <Animated.View style={[styles.animatedFill, enteringStyle]}>
-                {renderRouteContent(route, handleNavigate)}
+            <Animated.View
+                key={
+                    transition
+                        ? `entering-${transition.id}-${transition.to}`
+                        : `current-${displayedRoute}`
+                }
+                style={[
+                    styles.animatedFill,
+                    transition
+                        ? getEnteringLayerStyle(transition.direction)
+                        : null,
+                    transition
+                        ? transition.isAnimating
+                            ? enteringStyle
+                            : getEnteringInitialStyle(transition.direction)
+                        : null,
+                ]}
+            >
+                {renderRouteContent(currentRoute, handleNavigate)}
             </Animated.View>
 
             {backTarget ? (
@@ -161,6 +241,28 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
             ) : null}
         </View>
     );
+}
+
+function getEnteringStartX(direction: TransitionDirection) {
+    return direction === "back" ? -SHEET_WIDTH : SHEET_WIDTH;
+}
+
+function getEnteringInitialStyle(direction: TransitionDirection) {
+    return {
+        transform: [{ translateX: getEnteringStartX(direction) }],
+    };
+}
+
+function getLeavingLayerStyle(direction: TransitionDirection) {
+    return {
+        zIndex: direction === "back" ? 2 : 1,
+    };
+}
+
+function getEnteringLayerStyle(direction: TransitionDirection) {
+    return {
+        zIndex: direction === "back" ? 1 : 2,
+    };
 }
 
 function renderRouteContent(
