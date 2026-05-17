@@ -7,8 +7,6 @@ import {
     AppBottomSheet,
     type BottomSheetHandle,
 } from "@/features/sheet/AppBottomSheet";
-import { HidingZoneProvider } from "@/state/hidingZoneStore";
-import { PlayAreaProvider } from "@/state/playAreaStore";
 import { colors } from "@/theme/colors";
 
 export function MapAppScreen() {
@@ -26,18 +24,14 @@ export function MapAppScreen() {
     }, []);
 
     return (
-        <PlayAreaProvider>
-            <HidingZoneProvider>
-                <View style={styles.screen}>
-                    <StatusBar style="dark" />
-                    <NativeMap onPress={handleMapPress} />
-                    <AppBottomSheet
-                        ref={bottomSheetRef}
-                        onIndexChange={handleSheetIndexChange}
-                    />
-                </View>
-            </HidingZoneProvider>
-        </PlayAreaProvider>
+        <View style={styles.screen}>
+            <StatusBar style="dark" />
+            <NativeMap onPress={handleMapPress} />
+            <AppBottomSheet
+                ref={bottomSheetRef}
+                onIndexChange={handleSheetIndexChange}
+            />
+        </View>
     );
 }
 

@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
+import { ShareSetupModal } from "@/sharing/export/ShareSetupModal";
+import { useHidingZone } from "@/state/hidingZoneStore";
 import { usePlayArea } from "@/state/playAreaStore";
 import { colors } from "@/theme/colors";
 
@@ -10,11 +13,27 @@ type SettingsScreenProps = {
 
 export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
     const { cacheSource, playArea } = usePlayArea();
+    const { radiusMeters, radiusUnit, selectedPresetIds } = useHidingZone();
+    const [isShareVisible, setIsShareVisible] = useState(false);
 
     return (
         <View style={styles.container}>
             <Text style={styles.eyebrow}>Settings</Text>
-            <Text style={styles.title}>Game Settings</Text>
+            <View style={styles.titleRow}>
+                <Text style={styles.title}>Game Settings</Text>
+                <Pressable
+                    accessibilityLabel="Share game setup"
+                    accessibilityRole="button"
+                    onPress={() => setIsShareVisible(true)}
+                    style={({ pressed }) => [
+                        styles.shareButton,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                    testID="settings-share-button"
+                >
+                    <Text style={styles.shareButtonText}>Share</Text>
+                </Pressable>
+            </View>
             <Text style={styles.detail}>
                 Adjust the map area and app preferences.
             </Text>
@@ -58,6 +77,17 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     <Text style={styles.chevron}>›</Text>
                 </Pressable>
             </View>
+            <ShareSetupModal
+                hidingZones={{
+                    radiusMeters,
+                    radiusUnit,
+                    selectedPresetIds,
+                }}
+                includeBoundary={cacheSource !== "bundled"}
+                onClose={() => setIsShareVisible(false)}
+                playArea={playArea}
+                visible={isShareVisible}
+            />
         </View>
     );
 }
@@ -121,9 +151,26 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
     },
     title: {
+        flex: 1,
         color: colors.ink,
         fontSize: 28,
         fontWeight: "800",
+    },
+    shareButton: {
+        backgroundColor: colors.button,
+        borderRadius: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
+    },
+    shareButtonText: {
+        color: colors.white,
+        fontSize: 14,
+        fontWeight: "800",
+    },
+    titleRow: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 12,
         marginTop: 4,
     },
 });

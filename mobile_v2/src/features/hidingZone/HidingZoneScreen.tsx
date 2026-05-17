@@ -29,6 +29,7 @@ export function HidingZoneScreen() {
     const otherPresets = presets.filter(
         (preset) => !suggestedSet.has(preset.id),
     );
+    const currentAccessibilityLabel = `Hiding zone settings; radius ${radiusDisplayValue} ${radiusUnit}; stored as ${Math.round(radiusMeters)} m; ${selectedPresetIds.length} preset${selectedPresetIds.length === 1 ? "" : "s"} selected; ${selectedStations.length} station${selectedStations.length === 1 ? "" : "s"}`;
 
     return (
         <SheetScrollView
@@ -92,7 +93,7 @@ export function HidingZoneScreen() {
 
             <View
                 accessible
-                accessibilityLabel={`${selectedPresetIds.length} preset${selectedPresetIds.length === 1 ? "" : "s"} selected; ${selectedStations.length} station${selectedStations.length === 1 ? "" : "s"}`}
+                accessibilityLabel={currentAccessibilityLabel}
                 style={styles.card}
                 testID="current-hiding-zone-card"
             >

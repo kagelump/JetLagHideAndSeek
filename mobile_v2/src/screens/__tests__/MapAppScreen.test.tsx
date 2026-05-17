@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { hidingZonePresets } from "@/features/hidingZone/hidingZoneData";
 import { clearPlayAreaMemoryCache } from "@/features/map/playAreaBoundary";
+import { AppStateProviders } from "@/state/AppStateProviders";
 
 import { MapAppScreen } from "../MapAppScreen";
 
@@ -137,7 +138,7 @@ function renderWithSafeArea(ui: ReactElement) {
                 insets: { bottom: 34, left: 0, right: 0, top: 47 },
             }}
         >
-            {ui as any}
+            <AppStateProviders>{ui as any}</AppStateProviders>
         </SafeAreaProvider>,
     );
 }

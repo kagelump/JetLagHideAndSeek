@@ -32,6 +32,12 @@ import { usePlayArea } from "@/state/playAreaStore";
 
 const DEFAULT_RADIUS_METERS = 600;
 
+export type HidingZoneImportState = {
+    radiusMeters: number;
+    radiusUnit: HidingZoneUnit;
+    selectedPresetIds: string[];
+};
+
 type HidingZoneState = {
     addPreset: (presetId: string) => void;
     presets: HidingZonePreset[];
@@ -39,6 +45,7 @@ type HidingZoneState = {
     radiusMeters: number;
     radiusUnit: HidingZoneUnit;
     removePreset: (presetId: string) => void;
+    replaceSetup: (nextSetup: HidingZoneImportState) => void;
     routeFeatures: RouteFeatureCollection;
     selectedPresetIds: string[];
     selectedPresets: HidingZonePreset[];
@@ -103,6 +110,15 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
         );
     }, []);
 
+    const replaceSetup = useCallback((nextSetup: HidingZoneImportState) => {
+        setSelectedPresetIds(nextSetup.selectedPresetIds);
+        setRadiusMeters(nextSetup.radiusMeters);
+        setRadiusUnitState(nextSetup.radiusUnit);
+        setRadiusDisplayValueState(
+            fromMeters(nextSetup.radiusMeters, nextSetup.radiusUnit),
+        );
+    }, []);
+
     const togglePreset = useCallback(
         (presetId: string) => {
             if (selectedPresetIds.includes(presetId)) removePreset(presetId);
@@ -136,6 +152,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             radiusMeters,
             radiusUnit,
             removePreset,
+            replaceSetup,
             routeFeatures,
             selectedPresetIds,
             selectedPresets,
@@ -154,6 +171,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             radiusMeters,
             radiusUnit,
             removePreset,
+            replaceSetup,
             routeFeatures,
             selectedPresetIds,
             selectedPresets,

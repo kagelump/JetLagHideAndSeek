@@ -366,6 +366,8 @@ function DrawerAction({
 }: DrawerActionProps) {
     return (
         <Pressable
+            accessible
+            accessibilityLabel={title}
             accessibilityRole="button"
             onPress={onPress}
             style={({ pressed }) => [

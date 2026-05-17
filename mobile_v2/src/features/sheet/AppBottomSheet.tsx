@@ -12,7 +12,6 @@ import { StyleSheet } from "react-native";
 
 import { MainDrawer } from "@/features/sheet/MainDrawer";
 import { SheetRouteName } from "@/features/sheet/sheetRoutes";
-import { useHidingZone } from "@/state/hidingZoneStore";
 import { colors } from "@/theme/colors";
 
 const Sheet = BottomSheet as ComponentType<any>;
@@ -36,18 +35,6 @@ export const AppBottomSheet = forwardRef<
     const snapPoints = useMemo(() => ["18%", "42%", "88%"], []);
     const [route, setRoute] = useState<SheetRouteName>("main");
     const currentIndexRef = useRef(1);
-    const {
-        radiusDisplayValue,
-        radiusMeters,
-        radiusUnit,
-        selectedPresetIds,
-        selectedStations,
-    } = useHidingZone();
-    const hidingZoneAccessibilityLabel =
-        route === "hiding-zone"
-            ? `Hiding zone settings; radius ${radiusDisplayValue} ${radiusUnit}; stored as ${Math.round(radiusMeters)} m; ${selectedPresetIds.length} preset${selectedPresetIds.length === 1 ? "" : "s"} selected; ${selectedStations.length} station${selectedStations.length === 1 ? "" : "s"}`
-            : undefined;
-
     useImperativeHandle(ref, () => ({
         snapToIndex(index: number) {
             sheetRef.current?.snapToIndex?.(index);
@@ -66,6 +53,7 @@ export const AppBottomSheet = forwardRef<
             ref={sheetRef}
             index={1}
             snapPoints={snapPoints}
+            accessible={false}
             enableDynamicSizing={false}
             handleIndicatorStyle={styles.handleIndicator}
             backgroundStyle={styles.sheetBackground}
@@ -74,11 +62,7 @@ export const AppBottomSheet = forwardRef<
                 onIndexChange?.(index);
             }}
         >
-            <SheetView
-                accessible={route === "hiding-zone"}
-                accessibilityLabel={hidingZoneAccessibilityLabel}
-                style={styles.content}
-            >
+            <SheetView style={styles.content}>
                 <MainDrawer route={route} onNavigate={setRoute} />
             </SheetView>
         </Sheet>

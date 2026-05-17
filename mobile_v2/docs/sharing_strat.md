@@ -4,12 +4,12 @@
 
 This document designs a serverless multiplayer sharing system for `mobile_v2`, centered on app deep links that work for:
 
-* Sharing initial game state with seekers or teammates.
-* Asking hiders questions.
-* Returning hider answers.
-* Sharing teammate updates.
-* Pasting links into chat apps.
-* Showing and scanning QR codes.
+- Sharing initial game state with seekers or teammates.
+- Asking hiders questions.
+- Returning hider answers.
+- Sharing teammate updates.
+- Pasting links into chat apps.
+- Showing and scanning QR codes.
 
 The design intentionally starts without a central server. It should still leave room for a future snapshot server or live room server by using the same wire envelopes for every transport.
 
@@ -17,40 +17,40 @@ The design intentionally starts without a central server. It should still leave 
 
 ### 2.1 Product goals
 
-* A user can configure a game and share a setup link or QR code.
-* Another user can open the setup link and import the game state.
-* A seeker can ask a hider a question by sending a link or showing a QR code.
-* A hider can answer the question and send back an answer link or QR code.
-* A seeker can import the answer and apply it to the local question list/map state.
-* Teammates can share updates without accounts, rooms, or a server.
+- A user can configure a game and share a setup link or QR code.
+- Another user can open the setup link and import the game state.
+- A seeker can ask a hider a question by sending a link or showing a QR code.
+- A hider can answer the question and send back an answer link or QR code.
+- A seeker can import the answer and apply it to the local question list/map state.
+- Teammates can share updates without accounts, rooms, or a server.
 
 ### 2.2 Engineering goals
 
-* Keep the app local-first.
-* Use one validated wire format across paste, share sheet, QR, custom-scheme links, and future HTTPS links.
-* Make import safe: validate first, preview second, mutate state only after explicit user confirmation.
-* Avoid coupling URL parsing directly to game-state mutation.
-* Keep UI concerns separate from wire encoding, validation, and state application.
+- Keep the app local-first.
+- Use one validated wire format across paste, share sheet, QR, custom-scheme links, and future HTTPS links.
+- Make import safe: validate first, preview second, mutate state only after explicit user confirmation.
+- Avoid coupling URL parsing directly to game-state mutation.
+- Keep UI concerns separate from wire encoding, validation, and state application.
 
 ## 3. Non-goals
 
-* No realtime multiplayer in the first version.
-* No accounts or login.
-* No central room state.
-* No automatic background sync.
-* No hider location sharing.
-* No silent state mutation from opening a link.
-* No attempt to solve conflicts perfectly in the first version.
+- No realtime multiplayer in the first version.
+- No accounts or login.
+- No central room state.
+- No automatic background sync.
+- No hider location sharing.
+- No silent state mutation from opening a link.
+- No attempt to solve conflicts perfectly in the first version.
 
 ## 4. Existing mobile_v2 context
 
 `mobile_v2` is structured around a native map canvas plus an Apple Maps-style bottom drawer. The current app shell has:
 
-* `MapAppScreen`
-* `NativeMap`
-* `AppBottomSheet`
-* `PlayAreaProvider`
-* `HidingZoneProvider`
+- `MapAppScreen`
+- `NativeMap`
+- `AppBottomSheet`
+- `PlayAreaProvider`
+- `HidingZoneProvider`
 
 The current `app.json` already defines a custom scheme:
 
@@ -72,11 +72,11 @@ https://<your-domain>/i?d=<payload>
 
 The existing design notes already call out a copy/paste modal and a wire format containing:
 
-* Play Area
-* Hiding Zones
-* UI
-* Question state
-* New Question
+- Play Area
+- Hiding Zones
+- UI
+- Question state
+- New Question
 
 This design refines that into a dedicated sharing/import subsystem.
 
@@ -92,15 +92,15 @@ jetlag-hide-seek-v2://import?d=<encoded-envelope>
 
 Pros:
 
-* Works before domain setup.
-* Works in local dev builds.
-* Uses the existing Expo scheme.
+- Works before domain setup.
+- Works in local dev builds.
+- Uses the existing Expo scheme.
 
 Cons:
 
-* Some chat apps may not auto-link it.
-* No useful fallback when the app is not installed.
-* Less user-friendly than HTTPS.
+- Some chat apps may not auto-link it.
+- No useful fallback when the app is not installed.
+- Less user-friendly than HTTPS.
 
 ### 5.2 HTTPS link
 
@@ -112,16 +112,16 @@ https://<your-domain>/i?d=<encoded-envelope>
 
 Pros:
 
-* Best for LINE, iMessage, Discord, Slack, email, QR codes, and browser fallback.
-* Can open the app through iOS Universal Links and Android App Links.
-* Can later switch from direct payloads to snapshot ids.
+- Best for LINE, iMessage, Discord, Slack, email, QR codes, and browser fallback.
+- Can open the app through iOS Universal Links and Android App Links.
+- Can later switch from direct payloads to snapshot ids.
 
 Cons:
 
-* Requires a domain.
-* Requires Associated Domains on iOS.
-* Requires Android App Links verification.
-* Requires hosting well-known verification files.
+- Requires a domain.
+- Requires Associated Domains on iOS.
+- Requires Android App Links verification.
+- Requires hosting well-known verification files.
 
 ### 5.3 Future snapshot-link variant
 
@@ -236,10 +236,10 @@ type AppStateV1 = {
 
 The fields are optional because the share UI may allow partial exports:
 
-* Play area only
-* Play area + hiding zones
-* Questions only
-* Full game setup
+- Play area only
+- Play area + hiding zones
+- Questions only
+- Full game setup
 
 ### 7.3 Question request payload
 
@@ -322,12 +322,12 @@ Canonical JSON gives stable payloads and stable hashes.
 
 Rules:
 
-* Sort object keys recursively.
-* Remove keys with `undefined` values.
-* Preserve arrays in order.
-* Use ISO timestamps.
-* Store distances internally in meters.
-* Store coordinates in GeoJSON order where possible: `[longitude, latitude]`.
+- Sort object keys recursively.
+- Remove keys with `undefined` values.
+- Preserve arrays in order.
+- Use ISO timestamps.
+- Store distances internally in meters.
+- Store coordinates in GeoJSON order where possible: `[longitude, latitude]`.
 
 ### 8.3 Compression
 
@@ -360,9 +360,9 @@ This prevents QR/chat/link escaping problems.
 
 Responsibility:
 
-* Define all Zod schemas.
-* Export TypeScript inferred types.
-* Validate incoming unknown payloads.
+- Define all Zod schemas.
+- Export TypeScript inferred types.
+- Validate incoming unknown payloads.
 
 Exports:
 
@@ -376,17 +376,17 @@ export type WireEnvelope = z.infer<typeof wireEnvelopeSchema>;
 
 Does not:
 
-* Read URLs.
-* Mutate app state.
-* Render UI.
+- Read URLs.
+- Mutate app state.
+- Render UI.
 
 ## 9.2 `src/sharing/wire/canonicalize.ts`
 
 Responsibility:
 
-* Deterministic JSON generation.
-* Recursive key sorting.
-* `undefined` stripping.
+- Deterministic JSON generation.
+- Recursive key sorting.
+- `undefined` stripping.
 
 Exports:
 
@@ -401,8 +401,8 @@ export function stableHash(value: unknown): string;
 
 Responsibility:
 
-* Convert envelopes to compact payload strings.
-* Convert compact payload strings back to validated envelopes.
+- Convert envelopes to compact payload strings.
+- Convert compact payload strings back to validated envelopes.
 
 Exports:
 
@@ -433,8 +433,8 @@ decode:
 
 Responsibility:
 
-* Build shareable links from encoded payloads.
-* Centralize URL shape.
+- Build shareable links from encoded payloads.
+- Centralize URL shape.
 
 Exports:
 
@@ -458,9 +458,9 @@ https://<your-domain>/i?d=...
 
 Responsibility:
 
-* Parse incoming URLs.
-* Extract supported query parameters.
-* Return a decoded envelope or structured error.
+- Parse incoming URLs.
+- Extract supported query parameters.
+- Return a decoded envelope or structured error.
 
 Exports:
 
@@ -474,15 +474,15 @@ export function parseImportLink(url: string): ParsedImportLink;
 
 Does not:
 
-* Apply the import.
-* Navigate the user.
-* Show alerts.
+- Apply the import.
+- Navigate the user.
+- Show alerts.
 
 ## 9.6 `src/sharing/import/preview.ts`
 
 Responsibility:
 
-* Convert an envelope into a human-readable preview model.
+- Convert an envelope into a human-readable preview model.
 
 Exports:
 
@@ -513,9 +513,9 @@ type QuestionRequestImportPreview = {
 
 Responsibility:
 
-* Apply a validated import to app state after confirmation.
-* Handle replace vs merge behavior.
-* Deduplicate events by id.
+- Apply a validated import to app state after confirmation.
+- Handle replace vs merge behavior.
+- Deduplicate events by id.
 
 Exports:
 
@@ -531,24 +531,24 @@ export function applyImport(args: {
 
 Does:
 
-* Mutate stores.
-* Return a success/failure result.
+- Mutate stores.
+- Return a success/failure result.
 
 Does not:
 
-* Parse URLs.
-* Show UI.
+- Parse URLs.
+- Show UI.
 
 ## 9.8 `src/sharing/import/ImportScreen.tsx`
 
 Responsibility:
 
-* UI route for incoming links.
-* Decode incoming payload.
-* Show validation errors.
-* Show preview.
-* Ask for confirmation.
-* Call `applyImport` only after confirmation.
+- UI route for incoming links.
+- Decode incoming payload.
+- Show validation errors.
+- Show preview.
+- Ask for confirmation.
+- Call `applyImport` only after confirmation.
 
 Possible path:
 
@@ -568,7 +568,7 @@ src/sharing/import/ImportActions.tsx
 
 Responsibility:
 
-* Convert current local app state into wire envelopes.
+- Convert current local app state into wire envelopes.
 
 Exports:
 
@@ -596,9 +596,9 @@ export function buildQuestionAnswerEnvelope(args: {
 
 Responsibility:
 
-* User-facing share UI.
-* Uses React Native share sheet.
-* Allows choosing custom-scheme or HTTPS link in dev settings.
+- User-facing share UI.
+- Uses React Native share sheet.
+- Allows choosing custom-scheme or HTTPS link in dev settings.
 
 Possible components:
 
@@ -613,9 +613,9 @@ ShareTeamUpdatesButton
 
 Responsibility:
 
-* Render a QR code for a share link.
-* Show a fallback copy button.
-* Warn when payload is very large.
+- Render a QR code for a share link.
+- Show a fallback copy button.
+- Warn when payload is very large.
 
 Props:
 
@@ -632,10 +632,10 @@ type QRCodeViewProps = {
 
 Responsibility:
 
-* Scan QR codes.
-* Extract scanned URL.
-* Pass URL to `parseImportLink`.
-* Navigate to import preview.
+- Scan QR codes.
+- Extract scanned URL.
+- Pass URL to `parseImportLink`.
+- Navigate to import preview.
 
 This can be postponed. For MVP, system camera scanning of HTTPS links may be enough.
 
@@ -643,8 +643,8 @@ This can be postponed. For MVP, system camera scanning of HTTPS links may be eno
 
 Responsibility:
 
-* Allow users to paste a raw link or raw payload.
-* Parse and navigate to preview.
+- Allow users to paste a raw link or raw payload.
+- Parse and navigate to preview.
 
 This is useful because some chat apps may not open custom schemes reliably.
 
@@ -652,8 +652,8 @@ This is useful because some chat apps may not open custom schemes reliably.
 
 Responsibility:
 
-* Define structured import/export errors.
-* Provide user-facing messages.
+- Define structured import/export errors.
+- Provide user-facing messages.
 
 Example errors:
 
@@ -672,8 +672,8 @@ type ImportLinkError =
 
 Responsibility:
 
-* Upgrade old envelopes to current app structures.
-* Initially only supports v1.
+- Upgrade old envelopes to current app structures.
+- Initially only supports v1.
 
 Exports:
 
@@ -687,9 +687,9 @@ This file is mostly a placeholder at first, but adding it early avoids painting 
 
 Responsibility:
 
-* Enforce size limits.
-* Prevent accidental huge payload imports.
-* Prevent unsupported external actions.
+- Enforce size limits.
+- Prevent accidental huge payload imports.
+- Prevent unsupported external actions.
 
 Suggested limits:
 
@@ -862,12 +862,12 @@ Merge selected sections
 
 Preview should show:
 
-* Game id
-* Play area label
-* Hiding-zone presets
-* Radius
-* Number of questions
-* Timestamp
+- Game id
+- Play area label
+- Hiding-zone presets
+- Radius
+- Number of questions
+- Timestamp
 
 ## 12.2 `question-request`
 
@@ -879,10 +879,10 @@ Answer question
 
 Preview should show:
 
-* Question type
-* Question summary
-* Asking player/team if present
-* Game id mismatch warning if current local game differs
+- Question type
+- Question summary
+- Asking player/team if present
+- Game id mismatch warning if current local game differs
 
 Do not apply to seeker question list as a locked answer. This payload is for the hider to answer.
 
@@ -896,17 +896,17 @@ Apply answer
 
 Preview should show:
 
-* Original question summary
-* Answer summary
-* Hider name/team if present
-* Timestamp
-* Game id mismatch warning
+- Original question summary
+- Answer summary
+- Hider name/team if present
+- Timestamp
+- Game id mismatch warning
 
 Apply behavior:
 
-* If matching request id exists locally, update that question.
-* If not, offer to add as imported answered question.
-* Mark the question as locked/applied.
+- If matching request id exists locally, update that question.
+- If not, offer to add as imported answered question.
+- Mark the question as locked/applied.
 
 ## 12.4 `team-events`
 
@@ -918,15 +918,15 @@ Merge events
 
 Preview should show:
 
-* Number of total events
-* Number of new events
-* Number of duplicates
-* Event summaries
+- Number of total events
+- Number of new events
+- Number of duplicates
+- Event summaries
 
 Apply behavior:
 
-* Ignore already-applied event ids.
-* Apply new events in timestamp or declared order.
+- Ignore already-applied event ids.
+- Apply new events in timestamp or declared order.
 
 ## 13. State integration
 
@@ -1010,10 +1010,10 @@ Preview renders over current app context
 
 After successful import:
 
-* `app-state`: return to map.
-* `question-request`: return to answer-complete/share-answer screen.
-* `question-answer`: return to question detail or map.
-* `team-events`: return to map.
+- `app-state`: return to map.
+- `question-request`: return to answer-complete/share-answer screen.
+- `question-answer`: return to question detail or map.
+- `team-events`: return to map.
 
 ## 15. UI components
 
@@ -1027,26 +1027,26 @@ src/features/sheet/MultiplayerSharingScreen.tsx
 
 Contains:
 
-* Share setup
-* Import from clipboard
-* Show QR for current setup
-* Scan QR
-* Developer toggle for custom-scheme vs HTTPS links
+- Share setup
+- Import from clipboard
+- Show QR for current setup
+- Scan QR
+- Developer toggle for custom-scheme vs HTTPS links
 
 ## 15.2 `ShareSetupScreen`
 
 Contains checkboxes:
 
-* Play area
-* Hiding zones
-* Questions
-* UI settings
+- Play area
+- Hiding zones
+- Questions
+- UI settings
 
 Actions:
 
-* Copy link
-* Share link
-* Show QR
+- Copy link
+- Share link
+- Show QR
 
 ## 15.3 `QuestionShareActions`
 
@@ -1058,10 +1058,10 @@ src/features/questions/QuestionShareActions.tsx
 
 Actions:
 
-* Share with hider
-* Show QR for hider
-* Paste answer
-* Share latest answer with teammates
+- Share with hider
+- Show QR for hider
+- Paste answer
+- Share latest answer with teammates
 
 ## 15.4 `ImportPreviewCard`
 
@@ -1106,15 +1106,15 @@ type QRCodeModalProps = {
 
 ## 16. Validation and safety rules
 
-* Always validate with Zod before preview.
-* Never apply an import directly from URL open.
-* Show warnings for game id mismatch.
-* Show warnings for large payloads.
-* Reject unsupported versions.
-* Reject unknown envelope kinds.
-* Keep hider exact location out of all envelopes.
-* Avoid importing UI-only preferences unless the user explicitly included them.
-* Treat imported display names as untrusted text.
+- Always validate with Zod before preview.
+- Never apply an import directly from URL open.
+- Show warnings for game id mismatch.
+- Show warnings for large payloads.
+- Reject unsupported versions.
+- Reject unknown envelope kinds.
+- Keep hider exact location out of all envelopes.
+- Avoid importing UI-only preferences unless the user explicitly included them.
+- Treat imported display names as untrusted text.
 
 ## 17. Conflict handling
 
@@ -1124,29 +1124,29 @@ Initial simple policy:
 
 If importing a full setup:
 
-* Default to replace.
-* Offer merge only if partial sections are present.
+- Default to replace.
+- Offer merge only if partial sections are present.
 
 ### 17.2 Question answer import
 
 If request id matches a local pending question:
 
-* Update that pending question.
+- Update that pending question.
 
 If request id does not match:
 
-* Offer to add as imported answered question.
+- Offer to add as imported answered question.
 
 If request id already has an answer:
 
-* Show existing answer and incoming answer.
-* Ask whether to keep existing or replace.
+- Show existing answer and incoming answer.
+- Ask whether to keep existing or replace.
 
 ### 17.3 Team events
 
-* Deduplicate by event id.
-* Apply in declared order.
-* Skip events for obviously different game ids unless user confirms.
+- Deduplicate by event id.
+- Apply in declared order.
+- Skip events for obviously different game ids unless user confirms.
 
 ## 18. Testing plan
 
@@ -1195,10 +1195,10 @@ Import answer → apply → question appears locked/applied
 
 Deliver:
 
-* `WireEnvelope` schemas
-* canonicalization
-* encode/decode
-* unit tests
+- `WireEnvelope` schemas
+- canonicalization
+- encode/decode
+- unit tests
 
 No UI yet.
 
@@ -1206,63 +1206,63 @@ No UI yet.
 
 Deliver:
 
-* `/import` route
-* parse `d` param
-* decode envelope
-* preview app-state and question-request
-* no actual state mutation yet
+- `/import` route
+- parse `d` param
+- decode envelope
+- preview app-state and question-request
+- no actual state mutation yet
 
 ## 19.3 Milestone 3: share setup link
 
 Deliver:
 
-* Share setup UI
-* Build `app-state` envelope from current play area/hiding-zone stores
-* Copy/share custom-scheme link
-* Import setup with confirmation
+- Share setup UI
+- Build `app-state` envelope from current play area/hiding-zone stores
+- Copy/share custom-scheme link
+- Import setup with confirmation
 
 ## 19.4 Milestone 4: question request/answer links
 
 Deliver:
 
-* Build question-request envelope
-* Import question request as hider
-* Answer question
-* Build question-answer envelope
-* Import answer as seeker
+- Build question-request envelope
+- Import question request as hider
+- Answer question
+- Build question-answer envelope
+- Import answer as seeker
 
 ## 19.5 Milestone 5: QR display
 
 Deliver:
 
-* QR modal for setup links
-* QR modal for question links
-* QR modal for answer links
-* Copy/share fallback
+- QR modal for setup links
+- QR modal for question links
+- QR modal for answer links
+- Copy/share fallback
 
 ## 19.6 Milestone 6: paste fallback
 
 Deliver:
 
-* Paste link/payload modal
-* Same preview/apply path as deep links
+- Paste link/payload modal
+- Same preview/apply path as deep links
 
 ## 19.7 Milestone 7: HTTPS universal/app links
 
 Deliver:
 
-* Domain decision
-* iOS Associated Domains
-* Android App Links intent filters
-* Hosted verification files
-* Fallback web page
+- Domain decision
+- iOS Associated Domains
+- Android App Links intent filters
+- Hosted verification files
+- Fallback web page
 
 ## 19.8 Milestone 8: QR scanner
 
 Deliver:
 
-* In-app scanner
-* Scanned URL goes through same parser and preview path
+- In-app scanner
+- Scanned URL goes through same parser and preview path
 
 ## 20. Suggested file tree
 
@@ -1337,13 +1337,13 @@ unit tests
 
 Acceptance criteria:
 
-* Can encode and decode an `app-state` envelope.
-* Can encode and decode a `question-request` envelope.
-* Can encode and decode a `question-answer` envelope.
-* Invalid payloads return structured errors.
-* Unsupported versions are rejected.
-* Encoded payloads are URL-safe.
-* Canonicalization is deterministic.
+- Can encode and decode an `app-state` envelope.
+- Can encode and decode a `question-request` envelope.
+- Can encode and decode a `question-answer` envelope.
+- Invalid payloads return structured errors.
+- Unsupported versions are rejected.
+- Encoded payloads are URL-safe.
+- Canonicalization is deterministic.
 
 ## 23. Summary
 

@@ -13,6 +13,15 @@ jest.mock("expo-location", () => ({
         .mockResolvedValue({ status: "granted" }),
 }));
 
+jest.mock("expo-router", () => ({
+    Link: ({ children }: { children: React.ReactNode }) => children,
+    Stack: ({ children }: { children?: React.ReactNode }) => children,
+    useLocalSearchParams: jest.fn(() => ({})),
+    useRouter: jest.fn(() => ({
+        replace: jest.fn(),
+    })),
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => {
     let store = {};
     return {
@@ -159,3 +168,12 @@ jest.mock("@gorhom/bottom-sheet", () => {
         __bottomSheetMethods: bottomSheetMethods,
     };
 });
+
+jest.mock("qrcode/lib/core/qrcode", () => ({
+    create: () => ({
+        modules: {
+            data: [true, false, true, false],
+            size: 2,
+        },
+    }),
+}));

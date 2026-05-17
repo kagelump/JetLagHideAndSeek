@@ -19,12 +19,15 @@ import {
     type PlayAreaCacheSource,
 } from "@/features/map/playArea";
 
+export type PlayAreaImportState = PlayArea;
+
 type PlayAreaState = {
     applyRelationId: (value: string) => Promise<boolean>;
     applyPreset: (playArea: PlayArea) => void;
     cacheSource: PlayAreaCacheSource;
     error: string | null;
     isLoading: boolean;
+    importPlayArea: (playArea: PlayAreaImportState) => void;
     playArea: PlayArea;
     presets: PlayArea[];
 };
@@ -39,6 +42,14 @@ export function PlayAreaProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState<string | null>(null);
 
     const applyPreset = useCallback((nextPlayArea: PlayArea) => {
+        setPlayArea(nextPlayArea);
+        setCacheSource(
+            isBundledPlayAreaId(nextPlayArea.osmId) ? "bundled" : "memory",
+        );
+        setError(null);
+    }, []);
+
+    const importPlayArea = useCallback((nextPlayArea: PlayAreaImportState) => {
         setPlayArea(nextPlayArea);
         setCacheSource(
             isBundledPlayAreaId(nextPlayArea.osmId) ? "bundled" : "memory",
@@ -78,11 +89,20 @@ export function PlayAreaProvider({ children }: { children: ReactNode }) {
             applyRelationId,
             cacheSource,
             error,
+            importPlayArea,
             isLoading,
             playArea,
             presets: knownPlayAreaPresets,
         }),
-        [applyPreset, applyRelationId, cacheSource, error, isLoading, playArea],
+        [
+            applyPreset,
+            applyRelationId,
+            cacheSource,
+            error,
+            importPlayArea,
+            isLoading,
+            playArea,
+        ],
     );
 
     return (
