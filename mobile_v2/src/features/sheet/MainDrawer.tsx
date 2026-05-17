@@ -1,10 +1,28 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    BackHandler,
+    Dimensions,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
+} from "react-native-reanimated";
 
 import { HidingZoneScreen } from "@/features/hidingZone/HidingZoneScreen";
 import { PlayAreaScreen } from "@/features/playArea/PlayAreaScreen";
 import { SettingsScreen } from "@/features/sheet/SettingsScreen";
-import { SheetRouteName } from "@/features/sheet/sheetRoutes";
+import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
+import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";
 import { colors } from "@/theme/colors";
+
+const SHEET_WIDTH = Dimensions.get("window").width;
 
 type MainDrawerProps = {
     route: SheetRouteName;
@@ -40,65 +58,181 @@ const routeContent: Record<SheetRouteName, { title: string; detail: string }> =
     };
 
 export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
-    const content = routeContent[route];
+    const backTarget = getBackTarget(route);
+    const directionRef = useRef<"forward" | "back">("forward");
+    const [leavingRoute, setLeavingRoute] = useState<SheetRouteName | null>(
+        null,
+    );
+    const prevRouteRef = useRef(route);
+    const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    if (route === "settings") {
-        return (
-            <View style={styles.container}>
-                <BackButton onPress={() => onNavigate("main")} />
-                <SettingsScreen onNavigate={onNavigate} />
-            </View>
-        );
-    }
+    const leavingX = useSharedValue(0);
+    const enteringX = useSharedValue(0);
 
-    if (route === "play-area" || route === "hiding-zone") {
-        const Screen = route === "play-area" ? PlayAreaScreen : HidingZoneScreen;
-        return (
-            <View style={styles.fullContainer}>
-                <View style={styles.backButtonRow}>
-                    <BackButton onPress={() => onNavigate("settings")} />
-                </View>
-                <Screen />
-            </View>
+    const leavingStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: leavingX.value }],
+    }));
+
+    const enteringStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: enteringX.value }],
+    }));
+
+    const handleNavigate = useCallback(
+        (to: SheetRouteName) => {
+            if (cleanupTimerRef.current) {
+                clearTimeout(cleanupTimerRef.current);
+                cleanupTimerRef.current = null;
+            }
+            const dir = getNavDirection(route, to);
+            directionRef.current = dir;
+            setLeavingRoute(route);
+            enteringX.value = dir === "forward" ? SHEET_WIDTH : -SHEET_WIDTH;
+            onNavigate(to);
+        },
+        [route, onNavigate],
+    );
+
+    useEffect(() => {
+        if (route === prevRouteRef.current) return;
+        prevRouteRef.current = route;
+        const isBack = directionRef.current === "back";
+
+        leavingX.value = withTiming(isBack ? SHEET_WIDTH : -SHEET_WIDTH, {
+            duration: 300,
+        });
+        enteringX.value = withTiming(0, { duration: 300 });
+
+        cleanupTimerRef.current = setTimeout(() => {
+            setLeavingRoute(null);
+        }, 300);
+
+        return () => {
+            if (cleanupTimerRef.current) {
+                clearTimeout(cleanupTimerRef.current);
+                cleanupTimerRef.current = null;
+            }
+        };
+    }, [route]);
+
+    useEffect(() => {
+        if (!backTarget) return;
+        const onBackPress = () => {
+            handleNavigate(backTarget);
+            return true;
+        };
+        const sub = BackHandler.addEventListener(
+            "hardwareBackPress",
+            onBackPress,
         );
-    }
+        return () => sub.remove();
+    }, [backTarget, handleNavigate]);
+
+    const edgeGesture = useMemo(
+        () =>
+            Gesture.Pan()
+                .activeOffsetX(10)
+                .onEnd((event) => {
+                    if (event.translationX > 80 || event.velocityX > 500) {
+                        runOnJS(handleNavigate)(backTarget!);
+                    }
+                }),
+        [handleNavigate, backTarget],
+    );
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                {route !== "main" ? (
-                    <BackButton onPress={() => onNavigate("main")} />
-                ) : null}
-                <Text style={styles.eyebrow}>Mobile v2</Text>
-                <Text style={styles.title}>{content.title}</Text>
-                <Text style={styles.detail}>{content.detail}</Text>
-            </View>
+        <View style={styles.transitionContainer}>
+            {leavingRoute ? (
+                <Animated.View style={[styles.animatedFill, leavingStyle]}>
+                    {renderRouteContent(leavingRoute, handleNavigate)}
+                </Animated.View>
+            ) : null}
 
-            <View style={styles.actions}>
-                <DrawerAction
-                    title="Questions"
-                    description="Review answers and question geometry."
-                    isActive={route === "questions"}
-                    onPress={() => onNavigate("questions")}
-                    testID="main-questions-row"
-                />
-                <DrawerAction
-                    title="Add Question"
-                    description="Start a radius, thermometer, or transit question."
-                    isActive={route === "add-question"}
-                    onPress={() => onNavigate("add-question")}
-                    testID="main-add-question-row"
-                />
-                <DrawerAction
-                    title="Settings"
-                    description="Adjust the play area and app preferences."
-                    isActive={false}
-                    onPress={() => onNavigate("settings")}
-                    testID="main-settings-row"
-                />
-            </View>
+            <Animated.View style={[styles.animatedFill, enteringStyle]}>
+                {renderRouteContent(route, handleNavigate)}
+            </Animated.View>
+
+            {backTarget ? (
+                <GestureDetector gesture={edgeGesture}>
+                    <View
+                        testID="edge-swipe-back-slab"
+                        style={styles.edgeSlab}
+                    />
+                </GestureDetector>
+            ) : null}
         </View>
     );
+}
+
+function renderRouteContent(
+    routeName: SheetRouteName,
+    onNavigate: (route: SheetRouteName) => void,
+) {
+    switch (routeName) {
+        case "settings":
+            return (
+                <View style={styles.container}>
+                    <BackButton onPress={() => onNavigate("main")} />
+                    <SettingsScreen onNavigate={onNavigate} />
+                </View>
+            );
+        case "play-area":
+            return (
+                <View style={styles.fullContainer}>
+                    <View style={styles.backButtonRow}>
+                        <BackButton onPress={() => onNavigate("settings")} />
+                    </View>
+                    <PlayAreaScreen />
+                </View>
+            );
+        case "hiding-zone":
+            return (
+                <View style={styles.fullContainer}>
+                    <View style={styles.backButtonRow}>
+                        <BackButton onPress={() => onNavigate("settings")} />
+                    </View>
+                    <HidingZoneScreen />
+                </View>
+            );
+        default: {
+            const content = routeContent[routeName];
+            return (
+                <View style={styles.container}>
+                    <View style={styles.header}>
+                        {routeName !== "main" ? (
+                            <BackButton onPress={() => onNavigate("main")} />
+                        ) : null}
+                        <Text style={styles.eyebrow}>Mobile v2</Text>
+                        <Text style={styles.title}>{content.title}</Text>
+                        <Text style={styles.detail}>{content.detail}</Text>
+                    </View>
+
+                    <View style={styles.actions}>
+                        <DrawerAction
+                            title="Questions"
+                            description="Review answers and question geometry."
+                            isActive={routeName === "questions"}
+                            onPress={() => onNavigate("questions")}
+                            testID="main-questions-row"
+                        />
+                        <DrawerAction
+                            title="Add Question"
+                            description="Start a radius, thermometer, or transit question."
+                            isActive={routeName === "add-question"}
+                            onPress={() => onNavigate("add-question")}
+                            testID="main-add-question-row"
+                        />
+                        <DrawerAction
+                            title="Settings"
+                            description="Adjust the play area and app preferences."
+                            isActive={false}
+                            onPress={() => onNavigate("settings")}
+                            testID="main-settings-row"
+                        />
+                    </View>
+                </View>
+            );
+        }
+    }
 }
 
 function BackButton({ onPress }: { onPress: () => void }) {
@@ -186,6 +320,9 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: "700",
     },
+    animatedFill: {
+        ...StyleSheet.absoluteFillObject,
+    },
     backButton: {
         alignSelf: "flex-start",
         marginBottom: 8,
@@ -217,6 +354,13 @@ const styles = StyleSheet.create({
         lineHeight: 19,
         marginTop: 4,
     },
+    edgeSlab: {
+        bottom: 0,
+        left: 0,
+        position: "absolute",
+        top: 0,
+        width: 20,
+    },
     eyebrow: {
         color: colors.tint,
         fontSize: 12,
@@ -233,5 +377,9 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: "800",
         marginTop: 2,
+    },
+    transitionContainer: {
+        flex: 1,
+        overflow: "hidden",
     },
 });

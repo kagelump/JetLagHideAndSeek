@@ -16,3 +16,17 @@ appId: com.hinoka.hideandseek.v2
       timeout: 60000
 - assertVisible:
       id: "main-settings-row"
+- tapOn:
+      id: "main-settings-row"
+- extendedWaitUntil:
+      visible: "Game Settings"
+      timeout: 10000
+- swipe:
+      start: "2%,75%"
+      end: "80%,75%"
+      duration: 500
+- extendedWaitUntil:
+      visible: "Game Setup"
+      timeout: 10000
+- assertVisible:
+      id: "main-settings-row"

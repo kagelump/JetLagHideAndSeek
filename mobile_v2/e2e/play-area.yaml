@@ -16,9 +16,14 @@ appId: com.hinoka.hideandseek.v2
       timeout: 60000
 - tapOn:
       id: "main-settings-row"
+- extendedWaitUntil:
+      visible: "Game Settings"
+      timeout: 10000
 - tapOn:
       id: "settings-play-area-row"
-- waitForAnimationToEnd
+- extendedWaitUntil:
+      visible: "Map Boundary"
+      timeout: 10000
 - extendedWaitUntil:
       visible: "Tokyo 23 Wards"
       timeout: 15000

@@ -75,9 +75,60 @@ jest.mock("@maplibre/maplibre-react-native", () => {
     };
 });
 
-jest.mock("react-native-reanimated", () =>
-    require("react-native-reanimated/mock"),
-);
+jest.mock("react-native-reanimated", () => {
+    const { View } = require("react-native");
+    const noopFn = () => {};
+    const noopAnimation = { start: noopFn, stop: noopFn };
+    const createAnimation = () => noopAnimation;
+
+    return {
+        __esModule: true,
+        default: {
+            View,
+            Text: View,
+            Image: View,
+            ScrollView: View,
+            createAnimatedComponent: (c) => c,
+            addWhitelistedUIProps: noopFn,
+        },
+        useSharedValue: (init) => ({ value: init }),
+        useDerivedValue: (fn) => ({ value: fn() }),
+        useAnimatedProps: noopFn,
+        useAnimatedStyle: () => ({}),
+        useEvent: () => noopFn,
+        useHandler: noopFn,
+        withTiming: () => 0,
+        withSpring: () => 0,
+        withRepeat: () => 0,
+        withSequence: () => 0,
+        withDelay: () => 0,
+        cancelAnimation: noopFn,
+        runOnJS: (fn) => fn,
+        runOnUI: (fn) => fn,
+        SlideInLeft: createAnimation,
+        SlideInRight: createAnimation,
+        SlideOutLeft: createAnimation,
+        SlideOutRight: createAnimation,
+        FadeIn: createAnimation,
+        FadeOut: createAnimation,
+    };
+});
+
+jest.mock("react-native-gesture-handler", () => {
+    const RNGH = jest.requireActual("react-native-gesture-handler");
+    return {
+        ...RNGH,
+        GestureDetector: ({ children }: { children: React.ReactNode }) =>
+            children,
+        Gesture: {
+            Pan: () => ({
+                activeOffsetX: () => ({
+                    onEnd: () => {},
+                }),
+            }),
+        },
+    };
+});
 
 jest.mock("@gorhom/bottom-sheet", () => {
     const React = require("react");

@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import osmtogeojson from "osmtogeojson";
 import type { ReactElement } from "react";
@@ -178,10 +178,106 @@ describe("MapAppScreen", () => {
         ).toHaveLength(0);
     });
 
-    it("keeps bottom-sheet navigation working", () => {
+    it("renders edge-swipe-back slab on sub-screens", () => {
+        jest.useFakeTimers();
         const screen = renderWithSafeArea(<MapAppScreen />);
 
+        expect(() => screen.getByTestId("edge-swipe-back-slab")).toThrow();
+
+        fireEvent.press(screen.getByTestId("main-settings-row"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(screen.getByTestId("edge-swipe-back-slab")).toBeTruthy();
+
+        fireEvent.press(screen.getByTestId("settings-play-area-row"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(screen.getByTestId("edge-swipe-back-slab")).toBeTruthy();
+
+        fireEvent.press(screen.getByText("Back"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        fireEvent.press(screen.getByText("Back"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(() => screen.getByTestId("edge-swipe-back-slab")).toThrow();
+
+        jest.useRealTimers();
+    });
+
+    it("shows both screens during transition, clears leaving after timeout", () => {
+        jest.useFakeTimers();
+        const screen = renderWithSafeArea(<MapAppScreen />);
+
+        fireEvent.press(screen.getByTestId("main-settings-row"));
+
+        // During transition: both leaving (main) and current (settings) visible
+        expect(screen.getByText("Game Setup")).toBeTruthy();
+        expect(screen.getByText("Game Settings")).toBeTruthy();
+
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+
+        // After transition: leaving screen removed
+        expect(screen.queryByText("Game Setup")).toBeNull();
+        expect(screen.getByText("Game Settings")).toBeTruthy();
+
+        jest.useRealTimers();
+    });
+
+    it("maintains correct direction across forward and back navigation cycles", () => {
+        jest.useFakeTimers();
+        const screen = renderWithSafeArea(<MapAppScreen />);
+
+        // Forward: main → settings → hiding-zone
+        fireEvent.press(screen.getByTestId("main-settings-row"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        fireEvent.press(screen.getByTestId("settings-hiding-zone-row"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(screen.getByText("Eligible Transit Stations")).toBeTruthy();
+
+        // Back: hiding-zone → settings
+        fireEvent.press(screen.getByText("Back"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(screen.getByText("Game Settings")).toBeTruthy();
+
+        // Back: settings → main
+        fireEvent.press(screen.getByText("Back"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(screen.getByTestId("main-settings-row")).toBeTruthy();
+
+        // Forward again from a previously visited route (the bug scenario)
+        fireEvent.press(screen.getByTestId("main-settings-row"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+        expect(screen.getByText("Game Settings")).toBeTruthy();
+        expect(screen.queryByText("Game Setup")).toBeNull();
+
+        jest.useRealTimers();
+    });
+
+    it("keeps bottom-sheet navigation working", () => {
+        const screen = renderWithSafeArea(<MapAppScreen />);
+        jest.useFakeTimers();
+
         fireEvent.press(screen.getByText("Questions"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         expect(
             screen.getByText(
                 "The question list will be wired once the state model exists.",
@@ -189,7 +285,13 @@ describe("MapAppScreen", () => {
         ).toBeTruthy();
 
         fireEvent.press(screen.getByText("Back"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         fireEvent.press(screen.getByText("Add Question"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         expect(
             screen.getByText(
                 "Question creation will land here in a later milestone.",
@@ -197,10 +299,18 @@ describe("MapAppScreen", () => {
         ).toBeTruthy();
 
         fireEvent.press(screen.getByText("Back"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         fireEvent.press(screen.getByTestId("main-settings-row"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         expect(screen.getByText("Game Settings")).toBeTruthy();
         expect(screen.getByTestId("settings-play-area-row")).toBeTruthy();
         expect(screen.getByTestId("settings-hiding-zone-row")).toBeTruthy();
+
+        jest.useRealTimers();
     });
 
     it("suggests Tokyo hiding-zone presets without auto-selecting them", () => {
