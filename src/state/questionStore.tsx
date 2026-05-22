@@ -78,7 +78,12 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         [activeQuestionId, questions],
     );
     const questionMapRenderState = useMemo(
-        () => buildQuestionMapRenderState(questions, selectedStations, radiusMeters),
+        () =>
+            buildQuestionMapRenderState(
+                questions,
+                selectedStations,
+                radiusMeters,
+            ),
         [questions, radiusMeters, selectedStations],
     );
 

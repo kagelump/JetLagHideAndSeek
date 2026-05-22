@@ -15,9 +15,11 @@ export function buildQuestionMapRenderState(
             question.type === "matching" && question.lineId !== null,
     );
     const hitLine =
-        matchingQuestions.find((question) => question.answer === "positive") ?? null;
+        matchingQuestions.find((question) => question.answer === "positive") ??
+        null;
     const missLine =
-        matchingQuestions.find((question) => question.answer === "negative") ?? null;
+        matchingQuestions.find((question) => question.answer === "negative") ??
+        null;
 
     return {
         radar,

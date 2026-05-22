@@ -8,6 +8,7 @@ import {
     uncompactCoord,
     uncompactPolyline,
     unminifyEnvelope,
+    UNSUPPORTED_QUESTION_TYPE_ERROR,
 } from "@/sharing/wire/minified";
 import type { AppStateEnvelopeV1 } from "@/sharing/wire/schema";
 
@@ -316,6 +317,25 @@ describe("minifyEnvelope", () => {
     });
 });
 
+it("throws when non-radar questions are present", () => {
+    const envelope = makeEnvelope({
+        questions: [
+            {
+                answer: "unanswered",
+                createdAt: "2026-05-17T00:00:00.000Z",
+                id: "matching-1",
+                lineId: "line-1",
+                lineName: "Line 1",
+                type: "matching",
+                updatedAt: "2026-05-17T00:00:00.000Z",
+            },
+        ],
+    });
+
+    expect(() => minifyEnvelope(envelope)).toThrow(
+        UNSUPPORTED_QUESTION_TYPE_ERROR,
+    );
+});
 describe("unminifyEnvelope", () => {
     it("reconstructs omitted fields with defaults", () => {
         const envelope = makeEnvelope();

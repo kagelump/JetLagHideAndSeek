@@ -102,4 +102,28 @@ describe("sharing wire codec", () => {
             expect(result.payload.playArea?.osmType).toBe("R");
         }
     });
+
+    it("throws when envelope includes unsupported compact question types", () => {
+        const withMatching = {
+            ...envelope,
+            payload: {
+                ...envelope.payload,
+                questions: [
+                    {
+                        answer: "unanswered" as const,
+                        createdAt: "2026-05-17T00:00:00.000Z",
+                        id: "matching-1",
+                        lineId: "line-1",
+                        lineName: "Line 1",
+                        type: "matching" as const,
+                        updatedAt: "2026-05-17T00:00:00.000Z",
+                    },
+                ],
+            },
+        };
+
+        expect(() => encodeEnvelope(withMatching)).toThrow(
+            "Compact share links currently support radar questions only.",
+        );
+    });
 });

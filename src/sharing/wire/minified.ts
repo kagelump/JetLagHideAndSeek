@@ -124,6 +124,9 @@ const ANSWER_FROM_MINIFIED = {
     p: "positive",
 } as const;
 
+const UNSUPPORTED_QUESTION_TYPE_ERROR =
+    "Compact share links currently support radar questions only.";
+
 export type CompactPolyline = number[];
 
 export function compactPolyline(coords: [number, number][]): CompactPolyline {
@@ -208,7 +211,21 @@ export function minifyEnvelope(env: WireEnvelope): WireEnvelopeMinified {
     }
 
     if (p.questions && p.questions.length > 0) {
-        payload[FIELD_MAP.questions] = p.questions.filter((question) => question.type === "radar").map((question) => {
+        const hasUnsupportedQuestion = p.questions.some(
+            (question) => question.type !== "radar",
+        );
+        if (hasUnsupportedQuestion) {
+            throw new Error(UNSUPPORTED_QUESTION_TYPE_ERROR);
+        }
+
+        const radarQuestions = p.questions.filter(
+            (
+                question,
+            ): question is Extract<typeof question, { type: "radar" }> =>
+                question.type === "radar",
+        );
+
+        payload[FIELD_MAP.questions] = radarQuestions.map((question) => {
             const result: Record<string, unknown> = {
                 [FIELD_MAP.center]: compactCoord(
                     question.center[0],
@@ -300,3 +317,5 @@ export function unminifyEnvelope(
     full.payload = payload;
     return full as unknown as AppStateEnvelopeV1;
 }
+
+export { UNSUPPORTED_QUESTION_TYPE_ERROR };

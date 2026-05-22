@@ -61,7 +61,9 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
                         accessibilityRole="button"
                         key={type}
                         onPress={() => {
-                            createQuestion("matching", { center: playArea.center });
+                            createQuestion("matching", {
+                                center: playArea.center,
+                            });
                             onNavigate("question-detail");
                         }}
                         style={({ pressed }) => [

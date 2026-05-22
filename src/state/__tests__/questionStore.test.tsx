@@ -176,8 +176,12 @@ describe("QuestionProvider", () => {
         await waitFor(async () => {
             const persisted = await loadPersistedAppState();
             const first = persisted?.questions[0];
-            expect(first && first.type === "radar" ? first.distanceMeters : null).toBe(1000);
-            expect(first && first.type === "radar" ? first.distanceOption : null).toBe("1km");
+            expect(
+                first && first.type === "radar" ? first.distanceMeters : null,
+            ).toBe(1000);
+            expect(
+                first && first.type === "radar" ? first.distanceOption : null,
+            ).toBe("1km");
         });
     });
 
