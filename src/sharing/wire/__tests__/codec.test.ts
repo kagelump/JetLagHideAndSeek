@@ -103,7 +103,7 @@ describe("sharing wire codec", () => {
         }
     });
 
-    it("throws when envelope includes unsupported compact question types", () => {
+    it("encodes and decodes matching questions", () => {
         const withMatching = {
             ...envelope,
             payload: {
@@ -122,8 +122,13 @@ describe("sharing wire codec", () => {
             },
         };
 
-        expect(() => encodeEnvelope(withMatching)).toThrow(
-            "Compact share links currently support radar questions only.",
-        );
+        const payload = encodeEnvelope(withMatching);
+        const decoded = decodeEnvelopePayload(payload);
+        expect(decoded.ok).toBe(true);
+        if (decoded.ok) {
+            expect(decoded.envelope.payload.questions?.[0]).toEqual(
+                withMatching.payload.questions[0],
+            );
+        }
     });
 });

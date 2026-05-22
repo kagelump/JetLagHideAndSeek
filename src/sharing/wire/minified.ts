@@ -18,6 +18,9 @@ export const FIELD_MAP = {
     questions: "q",
     radiusMeters: "r",
     radiusOption: "d",
+    questionType: "t",
+    lineId: "x",
+    lineName: "y",
     selectedPresetIds: "s",
     version: "v",
 } as const;
@@ -48,7 +51,7 @@ const hidingZonesMinifiedSchema = z.object({
     [FIELD_MAP.selectedPresetIds]: z.array(z.string()),
 });
 
-const radiusQuestionMinifiedSchema = z.object({
+const radarQuestionMinifiedSchema = z.object({
     [FIELD_MAP.answer]: z.enum(["p", "n"]).optional(),
     [FIELD_MAP.center]: compactCoordSchema,
     [FIELD_MAP.id]: z.string().min(1).optional(),
@@ -69,6 +72,14 @@ const radiusQuestionMinifiedSchema = z.object({
         .optional(),
 });
 
+const matchingQuestionMinifiedSchema = z.object({
+    [FIELD_MAP.answer]: z.enum(["p", "n"]).optional(),
+    [FIELD_MAP.id]: z.string().min(1).optional(),
+    [FIELD_MAP.questionType]: z.literal("m"),
+    [FIELD_MAP.lineId]: z.string().min(1).nullable(),
+    [FIELD_MAP.lineName]: z.string().min(1).nullable(),
+});
+
 const metadataMinifiedSchema = z.object({
     [FIELD_MAP.createdAt]: z.string().min(1),
 });
@@ -78,7 +89,14 @@ const appStatePayloadMinifiedSchema = z.object({
     [FIELD_MAP.hidingZones]: hidingZonesMinifiedSchema.optional(),
     [FIELD_MAP.metadata]: metadataMinifiedSchema,
     [FIELD_MAP.playArea]: playAreaMinifiedSchema.optional(),
-    [FIELD_MAP.questions]: z.array(radiusQuestionMinifiedSchema).optional(),
+    [FIELD_MAP.questions]: z
+        .array(
+            z.union([
+                radarQuestionMinifiedSchema,
+                matchingQuestionMinifiedSchema,
+            ]),
+        )
+        .optional(),
 });
 
 const appStateEnvelopeMinifiedSchema = z.object({
@@ -123,9 +141,6 @@ const ANSWER_FROM_MINIFIED = {
     n: "negative",
     p: "positive",
 } as const;
-
-const UNSUPPORTED_QUESTION_TYPE_ERROR =
-    "Compact share links currently support radar questions only.";
 
 export type CompactPolyline = number[];
 
@@ -211,29 +226,32 @@ export function minifyEnvelope(env: WireEnvelope): WireEnvelopeMinified {
     }
 
     if (p.questions && p.questions.length > 0) {
-        const hasUnsupportedQuestion = p.questions.some(
-            (question) => question.type !== "radar",
-        );
-        if (hasUnsupportedQuestion) {
-            throw new Error(UNSUPPORTED_QUESTION_TYPE_ERROR);
-        }
+        payload[FIELD_MAP.questions] = p.questions.map((question) => {
+            if (question.type === "radar") {
+                const result: Record<string, unknown> = {
+                    [FIELD_MAP.center]: compactCoord(
+                        question.center[0],
+                        question.center[1],
+                    ),
+                    [FIELD_MAP.id]: question.id,
+                    [FIELD_MAP.questionType]: "r",
+                    [FIELD_MAP.radiusMeters]: question.distanceMeters,
+                    [FIELD_MAP.radiusOption]: question.distanceOption,
+                };
 
-        const radarQuestions = p.questions.filter(
-            (
-                question,
-            ): question is Extract<typeof question, { type: "radar" }> =>
-                question.type === "radar",
-        );
+                if (question.answer !== "unanswered") {
+                    result[FIELD_MAP.answer] =
+                        ANSWER_TO_MINIFIED[question.answer];
+                }
 
-        payload[FIELD_MAP.questions] = radarQuestions.map((question) => {
+                return result;
+            }
+
             const result: Record<string, unknown> = {
-                [FIELD_MAP.center]: compactCoord(
-                    question.center[0],
-                    question.center[1],
-                ),
                 [FIELD_MAP.id]: question.id,
-                [FIELD_MAP.radiusMeters]: question.distanceMeters,
-                [FIELD_MAP.radiusOption]: question.distanceOption,
+                [FIELD_MAP.questionType]: "m",
+                [FIELD_MAP.lineId]: question.lineId,
+                [FIELD_MAP.lineName]: question.lineName,
             };
 
             if (question.answer !== "unanswered") {
@@ -294,19 +312,48 @@ export function unminifyEnvelope(
 
     if (p[FIELD_MAP.questions]) {
         payload.questions = p[FIELD_MAP.questions]!.map((question, index) => {
-            const [lon, lat] = uncompactCoord(
-                question[FIELD_MAP.center][0],
-                question[FIELD_MAP.center][1],
-            );
             const createdAt = metadata[FIELD_MAP.createdAt];
-            const answer = question[FIELD_MAP.answer];
+            const q = question as Record<string, unknown>;
+            const answer = q[FIELD_MAP.answer] as
+                | keyof typeof ANSWER_FROM_MINIFIED
+                | undefined;
+            const resolvedAnswer = answer
+                ? ANSWER_FROM_MINIFIED[answer]
+                : "unanswered";
+            const questionType =
+                (q[FIELD_MAP.questionType] as "r" | "m" | undefined) ?? "r";
+
+            if (questionType === "m") {
+                return {
+                    answer: resolvedAnswer,
+                    createdAt,
+                    id:
+                        (q[FIELD_MAP.id] as string | undefined) ??
+                        `q-imported-${index + 1}`,
+                    lineId:
+                        (q[FIELD_MAP.lineId] as string | null | undefined) ??
+                        null,
+                    lineName:
+                        (q[FIELD_MAP.lineName] as string | null | undefined) ??
+                        null,
+                    type: "matching",
+                    updatedAt: createdAt,
+                };
+            }
+
+            const center = q[FIELD_MAP.center] as [number, number];
+            const [lon, lat] = uncompactCoord(center[0], center[1]);
             return {
-                answer: answer ? ANSWER_FROM_MINIFIED[answer] : "unanswered",
+                answer: resolvedAnswer,
                 center: [lon, lat],
                 createdAt,
-                id: question[FIELD_MAP.id] ?? `q-imported-${index + 1}`,
-                distanceMeters: question[FIELD_MAP.radiusMeters],
-                distanceOption: question[FIELD_MAP.radiusOption] ?? "other",
+                id:
+                    (q[FIELD_MAP.id] as string | undefined) ??
+                    `q-imported-${index + 1}`,
+                distanceMeters: q[FIELD_MAP.radiusMeters] as number,
+                distanceOption:
+                    (q[FIELD_MAP.radiusOption] as string | undefined) ??
+                    "other",
                 distanceUnit: "m",
                 type: "radar",
                 updatedAt: createdAt,
@@ -317,5 +364,3 @@ export function unminifyEnvelope(
     full.payload = payload;
     return full as unknown as AppStateEnvelopeV1;
 }
-
-export { UNSUPPORTED_QUESTION_TYPE_ERROR };

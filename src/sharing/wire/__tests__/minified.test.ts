@@ -8,7 +8,6 @@ import {
     uncompactCoord,
     uncompactPolyline,
     unminifyEnvelope,
-    UNSUPPORTED_QUESTION_TYPE_ERROR,
 } from "@/sharing/wire/minified";
 import type { AppStateEnvelopeV1 } from "@/sharing/wire/schema";
 
@@ -317,11 +316,11 @@ describe("minifyEnvelope", () => {
     });
 });
 
-it("throws when non-radar questions are present", () => {
+it("writes matching questions in compact format", () => {
     const envelope = makeEnvelope({
         questions: [
             {
-                answer: "unanswered",
+                answer: "negative",
                 createdAt: "2026-05-17T00:00:00.000Z",
                 id: "matching-1",
                 lineId: "line-1",
@@ -331,12 +330,41 @@ it("throws when non-radar questions are present", () => {
             },
         ],
     });
+    const mini = minifyEnvelope(envelope);
+    const json = JSON.parse(canonicalize(mini));
 
-    expect(() => minifyEnvelope(envelope)).toThrow(
-        UNSUPPORTED_QUESTION_TYPE_ERROR,
-    );
+    expect(json.p.q[0].t).toBe("m");
+    expect(json.p.q[0].x).toBe("line-1");
+    expect(json.p.q[0].y).toBe("Line 1");
+    expect(json.p.q[0].e).toBe("n");
 });
 describe("unminifyEnvelope", () => {
+    it("restores matching questions", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "positive",
+                    createdAt: "2026-05-17T00:00:00.000Z",
+                    id: "matching-1",
+                    lineId: "line-1",
+                    lineName: "Line 1",
+                    type: "matching",
+                    updatedAt: "2026-05-17T00:00:00.000Z",
+                },
+            ],
+        });
+        const restored = unminifyEnvelope(minifyEnvelope(envelope));
+        expect(restored.payload.questions?.[0]).toEqual({
+            answer: "positive",
+            createdAt: "2026-05-17T00:00:00.000Z",
+            id: "matching-1",
+            lineId: "line-1",
+            lineName: "Line 1",
+            type: "matching",
+            updatedAt: "2026-05-17T00:00:00.000Z",
+        });
+    });
+
     it("reconstructs omitted fields with defaults", () => {
         const envelope = makeEnvelope();
         const mini = minifyEnvelope(envelope);
