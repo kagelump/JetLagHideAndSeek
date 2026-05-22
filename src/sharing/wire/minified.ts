@@ -208,7 +208,7 @@ export function minifyEnvelope(env: WireEnvelope): WireEnvelopeMinified {
     }
 
     if (p.questions && p.questions.length > 0) {
-        payload[FIELD_MAP.questions] = p.questions.map((question) => {
+        payload[FIELD_MAP.questions] = p.questions.filter((question) => question.type === "radar").map((question) => {
             const result: Record<string, unknown> = {
                 [FIELD_MAP.center]: compactCoord(
                     question.center[0],
