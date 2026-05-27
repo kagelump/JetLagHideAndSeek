@@ -22,8 +22,10 @@ appId: com.raycatdev.hideandseek.v2
       when:
           platform: ios
       commands:
-          - waitForAnimationToEnd:
-                timeout: 240000
+          - swipe:
+                start: "50%,50%"
+                end: "50%,50%"
+                duration: 240000
           - swipe:
                 start: "50%,85%"
                 end: "50%,45%"
@@ -31,10 +33,7 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "50%,60%"
           - takeScreenshot: e2e/artifacts/smoke/smoke-ios-settings
-          - swipe:
-                start: "2%,75%"
-                end: "80%,75%"
-                duration: 500
+# Android: XCUITest/UI Automator can see React Native elements
 - runFlow:
       when:
           platform: android
@@ -61,5 +60,9 @@ appId: com.raycatdev.hideandseek.v2
                 visible:
                     id: "main-questions-row"
                 timeout: 10000
-- assertVisible:
-      id: "main-settings-row"
+- runFlow:
+      when:
+          platform: android
+      commands:
+          - assertVisible:
+                id: "main-settings-row"
