@@ -18,16 +18,13 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible: "Tokyo 23 Wards"
+      visible: "Game Setup"
       timeout: 240000
 - runFlow:
       when:
           visible: "Open bottom sheet"
       commands:
           - tapOn: "Open bottom sheet"
-- extendedWaitUntil:
-      visible: "Game Setup"
-      timeout: 10000
 - tapOn:
       id: "main-questions-row"
 - extendedWaitUntil:
