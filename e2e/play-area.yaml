@@ -18,7 +18,8 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      id: "main-settings-row"
+      visible:
+          id: "main-settings-row"
       timeout: 240000
 - runFlow:
       when:
@@ -32,15 +33,18 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn:
       id: "main-settings-row"
 - extendedWaitUntil:
-      id: "settings-share-button"
+      visible:
+          id: "settings-share-button"
       timeout: 10000
 - tapOn:
       id: "settings-play-area-row"
 - extendedWaitUntil:
-      id: "current-play-area-card"
+      visible:
+          id: "current-play-area-card"
       timeout: 10000
 - extendedWaitUntil:
-      id: "current-play-area-card"
+      visible:
+          id: "current-play-area-card"
       timeout: 15000
 - tapOn:
       point: "38%,39%"

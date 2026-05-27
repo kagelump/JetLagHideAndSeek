@@ -18,7 +18,8 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      id: "main-settings-row"
+      visible:
+          id: "main-settings-row"
       timeout: 240000
 - runFlow:
       when:
@@ -32,12 +33,14 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn:
       id: "main-settings-row"
 - extendedWaitUntil:
-      id: "settings-share-button"
+      visible:
+          id: "settings-share-button"
       timeout: 10000
 - tapOn:
       id: "settings-hiding-zone-row"
 - extendedWaitUntil:
-      id: "hiding-zone-preset-tokyo-metro"
+      visible:
+          id: "hiding-zone-preset-tokyo-metro"
       timeout: 10000
 - assertVisible: "Hiding zone settings; radius 600 m; stored as 600 m; 0 presets selected; 0 stations"
 - tapOn:
