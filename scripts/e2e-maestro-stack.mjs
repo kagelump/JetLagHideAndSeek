@@ -1,13 +1,16 @@
 /* global URL, console, fetch, process, setTimeout */
 
 import { spawn } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { platform } from "node:os";
 import { join } from "node:path";
 
 const metroPort = 8081;
 const metroStatusUrl = `http://127.0.0.1:${metroPort}/status`;
 const projectRoot = new URL("..", import.meta.url).pathname;
+const appConfig = JSON.parse(
+    readFileSync(join(projectRoot, "app.json"), "utf8"),
+).expo;
 const artifactsDir = join(projectRoot, "e2e", "artifacts");
 const maestroBin = join(process.env.HOME ?? "", ".maestro", "bin");
 const pathSeparator = platform() === "win32" ? ";" : ":";
@@ -46,7 +49,7 @@ const flows = [
 const env = {
     ...process.env,
     PATH: `${maestroBin}${pathSeparator}${process.env.PATH ?? ""}`,
-    MAESTRO_DEV_CLIENT_URL: `jetlag-hide-seek-v2://expo-development-client/?url=${devClientBundleUrl}&disableOnboarding=1`,
+    MAESTRO_DEV_CLIENT_URL: `exp+${appConfig.slug}://expo-development-client/?url=${devClientBundleUrl}&disableOnboarding=1`,
 };
 
 const metro = spawn(
