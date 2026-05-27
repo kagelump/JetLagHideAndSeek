@@ -161,7 +161,14 @@ jobs:
                   E2E_DISABLE_IOS_ASSOCIATED_DOMAINS: "1"
               run: |
                   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform ios --clean
+                  set +e
                   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "$IOS_SIMULATOR" --no-bundler
+                  EXIT=$?
+                  set -e
+                  if [ $EXIT -ne 0 ]; then
+                      echo "expo run:ios exited $EXIT (expected: simctl openurl may time out without Metro)"
+                      xcrun simctl listapps booted | grep -q com.raycatdev.hideandseek.v2 || exit $EXIT
+                  fi
 
             - name: Run Maestro
               run: pnpm test:e2e:ios:stack
