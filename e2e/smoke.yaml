@@ -17,52 +17,29 @@ appId: com.raycatdev.hideandseek.v2
                 timeout: 10000
           - tapOn:
                 point: "91%,48%"
-# iOS: gorhom bottom sheet blocks XCUITest; use coordinate taps
+- extendedWaitUntil:
+      visible: "Game Setup"
+      timeout: 60000
 - runFlow:
       when:
-          platform: ios
+          visible: "Open bottom sheet"
       commands:
-          - swipe:
-                start: "50%,50%"
-                end: "50%,50%"
-                duration: 240000
-          - swipe:
-                start: "50%,85%"
-                end: "50%,45%"
-                duration: 500
-          - tapOn:
-                point: "50%,60%"
-          - takeScreenshot: e2e/artifacts/smoke/smoke-ios-settings
-# Android: XCUITest/UI Automator can see React Native elements
-- runFlow:
-      when:
-          platform: android
-      commands:
-          - extendedWaitUntil:
-                visible:
-                    id: "main-settings-row"
-                timeout: 240000
-          - swipe:
-                start: "50%,85%"
-                end: "50%,45%"
-                duration: 500
-          - tapOn:
-                id: "main-settings-row"
-          - extendedWaitUntil:
-                visible:
-                    id: "settings-share-button"
-                timeout: 10000
-          - swipe:
-                start: "2%,75%"
-                end: "80%,75%"
-                duration: 500
-          - extendedWaitUntil:
-                visible:
-                    id: "main-questions-row"
-                timeout: 10000
-- runFlow:
-      when:
-          platform: android
-      commands:
-          - assertVisible:
-                id: "main-settings-row"
+          - tapOn: "Open bottom sheet"
+- swipe:
+      start: "50%,85%"
+      end: "50%,45%"
+      duration: 500
+- tapOn:
+      id: "main-settings-row"
+- extendedWaitUntil:
+      visible: "Game Settings"
+      timeout: 10000
+- swipe:
+      start: "2%,75%"
+      end: "80%,75%"
+      duration: 500
+- extendedWaitUntil:
+      visible: "Game Setup"
+      timeout: 10000
+- assertVisible:
+      id: "main-settings-row"

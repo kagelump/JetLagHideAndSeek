@@ -77,9 +77,25 @@ let shuttingDown = false;
 async function main() {
     try {
         await waitForMetro();
+        await warmMetroBundle();
         await runMaestro();
     } finally {
         await stopMetro();
+    }
+}
+
+async function warmMetroBundle() {
+    const warmedAt = Date.now();
+    const warmUrl = `http://127.0.0.1:${metroPort}/index.bundle?platform=ios&dev=true&minify=false`;
+    console.log(`Pre-warming Metro bundle at ${warmUrl} ...`);
+    try {
+        const response = await fetch(warmUrl);
+        await response.arrayBuffer();
+        console.log(
+            `Bundle pre-warmed in ${((Date.now() - warmedAt) / 1000).toFixed(1)}s.`,
+        );
+    } catch (err) {
+        console.warn(`Bundle pre-warm failed (${err.message}), continuing...`);
     }
 }
 
