@@ -155,7 +155,7 @@ jobs:
             - name: Build and install iOS dev client
               run: |
                   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform ios --clean
-                  LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --simulator "$IOS_SIMULATOR" --no-bundler
+                  LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "$IOS_SIMULATOR" --no-bundler
 
             - name: Run Maestro
               run: pnpm test:e2e:ios:stack
