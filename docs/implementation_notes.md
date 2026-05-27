@@ -26,7 +26,7 @@ E2E notes:
 
 - Maestro is installed at `~/.maestro/bin/maestro`; add it to `PATH` if `maestro` is not found.
 - Start Metro first: `pnpm exec expo start --dev-client --host localhost --port 8081 -c`.
-- The smoke flow handles Expo dev-client first-run prompts conditionally, then asserts the map has loaded the default `Tokyo 23 Wards` label and the main settings row is targetable. Android CI can spend more than 15 seconds on the cold `Bundling ...` screen after opening the dev-client URL, so the shared app-state wait allows up to 120 seconds. The floating `Open bottom sheet` button is hidden from the native accessibility tree while the sheet covers it; otherwise Android Maestro can target the stale button and tap through to sheet content. The map controls are icon-only, so Maestro should not assert old visible copy such as `Fit Tokyo 23 Wards` or `Locate me`.
+- The smoke flow handles Expo dev-client first-run prompts conditionally, then asserts the map has loaded the default `Tokyo 23 Wards` label and the main settings row is targetable. iOS and Android CI can spend most of the first app-state wait on the cold `Bundling ...` screen after opening the dev-client URL, so the shared app-state wait allows up to 240 seconds. The floating `Open bottom sheet` button is hidden from the native accessibility tree while the sheet covers it; otherwise Android Maestro can target the stale button and tap through to sheet content. The map controls are icon-only, so Maestro should not assert old visible copy such as `Fit Tokyo 23 Wards` or `Locate me`.
 - GitHub Actions has a manually dispatchable `Maestro E2E` workflow. Agents can hand off device tests with `gh workflow run "Maestro E2E" --ref <branch> -f platform=android` or `platform=ios`, then follow it with `gh run watch`.
 - The workflow also accepts `-f flow=smoke`, `play-area`, `hiding-zone`, `radar-question`, or `transit-line-question` for focused runs. Omit it, or pass `flow=all`, to run every Maestro flow.
 - Android CI must enable KVM before `reactivecircus/android-emulator-runner`. If a run fails before `expo prebuild` with repeated `adb shell getprop sys.boot_completed`, a very slow boot time, and `adb` exit code 224 after `shell input keyevent 82`, suspect missing or broken VM acceleration rather than a Maestro flow failure.
@@ -50,6 +50,7 @@ Native/dependency setup matters:
 Bottom-sheet and E2E accessibility notes:
 
 - The Play Area route snaps the bottom sheet to the large snap point before Maestro looks for controls.
+- On the small Android CI emulator, the main sheet title can be visible while the lower `Settings` row is still clipped at the medium snap. Maestro settings flows expand the sheet before tapping `main-settings-row`.
 - Maestro/XCUITest sees the native accessibility hierarchy, not the React tree. A visible empty `TextInput` may not expose its `testID` as a targetable iOS node.
 - The direct relation ID field has React/Jest test IDs on both the wrapper and the inner text input, but the current Maestro flow uses visible coordinate taps because iOS does not expose those nested nodes reliably through XCUITest.
 - The iOS number pad does not reliably support Maestro `hideKeyboard`. The play-area flow taps the visible Apply button directly after entering text.

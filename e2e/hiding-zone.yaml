@@ -19,7 +19,7 @@ appId: com.raycatdev.hideandseek.v2
                 point: "91%,48%"
 - extendedWaitUntil:
       visible: "Tokyo 23 Wards"
-      timeout: 120000
+      timeout: 240000
 - runFlow:
       when:
           visible: "Open bottom sheet"
@@ -28,6 +28,10 @@ appId: com.raycatdev.hideandseek.v2
 - extendedWaitUntil:
       visible: "Game Setup"
       timeout: 10000
+- swipe:
+      start: "50%,85%"
+      end: "50%,45%"
+      duration: 500
 - tapOn:
       id: "main-settings-row"
 - extendedWaitUntil:
