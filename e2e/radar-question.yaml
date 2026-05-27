@@ -18,7 +18,7 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible: "Game Setup"
+      id: "main-settings-row"
       timeout: 240000
 - runFlow:
       when:
@@ -28,17 +28,17 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn:
       id: "main-questions-row"
 - extendedWaitUntil:
-      visible: "Question List"
+      id: "questions-add-question-row"
       timeout: 10000
 - tapOn:
       id: "questions-add-question-row"
 - extendedWaitUntil:
-      visible: "Choose a question"
+      id: "add-radar-question-row"
       timeout: 10000
 - tapOn:
       id: "add-radar-question-row"
 - extendedWaitUntil:
-      visible: "Radar Question"
+      id: "radar-pin-lock-button"
       timeout: 10000
 - assertVisible:
       id: "radar-distance-option-500m"
@@ -66,6 +66,6 @@ appId: com.raycatdev.hideandseek.v2
 - takeScreenshot: e2e/artifacts/radar-question/radar-question-miss-map
 - tapOn: "Back"
 - extendedWaitUntil:
-      visible: "Question List"
+      id: "questions-add-question-row"
       timeout: 10000
 - assertVisible: "Open radar question 1"

@@ -18,7 +18,7 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible: "Game Setup"
+      id: "main-settings-row"
       timeout: 240000
 - runFlow:
       when:
@@ -32,15 +32,15 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn:
       id: "main-settings-row"
 - extendedWaitUntil:
-      visible: "Game Settings"
+      id: "settings-share-button"
       timeout: 10000
 - tapOn:
       id: "settings-play-area-row"
 - extendedWaitUntil:
-      visible: "Map Boundary"
+      id: "current-play-area-card"
       timeout: 10000
 - extendedWaitUntil:
-      visible: "Tokyo 23 Wards"
+      id: "current-play-area-card"
       timeout: 15000
 - tapOn:
       point: "38%,39%"

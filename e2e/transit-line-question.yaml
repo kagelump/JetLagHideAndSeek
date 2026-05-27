@@ -18,7 +18,7 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible: "Game Setup"
+      id: "main-settings-row"
       timeout: 240000
 - runFlow:
       when:
@@ -32,37 +32,37 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn:
       id: "main-settings-row"
 - extendedWaitUntil:
-      visible: "Game Settings"
+      id: "settings-share-button"
       timeout: 10000
 - tapOn:
       id: "settings-hiding-zone-row"
 - extendedWaitUntil:
-      visible: "Hiding Zones"
+      id: "hiding-zone-preset-tokyo-metro"
       timeout: 10000
 - tapOn:
       id: "hiding-zone-preset-tokyo-metro"
 - tapOn: "Back"
 - extendedWaitUntil:
-      visible: "Game Settings"
+      id: "settings-share-button"
       timeout: 10000
 - tapOn: "Back"
 - extendedWaitUntil:
-      visible: "Game Setup"
+      id: "main-settings-row"
       timeout: 10000
 - tapOn:
       id: "main-questions-row"
 - extendedWaitUntil:
-      visible: "Question List"
+      id: "questions-add-question-row"
       timeout: 10000
 - tapOn:
       id: "questions-add-question-row"
 - extendedWaitUntil:
-      visible: "Choose a question"
+      id: "add-matching-question-row"
       timeout: 10000
 - tapOn:
       id: "add-matching-question-row"
 - extendedWaitUntil:
-      visible: "Transit · Transit Line"
+      id: "matching-answer-option-unanswered"
       timeout: 10000
 - assertVisible:
       id: "matching-answer-option-unanswered"
@@ -79,6 +79,6 @@ appId: com.raycatdev.hideandseek.v2
 - takeScreenshot: e2e/artifacts/transit-line-question/transit-line-hit-map
 - tapOn: "Back"
 - extendedWaitUntil:
-      visible: "Question List"
+      id: "questions-add-question-row"
       timeout: 10000
 - assertVisible: "Open matching question 1"

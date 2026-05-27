@@ -18,7 +18,7 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible: "Game Setup"
+      id: "main-settings-row"
       timeout: 240000
 - runFlow:
       when:
@@ -32,14 +32,14 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn:
       id: "main-settings-row"
 - extendedWaitUntil:
-      visible: "Game Settings"
+      id: "settings-share-button"
       timeout: 10000
 - swipe:
       start: "2%,75%"
       end: "80%,75%"
       duration: 500
 - extendedWaitUntil:
-      visible: "Game Setup"
+      id: "main-settings-row"
       timeout: 10000
 - assertVisible:
       id: "main-settings-row"
