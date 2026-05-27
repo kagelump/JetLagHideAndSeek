@@ -153,6 +153,8 @@ jobs:
                   echo "IOS_SIMULATOR=$IOS_SIMULATOR" >> "$GITHUB_ENV"
 
             - name: Build and install iOS dev client
+              env:
+                  E2E_DISABLE_IOS_ASSOCIATED_DOMAINS: "1"
               run: |
                   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform ios --clean
                   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "$IOS_SIMULATOR" --no-bundler
