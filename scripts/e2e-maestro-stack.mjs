@@ -86,7 +86,7 @@ async function main() {
 
 async function warmMetroBundle() {
     const warmedAt = Date.now();
-    const warmUrl = `http://127.0.0.1:${metroPort}/index.bundle?platform=ios&dev=true&minify=false`;
+    const warmUrl = `http://127.0.0.1:${metroPort}/node_modules/expo-router/entry.js?platform=ios&dev=true&minify=false`;
     console.log(`Pre-warming Metro bundle at ${warmUrl} ...`);
     try {
         const response = await fetch(warmUrl);
