@@ -74,6 +74,7 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
 | `pnpm lint`               | Lint with ESLint                       |
 | `pnpm format`             | Format with Prettier                   |
 | `pnpm format:check`       | Check formatting                       |
+| `pnpm fix`                | Auto-fix lint and format issues        |
 | `pnpm typecheck`          | Run TypeScript type checking           |
 | `pnpm check`              | Lint, format check, and typecheck      |
 | `pnpm test`               | Run Jest unit and component tests      |
