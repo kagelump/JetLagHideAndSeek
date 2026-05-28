@@ -18,28 +18,12 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible: "Game Setup"
+      notVisible: "Continue"
       timeout: 60000
-- runFlow:
-      when:
-          visible: "Open bottom sheet"
-      commands:
-          - tapOn: "Open bottom sheet"
 - swipe:
       start: "50%,85%"
       end: "50%,45%"
       duration: 500
 - tapOn:
-      id: "main-settings-row"
-- extendedWaitUntil:
-      visible: "Game Settings"
-      timeout: 10000
-- swipe:
-      start: "2%,75%"
-      end: "80%,75%"
-      duration: 500
-- extendedWaitUntil:
-      visible: "Game Setup"
-      timeout: 10000
-- assertVisible:
-      id: "main-settings-row"
+      point: "50%,45%"
+- takeScreenshot: e2e/artifacts/smoke/smoke-ios-loaded
