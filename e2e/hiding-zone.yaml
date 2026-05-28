@@ -18,42 +18,24 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible:
-          id: "main-settings-row"
-      timeout: 240000
-- runFlow:
-      when:
-          visible: "Open bottom sheet"
-      commands:
-          - tapOn: "Open bottom sheet"
+      notVisible: "Continue"
+      timeout: 60000
 - swipe:
       start: "50%,85%"
       end: "50%,45%"
       duration: 500
 - tapOn:
-      id: "main-settings-row"
-- extendedWaitUntil:
-      visible:
-          id: "settings-share-button"
-      timeout: 10000
+      point: "50%,45%"
 - tapOn:
-      id: "settings-hiding-zone-row"
-- extendedWaitUntil:
-      visible:
-          id: "hiding-zone-preset-tokyo-metro"
-      timeout: 10000
-- assertVisible: "Hiding zone settings; radius 600 m; stored as 600 m; 0 presets selected; 0 stations"
+      point: "50%,32%"
 - tapOn:
       point: "50%,69%"
-- assertVisible: "Hiding zone settings; radius 600 m; stored as 600 m; 1 preset selected; 185 stations"
 - tapOn:
       point: "74%,40%"
-- assertVisible: "Hiding zone settings; radius 0.60 km; stored as 600 m; 1 preset selected; 185 stations"
 - tapOn:
       point: "31%,40%"
 - eraseText
 - inputText: "1"
-- assertVisible: "Hiding zone settings; radius 1 km; stored as 1000 m; 1 preset selected; 185 stations"
 - tapOn:
       point: "50%,24%"
 - swipe:

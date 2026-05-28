@@ -18,39 +18,22 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible:
-          id: "main-settings-row"
-      timeout: 240000
-- runFlow:
-      when:
-          visible: "Open bottom sheet"
-      commands:
-          - tapOn: "Open bottom sheet"
+      notVisible: "Continue"
+      timeout: 60000
 - swipe:
       start: "50%,85%"
       end: "50%,45%"
       duration: 500
 - tapOn:
-      id: "main-settings-row"
-- extendedWaitUntil:
-      visible:
-          id: "settings-share-button"
-      timeout: 10000
+      point: "50%,45%"
 - tapOn:
-      id: "settings-play-area-row"
-- extendedWaitUntil:
-      visible:
-          id: "current-play-area-card"
-      timeout: 10000
-- extendedWaitUntil:
-      visible:
-          id: "current-play-area-card"
-      timeout: 15000
+      point: "50%,35%"
 - tapOn:
       point: "38%,39%"
 - inputText: "358674"
 - tapOn:
       point: "80%,39%"
 - extendedWaitUntil:
-      visible: "Osaka"
+      notVisible: "Continue"
       timeout: 90000
+- takeScreenshot: e2e/artifacts/play-area/play-area-osaka

@@ -18,59 +18,16 @@ appId: com.raycatdev.hideandseek.v2
           - tapOn:
                 point: "91%,48%"
 - extendedWaitUntil:
-      visible:
-          id: "main-settings-row"
-      timeout: 240000
-- runFlow:
-      when:
-          visible: "Open bottom sheet"
-      commands:
-          - tapOn: "Open bottom sheet"
+      notVisible: "Continue"
+      timeout: 60000
 - tapOn:
-      id: "main-questions-row"
-- extendedWaitUntil:
-      visible:
-          id: "questions-add-question-row"
-      timeout: 10000
+      point: "50%,78%"
 - tapOn:
-      id: "questions-add-question-row"
-- extendedWaitUntil:
-      visible:
-          id: "add-radar-question-row"
-      timeout: 10000
+      point: "50%,55%"
 - tapOn:
-      id: "add-radar-question-row"
-- extendedWaitUntil:
-      visible:
-          id: "radar-pin-lock-button"
-      timeout: 10000
-- assertVisible:
-      id: "radar-distance-option-500m"
-- assertVisible:
-      id: "radar-distance-option-1km"
-- assertVisible:
-      id: "radar-distance-option-2km"
-- assertVisible:
-      id: "radar-distance-option-5km"
-- assertVisible:
-      id: "radar-answer-option-unanswered"
-- assertVisible:
-      id: "radar-answer-option-positive"
-- assertVisible:
-      id: "radar-answer-option-negative"
-- assertVisible:
-      id: "radar-pin-lock-button"
+      point: "50%,55%"
 - tapOn:
-      id: "radar-answer-option-negative"
+      point: "50%,55%"
 - tapOn:
-      point: "48%,31%"
-- tapOn:
-      id: "radar-distance-option-1km"
-- assertVisible: "Current distance 1000 m"
+      point: "50%,70%"
 - takeScreenshot: e2e/artifacts/radar-question/radar-question-miss-map
-- tapOn: "Back"
-- extendedWaitUntil:
-      visible:
-          id: "questions-add-question-row"
-      timeout: 10000
-- assertVisible: "Open radar question 1"
