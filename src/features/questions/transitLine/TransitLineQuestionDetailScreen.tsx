@@ -29,31 +29,6 @@ export function TransitLineQuestionDetailScreen({
 
     return (
         <>
-            <View style={styles.section}>
-                <Text
-                    accessibilityLabel="Transit line answer section"
-                    style={styles.sectionTitle}
-                >
-                    Answer
-                </Text>
-                <QuestionAnswerSelector
-                    answer={question.answer}
-                    onChange={(answer) =>
-                        updateQuestion(question.id, (current) =>
-                            current.type === "matching"
-                                ? {
-                                      ...current,
-                                      answer,
-                                      updatedAt: new Date().toISOString(),
-                                  }
-                                : current,
-                        )
-                    }
-                    questionType={question.type}
-                    testIDPrefix="matching-answer-option"
-                />
-            </View>
-
             <QuestionLocationSelector
                 center={question.center}
                 onCenterChange={(center) =>
@@ -118,6 +93,32 @@ export function TransitLineQuestionDetailScreen({
                     );
                 })}
             </View>
+
+            <View style={styles.section}>
+                <Text
+                    accessibilityLabel="Transit line answer section"
+                    style={styles.sectionTitle}
+                >
+                    Answer
+                </Text>
+                <QuestionAnswerSelector
+                    answer={question.answer}
+                    onChange={(answer) =>
+                        updateQuestion(question.id, (current) =>
+                            current.type === "matching"
+                                ? {
+                                      ...current,
+                                      answer,
+                                      updatedAt: new Date().toISOString(),
+                                  }
+                                : current,
+                        )
+                    }
+                    questionType={question.type}
+                    testIDPrefix="matching-answer-option"
+                />
+            </View>
+
         </>
     );
 }
