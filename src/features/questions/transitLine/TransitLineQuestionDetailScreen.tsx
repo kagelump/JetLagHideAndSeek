@@ -118,7 +118,6 @@ export function TransitLineQuestionDetailScreen({
                     testIDPrefix="matching-answer-option"
                 />
             </View>
-
         </>
     );
 }
