@@ -349,9 +349,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
         );
 
         await waitFor(() => {
-            expect(
-                screen.getByTestId("osm-matching-stale"),
-            ).toBeTruthy();
+            expect(screen.getByTestId("osm-matching-stale")).toBeTruthy();
         });
     });
 

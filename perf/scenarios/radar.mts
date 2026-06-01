@@ -1,4 +1,7 @@
-import { buildRadarQuestionRenderState } from "../../src/features/questions/radar/radarGeometry.ts";
+import {
+    buildRadarQuestionRenderState,
+    clearRadarCircleCache,
+} from "../../src/features/questions/radar/radarGeometry.ts";
 import type { RadarQuestion } from "../../src/features/questions/radar/radarTypes.ts";
 import type { PerfScenario } from "../lib.mts";
 
@@ -13,6 +16,24 @@ export const radarScenarios: PerfScenario[] = [
             questionsByCount.get(count) ?? [],
         ),
     ),
+    {
+        group: "radar",
+        iterations: 15,
+        name: "radar/50-questions-warm-repeat",
+        setup: () => {
+            clearRadarCircleCache();
+            const questions = questionsByCount.get(50) ?? [];
+            buildRadarQuestionRenderState(questions);
+        },
+        run: () => {
+            const questions = questionsByCount.get(50) ?? [];
+            return {
+                metrics: { questions: questions.length },
+                output: buildRadarQuestionRenderState(questions),
+            };
+        },
+        warmups: 3,
+    },
     radarScenario(
         "radar/50-questions-one-answer-edit",
         editQuestion(questionsByCount.get(50) ?? [], 24, {
@@ -39,6 +60,29 @@ export const radarScenarios: PerfScenario[] = [
         },
         warmups: 3,
     },
+    {
+        group: "radar",
+        iterations: 15,
+        name: "radar/50-questions-cache-hit-after-cold",
+        setup: () => {
+            clearRadarCircleCache();
+        },
+        run: () => {
+            const questions = questionsByCount.get(50) ?? [];
+            // First call: cold — generates 50 circles (instead of 100 without cache).
+            buildRadarQuestionRenderState(questions);
+            // Second call: warm — all 50 circles are cached, no @turf/circle calls.
+            const output = buildRadarQuestionRenderState(questions);
+            return {
+                metrics: {
+                    questions: questions.length,
+                    fragmentsGenerated: 50,
+                },
+                output,
+            };
+        },
+        warmups: 2,
+    },
 ];
 
 function radarScenario(name: string, questions: RadarQuestion[]): PerfScenario {
@@ -50,6 +94,7 @@ function radarScenario(name: string, questions: RadarQuestion[]): PerfScenario {
             metrics: { questions: questions.length },
             output: buildRadarQuestionRenderState(questions),
         }),
+        setup: clearRadarCircleCache,
         warmups: 3,
     };
 }

@@ -141,6 +141,90 @@ export function buildStationQuery(
 out center tags qt;`;
 }
 
+// ─── Bbox-based queries (for deterministic cell-grid cache) ────────────────
+
+/**
+ * Builds an Overpass QL query that searches for elements matching the given
+ * tags within a bounding box defined by (south, west, north, east).
+ */
+export function buildOverpassBboxQuery(
+    tags: string,
+    south: number,
+    west: number,
+    north: number,
+    east: number,
+): string {
+    return `[out:json][timeout:30];
+(
+  node${tags}(${south},${west},${north},${east});
+  way${tags}(${south},${west},${north},${east});
+  relation${tags}(${south},${west},${north},${east});
+);
+out center tags qt;`;
+}
+
+/**
+ * Builds an Overpass QL query that searches for railway/subway stations
+ * within a bounding box defined by (south, west, north, east).
+ */
+export function buildStationBboxQuery(
+    south: number,
+    west: number,
+    north: number,
+    east: number,
+): string {
+    const bbox = `(${south},${west},${north},${east})`;
+    return `[out:json][timeout:30];
+(
+  node["railway"="station"]${bbox};
+  way["railway"="station"]${bbox};
+  node["station"="subway"]["railway"="station"]${bbox};
+  way["station"="subway"]["railway"="station"]${bbox};
+);
+out center tags qt;`;
+}
+
+/**
+ * Fetches and parses OSM features from Overpass using a bbox query instead
+ * of a circle (around) query. Returns an empty array for categories that have
+ * no Overpass query tags.
+ */
+export async function fetchAndParseOverpassBboxFeatures(
+    category: MatchingCategory,
+    south: number,
+    west: number,
+    north: number,
+    east: number,
+    signal?: AbortSignal,
+): Promise<OsmFeature[]> {
+    const config = getCategoryConfig(category);
+    if (!config) return [];
+    if (!config.osmQueryTags && category !== "station-name-length") return [];
+
+    const query =
+        category === "station-name-length"
+            ? buildStationBboxQuery(south, west, north, east)
+            : buildOverpassBboxQuery(
+                  config.osmQueryTags,
+                  south,
+                  west,
+                  north,
+                  east,
+              );
+
+    const response = await fetch(
+        `${OVERPASS_API}?data=${encodeURIComponent(query)}`,
+        { signal },
+    );
+
+    if (!response.ok) {
+        throw new Error(`Overpass API error ${response.status}`);
+    }
+
+    const data = (await response.json()) as OverpassResponse;
+    return parseOverpassElements(data.elements ?? [], category);
+}
+
 export function parseOverpassElements(
     elements: OverpassElement[],
     category?: string,
