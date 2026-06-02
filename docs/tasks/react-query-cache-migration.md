@@ -35,7 +35,7 @@ The intent of this doc is to be honest about where the library helps and where i
 ## Non-Goals
 
 - Replacing the app-state stores (`playAreaStore`, `hidingZoneStore`, `questionStore`).
-  TanStack Query is a *server/async-cache* layer, not a client-state manager. The Context
+  TanStack Query is a _server/async-cache_ layer, not a client-state manager. The Context
   stores stay.
 - Changing the network protocols (Overpass / Photon) or query construction.
 - Eliminating the **spatial containment** matching in the OSM matching cache (see
@@ -47,11 +47,11 @@ The intent of this doc is to be honest about where the library helps and where i
 
 Three subsystems, each with overlapping but separately-implemented concerns:
 
-| Subsystem | File | LOC | Key | Layers | TTL | SWR | Dedup | Disk |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| OSM matching | `src/features/questions/matching/osmMatchingCache.ts` | 533 | category + **spatial circle** | memory LRU (20) → manifest+disk → network | 90d | yes | yes (`inflight`) | yes (manifest + per-entry) |
-| Play area boundary | `src/features/map/playAreaBoundary.ts` | 292 | `relationId` (number) | bundled → memory `Map` → AsyncStorage → Overpass | 30d | yes | yes (`boundaryRevalidations`) | yes (per-entry envelope) |
-| Play area search | `src/features/playArea/playAreaSearch.ts` | 88 | normalized query string | memory LRU (50) | none | no | **no** | no |
+| Subsystem          | File                                                  | LOC | Key                           | Layers                                           | TTL  | SWR | Dedup                         | Disk                       |
+| ------------------ | ----------------------------------------------------- | --- | ----------------------------- | ------------------------------------------------ | ---- | --- | ----------------------------- | -------------------------- |
+| OSM matching       | `src/features/questions/matching/osmMatchingCache.ts` | 533 | category + **spatial circle** | memory LRU (20) → manifest+disk → network        | 90d  | yes | yes (`inflight`)              | yes (manifest + per-entry) |
+| Play area boundary | `src/features/map/playAreaBoundary.ts`                | 292 | `relationId` (number)         | bundled → memory `Map` → AsyncStorage → Overpass | 30d  | yes | yes (`boundaryRevalidations`) | yes (per-entry envelope)   |
+| Play area search   | `src/features/playArea/playAreaSearch.ts`             | 88  | normalized query string       | memory LRU (50)                                  | none | no  | **no**                        | no                         |
 
 Each consumer re-implements client-side coordination on top:
 
@@ -63,7 +63,7 @@ Each consumer re-implements client-side coordination on top:
 - `playAreaStore.tsx` — calls `loadPlayAreaByRelationId` and tracks load state by hand.
 
 **Observation:** the same five concerns (dedup, TTL, SWR, loading state, cancellation) are
-written three to six times, inconsistently. The search cache has *no* dedup and *no*
+written three to six times, inconsistently. The search cache has _no_ dedup and _no_
 cancellation at all (`playAreaSearch.ts:47`), so rapid typing fires redundant Photon
 requests and can apply out-of-order responses.
 
@@ -71,36 +71,36 @@ requests and can apply out-of-order responses.
 
 TanStack Query gives, as configuration rather than code:
 
-| Concern | Today | With TanStack Query |
-| --- | --- | --- |
-| In-flight dedup | hand-rolled `inflight` / `boundaryRevalidations` maps; absent in search | automatic per query key |
-| TTL / staleness | manual `Date.now()` comparisons against per-module constants | `staleTime` / `gcTime` |
-| Stale-while-revalidate | hand-written background revalidation functions | default behaviour |
-| Retry + backoff | **absent everywhere** | `retry` / `retryDelay` |
-| Cancellation | manual `AbortController` in one consumer | `signal` passed to `queryFn` |
-| Loading/error state | `useState` in every consumer | `useQuery` return value |
-| Disk persistence | manual manifest + AsyncStorage per subsystem | `persistQueryClient` + async-storage persister |
-| Memory eviction | hand-tuned LRU sizes (20 / 50) | `gcTime`-driven garbage collection |
+| Concern                | Today                                                                   | With TanStack Query                            |
+| ---------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- |
+| In-flight dedup        | hand-rolled `inflight` / `boundaryRevalidations` maps; absent in search | automatic per query key                        |
+| TTL / staleness        | manual `Date.now()` comparisons against per-module constants            | `staleTime` / `gcTime`                         |
+| Stale-while-revalidate | hand-written background revalidation functions                          | default behaviour                              |
+| Retry + backoff        | **absent everywhere**                                                   | `retry` / `retryDelay`                         |
+| Cancellation           | manual `AbortController` in one consumer                                | `signal` passed to `queryFn`                   |
+| Loading/error state    | `useState` in every consumer                                            | `useQuery` return value                        |
+| Disk persistence       | manual manifest + AsyncStorage per subsystem                            | `persistQueryClient` + async-storage persister |
+| Memory eviction        | hand-tuned LRU sizes (20 / 50)                                          | `gcTime`-driven garbage collection             |
 
 It is already compatible with React Native / Expo and the installed React 19 / RN 0.81.
 
 ## The hard part: spatial containment does not map to key-based caching
 
-This is the central design tension and the reason this is a *phased* migration rather than
+This is the central design tension and the reason this is a _phased_ migration rather than
 a wholesale replacement.
 
 TanStack Query is **key-based**: a query is a pure function of its `queryKey`. Two requests
 hit the same cache entry only if their keys are equal.
 
 The OSM matching cache is **not** key-based. A cached result fetched at center `A` with
-radius `R` serves a *different* request at center `B` with radius `r` whenever the request
+radius `R` serves a _different_ request at center `B` with radius `r` whenever the request
 circle is geometrically contained in the cached circle:
 
 ```
 dist(A, B) + r <= R          // osmMatchingCache.ts:94-109 (containsSearchCircle)
 ```
 
-The cache *scans* its entries (`findInMemory`, `findInManifest`) looking for any covering
+The cache _scans_ its entries (`findInMemory`, `findInManifest`) looking for any covering
 circle, and fetches with a 1.5× overscan radius so nearby follow-up searches reuse the
 result. This containment + overscan behaviour is the cache's whole value proposition for
 panning the map — and it has **no native equivalent** in a key-equality cache.
@@ -110,10 +110,10 @@ There are three ways to reconcile this, in increasing fidelity:
 1. **Grid quantization (recommended for phase 3).** Snap the request center to a coarse
    spatial grid cell and round the radius up to a bucket, then use `["osm-matching", category, cellX, cellY, radiusBucket]`
    as the query key. Nearby requests land in the same cell → same key → cache hit. This
-   *approximates* containment with grid bucketing. Simpler, fully key-based, but loses the
+   _approximates_ containment with grid bucketing. Simpler, fully key-based, but loses the
    exact "any covering circle" reuse and can double-fetch near cell boundaries.
 2. **Hybrid (highest fidelity).** Keep `containsSearchCircle` + the spatial scan as a thin
-   resolver that maps an incoming request to an existing *canonical* query key, then let
+   resolver that maps an incoming request to an existing _canonical_ query key, then let
    TanStack Query own dedup/SWR/persistence for that canonical key. Most of
    `osmMatchingCache.ts` deletes; the spatial index (~80 lines) stays.
 3. **Leave OSM matching as-is.** Migrate only search + boundary; wrap the existing
@@ -147,9 +147,9 @@ const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             retry: 2,
-            staleTime: 5 * 60 * 1000,      // overridden per query below
+            staleTime: 5 * 60 * 1000, // overridden per query below
             gcTime: 30 * 60 * 1000,
-            refetchOnWindowFocus: false,    // not meaningful on RN
+            refetchOnWindowFocus: false, // not meaningful on RN
         },
     },
 });
@@ -157,7 +157,7 @@ const queryClient = new QueryClient({
 
 ### Phase 1 — Play area search (clean drop-in)
 
-This is the purest fit: string key, no disk, no TTL, no spatial logic. It also *gains*
+This is the purest fit: string key, no disk, no TTL, no spatial logic. It also _gains_
 dedup and cancellation it does not have today.
 
 Replace the module-level LRU in `playAreaSearch.ts` with a query. Keep
@@ -177,7 +177,7 @@ export function usePlayAreaSearch(query: string) {
 ```
 
 `PlayAreaScreen.tsx` loses its debounce-timer + `isSearching`/`searchError`/`results`
-state. Debounce the *input value* (a small `useDebouncedValue` hook) and feed it to the
+state. Debounce the _input value_ (a small `useDebouncedValue` hook) and feed it to the
 query; `data` / `isFetching` / `error` come from the hook. Net: ~30 lines deleted in the
 screen, the entire 88-line cache module reduced to a pure fetch + a hook.
 
@@ -193,7 +193,10 @@ export function usePlayAreaBoundary(relationId: number | null) {
         queryFn: ({ signal }) => fetchPlayAreaBoundary(relationId!, signal),
         enabled: relationId != null && !isBundledPlayAreaId(relationId),
         staleTime: BOUNDARY_CACHE_TTL_MS, // 30d — SWR handled by the library
-        initialData: relationId != null ? getBundledPlayArea(relationId) ?? undefined : undefined,
+        initialData:
+            relationId != null
+                ? (getBundledPlayArea(relationId) ?? undefined)
+                : undefined,
     });
 }
 ```
@@ -207,7 +210,7 @@ export function usePlayAreaBoundary(relationId: number | null) {
 
 **Coupling caveat:** `persistence.ts:83` and `ensurePlayAreaBoundaryCached` use the
 boundary cache to avoid re-serializing huge boundary GeoJSON into durable app state. This
-is a *correctness* dependency, not just a perf cache. The migration must preserve the
+is a _correctness_ dependency, not just a perf cache. The migration must preserve the
 invariant that app-state restore can resolve a boundary by `relationId` without a network
 call. With the persister this still holds (the query cache is on disk), but the validity
 must be verified — see [Open Questions](#open-questions).
@@ -216,7 +219,7 @@ must be verified — see [Open Questions](#open-questions).
 
 Per [The hard part](#the-hard-part-spatial-containment-does-not-map-to-key-based-caching),
 keep `containsSearchCircle` + the spatial scan as a small resolver that returns a
-*canonical key* for an incoming `(category, center, radius)`. The resolver answers: "is
+_canonical key_ for an incoming `(category, center, radius)`. The resolver answers: "is
 there an existing covering circle, and if so what key?" If yes → reuse that key; if no →
 mint a new canonical key (with overscan) and let TanStack Query fetch + dedupe + persist
 it.
@@ -227,9 +230,15 @@ export function useMatchingCandidates(category, center, radiusMeters) {
     return useQuery({
         queryKey: ["osm-matching", category, canonical.key],
         queryFn: ({ signal }) =>
-            fetchAndParseOverpassFeatures(category, canonical.center, canonical.radius, signal),
+            fetchAndParseOverpassFeatures(
+                category,
+                canonical.center,
+                canonical.radius,
+                signal,
+            ),
         staleTime: MATCHING_CACHE_TTL_MS, // 90d
-        select: (features) => rankMatchingFeatures(features, center, maxCandidates),
+        select: (features) =>
+            rankMatchingFeatures(features, center, maxCandidates),
     });
 }
 ```
@@ -275,6 +284,7 @@ Phased, each phase independently shippable and testable:
 
 **Testing.** The existing suites are strong here — `osmMatchingCache.test.ts` (396 lines),
 `playAreaSearch.test.ts`, boundary tests. Strategy:
+
 - Keep the pure functions (`mapPhotonFeaturesToPlayAreaResults`, `rankMatchingFeatures`,
   `containsSearchCircle`, `getOverscanRadius`, conversion helpers) and their tests intact —
   they move, they do not change.
@@ -297,12 +307,12 @@ Phased, each phase independently shippable and testable:
   Query introduces new mental model (query keys, stale/gc time, invalidation). Mitigated by
   the phased rollout starting with the trivial search case.
 - **Two state paradigms.** Context stores for client state + TanStack Query for async state
-  is the *intended* split, but it must be documented so contributors do not put server data
+  is the _intended_ split, but it must be documented so contributors do not put server data
   in Context or client data in queries.
 
 ## Open Questions
 
-1. Does the persister reliably rehydrate the boundary cache *before* `persistence.ts` needs
+1. Does the persister reliably rehydrate the boundary cache _before_ `persistence.ts` needs
    it during app-state restore, or is there a race? (Determines whether phase 2 needs an
    explicit `await persistQueryClient` gate at startup.)
 2. For phase 3, is the hybrid spatial resolver worth the remaining ~80 lines, or does
@@ -313,13 +323,13 @@ Phased, each phase independently shippable and testable:
 
 ## Effort Estimate
 
-| Phase | Scope | Estimate |
-| --- | --- | --- |
-| 0 | Setup + provider + test harness | ~0.5 day |
-| 1 | Search migration | ~0.5 day |
-| 2 | Boundary migration + persister + invariant verification | ~1.5 days |
-| 3 | OSM matching hybrid + consumer rewrite | ~2-3 days |
-| — | Test rewrites across phases | ~1 day |
+| Phase | Scope                                                   | Estimate  |
+| ----- | ------------------------------------------------------- | --------- |
+| 0     | Setup + provider + test harness                         | ~0.5 day  |
+| 1     | Search migration                                        | ~0.5 day  |
+| 2     | Boundary migration + persister + invariant verification | ~1.5 days |
+| 3     | OSM matching hybrid + consumer rewrite                  | ~2-3 days |
+| —     | Test rewrites across phases                             | ~1 day    |
 
 Phases 1–2 (the clean wins) are ~2.5 days and deletable independently of the harder phase 3.
 

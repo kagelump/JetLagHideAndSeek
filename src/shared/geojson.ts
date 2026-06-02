@@ -1,5 +1,10 @@
 import { union as polyUnion, type Geom } from "polyclip-ts";
-import type { Feature, GeoJsonProperties, MultiPolygon, Polygon } from "geojson";
+import type {
+    Feature,
+    GeoJsonProperties,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
 
 export type Position = [number, number];
 
@@ -23,9 +28,7 @@ export function unionPolygons<P extends GeoJsonProperties = GeoJsonProperties>(
     polygons: Feature<Polygon, P>[],
     properties?: P,
 ): Feature<Polygon | MultiPolygon, P> | null {
-    const coords: Geom[] = polygons.map(
-        (p) => p.geometry.coordinates as Geom,
-    );
+    const coords: Geom[] = polygons.map((p) => p.geometry.coordinates as Geom);
     const result = polyUnion(coords[0], ...coords.slice(1));
     if (result.length === 0) return null;
     if (result.length === 1) {
