@@ -1,5 +1,4 @@
 import { featureCollection, point } from "@turf/helpers";
-import union from "@turf/union";
 import voronoi from "@turf/voronoi";
 import type {
     Feature,
@@ -9,6 +8,7 @@ import type {
 } from "geojson";
 
 import type { Bbox } from "@/shared/geojson";
+import { unionPolygons } from "@/shared/geojson";
 import type { OsmFeature } from "@/features/questions/matching/matchingTypes";
 
 export function makeOsmKey(
@@ -153,7 +153,7 @@ export function buildOsmMatchingMissMask(
         >;
     }
 
-    const result = union(featureCollection(otherCells));
+    const result = unionPolygons(otherCells);
 
     if (result === null) {
         return featureCollection([]);
@@ -209,7 +209,7 @@ function unionMany(
             Polygon | MultiPolygon
         >;
     }
-    const result = union(featureCollection(features));
+    const result = unionPolygons(features);
     if (result === null) {
         return featureCollection([]);
     }
