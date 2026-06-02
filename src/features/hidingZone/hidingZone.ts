@@ -165,7 +165,7 @@ const MAX_ZONE_CACHE_SIZE = 30;
 const zoneFeatureCache = new Map<string, ZoneFeatureCollection>();
 
 const CIRCLE_ALGORITHM_VERSION = 1;
-const CIRCLE_STEPS = 48;
+const CIRCLE_STEPS = 24;
 const MAX_CIRCLE_CACHE_SIZE = 500;
 const MAX_COMPONENT_CACHE_SIZE = 50;
 
