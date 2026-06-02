@@ -451,7 +451,7 @@ function isCacheable(category: MatchingCategory): boolean {
 
 // ─── Cell helpers ──────────────────────────────────────────────────────────
 
-const CELL_LRU_MAX = 20;
+const CELL_LRU_MAX = 200;
 
 function makeCellCacheKey(category: MatchingCategory, cellId: string): string {
     return `${CACHE_KEY_PREFIX}cell:${category}:${cellId}`;
@@ -577,7 +577,12 @@ async function persistCellEntry(
         .catch(() => {
             // If a manifest mutation fails, allow subsequent mutations to proceed.
         });
-    await cellManifestMutex;
+    // Fire-and-forget: do NOT await cellManifestMutex here. The manifest write
+    // is best-effort; the in-memory cache is already updated by cellMemorySet
+    // before this function is called. The cell data is persisted to AsyncStorage
+    // synchronously above, so a cold restart can load entries from disk even
+    // without a manifest row. The manifest row catches up on the next tick after
+    // the chain drains.
 }
 
 function cellRevalidateInBackground(
@@ -858,7 +863,12 @@ export async function findMatchingFeaturesWithCellCache(
                 options?.signal,
             );
         });
-        const fetchedFeatures = (await Promise.all(forcePromises)).flat();
+        const fetchedFeatures = (await Promise.allSettled(forcePromises))
+            .filter(
+                (r): r is PromiseFulfilledResult<OsmFeature[]> =>
+                    r.status === "fulfilled",
+            )
+            .flatMap((r) => r.value);
         const merged = deduplicateFeatures(fetchedFeatures);
         return {
             candidates: rankMatchingFeatures(merged, center, maxCandidates),
@@ -938,21 +948,30 @@ export async function findMatchingFeaturesWithCellCache(
             options?.signal,
         );
     });
-    const fetchedFeatures = (await Promise.all(fetchPromises)).flat();
+    const fetchedFeatures = (await Promise.allSettled(fetchPromises))
+        .filter(
+            (r): r is PromiseFulfilledResult<OsmFeature[]> =>
+                r.status === "fulfilled",
+        )
+        .flatMap((r) => r.value);
 
     // 6. Merge all features, deduplicate, rank.
-    const merged = deduplicateFeatures([...allFeatures, ...fetchedFeatures]);
+    // Fresh network data takes precedence over stale cached data at cell boundaries.
+    const merged = deduplicateFeatures([...fetchedFeatures, ...allFeatures]);
 
     return {
         candidates: rankMatchingFeatures(merged, center, maxCandidates),
-        source: "network",
+        source: anyStale ? "stale" : "network",
     };
 }
 
 /** Clears the in-process cell memory cache and manifest. Call in tests to reset state. */
-export function clearOsmMatchingCellMemoryCache(): void {
+export async function clearOsmMatchingCellMemoryCache(): Promise<void> {
     cellMemoryLru.clear();
     cellInflight.clear();
     cellManifestCache = null;
+    // Drain any in-flight manifest write before replacing the chain so
+    // that concurrent persistCellEntry calls do not race with the reset.
+    await cellManifestMutex;
     cellManifestMutex = Promise.resolve();
 }

@@ -60,9 +60,9 @@ const hospitalFeatures = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function resetAll() {
+async function resetAll() {
     clearOsmMatchingMemoryCache();
-    clearOsmMatchingCellMemoryCache();
+    await clearOsmMatchingCellMemoryCache();
     (AsyncStorage.clear as jest.Mock)();
 }
 
@@ -124,9 +124,9 @@ describe("getOverscanRadius", () => {
 // ─── findMatchingFeaturesWithCache ────────────────────────────────────────────
 
 describe("findMatchingFeaturesWithCache", () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         jest.clearAllMocks();
-        resetAll();
+        await resetAll();
         mockFetchAndParse.mockResolvedValue(hospitalFeatures);
     });
 
@@ -603,9 +603,9 @@ describe("deduplicateFeatures", () => {
 // ─── findMatchingFeaturesWithCellCache ────────────────────────────────────────
 
 describe("findMatchingFeaturesWithCellCache", () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         jest.clearAllMocks();
-        resetAll();
+        await resetAll();
         mockFetchAndParseBbox.mockResolvedValue(hospitalFeatures);
     });
 
@@ -706,7 +706,7 @@ describe("findMatchingFeaturesWithCellCache", () => {
             requestedRadiusMeters: 5000,
         });
         // Flush memory but keep AsyncStorage.
-        clearOsmMatchingCellMemoryCache();
+        await clearOsmMatchingCellMemoryCache();
         jest.clearAllMocks();
 
         const result = await findMatchingFeaturesWithCellCache(

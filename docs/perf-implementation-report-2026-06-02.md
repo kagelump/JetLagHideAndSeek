@@ -7,11 +7,11 @@ Related: [map-performance-audit-2026-06-01](./map-performance-audit-2026-06-01.m
 
 Implemented items #3, #4, and #5 from the audit's suggested implementation sequence:
 
-| Item | Description | Status |
-|---|---|---|
-| #3 | OSM matching memory cache with stale-while-revalidate | Verified (previously shipped) |
-| #4 | OSM matching deterministic bbox grid cells | Implemented |
-| #5 | Per-radar immutable geometry fragments | Implemented |
+| Item | Description                                           | Status                        |
+| ---- | ----------------------------------------------------- | ----------------------------- |
+| #3   | OSM matching memory cache with stale-while-revalidate | Verified (previously shipped) |
+| #4   | OSM matching deterministic bbox grid cells            | Implemented                   |
+| #5   | Per-radar immutable geometry fragments                | Implemented                   |
 
 All changes pass the full test suite (372/375 Jest tests, 68/68 perf scenarios) with stable output digests.
 
@@ -33,6 +33,7 @@ The circle-based spatial cache was already shipped. Verification confirmed all a
 - Hit-type instrumentation (`memory` | `disk` | `stale` | `network`)
 
 **Minor gaps** (tracked as future enhancements):
+
 - Rate-limit backoff (429/503 retry) not yet implemented
 - Overscan failure fallback to exact-radius query not yet implemented
 
@@ -42,13 +43,13 @@ The circle-based spatial cache was already shipped. Verification confirmed all a
 
 ### Files changed
 
-| File | Change |
-|---|---|
-| `src/features/questions/matching/osmMatchingGrid.ts` | **New** — grid system (cellIndex, cellBbox, cellsForSearch) |
-| `src/features/questions/matching/osmMatching.ts` | Added bbox-based Overpass query builders and fetcher |
-| `src/features/questions/matching/osmMatchingCache.ts` | Added cell-based cache layer (separate LRU, manifest, public API) |
-| `src/features/questions/matching/__tests__/osmMatchingCache.test.ts` | 28 new tests (50 total) |
-| `perf/scenarios/matching.mts` | 5 new bbox-cell scenarios |
+| File                                                                 | Change                                                            |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `src/features/questions/matching/osmMatchingGrid.ts`                 | **New** — grid system (cellIndex, cellBbox, cellsForSearch)       |
+| `src/features/questions/matching/osmMatching.ts`                     | Added bbox-based Overpass query builders and fetcher              |
+| `src/features/questions/matching/osmMatchingCache.ts`                | Added cell-based cache layer (separate LRU, manifest, public API) |
+| `src/features/questions/matching/__tests__/osmMatchingCache.test.ts` | 28 new tests (50 total)                                           |
+| `perf/scenarios/matching.mts`                                        | 5 new bbox-cell scenarios                                         |
 
 ### Architecture
 
@@ -68,17 +69,18 @@ The world is divided into fixed 0.1° × 0.1° grid cells (~11 km at equator). A
 
 ### Perf results
 
-| Scenario | Median | Notes |
-|---|---|---|
-| `cells-for-search` | 0.00 ms | Cell computation is negligible |
-| `cell-index` | 0.00 ms | Single cell index computation |
-| `cache-hit-merge` | 0.09 ms | All cells cached, merge + filter only |
-| `cache-partial-fetch` | 9.52 ms | Some cells cached, partial network fetch |
-| `dedup-merge` | 0.01 ms | Deduplication of overlapping cell results |
+| Scenario              | Median  | Notes                                     |
+| --------------------- | ------- | ----------------------------------------- |
+| `cells-for-search`    | 0.00 ms | Cell computation is negligible            |
+| `cell-index`          | 0.00 ms | Single cell index computation             |
+| `cache-hit-merge`     | 0.09 ms | All cells cached, merge + filter only     |
+| `cache-partial-fetch` | 9.52 ms | Some cells cached, partial network fetch  |
+| `dedup-merge`         | 0.01 ms | Deduplication of overlapping cell results |
 
 ### Test coverage
 
 50 Jest tests covering:
+
 - Grid system: determinism, bbox reversal, coverage proof, negative coordinates
 - Cell cache: network fetch, memory hit, nearby center reuse, partial cell fetch, disk persistence, manifest, disk hit after memory clear, empty results, cross-category isolation, dedup at cell boundaries, in-flight dedup per cell, stale + background refresh, force-refresh
 
@@ -103,13 +105,13 @@ Added a module-level circle fragment cache in `radarGeometry.ts`:
 
 ### Perf results (before → after)
 
-| Scenario | Before | After | Improvement |
-|---|---|---|---|
-| `50-questions-cold` | 0.65 ms | 0.40 ms | **38%** |
-| `50-questions-one-answer-edit` | 0.65 ms | 0.37 ms | **43%** |
-| `50-questions-one-distance-edit` | 0.65 ms | 0.37 ms | **43%** |
-| `50-questions-repeat-current` | 1.31 ms | 0.07 ms | **95%** |
-| `50-questions-warm-repeat` | — | 0.04 ms | (new) |
+| Scenario                         | Before  | After   | Improvement |
+| -------------------------------- | ------- | ------- | ----------- |
+| `50-questions-cold`              | 0.65 ms | 0.40 ms | **38%**     |
+| `50-questions-one-answer-edit`   | 0.65 ms | 0.37 ms | **43%**     |
+| `50-questions-one-distance-edit` | 0.65 ms | 0.37 ms | **43%**     |
+| `50-questions-repeat-current`    | 1.31 ms | 0.07 ms | **95%**     |
+| `50-questions-warm-repeat`       | —       | 0.04 ms | (new)       |
 
 All output digests unchanged (`bb686bd588`, `c5d2fb0488`, `c77aef2985`, `2f78909838`, `69799b4c3c`) — geometry is identical.
 

@@ -432,31 +432,38 @@ export const matchingScenarios: PerfScenario[] = [
         group: "matching-bbox-cell",
         iterations: 15,
         name: "matching-bbox-cell/cache-hit-merge",
+        setup: clearOsmMatchingCellMemoryCache,
         run: async () => {
+            const realFetch = globalThis.fetch;
             const transport = installFixtureFetch(hospitalCapture);
-            // Prime the cell cache.
-            await findMatchingFeaturesWithCellCache("hospital", tokyoCenter, {
-                requestedRadiusMeters: 5000,
-            });
-            const oldFetch = globalThis.fetch;
-            const noop = () => {
-                throw new Error("unexpected network call");
-            };
-            globalThis.fetch = noop as unknown as typeof globalThis.fetch;
-            // Cache-hit: all cells cached, measure merge+filter time.
-            const result = await findMatchingFeaturesWithCellCache(
-                "hospital",
-                movedTokyoCenter,
-                { requestedRadiusMeters: 5000 },
-            );
-            globalThis.fetch = oldFetch;
-            return {
-                metrics: {
-                    candidates: result.candidates.length,
-                    networkIntents: transport.calls(),
-                },
-                output: result,
-            };
+            try {
+                // Prime the cell cache.
+                await findMatchingFeaturesWithCellCache(
+                    "hospital",
+                    tokyoCenter,
+                    { requestedRadiusMeters: 5000 },
+                );
+                // Replace fetch with a noop so any unexpected network call
+                // throws and fails the scenario loudly.
+                globalThis.fetch = (() => {
+                    throw new Error("unexpected network call");
+                }) as unknown as typeof globalThis.fetch;
+                // Cache-hit: all cells cached, measure merge+filter time.
+                const result = await findMatchingFeaturesWithCellCache(
+                    "hospital",
+                    movedTokyoCenter,
+                    { requestedRadiusMeters: 5000 },
+                );
+                return {
+                    metrics: {
+                        candidates: result.candidates.length,
+                        networkIntents: transport.calls(),
+                    },
+                    output: result,
+                };
+            } finally {
+                globalThis.fetch = realFetch;
+            }
         },
         warmups: 3,
     },
@@ -465,12 +472,17 @@ export const matchingScenarios: PerfScenario[] = [
         group: "matching-bbox-cell",
         iterations: 15,
         name: "matching-bbox-cell/cache-partial-fetch",
-        run: async () => {
-            const transport = installFixtureFetch(hospitalCapture);
-            // Prime the cell cache with a small-radius search.
+        setup: async () => {
+            clearOsmMatchingCellMemoryCache();
+            installFixtureFetch(hospitalCapture);
+            // Prime the cell cache with a small-radius search so that
+            // each measured run starts from a partially-warm state.
             await findMatchingFeaturesWithCellCache("hospital", tokyoCenter, {
                 requestedRadiusMeters: 1000,
             });
+        },
+        run: async () => {
+            const transport = installFixtureFetch(hospitalCapture);
             // Perform a larger-radius search that needs extra cells.
             const result = await findMatchingFeaturesWithCellCache(
                 "hospital",
