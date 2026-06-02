@@ -118,9 +118,11 @@ describe("buildQuestionMapRenderState transit line masks", () => {
         );
 
         expect(selected.lineId).toBe(HIBIYA_LINE_ID);
-        expect(hitState.transitLine.hitMaskFeatures.features).toHaveLength(1);
+        // Two stations on the Hibiya line ~1,318 m apart at 600 m radius —
+        // circles don't overlap, so decomposition produces two features.
+        expect(hitState.transitLine.hitMaskFeatures.features).toHaveLength(2);
         expect(missState.transitLine.hitMaskFeatures.features).toHaveLength(0);
-        expect(missState.transitLine.missMaskFeatures.features).toHaveLength(1);
+        expect(missState.transitLine.missMaskFeatures.features).toHaveLength(2);
     });
 });
 

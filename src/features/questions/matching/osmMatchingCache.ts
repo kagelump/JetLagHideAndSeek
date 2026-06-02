@@ -7,10 +7,12 @@ import { getCategoryConfig } from "./matchingCategories";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
 import {
     DEFAULT_SEARCH_RADIUS_METERS,
+    fetchAndParseOverpassBboxFeatures,
     fetchAndParseOverpassFeatures,
     rankMatchingFeatures,
     type OsmFeatureWithDistance,
 } from "./osmMatching";
+import { cellBbox, cellsForSearch } from "./osmMatchingGrid";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -66,6 +68,34 @@ export type OsmMatchingFeaturesResult = {
     source: OsmMatchingCacheSource;
 };
 
+// ─── Cell-based cache types ────────────────────────────────────────────────
+
+const CELL_SCHEMA_VERSION = 1;
+
+type OsmMatchingCellEntry = {
+    schemaVersion: number;
+    category: MatchingCategory;
+    cellIndex: string;
+    bbox: { south: number; west: number; north: number; east: number };
+    fetchedAt: number;
+    features: OsmFeature[];
+};
+
+type OsmMatchingCellManifestRow = {
+    key: string;
+    category: MatchingCategory;
+    cellIndex: string;
+    fetchedAt: number;
+    featureCount: number;
+};
+
+type OsmMatchingCellManifest = {
+    schemaVersion: number;
+    rows: OsmMatchingCellManifestRow[];
+};
+
+export type OsmMatchingCellSource = "memory" | "disk" | "stale" | "network";
+
 // ─── Module-level state ───────────────────────────────────────────────────────
 
 // In-memory LRU. Map preserves insertion order; re-inserting an entry at the
@@ -83,6 +113,20 @@ let manifestCache: OsmMatchingManifest | null = null;
 // persistEntry calls for different keys do not lose rows via a read-modify-write
 // race.
 let manifestMutex: Promise<void> = Promise.resolve();
+
+// ─── Cell-based module-level state ─────────────────────────────────────────
+
+// Separate in-memory LRU for cell-cached entries.
+const cellMemoryLru = new Map<string, OsmMatchingCellEntry>();
+
+// Per-cell in-flight deduplication.
+const cellInflight = new Map<string, Promise<OsmFeature[]>>();
+
+// Cell manifest loaded lazily.
+let cellManifestCache: OsmMatchingCellManifest | null = null;
+
+// Sequential promise chain for cell manifest mutations.
+let cellManifestMutex: Promise<void> = Promise.resolve();
 
 // ─── Spatial math ─────────────────────────────────────────────────────────────
 
@@ -347,12 +391,13 @@ function revalidateInBackground(
                 "[osmMatchingCache] background revalidation failed:",
                 err,
             );
+            return entry.features;
         })
         .finally(() => {
             inflight.delete(key);
         });
 
-    inflight.set(key, request as Promise<OsmFeature[]>);
+    inflight.set(key, request);
 }
 
 // ─── Network fetch with in-flight deduplication ───────────────────────────────
@@ -402,6 +447,241 @@ function isCacheable(category: MatchingCategory): boolean {
     if (category === "station-name-length") return true;
     const config = getCategoryConfig(category);
     return Boolean(config?.osmQueryTags);
+}
+
+// ─── Cell helpers ──────────────────────────────────────────────────────────
+
+const CELL_LRU_MAX = 200;
+
+function makeCellCacheKey(category: MatchingCategory, cellId: string): string {
+    return `${CACHE_KEY_PREFIX}cell:${category}:${cellId}`;
+}
+
+function cellMemorySet(key: string, entry: OsmMatchingCellEntry): void {
+    cellMemoryLru.delete(key);
+    cellMemoryLru.set(key, entry);
+    while (cellMemoryLru.size > CELL_LRU_MAX) {
+        const oldest = cellMemoryLru.keys().next().value;
+        if (oldest !== undefined) cellMemoryLru.delete(oldest);
+    }
+}
+
+function isCellStale(entry: OsmMatchingCellEntry): boolean {
+    const ageMs = Date.now() - entry.fetchedAt;
+    return ageMs < 0 || ageMs >= MATCHING_CACHE_TTL_MS;
+}
+
+function isCellEntry(value: unknown): value is OsmMatchingCellEntry {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return false;
+    }
+    const obj = value as Record<string, unknown>;
+    return (
+        obj.schemaVersion === CELL_SCHEMA_VERSION &&
+        typeof obj.category === "string" &&
+        typeof obj.cellIndex === "string" &&
+        typeof obj.bbox === "object" &&
+        obj.bbox !== null &&
+        typeof (obj.bbox as Record<string, unknown>).south === "number" &&
+        typeof (obj.bbox as Record<string, unknown>).west === "number" &&
+        typeof (obj.bbox as Record<string, unknown>).north === "number" &&
+        typeof (obj.bbox as Record<string, unknown>).east === "number" &&
+        typeof obj.fetchedAt === "number" &&
+        Array.isArray(obj.features)
+    );
+}
+
+function isCellManifest(value: unknown): value is OsmMatchingCellManifest {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value) &&
+        (value as Record<string, unknown>).schemaVersion ===
+            CELL_SCHEMA_VERSION &&
+        Array.isArray((value as Record<string, unknown>).rows)
+    );
+}
+
+async function loadCellManifest(): Promise<OsmMatchingCellManifest> {
+    if (cellManifestCache) return cellManifestCache;
+    try {
+        const raw = await AsyncStorage.getItem(`${MANIFEST_KEY}:cell`);
+        if (raw) {
+            const parsed = JSON.parse(raw) as unknown;
+            if (isCellManifest(parsed)) {
+                cellManifestCache = parsed;
+                return cellManifestCache;
+            }
+        }
+    } catch {
+        // Treat corrupt or unavailable storage as an empty manifest.
+    }
+    cellManifestCache = { schemaVersion: CELL_SCHEMA_VERSION, rows: [] };
+    return cellManifestCache;
+}
+
+async function saveCellManifest(
+    manifest: OsmMatchingCellManifest,
+): Promise<void> {
+    cellManifestCache = manifest;
+    try {
+        await AsyncStorage.setItem(
+            `${MANIFEST_KEY}:cell`,
+            JSON.stringify(manifest),
+        );
+    } catch {
+        // Storage may be unavailable; the in-memory cache is still current.
+    }
+}
+
+async function loadCellFromDisk(
+    key: string,
+): Promise<OsmMatchingCellEntry | null> {
+    try {
+        const raw = await AsyncStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as unknown;
+        return isCellEntry(parsed) ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+async function persistCellEntry(
+    key: string,
+    entry: OsmMatchingCellEntry,
+): Promise<void> {
+    try {
+        await AsyncStorage.setItem(key, JSON.stringify(entry));
+    } catch {
+        // Storage may be unavailable.
+    }
+    cellManifestMutex = cellManifestMutex
+        .then(async () => {
+            const manifest = await loadCellManifest();
+            const row: OsmMatchingCellManifestRow = {
+                key,
+                category: entry.category,
+                cellIndex: entry.cellIndex,
+                fetchedAt: entry.fetchedAt,
+                featureCount: entry.features.length,
+            };
+            const idx = manifest.rows.findIndex((r) => r.key === key);
+            if (idx >= 0) {
+                manifest.rows[idx] = row;
+            } else {
+                manifest.rows.push(row);
+            }
+            await saveCellManifest(manifest);
+        })
+        .catch(() => {
+            // If a manifest mutation fails, allow subsequent mutations to proceed.
+        });
+    // Fire-and-forget: do NOT await cellManifestMutex here. The manifest write
+    // is best-effort; the in-memory cache is already updated by cellMemorySet
+    // before this function is called. The cell data is persisted to AsyncStorage
+    // synchronously above, so a cold restart can load entries from disk even
+    // without a manifest row. The manifest row catches up on the next tick after
+    // the chain drains.
+}
+
+function cellRevalidateInBackground(
+    key: string,
+    entry: OsmMatchingCellEntry,
+): void {
+    if (cellInflight.has(key)) return;
+
+    const bbox = cellBbox(entry.cellIndex);
+    const request = fetchAndParseOverpassBboxFeatures(
+        entry.category,
+        bbox.south,
+        bbox.west,
+        bbox.north,
+        bbox.east,
+    )
+        .then(async (features) => {
+            const updated: OsmMatchingCellEntry = {
+                ...entry,
+                features,
+                fetchedAt: Date.now(),
+            };
+            cellMemorySet(key, updated);
+            await persistCellEntry(key, updated);
+            return features;
+        })
+        .catch((err) => {
+            console.warn(
+                "[osmMatchingCache] cell background revalidation failed:",
+                err,
+            );
+            return entry.features;
+        })
+        .finally(() => {
+            cellInflight.delete(key);
+        });
+
+    cellInflight.set(key, request);
+}
+
+async function fetchAndStoreCell(
+    key: string,
+    category: MatchingCategory,
+    cellId: string,
+    bbox: { south: number; west: number; north: number; east: number },
+    signal?: AbortSignal,
+): Promise<OsmFeature[]> {
+    const existing = cellInflight.get(key);
+    if (existing) return existing;
+
+    const request = fetchAndParseOverpassBboxFeatures(
+        category,
+        bbox.south,
+        bbox.west,
+        bbox.north,
+        bbox.east,
+        signal,
+    )
+        .then(async (features) => {
+            const entry: OsmMatchingCellEntry = {
+                schemaVersion: CELL_SCHEMA_VERSION,
+                category,
+                cellIndex: cellId,
+                bbox: {
+                    south: bbox.south,
+                    west: bbox.west,
+                    north: bbox.north,
+                    east: bbox.east,
+                },
+                fetchedAt: Date.now(),
+                features,
+            };
+            cellMemorySet(key, entry);
+            await persistCellEntry(key, entry);
+            return features;
+        })
+        .finally(() => {
+            cellInflight.delete(key);
+        });
+
+    cellInflight.set(key, request);
+    return request;
+}
+
+/**
+ * Deduplicates an array of OsmFeatures by (osmType, osmId), keeping the first
+ * occurrence. Used when merging features from multiple grid cells.
+ */
+export function deduplicateFeatures(features: OsmFeature[]): OsmFeature[] {
+    const seen = new Set<string>();
+    const result: OsmFeature[] = [];
+    for (const f of features) {
+        const key = `${f.osmType}:${f.osmId}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            result.push(f);
+        }
+    }
+    return result;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -529,4 +809,169 @@ export function clearOsmMatchingMemoryCache(): void {
     inflight.clear();
     manifestCache = null;
     manifestMutex = Promise.resolve();
+}
+
+// ─── Cell-based public API ─────────────────────────────────────────────────
+
+/**
+ * Returns ranked OSM matching candidates using a deterministic bbox grid cell
+ * cache. The world is divided into fixed cells (0.1 degrees); a search maps to
+ * the set of cells needed to cover its search disk.
+ *
+ * Cell cache reuse is valid when the union of loaded cell bboxes covers the
+ * entire search region. If any cell is missing, only the missing cells are
+ * fetched (not the entire search area).
+ *
+ * Follows the same patterns as findMatchingFeaturesWithCache: memory LRU,
+ * persisted disk, stale-while-revalidate, and in-flight deduplication.
+ */
+export async function findMatchingFeaturesWithCellCache(
+    category: MatchingCategory,
+    center: Position,
+    options?: {
+        maxCandidates?: number;
+        requestedRadiusMeters?: number;
+        forceRefresh?: boolean;
+        signal?: AbortSignal;
+    },
+): Promise<OsmMatchingFeaturesResult> {
+    if (!isCacheable(category)) {
+        return { candidates: [], source: "network" };
+    }
+
+    const [lon, lat] = center;
+    const requestedRadius =
+        options?.requestedRadiusMeters ?? DEFAULT_SEARCH_RADIUS_METERS;
+    const maxCandidates = options?.maxCandidates ?? 10;
+
+    // 1. Compute the set of cells that cover the search disk's bounding square.
+    const neededCells = cellsForSearch(lat, lon, requestedRadius);
+
+    // 2. When force-refreshing, discard cached cells and fetch everything fresh.
+    if (options?.forceRefresh) {
+        const forcePromises = neededCells.map((cellId) => {
+            const cellKey = makeCellCacheKey(category, cellId);
+            // Discard any in-flight request so the caller does not receive a
+            // promise that was already aborted.
+            cellInflight.delete(cellKey);
+            const bbox = cellBbox(cellId);
+            return fetchAndStoreCell(
+                cellKey,
+                category,
+                cellId,
+                bbox,
+                options?.signal,
+            );
+        });
+        const fetchedFeatures = (await Promise.allSettled(forcePromises))
+            .filter(
+                (r): r is PromiseFulfilledResult<OsmFeature[]> =>
+                    r.status === "fulfilled",
+            )
+            .flatMap((r) => r.value);
+        const merged = deduplicateFeatures(fetchedFeatures);
+        return {
+            candidates: rankMatchingFeatures(merged, center, maxCandidates),
+            source: "network",
+        };
+    }
+
+    // 3. Attempt to load each cell from memory. Load the cell manifest once
+    //    before checking disk for any uncached cells.
+    const allFeatures: OsmFeature[] = [];
+    const missingCells: string[] = [];
+    let overallSource: OsmMatchingCacheSource = "memory";
+    let anyStale = false;
+    let cellManifestLoaded: OsmMatchingCellManifest | null = null;
+
+    for (const cellId of neededCells) {
+        const cellKey = makeCellCacheKey(category, cellId);
+
+        // Check memory LRU.
+        const memEntry = cellMemoryLru.get(cellKey);
+        if (memEntry) {
+            // Promote to MRU.
+            cellMemoryLru.delete(cellKey);
+            cellMemoryLru.set(cellKey, memEntry);
+
+            if (isCellStale(memEntry)) {
+                anyStale = true;
+                cellRevalidateInBackground(cellKey, memEntry);
+            }
+            allFeatures.push(...memEntry.features);
+            continue;
+        }
+
+        // Check disk via manifest (loaded lazily once).
+        if (!cellManifestLoaded) {
+            cellManifestLoaded = await loadCellManifest();
+        }
+        const manifestRow = cellManifestLoaded.rows.find(
+            (r) => r.key === cellKey,
+        );
+        if (manifestRow) {
+            const diskEntry = await loadCellFromDisk(cellKey);
+            if (diskEntry) {
+                cellMemorySet(cellKey, diskEntry);
+                if (overallSource === "memory") overallSource = "disk";
+                if (isCellStale(diskEntry)) {
+                    anyStale = true;
+                    cellRevalidateInBackground(cellKey, diskEntry);
+                }
+                allFeatures.push(...diskEntry.features);
+                continue;
+            }
+        }
+
+        // Cell is not cached at all.
+        missingCells.push(cellId);
+    }
+
+    // 4. All cells were cached — local ranking only.
+    if (missingCells.length === 0) {
+        const deduped = deduplicateFeatures(allFeatures);
+        return {
+            candidates: rankMatchingFeatures(deduped, center, maxCandidates),
+            source: anyStale ? "stale" : overallSource,
+        };
+    }
+
+    // 5. Fetch missing cells in parallel.
+    const fetchPromises = missingCells.map((cellId) => {
+        const cellKey = makeCellCacheKey(category, cellId);
+        const bbox = cellBbox(cellId);
+        return fetchAndStoreCell(
+            cellKey,
+            category,
+            cellId,
+            bbox,
+            options?.signal,
+        );
+    });
+    const fetchedFeatures = (await Promise.allSettled(fetchPromises))
+        .filter(
+            (r): r is PromiseFulfilledResult<OsmFeature[]> =>
+                r.status === "fulfilled",
+        )
+        .flatMap((r) => r.value);
+
+    // 6. Merge all features, deduplicate, rank.
+    // Fresh network data takes precedence over stale cached data at cell boundaries.
+    const merged = deduplicateFeatures([...fetchedFeatures, ...allFeatures]);
+
+    return {
+        candidates: rankMatchingFeatures(merged, center, maxCandidates),
+        source: anyStale ? "stale" : "network",
+    };
+}
+
+/** Clears the in-process cell memory cache and manifest. Call in tests to reset state. */
+export async function clearOsmMatchingCellMemoryCache(): Promise<void> {
+    cellMemoryLru.clear();
+    cellInflight.clear();
+    cellManifestCache = null;
+    // Drain any in-flight manifest write before replacing the chain so
+    // that concurrent persistCellEntry calls do not race with the reset.
+    await cellManifestMutex;
+    cellManifestMutex = Promise.resolve();
 }

@@ -1,10 +1,8 @@
 import circle from "@turf/circle";
-import { featureCollection } from "@turf/helpers";
-import union from "@turf/union";
-
 import {
     bboxIntersects,
     EARTH_RADIUS_METERS,
+    unionPolygons,
     type Bbox,
 } from "@/shared/geojson";
 import {
@@ -165,7 +163,7 @@ const MAX_ZONE_CACHE_SIZE = 30;
 const zoneFeatureCache = new Map<string, ZoneFeatureCollection>();
 
 const CIRCLE_ALGORITHM_VERSION = 1;
-const CIRCLE_STEPS = 48;
+const CIRCLE_STEPS = 24;
 const MAX_CIRCLE_CACHE_SIZE = 500;
 const MAX_COMPONENT_CACHE_SIZE = 50;
 
@@ -380,9 +378,9 @@ export function buildHidingZoneFeatureCollection(
         if (circles.length === 1) {
             feature = circles[0].feature as ZoneFeature;
         } else {
-            const merged = union(
-                featureCollection(circles.map((c) => c.feature)),
-                { properties: { radiusMeters } },
+            const merged = unionPolygons(
+                circles.map((c) => c.feature),
+                { radiusMeters },
             ) as ZoneFeature | null;
 
             if (!merged) {

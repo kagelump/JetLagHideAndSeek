@@ -37,9 +37,11 @@
         "@gorhom/bottom-sheet": "^5.2.8",
         "@maplibre/maplibre-react-native": "^10.4.2",
         "@react-native-async-storage/async-storage": "2.2.0",
+        "@tanstack/query-async-storage-persister": "^5.100.14",
+        "@tanstack/react-query": "^5.100.14",
+        "@tanstack/react-query-persist-client": "^5.100.14",
         "@turf/circle": "^7.2.0",
         "@turf/helpers": "^7.2.0",
-        "@turf/union": "^7.2.0",
         "@turf/voronoi": "^7.3.5",
         "expo": "~54.0.34",
         "expo-dev-client": "~6.0.21",
@@ -72,12 +74,26 @@
         "eslint-plugin-rn-a11y": "^1.9.0",
         "globals": "^17.6.0",
         "jest-expo": "~54.0.0",
+        "lint-staged": "^17.0.7",
         "prettier": "3.5.3",
         "react-test-renderer": "19.1.0",
+        "simple-git-hooks": "^2.13.1",
         "tsx": "^4.22.4",
         "typescript": "~5.9.3",
         "typescript-eslint": "^8.59.3"
     },
     "private": true,
+    "simple-git-hooks": {
+        "pre-commit": "pnpm lint-staged && pnpm typecheck"
+    },
+    "lint-staged": {
+        "*.{ts,tsx}": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "*.{json,md,yaml,yml}": [
+            "prettier --write"
+        ]
+    },
     "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }

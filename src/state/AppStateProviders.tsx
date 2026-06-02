@@ -9,6 +9,7 @@ import {
     useState,
 } from "react";
 import { AppState } from "react-native";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 import {
     appStateHidingZonesToImportState,
@@ -21,9 +22,10 @@ import {
     useHidingZoneActions,
     useHidingZoneState,
 } from "@/state/hidingZoneStore";
-import { warmBoundaryCacheFromStorage } from "@/features/map/playAreaBoundary";
+import { cleanOrphanedBoundaryKeys } from "@/features/map/playAreaBoundary";
 import { loadPersistedAppState, persistAppState } from "@/state/persistence";
 import { PlayAreaProvider, usePlayArea } from "@/state/playAreaStore";
+import { queryClient, setupPersister } from "@/state/queryClient";
 import {
     QuestionProvider,
     useQuestionActions,
@@ -67,15 +69,17 @@ export function useMarkAppMapReady(): () => void {
 
 export function AppStateProviders({ children }: { children: ReactNode }) {
     return (
-        <PlayAreaProvider>
-            <HidingZoneProvider>
-                <QuestionProvider>
-                    <AppStatePersistenceCoordinator>
-                        {children}
-                    </AppStatePersistenceCoordinator>
-                </QuestionProvider>
-            </HidingZoneProvider>
-        </PlayAreaProvider>
+        <QueryClientProvider client={queryClient}>
+            <PlayAreaProvider>
+                <HidingZoneProvider>
+                    <QuestionProvider>
+                        <AppStatePersistenceCoordinator>
+                            {children}
+                        </AppStatePersistenceCoordinator>
+                    </QuestionProvider>
+                </HidingZoneProvider>
+            </PlayAreaProvider>
+        </QueryClientProvider>
     );
 }
 
@@ -128,6 +132,14 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
         let cancelled = false;
 
         (async () => {
+            // Set up the persister and wait for it to rehydrate the query
+            // cache from AsyncStorage so that boundary lookups during
+            // app-state restore resolve without a network call.
+            const persisterPromise = setupPersister();
+            await persisterPromise;
+
+            if (cancelled) return;
+
             const persisted = await loadPersistedAppState();
             if (cancelled) return;
 
@@ -151,8 +163,9 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
             hidingZoneActions.markRestored();
             questionActions.markRestored();
 
-            // Warm the boundary cache in the background — non-blocking.
-            warmBoundaryCacheFromStorage();
+            // Clean up orphaned pre-migration boundary cache keys in the
+            // background — non-blocking.
+            cleanOrphanedBoundaryKeys();
         })();
 
         return () => {

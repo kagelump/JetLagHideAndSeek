@@ -1,13 +1,17 @@
 import {
-    clearPlayAreaSearchCache,
+    fetchPhotonResults,
     mapPhotonFeaturesToPlayAreaResults,
-    searchPlayAreas,
 } from "../playAreaSearch";
 
-describe("searchPlayAreas", () => {
+describe("fetchPhotonResults", () => {
     beforeEach(() => {
-        clearPlayAreaSearchCache();
         globalThis.fetch = jest.fn();
+    });
+
+    it("returns empty array for blank query", async () => {
+        const results = await fetchPhotonResults("  ");
+        expect(results).toEqual([]);
+        expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
     it("throws on Photon API error", async () => {
@@ -16,12 +20,12 @@ describe("searchPlayAreas", () => {
             status: 500,
         });
 
-        await expect(searchPlayAreas("Osaka")).rejects.toThrow(
+        await expect(fetchPhotonResults("Osaka")).rejects.toThrow(
             "Photon search error 500",
         );
     });
 
-    it("reuses cached results for normalized queries", async () => {
+    it("passes an AbortSignal to fetch", async () => {
         (globalThis.fetch as jest.Mock).mockResolvedValue({
             json: jest.fn().mockResolvedValue({
                 features: [
@@ -37,9 +41,13 @@ describe("searchPlayAreas", () => {
             ok: true,
         });
 
-        await expect(searchPlayAreas(" Osaka ")).resolves.toHaveLength(1);
-        await expect(searchPlayAreas("osaka")).resolves.toHaveLength(1);
-        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+        const controller = new AbortController();
+        await fetchPhotonResults("Osaka", controller.signal);
+
+        expect(globalThis.fetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({ signal: controller.signal }),
+        );
     });
 });
 

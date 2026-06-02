@@ -1,7 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { defaultPlayArea } from "@/features/map/playArea";
-import { clearPlayAreaMemoryCache } from "@/features/map/playAreaBoundary";
 import {
     appStateV1Schema,
     createAppStateV1,
@@ -12,6 +11,7 @@ import {
     loadPersistedAppState,
     persistAppState,
 } from "@/state/persistence";
+import { queryClient } from "@/state/queryClient";
 
 function makeAppState() {
     return createAppStateV1({
@@ -234,7 +234,7 @@ describe("AppStateV1 schema", () => {
 
 describe("app-state persistence", () => {
     beforeEach(async () => {
-        clearPlayAreaMemoryCache();
+        queryClient.clear();
         await AsyncStorage.clear();
     });
 
@@ -271,7 +271,7 @@ describe("app-state persistence", () => {
         });
 
         await persistAppState(state);
-        clearPlayAreaMemoryCache();
+        queryClient.clear();
 
         const playAreaReference = await AsyncStorage.getItem(
             "app-state:play-area:v1",
@@ -282,8 +282,8 @@ describe("app-state persistence", () => {
         expect(playAreaReference).toBe(JSON.stringify({ osmId: 999999 }));
         expect(playAreaReference).not.toContain("boundary");
         expect(JSON.parse(boundaryEnvelope ?? "{}")).toMatchObject({
-            cachedAt: expect.any(String),
-            playArea: { label: "Custom Area", osmId: 999999 },
+            label: "Custom Area",
+            osmId: 999999,
         });
         await expect(loadPersistedAppState()).resolves.toEqual(state);
     });

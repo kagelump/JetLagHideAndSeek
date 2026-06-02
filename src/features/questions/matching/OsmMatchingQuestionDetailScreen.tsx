@@ -12,7 +12,7 @@ import { colors } from "@/theme/colors";
 import type { MatchingQuestion } from "./matchingTypes";
 import { getCategoryTitle } from "./matchingCategories";
 import {
-    findMatchingFeaturesWithCache,
+    findMatchingFeaturesWithCellCache,
     type OsmMatchingCacheSource,
 } from "./osmMatchingCache";
 
@@ -59,7 +59,7 @@ export function OsmMatchingQuestionDetailScreen({
             setIsLoading(true);
             setError(null);
             try {
-                const result = await findMatchingFeaturesWithCache(
+                const result = await findMatchingFeaturesWithCellCache(
                     question.category,
                     question.center,
                     {

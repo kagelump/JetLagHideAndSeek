@@ -1,6 +1,49 @@
+import { union as polyUnion, type Geom } from "polyclip-ts";
+import type {
+    Feature,
+    GeoJsonProperties,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
+
 export type Position = [number, number];
 
 export type Bbox = [number, number, number, number];
+
+// ---------------------------------------------------------------------------
+// Geometry helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Union an array of Polygon features using polyclip-ts directly.
+ *
+ * This replaces the pattern of constructing a temporary FeatureCollection and
+ * calling @turf/union (which internally just extracts coordinates, calls
+ * polyclip-ts, and wraps the result back into GeoJSON).
+ *
+ * Returns null when the union produces an empty result (e.g. identical input
+ * polygons that cancel out).
+ */
+export function unionPolygons<P extends GeoJsonProperties = GeoJsonProperties>(
+    polygons: Feature<Polygon, P>[],
+    properties?: P,
+): Feature<Polygon | MultiPolygon, P> | null {
+    const coords: Geom[] = polygons.map((p) => p.geometry.coordinates as Geom);
+    const result = polyUnion(coords[0], ...coords.slice(1));
+    if (result.length === 0) return null;
+    if (result.length === 1) {
+        return {
+            type: "Feature",
+            properties: (properties ?? {}) as P,
+            geometry: { type: "Polygon", coordinates: result[0] },
+        };
+    }
+    return {
+        type: "Feature",
+        properties: (properties ?? {}) as P,
+        geometry: { type: "MultiPolygon", coordinates: result },
+    };
+}
 
 export function bboxIntersects(a: Bbox, b: Bbox): boolean {
     const [aWest, aSouth, aEast, aNorth] = a;

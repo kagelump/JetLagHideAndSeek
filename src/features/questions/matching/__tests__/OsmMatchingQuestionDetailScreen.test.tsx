@@ -36,11 +36,11 @@ const mockCandidates = [
     },
 ];
 
-let mockFindMatchingFeaturesWithCache: jest.Mock;
+let mockFindMatchingFeaturesWithCellCache: jest.Mock;
 
 jest.mock("@/features/questions/matching/osmMatchingCache", () => ({
-    findMatchingFeaturesWithCache: (...args: unknown[]) =>
-        mockFindMatchingFeaturesWithCache(...args),
+    findMatchingFeaturesWithCellCache: (...args: unknown[]) =>
+        mockFindMatchingFeaturesWithCellCache(...args),
 }));
 
 function TestScreen({
@@ -78,7 +78,7 @@ function TestScreen({
 describe("OsmMatchingQuestionDetailScreen", () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockFindMatchingFeaturesWithCache = jest.fn().mockResolvedValue({
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
             candidates: mockCandidates,
             source: "network",
         });
@@ -250,7 +250,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
         render(<TestScreen initialQuestion={question} onUpdate={onUpdate} />);
 
         await waitFor(() => {
-            expect(mockFindMatchingFeaturesWithCache).toHaveBeenCalled();
+            expect(mockFindMatchingFeaturesWithCellCache).toHaveBeenCalled();
         });
 
         const lastCall =
@@ -291,7 +291,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             expect(screen.getByTestId("osm-matching-refresh")).toBeTruthy();
         });
 
-        mockFindMatchingFeaturesWithCache.mockClear();
+        mockFindMatchingFeaturesWithCellCache.mockClear();
         const newCandidates = [
             {
                 distanceMeters: 300,
@@ -303,7 +303,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
                 tags: {},
             },
         ];
-        mockFindMatchingFeaturesWithCache.mockResolvedValue({
+        mockFindMatchingFeaturesWithCellCache.mockResolvedValue({
             candidates: newCandidates,
             source: "network",
         });
@@ -311,7 +311,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
         fireEvent.press(screen.getByTestId("osm-matching-refresh"));
 
         await waitFor(() => {
-            expect(mockFindMatchingFeaturesWithCache).toHaveBeenCalledWith(
+            expect(mockFindMatchingFeaturesWithCellCache).toHaveBeenCalledWith(
                 "park",
                 defaultPlayArea.center,
                 expect.objectContaining({ forceRefresh: true }),
@@ -320,7 +320,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
     });
 
     it("renders stale-cache banner when cache source is stale", async () => {
-        mockFindMatchingFeaturesWithCache.mockResolvedValue({
+        mockFindMatchingFeaturesWithCellCache.mockResolvedValue({
             candidates: mockCandidates,
             source: "stale",
         });
@@ -349,9 +349,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
         );
 
         await waitFor(() => {
-            expect(
-                screen.getByTestId("osm-matching-stale"),
-            ).toBeTruthy();
+            expect(screen.getByTestId("osm-matching-stale")).toBeTruthy();
         });
     });
 
@@ -385,7 +383,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             expect(screen.getByText("Nearest Park")).toBeTruthy();
         });
 
-        mockFindMatchingFeaturesWithCache.mockClear();
+        mockFindMatchingFeaturesWithCellCache.mockClear();
 
         const movedQuestion: MatchingQuestion = {
             ...question,
@@ -397,7 +395,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
         );
 
         await waitFor(() => {
-            expect(mockFindMatchingFeaturesWithCache).toHaveBeenCalledWith(
+            expect(mockFindMatchingFeaturesWithCellCache).toHaveBeenCalledWith(
                 "park",
                 [139.8, 35.8],
                 expect.objectContaining({ signal: expect.any(AbortSignal) }),

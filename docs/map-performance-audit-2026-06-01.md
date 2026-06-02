@@ -34,6 +34,20 @@ reuse immutable geometry fragments, perform cheap bbox filtering before exact
 geometry operations, and return stale data immediately while refreshing it in
 the background.
 
+A review of the codebase against this audit identified additional concerns that
+are not addressable by domain-function optimization alone:
+
+6. Defer expensive geometry computation off the main thread or yield during
+   long unions so the UI remains responsive during cold builds.
+7. Reduce React render cascading in `NativeMap` by memoizing layer components
+   and splitting the combined-mask dependency tree so unrelated ShapeSource
+   props are not re-serialized across the native bridge.
+8. Coalesce persistence writes with per-slice dirty flags so rapid question
+   edits do not redundantly serialize unchanged state slices.
+
+These runtime-integration concerns are structurally invisible to the Node-based
+replay suite and often dominate real-device profiles.
+
 ## Scope and Method
 
 This audit covers runtime network calls, state persistence, GeoJSON derivation,
@@ -53,19 +67,44 @@ app state
 
 The best improvements reduce work before data crosses the React Native bridge.
 
+### What the Node benchmark cannot measure
+
+The replay suite exercises pure domain functions in isolation. Three cost
+categories that often dominate real-device profiles are structurally outside its
+reach:
+
+1. **Main-thread blocking.** Synchronous `useMemo` computations (hiding-zone
+   unions, mask clipping, radar circle generation) run on the JS thread with no
+   yielding. A 660 ms union freezes the UI for the entire duration. The Node
+   benchmark reports wall time but cannot distinguish "fast enough" from "fast
+   enough without jank."
+2. **React render cascading.** `NativeMap` recomputes `combinedInsideMask` in a
+   `useMemo` with eight dependency values. A change to any one triggers a
+   re-render of every child layer component. None of the layer components
+   (`HidingZoneLayers`, `RadarQuestionLayers`, `OsmMatchingLayers`) are wrapped
+   in `React.memo`, so unchanged ShapeSource props are still re-evaluated and
+   may re-serialize identical GeoJSON across the native bridge.
+3. **Bridge serialization.** Each ShapeSource prop update serializes a full
+   GeoJSON feature collection through the React Native bridge. The cost scales
+   with vertex count and is invisible to a Node benchmark.
+
+These gaps mean the replay suite is necessary but not sufficient. On-device
+profiling with Hermes or a systrace is needed to validate that a domain-level
+improvement translates to a user-visible responsiveness gain.
+
 ## Current Cache Inventory
 
-| Area                      | Current behavior                                                                                                                                                                                                  | Main limitation                                                                                           |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Raster map tiles          | MapLibre ambient cache is configured at 100 MiB in [`NativeMap.tsx`](../src/features/map/NativeMap.tsx).                                                                                                          | Keep this. Public `tile.openstreetmap.org` usage must not add bulk prefetch or offline-pack behavior.     |
-| Play-area boundaries      | [`playAreaBoundary.ts`](../src/features/map/playAreaBoundary.ts) has bundled Tokyo and Osaka data, a memory cache, AsyncStorage persistence, a 30-day stale-while-revalidate window, and in-flight deduplication. | Memory and disk entries are unbounded, and startup hydration scans and parses all boundary cache entries. |
-| Play-area Photon search   | [`playAreaSearch.ts`](../src/features/playArea/playAreaSearch.ts) has a 50-entry in-memory LRU keyed by normalized query.                                                                                         | No persistent cache, stale reuse, in-flight dedupe, or out-of-order response guard.                       |
-| OSM matching candidates   | [`osmMatching.ts`](../src/features/questions/matching/osmMatching.ts) calls Overpass for each matching search. The detail screen debounces and aborts prior requests.                                             | No shared memory cache, persistent cache, stale reuse, spatial reuse, or in-flight dedupe.                |
-| Hiding-zone area          | [`hidingZone.ts`](../src/features/hidingZone/hidingZone.ts) has a 30-entry exact-result LRU keyed by all selected stations and radius.                                                                            | A partial edit or new radius rebuilds all circles and runs one union over the full set.                   |
-| Combined eligibility mask | [`maskBuilder.ts`](../src/features/map/maskBuilder.ts) has a 40-entry result LRU and a WeakMap for extracted polygons.                                                                                            | No bbox rejection before clipping. Upstream feature-object churn reduces identity-cache hits.             |
-| Matching Voronoi cells    | [`matchingVoronoi.ts`](../src/features/questions/matching/matchingVoronoi.ts) has a 20-entry exact-result LRU.                                                                                                    | Downstream selected-cell and name-length masks are rebuilt from the cached cells.                         |
-| Question-derived geometry | [`questionGeometry.ts`](../src/features/questions/questionGeometry.ts) rebuilds family render state from the questions array.                                                                                     | Any question edit can recreate unaffected radar, matching, and transit fragments.                         |
-| Persisted app state       | [`persistence.ts`](../src/state/persistence.ts) serializes the entire questions slice after a question edit.                                                                                                      | Matching candidates and tags make small edits rewrite larger JSON payloads.                               |
+| Area                      | Current behavior                                                                                                                                                                                                  | Main limitation                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Raster map tiles          | MapLibre ambient cache is configured at 100 MiB in [`NativeMap.tsx`](../src/features/map/NativeMap.tsx).                                                                                                          | Keep this. Public `tile.openstreetmap.org` usage must not add bulk prefetch or offline-pack behavior. The 100 MiB budget may be tight for users who switch between distant play areas (e.g. Tokyo then Osaka); tiles from the previous area are evicted before they can be reused on a return visit. Consider whether the budget should be tunable or whether a per-area eviction strategy is warranted. |
+| Play-area boundaries      | [`playAreaBoundary.ts`](../src/features/map/playAreaBoundary.ts) has bundled Tokyo and Osaka data, a memory cache, AsyncStorage persistence, a 30-day stale-while-revalidate window, and in-flight deduplication. | Memory and disk entries are unbounded, and startup hydration scans and parses all boundary cache entries.                                                                                                                                                                                                                                                                                                |
+| Play-area Photon search   | [`playAreaSearch.ts`](../src/features/playArea/playAreaSearch.ts) has a 50-entry in-memory LRU keyed by normalized query.                                                                                         | No persistent cache, stale reuse, in-flight dedupe, or out-of-order response guard.                                                                                                                                                                                                                                                                                                                      |
+| OSM matching candidates   | [`osmMatching.ts`](../src/features/questions/matching/osmMatching.ts) calls Overpass for each matching search. The detail screen debounces and aborts prior requests.                                             | No shared memory cache, persistent cache, stale reuse, spatial reuse, or in-flight dedupe.                                                                                                                                                                                                                                                                                                               |
+| Hiding-zone area          | [`hidingZone.ts`](../src/features/hidingZone/hidingZone.ts) has a 30-entry exact-result LRU keyed by all selected stations and radius.                                                                            | A partial edit or new radius rebuilds all circles and runs one union over the full set.                                                                                                                                                                                                                                                                                                                  |
+| Combined eligibility mask | [`maskBuilder.ts`](../src/features/map/maskBuilder.ts) has a 40-entry result LRU and a WeakMap for extracted polygons.                                                                                            | No bbox rejection before clipping. Upstream feature-object churn reduces identity-cache hits.                                                                                                                                                                                                                                                                                                            |
+| Matching Voronoi cells    | [`matchingVoronoi.ts`](../src/features/questions/matching/matchingVoronoi.ts) has a 20-entry exact-result LRU.                                                                                                    | Downstream selected-cell and name-length masks are rebuilt from the cached cells.                                                                                                                                                                                                                                                                                                                        |
+| Question-derived geometry | [`questionGeometry.ts`](../src/features/questions/questionGeometry.ts) rebuilds family render state from the questions array.                                                                                     | Any question edit can recreate unaffected radar, matching, and transit fragments.                                                                                                                                                                                                                                                                                                                        |
+| Persisted app state       | [`persistence.ts`](../src/state/persistence.ts) serializes the entire questions slice after a question edit. [`AppStateProviders.tsx`](../src/state/AppStateProviders.tsx) debounces writes with `setTimeout`.    | Matching candidates and tags make small edits rewrite larger JSON payloads. Each debounce tick calls `ensurePlayAreaBoundaryCached` then `AsyncStorage.multiSet` for all five slices, even when only one slice changed. A dirty-flag check per slice would reduce unnecessary serialization and writes during rapid edits.                                                                               |
 
 ## Local Union Benchmark
 
@@ -365,29 +404,31 @@ loaded cells covers the requested search disk before local distance filtering.
 
 ### Initial Scenario Matrix
 
-| Scenario family           | Required replays                                                                                                                                                      |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Boundary conversion       | Raw Overpass response -> filtered boundary -> bbox, center, and mask metadata; cold parse and cached metadata reuse.                                                  |
-| Hiding-zone geometry      | Tokyo Metro, Toei Subway, and combined presets at `300 m`, `600 m`, and `1 km`; cold build, exact repeat, one-station edit, preset add/remove, and radius return.     |
-| Matching network cache    | Cold fixture load, memory hit, persisted hit, stale hit plus background-refresh intent, in-flight dedupe, containment hit, containment miss, and cached empty result. |
-| Matching geometry         | Candidate parsing, distance sort, Voronoi build, selected-cell mask, name-length mask, exact repeat, and one-answer edit.                                             |
-| Combined eligibility mask | Required and excluded constraints with disjoint, touching, partial-overlap, and full-overlap bboxes; exact repeat and one-fragment edit.                              |
-| Radar geometry            | Collections of 1, 10, and 50 radar questions; cold build, exact repeat, one-answer edit, and one-distance edit.                                                       |
-| Persistence               | Existing whole-slice serialization plus normalized-record prototypes for small, medium, and larger question sets.                                                     |
-| Photon search cache       | Cold parse, memory hit, persisted stale hit, duplicate query, and out-of-order response protection.                                                                   |
+| Scenario family           | Required replays                                                                                                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Boundary conversion       | Raw Overpass response -> filtered boundary -> bbox, center, and mask metadata; cold parse and cached metadata reuse.                                                                |
+| Hiding-zone geometry      | Tokyo Metro, Toei Subway, and combined presets at `300 m`, `600 m`, and `1 km`; cold build, exact repeat, one-station edit, preset add/remove, and radius return.                   |
+| Matching network cache    | Cold fixture load, memory hit, persisted hit, stale hit plus background-refresh intent, in-flight dedupe, containment hit, containment miss, and cached empty result.               |
+| Matching geometry         | Candidate parsing, distance sort, Voronoi build, selected-cell mask, name-length mask, exact repeat, and one-answer edit.                                                           |
+| Combined eligibility mask | Required and excluded constraints with disjoint, touching, partial-overlap, and full-overlap bboxes; exact repeat and one-fragment edit. Include `polyclip-ts` operation baselines. |
+| Radar geometry            | Collections of 1, 10, and 50 radar questions; cold build, exact repeat, one-answer edit, and one-distance edit. Count total `@turf/circle` calls to verify deduplication.           |
+| Persistence               | Existing whole-slice serialization plus normalized-record prototypes for small, medium, and larger question sets. Measure per-slice dirty-flag skip rate.                           |
+| Photon search cache       | Cold parse, memory hit, persisted stale hit, duplicate query, and out-of-order response protection.                                                                                 |
 
 ### How the Suite Helps Each Recommendation
 
-| Recommendation                          | Measurements and proof added by `pnpm perf:test`                                                                                                                                          |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Persist spatial OSM matching results    | Compare cold fixture parsing with exact, containment, bbox-cell, stale, negative, and in-flight hits. Assert that every reused result is distance-filtered from a proven coverage region. |
-| Union hiding zones by overlap component | Measure cold build, full-union baseline, component build, warm repeat, one-station edit, preset add/remove, and radius return. Report reused component count and unioned input circles.   |
-| Cache per-question geometry fragments   | Edit one question in synthetic 10- and 50-question collections. Report reused fragment count, regenerated fragment count, output digest, vertices, and elapsed time.                      |
-| Add bbox rejection before clipping      | Replay disjoint and overlap masks. Report short-circuited intersections and differences, exact clip calls, digest equality, and elapsed time.                                             |
-| Lazily hydrate boundary caches          | Compare manifest parse, active-entry load, and eager all-entry hydration over synthetic cache sizes. Report parsed bytes and startup work avoided.                                        |
-| Persist Photon results                  | Replay duplicate and stale queries. Report parse count, network-intent count, cache hits, and out-of-order response handling.                                                             |
-| Normalize question persistence          | Compare serialized bytes and elapsed time for one-question edits as matching candidate payloads grow.                                                                                     |
-| Add weighted cache budgets              | Replay a mixed workload and report retained entry count, estimated bytes, vertices, hit rate, and evictions.                                                                              |
+| Recommendation                          | Measurements and proof added by `pnpm perf:test`                                                                                                                                                                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Persist spatial OSM matching results    | Compare cold fixture parsing with exact, containment, bbox-cell, stale, negative, and in-flight hits. Assert that every reused result is distance-filtered from a proven coverage region.                                                                        |
+| Union hiding zones by overlap component | Measure cold build, full-union baseline, component build, warm repeat, one-station edit, preset add/remove, and radius return. Report reused component count and unioned input circles.                                                                          |
+| Cache per-question geometry fragments   | Edit one question in synthetic 10- and 50-question collections. Report reused fragment count, regenerated fragment count, output digest, vertices, and elapsed time.                                                                                             |
+| Add bbox rejection before clipping      | Replay disjoint and overlap masks. Report short-circuited intersections and differences, exact clip calls, digest equality, and elapsed time.                                                                                                                    |
+| Lazily hydrate boundary caches          | Compare manifest parse, active-entry load, and eager all-entry hydration over synthetic cache sizes. Report parsed bytes and startup work avoided.                                                                                                               |
+| Persist Photon results                  | Replay duplicate and stale queries. Report parse count, network-intent count, cache hits, and out-of-order response handling.                                                                                                                                    |
+| Normalize question persistence          | Compare serialized bytes and elapsed time for one-question edits as matching candidate payloads grow. Measure per-slice dirty-flag skip rate to quantify redundant writes.                                                                                       |
+| Add weighted cache budgets              | Replay a mixed workload and report retained entry count, estimated bytes, vertices, hit rate, and evictions. Estimate aggregate memory footprint across all cache families.                                                                                      |
+| Reduce render cascading (limitation)    | The Node suite cannot measure React render counts or bridge serialization. On-device profiling with Hermes or React DevTools Profiler is needed. The suite can indirectly help by counting output objects and verifying stable identity for unchanged fragments. |
+| Main-thread scheduling (limitation)     | The suite reports wall time but cannot distinguish synchronous blocking from yielded work. On-device systrace or `InteractionManager` instrumentation is needed to verify that long unions do not drop frames.                                                   |
 
 The suite should make partial-update improvements visible. A cold benchmark
 alone can miss the main user experience win: changing one station, one answer,
@@ -477,6 +518,29 @@ Add:
 If the cache grows beyond a small number of JSON entries, move the spatial cache
 to SQLite rather than turning AsyncStorage into a large local database.
 
+**Error handling and resilience**
+
+The public Overpass API throttles aggressively and returns `429` or `504` under
+load. A spatial-overscan strategy that fetches a larger radius than the UI needs
+produces larger queries that are more likely to hit rate limits or timeouts. The
+cache implementation must address:
+
+- **Rate-limit backoff.** Retry with exponential backoff on `429` and `503`.
+  Surface the retry state to the UI so the user knows the search is still in
+  progress, not silently stalled.
+- **Partial or corrupt cache entries.** An interrupted AsyncStorage write can
+  leave a truncated JSON payload. Wrap reads in try/catch and treat parse
+  failures as cache misses rather than crashes. The boundary cache already does
+  this; the matching cache should follow the same pattern.
+- **Stale feature drift.** A 90-day stale window means a hospital that closed
+  or a station that was renamed 60 days ago will still appear as a matching
+  candidate. The force-refresh affordance mentioned above deserves a visible UI
+  element — not just a developer hook — and the stale indicator should be shown
+  alongside cached results so users can judge freshness.
+- **Overscan failure fallback.** If the larger-radius overscan query fails
+  (timeout, rate limit), fall back to the original exact-radius query rather
+  than showing no results.
+
 **Correctness contract**
 
 For the initial circle cache, a cached search centered at `a` with radius `R`
@@ -540,6 +604,32 @@ For the current few hundred stations, a simple bbox comparison graph is a
 reasonable first implementation. If the dataset grows, use an R-tree such as
 RBush to find nearby bbox candidates efficiently.
 
+**Main-thread scheduling**
+
+Component decomposition reduces wall time for partial edits but does not help
+the cold-build case. The combined union at 1 km takes ~660 ms on an M3 and
+will be longer on a mid-range Android device. This computation runs
+synchronously inside a `useMemo` in `hidingZoneStore.tsx` with no yielding,
+freezing the map and radius slider for the entire duration.
+
+The implementation should address scheduling:
+
+- **Immediate option:** Wrap the zone geometry `useMemo` in
+  `React.useTransition` or `React.useDeferredValue` so the radius slider
+  remains responsive while geometry recomputes in the background. This keeps
+  the previous result on screen during the transition.
+- **Chunked option:** If a single component union is still too long (the
+  largest component at 1 km contains 327 stations), yield to the event loop
+  between component unions using `InteractionManager.runAfterInteractions` or
+  a microtask-based chunking pattern. Deliver partial visual updates as each
+  component completes.
+- **Off-thread option:** For sustained large datasets, move Turf union work to
+  a JSI-based background thread or a React Native Worklet. This is higher
+  implementation cost but eliminates JS-thread contention entirely.
+
+The same scheduling concern applies to `polyclip-ts` operations in the mask
+builder, which can also block the JS thread when clipping complex polygons.
+
 **Correctness proof**
 
 If two polygon bboxes do not intersect, the polygons cannot intersect. Their
@@ -560,9 +650,11 @@ feature objects.
 
 Radar has an especially clear duplication:
 [`buildRadarQuestionRenderState`](../src/features/questions/radar/radarGeometry.ts)
-builds positive, negative, outline, and preview collections independently.
-Each radar circle is generated for the outline plus one answer-state
-collection.
+calls `buildRadarQuestionFeatureCollection` four times — for hit, miss,
+outline, and preview — each independently calling `@turf/circle`. Every radar
+question appears in `outlineFeatures` plus exactly one of the other three
+collections, so each circle is generated twice. With 50 radar questions, that
+is 100 Turf circle calls instead of 50.
 
 OSM matching has a similar second-stage issue:
 [`matchingVoronoi.ts`](../src/features/questions/matching/matchingVoronoi.ts)
@@ -602,6 +694,13 @@ stable feature IDs so a future bridge capability can be adopted cleanly.
 exact polygon-clipping intersections, unions, and differences after extracting
 polygons. Exact clipping is necessary for the final result, but many inputs can
 be rejected with a cheap bbox test first.
+
+The mask builder uses `polyclip-ts` (not Turf) for its `intersection`,
+`difference`, and `union` operations. The audit's union benchmark measures Turf
+union cost for hiding zones, but no equivalent baseline exists for `polyclip-ts`
+operations in the mask path. Before implementing bbox rejection, profile the
+actual `polyclip-ts` call costs so the improvement can be measured against a
+known baseline and the benefit of short-circuiting can be quantified.
 
 **Recommended architecture**
 
@@ -659,6 +758,46 @@ cache becomes useful.
 OSM boundaries can retain a long stale window. Retention and eager memory
 hydration are separate decisions.
 
+### P1: Reduce React Render Cascading in NativeMap
+
+**Problem**
+
+[`NativeMap.tsx`](../src/features/map/NativeMap.tsx) computes
+`combinedInsideMask` in a `useMemo` that depends on eight values: the play-area
+boundary, zone features, and six question-render-state feature collections
+(hit and miss masks for radar, transit line, and OSM matching). A change to any
+single value triggers a full mask rebuild and a re-render of the entire
+component tree beneath `NativeMap`.
+
+None of the child layer components — `HidingZoneLayers`, `RadarQuestionLayers`,
+`OsmMatchingLayers`, `PlayAreaMaskLayers` — are wrapped in `React.memo`. This
+means a change to radar state causes `HidingZoneLayers` to re-render and
+re-evaluate its ShapeSource props even though its inputs (`routeFeatures`,
+`stationFeatures`, `zoneFeatures`) are unchanged. The ShapeSource may then
+re-serialize identical GeoJSON through the native bridge.
+
+This render cascade is invisible to the Node-based perf suite and may
+contribute more to on-device jank than the domain-level computation it
+measures.
+
+**Recommended architecture**
+
+- Wrap each layer component in `React.memo` so unchanged props skip re-render.
+  The upstream `useMemo` calls in `hidingZoneStore` and `questionGeometry`
+  already produce stable object references for unchanged data, so `React.memo`
+  shallow comparison will be effective.
+- Consider splitting `NativeMap`'s mask computation into a dedicated context
+  provider or a separate memoized component so that mask recomputation does not
+  force a re-render of unrelated layers.
+- Profile the ShapeSource bridge cost for identical-data updates. If MapLibre
+  React Native already short-circuits identical GeoJSON, `React.memo` is
+  sufficient. If not, a reference-equality guard before setting ShapeSource
+  props would prevent unnecessary serialization.
+- Add a replay scenario that measures the number of ShapeSource prop updates
+  per user action (e.g., answering one radar question). The target is that only
+  the affected ShapeSource receives a new prop; unrelated sources should not be
+  re-set.
+
 ## Secondary Recommendations
 
 ### Persist Photon Search Results Conservatively
@@ -671,14 +810,26 @@ A small persistent stale cache can improve repeat searches, but this is lower
 priority than OSM matching because Photon results are lightweight and the
 search interaction is less geometry-heavy.
 
-### Normalize Question Persistence
+### Normalize Question Persistence and Coalesce Writes
 
 [`persistence.ts`](../src/state/persistence.ts) serializes the entire questions
 slice after edits. OSM matching candidates carry tag maps, so a small answer
 change can rewrite significantly more JSON than necessary.
 
-Consider:
+The write path has a more immediate issue than payload size:
+[`AppStateProviders.tsx`](../src/state/AppStateProviders.tsx) debounces
+persistence with `setTimeout`, but each debounce tick calls
+`ensurePlayAreaBoundaryCached` (a potential AsyncStorage read) followed by
+`AsyncStorage.multiSet` for all five state slices, regardless of which slices
+changed. During rapid question editing — the most common interaction — this
+produces redundant serialization and writes for the metadata, play-area,
+hiding-zone, and question-settings slices that have not changed.
 
+Consider, in priority order:
+
+- A per-slice dirty flag so `persistAppState` only serializes and writes slices
+  that actually changed since the last persist. This is the highest-impact
+  change and requires minimal refactoring.
 - A question index plus one persisted record per question ID.
 - Dirty-record writes for edited questions only.
 - Separating cached OSM candidates from question state and referencing them by
@@ -699,7 +850,7 @@ The current generated dataset is small enough that this is not a first-order
 problem, but it is a clean architectural boundary and becomes useful if more
 providers are added.
 
-### Use Weighted Cache Budgets
+### Use Weighted Cache Budgets and a Shared Memory Ceiling
 
 The geometry LRUs are entry-count bounded. Polygon entries vary substantially
 in vertex count and serialized size, so count alone is a weak proxy for mobile
@@ -716,6 +867,27 @@ max estimated bytes
 Track hit rate, miss rate, build time, output vertex count, and estimated bytes
 per cache family. A cache that retains expensive outputs but rarely hits should
 be reduced or removed.
+
+**Aggregate memory pressure.** The app currently maintains independent LRUs for
+masks (40 entries), hiding zones (30 entries), Voronoi cells (20 entries), and
+Photon results (50 entries). This audit proposes adding caches for OSM matching
+(memory + persistent), per-question geometry fragments (radar, matching,
+transit), per-component hiding-zone unions, and boundary manifests. Each cache
+is sized in isolation, but on a mobile device they compete with each other and
+with MapLibre's 100 MiB tile cache for a shared memory budget.
+
+A 3 GB Android device under memory pressure can trigger aggressive garbage
+collection or out-of-memory kills. The implementation should:
+
+- Estimate the aggregate worst-case memory footprint across all cache families
+  for a realistic workload (e.g., 334 stations at 600 m, 10 matching
+  questions, 50 radar questions, 5 cached boundaries).
+- Consider a shared memory budget with per-family allocation weights, so that
+  a large hiding-zone cache can shrink the matching cache rather than exceeding
+  the device memory ceiling.
+- Register for React Native's `MemoryWarning` event and shed low-priority cache
+  entries (e.g., stale boundary entries, old radius variants) before the OS
+  kills the process.
 
 ### Keep Visual Geometry Separate From Exact Gameplay Geometry
 
@@ -766,6 +938,12 @@ Each step can be implemented, measured, tested, and committed independently.
    custom-boundary mask metadata.
 10. Normalize persisted question records if profiling shows meaningful
     serialization or AsyncStorage write cost.
+11. Add per-slice dirty flags to `persistAppState` so unchanged slices are not
+    re-serialized on every debounce tick.
+12. Wrap layer components in `React.memo` and profile bridge serialization
+    cost to verify that unchanged ShapeSource props do not re-serialize.
+13. Add main-thread scheduling (transition or chunking) for hiding-zone
+    unions and mask clipping so cold builds do not freeze the UI.
 
 ## Verification Strategy
 
@@ -793,6 +971,19 @@ For performance validation:
 - Treat timing thresholds as advisory until CI history supports stable budgets.
 - Inspect native responsiveness after source updates, since reduced JS time does
   not guarantee reduced bridge or MapLibre processing time.
+
+For render and scheduling changes:
+
+- Use React DevTools Profiler to count re-renders of layer components after a
+  single question edit. The target is that only the affected layer re-renders.
+- Use Hermes sampling profiler or systrace to verify that hiding-zone union
+  and mask clipping do not produce single long-task frames (>16 ms) after
+  scheduling changes are applied.
+- Measure `@turf/circle` call count before and after radar deduplication to
+  confirm the 2x reduction.
+- Monitor aggregate JS heap size during a mixed workload (hiding zones +
+  matching + radar + boundaries) to validate that cache families stay within
+  the shared memory budget.
 
 ## Constraints and Non-Recommendations
 
