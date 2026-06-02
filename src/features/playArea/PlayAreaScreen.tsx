@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
     ActivityIndicator,
     Keyboard,
@@ -11,11 +11,14 @@ import {
 
 import {
     type PlayAreaSearchResult,
-    searchPlayAreas,
+    usePlayAreaSearch,
 } from "@/features/playArea/playAreaSearch";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
+import { useDebouncedValue } from "@/shared/useDebouncedValue";
 import { usePlayArea } from "@/state/playAreaStore";
 import { colors } from "@/theme/colors";
+
+const SEARCH_DEBOUNCE_MS = 350;
 
 export function PlayAreaScreen() {
     const {
@@ -29,42 +32,13 @@ export function PlayAreaScreen() {
     } = usePlayArea();
     const [relationId, setRelationId] = useState("");
     const [query, setQuery] = useState("");
-    const [results, setResults] = useState<PlayAreaSearchResult[]>([]);
-    const [searchError, setSearchError] = useState<string | null>(null);
-    const [isSearching, setIsSearching] = useState(false);
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+    const {
+        data: results = [],
+        error: searchError,
+        isFetching: isSearching,
+    } = usePlayAreaSearch(debouncedQuery);
     const relationInputRef = useRef<TextInput>(null);
-
-    useEffect(() => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        const trimmed = query.trim();
-
-        if (!trimmed) {
-            setResults([]);
-            setSearchError(null);
-            setIsSearching(false);
-            return;
-        }
-
-        debounceRef.current = setTimeout(async () => {
-            setIsSearching(true);
-            setSearchError(null);
-            try {
-                setResults(await searchPlayAreas(trimmed));
-            } catch (err) {
-                setSearchError(
-                    err instanceof Error ? err.message : "Search failed.",
-                );
-                setResults([]);
-            } finally {
-                setIsSearching(false);
-            }
-        }, 350);
-
-        return () => {
-            if (debounceRef.current) clearTimeout(debounceRef.current);
-        };
-    }, [query]);
 
     const applyDirectRelation = async () => {
         Keyboard.dismiss();
@@ -153,7 +127,11 @@ export function PlayAreaScreen() {
                     <Text style={styles.loading}>Searching...</Text>
                 ) : null}
                 {searchError ? (
-                    <Text style={styles.error}>{searchError}</Text>
+                    <Text style={styles.error}>
+                        {searchError instanceof Error
+                            ? searchError.message
+                            : "Search failed."}
+                    </Text>
                 ) : null}
                 {results.map((result) => (
                     <ResultRow

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 
 import osakaBoundaryJson from "../../../assets/default-zones/osaka.json";
 
@@ -16,32 +17,26 @@ import {
     buildPlayAreaFromBoundary,
     buildPlayAreaFromOverpass,
 } from "./playAreaBoundaryConversion";
+import { BOUNDARY_CACHE_TTL_MS, queryClient } from "@/state/queryClient";
+
+// Re-export for consumers that need the constant.
+export { BOUNDARY_CACHE_TTL_MS } from "@/state/queryClient";
 
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
 const CACHE_PREFIX = "play-area-boundary:";
-export const BOUNDARY_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 const BUNDLED_BOUNDARIES: Partial<Record<number, GeoJsonFeatureCollection>> = {
     358674: osakaBoundaryJson as unknown as GeoJsonFeatureCollection,
 };
-
-type BoundaryCacheEntry = {
-    cachedAt: string | null;
-    playArea: PlayArea;
-};
-
-const memoryCache = new Map<number, BoundaryCacheEntry>();
-const boundaryRevalidations = new Map<number, Promise<void>>();
 
 export type LoadedPlayArea = {
     cacheSource: PlayAreaCacheSource;
     playArea: PlayArea;
 };
 
-type BoundaryCacheEnvelope = {
-    /** ISO-8601 timestamp of when the boundary was cached. */
-    cachedAt: string;
-    playArea: PlayArea;
-};
+// ---------------------------------------------------------------------------
+// Pure helpers
+// ---------------------------------------------------------------------------
 
 export function parseRelationId(value: string): number | null {
     const trimmed = value.trim();
@@ -59,86 +54,17 @@ export function isBundledPlayAreaId(relationId: number): boolean {
     );
 }
 
-export async function loadPlayAreaByRelationId(
-    relationId: number,
-): Promise<LoadedPlayArea> {
-    const cached = await loadCachedPlayAreaByRelationId(relationId);
-    if (cached) return cached;
-
-    const playArea = await fetchPlayAreaBoundary(relationId);
-    await persistPlayAreaBoundary(playArea);
-    return { cacheSource: "fetched", playArea };
-}
-
-export async function loadCachedPlayAreaByRelationId(
-    relationId: number,
-): Promise<LoadedPlayArea | null> {
-    const bundled = getBundledPlayArea(relationId);
-    if (bundled) {
-        return { cacheSource: "bundled", playArea: bundled };
-    }
-
-    const memoryHit = memoryCache.get(relationId);
-    if (memoryHit) {
-        revalidateBoundaryIfStale(relationId, memoryHit);
-        return { cacheSource: "memory", playArea: memoryHit.playArea };
-    }
-
-    const persisted = await readPersistedBoundary(relationId);
-    if (!persisted) return null;
-
-    memoryCache.set(relationId, persisted);
-    revalidateBoundaryIfStale(relationId, persisted);
-    return { cacheSource: "persisted", playArea: persisted.playArea };
-}
-
-export async function persistPlayAreaBoundary(playArea: PlayArea) {
-    const envelope: BoundaryCacheEnvelope = {
-        cachedAt: new Date().toISOString(),
-        playArea,
-    };
-    if (isBundledPlayAreaId(playArea.osmId)) return;
-
-    const memoryHit = memoryCache.get(playArea.osmId);
-    if (memoryHit?.playArea === playArea) return;
-
-    memoryCache.set(playArea.osmId, envelope);
-    await AsyncStorage.setItem(
-        getBoundaryCacheKey(playArea.osmId),
-        JSON.stringify(envelope),
-    );
-}
-
-/**
- * App-state writes only need a durable boundary reference. They must not
- * replace an existing cache record because the live state may still hold the
- * stale object returned immediately before a background refresh completed.
- */
-export async function ensurePlayAreaBoundaryCached(playArea: PlayArea) {
-    if (
-        isBundledPlayAreaId(playArea.osmId) ||
-        memoryCache.has(playArea.osmId)
-    ) {
-        return;
-    }
-
-    const persisted = await readPersistedBoundary(playArea.osmId);
-    if (persisted) {
-        if (!memoryCache.has(playArea.osmId)) {
-            memoryCache.set(playArea.osmId, persisted);
-        }
-        return;
-    }
-    if (memoryCache.has(playArea.osmId)) return;
-    await persistPlayAreaBoundary(playArea);
-}
+// ---------------------------------------------------------------------------
+// Network fetch (pure — no caching)
+// ---------------------------------------------------------------------------
 
 export async function fetchPlayAreaBoundary(
     relationId: number,
+    signal?: AbortSignal,
 ): Promise<PlayArea> {
     const query = `[out:json][timeout:60];relation(${relationId});out geom qt;`;
     const url = `${OVERPASS_API}?data=${encodeURIComponent(query)}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal });
 
     if (!response.ok) {
         throw new Error(`Overpass API error ${response.status}`);
@@ -148,38 +74,177 @@ export async function fetchPlayAreaBoundary(
     return buildPlayAreaFromOverpass(relationId, overpassJson);
 }
 
-export function clearPlayAreaMemoryCache() {
-    memoryCache.clear();
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
+export function usePlayAreaBoundary(relationId: number | null) {
+    return useQuery({
+        queryKey: ["play-area-boundary", relationId],
+        queryFn: ({ signal }) => fetchPlayAreaBoundary(relationId!, signal),
+        enabled: relationId != null && !isBundledPlayAreaId(relationId),
+        staleTime: BOUNDARY_CACHE_TTL_MS,
+        initialData:
+            relationId != null
+                ? (getBundledPlayArea(relationId) ?? undefined)
+                : undefined,
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Programmatic access (for stores / persistence)
+// ---------------------------------------------------------------------------
+
+/**
+ * Load a play area by relation ID. Bundled boundaries resolve instantly;
+ * otherwise the query cache is checked first, then Overpass is fetched.
+ */
+export async function loadPlayAreaByRelationId(
+    relationId: number,
+): Promise<LoadedPlayArea> {
+    const bundled = getBundledPlayArea(relationId);
+    if (bundled) {
+        return { cacheSource: "bundled", playArea: bundled };
+    }
+
+    const wasCached = queryClient.getQueryData<PlayArea>([
+        "play-area-boundary",
+        relationId,
+    ]);
+
+    const playArea = await queryClient.fetchQuery<PlayArea>({
+        queryKey: ["play-area-boundary", relationId],
+        queryFn: ({ signal }) => fetchPlayAreaBoundary(relationId, signal),
+        staleTime: BOUNDARY_CACHE_TTL_MS,
+        // Surface errors immediately for programmatic callers (the store
+        // manages its own loading/error state). Components using the
+        // usePlayAreaBoundary hook still get the default retry behavior.
+        retry: false,
+    });
+
+    return {
+        cacheSource: wasCached ? "memory" : "fetched",
+        playArea,
+    };
 }
 
 /**
- * Scan AsyncStorage for persisted boundary entries and seed the in-memory
- * cache so that subsequent {@link loadPlayAreaByRelationId} calls skip the
- * AsyncStorage read and avoid unnecessary Overpass fetches on restart.
- *
- * Call once during app startup (non-blocking — failures are silently ignored).
+ * Resolve a relation ID from the cache without triggering a fetch. Returns
+ * null when the boundary is not cached. Used by app-state restoration to
+ * check whether a boundary reference can be resolved offline.
  */
-export async function warmBoundaryCacheFromStorage(): Promise<void> {
+export async function loadCachedPlayAreaByRelationId(
+    relationId: number,
+): Promise<LoadedPlayArea | null> {
+    const bundled = getBundledPlayArea(relationId);
+    if (bundled) {
+        return { cacheSource: "bundled", playArea: bundled };
+    }
+
+    // Check the in-memory query cache first (rehydrated by the persister).
+    const cached = queryClient.getQueryData<PlayArea>([
+        "play-area-boundary",
+        relationId,
+    ]);
+    if (cached) {
+        return { cacheSource: "memory", playArea: cached };
+    }
+
+    // Fall back to a direct AsyncStorage read — the persister may not have
+    // rehydrated yet during app-startup restoration, so this guarantees the
+    // boundary is resolvable without a network call.
+    const persisted = await readPersistedBoundary(relationId);
+    if (!persisted) return null;
+
+    // Seed the query cache so subsequent reads hit the in-memory layer.
+    queryClient.setQueryData(["play-area-boundary", relationId], persisted);
+
+    return { cacheSource: "persisted", playArea: persisted };
+}
+
+/**
+ * Ensure a boundary is durably cached so that app-state restore can resolve
+ * it offline after a restart.
+ *
+ * Two independent writes are made:
+ * 1. Query cache — so the persister picks it up immediately.
+ * 2. Direct AsyncStorage write — a durable backstop that survives gc eviction.
+ *    The query cache entry is garbage-collected after gcTime (default 30 min)
+ *    when no observer is mounted. If the gc fires and the persister re-saves
+ *    the blob without this entry, the direct key is the only offline copy.
+ *
+ * Both writes are first-writer-wins: an existing entry in either layer is
+ * preserved so a background-refreshed fresher copy is never overwritten.
+ */
+export async function ensurePlayAreaBoundaryCached(playArea: PlayArea) {
+    if (isBundledPlayAreaId(playArea.osmId)) return;
+
+    // Query cache: write only if absent (preserve a fresher in-memory copy).
+    const existing = queryClient.getQueryData<PlayArea>([
+        "play-area-boundary",
+        playArea.osmId,
+    ]);
+    if (!existing) {
+        queryClient.setQueryData(
+            ["play-area-boundary", playArea.osmId],
+            playArea,
+        );
+    }
+
+    // AsyncStorage: write only if the disk key is absent. This is independent
+    // of the query-cache state so gc eviction cannot remove the only durable copy.
+    try {
+        const diskKey = getBoundaryCacheKey(playArea.osmId);
+        const onDisk = await AsyncStorage.getItem(diskKey);
+        if (!onDisk) {
+            await AsyncStorage.setItem(
+                diskKey,
+                JSON.stringify(existing ?? playArea),
+            );
+        }
+    } catch {
+        // AsyncStorage may not be available — ignore.
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Legacy cache-key cleanup
+// ---------------------------------------------------------------------------
+
+/**
+ * Remove pre-migration boundary cache entries written by the hand-rolled cache
+ * (format: `{cachedAt, playArea}`). Plain PlayArea entries written by the new
+ * durable backstop are left untouched so they survive gc eviction.
+ */
+export async function cleanOrphanedBoundaryKeys(): Promise<void> {
     try {
         const keys = await AsyncStorage.getAllKeys();
         for (const key of keys) {
             if (!key.startsWith(CACHE_PREFIX)) continue;
 
-            const relationId = Number(key.slice(CACHE_PREFIX.length));
-            if (!Number.isSafeInteger(relationId) || relationId <= 0) continue;
+            try {
+                const raw = await AsyncStorage.getItem(key);
+                if (!raw) continue;
 
-            // Skip if already loaded or warmed.
-            if (memoryCache.has(relationId)) continue;
-
-            const playArea = await readPersistedBoundary(relationId);
-            if (playArea) {
-                memoryCache.set(relationId, playArea);
+                const parsed = JSON.parse(raw) as unknown;
+                // Pre-migration entries are envelopes with a `cachedAt` field.
+                // Plain PlayArea objects (new durable-backstop format) are kept.
+                if (isRecord(parsed) && "cachedAt" in parsed) {
+                    await AsyncStorage.removeItem(key);
+                }
+            } catch {
+                // Corrupted — remove.
+                await AsyncStorage.removeItem(key);
             }
         }
     } catch {
         // AsyncStorage may not be available — ignore.
     }
 }
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
 
 function getBundledPlayArea(relationId: number): PlayArea | null {
     if (relationId === defaultPlayArea.osmId) return defaultPlayArea;
@@ -192,71 +257,28 @@ function getBundledPlayArea(relationId: number): PlayArea | null {
 
 async function readPersistedBoundary(
     relationId: number,
-): Promise<BoundaryCacheEntry | null> {
+): Promise<PlayArea | null> {
     const cacheKey = getBoundaryCacheKey(relationId);
     try {
         const raw = await AsyncStorage.getItem(cacheKey);
         if (!raw) return null;
 
         const parsed = JSON.parse(raw) as unknown;
-        const isEnvelope = isRecord(parsed) && "playArea" in parsed;
-        const playArea = isEnvelope ? parsed.playArea : parsed;
+
+        // Handle both legacy {cachedAt, playArea} envelopes and plain PlayArea.
+        const playArea =
+            isRecord(parsed) && "playArea" in parsed
+                ? (parsed as { playArea: unknown }).playArea
+                : parsed;
+
         if (!isPlayArea(playArea, relationId)) {
-            await removeBoundaryCacheEntry(cacheKey);
+            await AsyncStorage.removeItem(cacheKey);
             return null;
         }
-        return {
-            cachedAt:
-                isEnvelope && typeof parsed.cachedAt === "string"
-                    ? parsed.cachedAt
-                    : null,
-            playArea,
-        };
+        return playArea;
     } catch {
-        await removeBoundaryCacheEntry(cacheKey);
-        return null;
-    }
-}
-
-function revalidateBoundaryIfStale(
-    relationId: number,
-    cacheEntry: BoundaryCacheEntry,
-) {
-    if (
-        !isBoundaryCacheEntryStale(cacheEntry) ||
-        boundaryRevalidations.has(relationId)
-    ) {
-        return;
-    }
-
-    const revalidation = fetchPlayAreaBoundary(relationId)
-        .then(persistPlayAreaBoundary)
-        .catch(() => {
-            // Keep serving the stale boundary when Overpass is unavailable.
-        })
-        .finally(() => {
-            boundaryRevalidations.delete(relationId);
-        });
-    boundaryRevalidations.set(relationId, revalidation);
-}
-
-function isBoundaryCacheEntryStale(cacheEntry: BoundaryCacheEntry): boolean {
-    if (!cacheEntry.cachedAt) return true;
-
-    const cachedAtMs = Date.parse(cacheEntry.cachedAt);
-    const ageMs = Date.now() - cachedAtMs;
-    return (
-        !Number.isFinite(cachedAtMs) ||
-        ageMs < 0 ||
-        ageMs >= BOUNDARY_CACHE_TTL_MS
-    );
-}
-
-async function removeBoundaryCacheEntry(cacheKey: string) {
-    try {
         await AsyncStorage.removeItem(cacheKey);
-    } catch {
-        // Storage may be unavailable. Treat this as a cache miss either way.
+        return null;
     }
 }
 

@@ -4,17 +4,16 @@ import osmtogeojson from "osmtogeojson";
 import type { GeoJsonFeatureCollection } from "../geojsonTypes";
 
 import {
-    BOUNDARY_CACHE_TTL_MS,
     buildPlayAreaFromBoundary,
     buildPlayAreaFromOverpass,
-    clearPlayAreaMemoryCache,
     ensurePlayAreaBoundaryCached,
     fetchPlayAreaBoundary,
     isBundledPlayAreaId,
+    loadCachedPlayAreaByRelationId,
     loadPlayAreaByRelationId,
     parseRelationId,
-    warmBoundaryCacheFromStorage,
 } from "../playAreaBoundary";
+import { queryClient } from "@/state/queryClient";
 
 jest.mock("osmtogeojson", () => ({
     __esModule: true,
@@ -64,14 +63,9 @@ function makeCachedOsaka(label = "Osaka") {
     };
 }
 
-async function storeCachedOsaka(cachedAt: string | null, label = "Osaka") {
+async function storeCachedOsaka(label = "Osaka") {
     const playArea = makeCachedOsaka(label);
-    await AsyncStorage.setItem(
-        CACHE_KEY,
-        cachedAt === null
-            ? JSON.stringify(playArea)
-            : JSON.stringify({ cachedAt, playArea }),
-    );
+    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(playArea));
 }
 
 function makeOverpassResponse() {
@@ -81,27 +75,17 @@ function makeOverpassResponse() {
     };
 }
 
-function makeDeferred<T>() {
-    let resolve!: (value: T | PromiseLike<T>) => void;
-    const promise = new Promise<T>((resolvePromise) => {
-        resolve = resolvePromise;
-    });
-    return { promise, resolve };
-}
-
-async function flushBackgroundWork() {
-    await new Promise<void>((resolve) => {
-        setTimeout(resolve, 0);
-    });
-}
-
 describe("playAreaBoundary", () => {
     beforeEach(async () => {
         jest.clearAllMocks();
-        clearPlayAreaMemoryCache();
+        queryClient.clear();
         await AsyncStorage.clear();
         globalThis.fetch = jest.fn();
     });
+
+    // -----------------------------------------------------------------------
+    // Pure function tests (unchanged)
+    // -----------------------------------------------------------------------
 
     it("validates direct OSM relation IDs", () => {
         expect(parseRelationId("358674")).toBe(358674);
@@ -111,12 +95,10 @@ describe("playAreaBoundary", () => {
         expect(parseRelationId("way/358674")).toBeNull();
     });
 
-    it("returns bundled Tokyo without network", async () => {
-        const result = await loadPlayAreaByRelationId(19631009);
-
-        expect(result.cacheSource).toBe("bundled");
-        expect(result.playArea.label).toBe("Tokyo 23 Wards");
-        expect(globalThis.fetch).not.toHaveBeenCalled();
+    it("identifies bundled play area IDs", () => {
+        expect(isBundledPlayAreaId(19631009)).toBe(true);
+        expect(isBundledPlayAreaId(358674)).toBe(true);
+        expect(isBundledPlayAreaId(999999)).toBe(false);
     });
 
     it("converts mocked Overpass Osaka geometry into a play area", () => {
@@ -130,167 +112,6 @@ describe("playAreaBoundary", () => {
         expect(playArea.osmId).toBe(358674);
         expect(playArea.boundary.features).toHaveLength(1);
         expect(playArea.bbox).toEqual([135.35, 34.5, 135.7, 34.82]);
-    });
-
-    it("caches fetched relation boundaries in AsyncStorage", async () => {
-        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
-        (globalThis.fetch as jest.Mock).mockResolvedValue(
-            makeOverpassResponse(),
-        );
-
-        const first = await loadPlayAreaByRelationId(999999);
-        clearPlayAreaMemoryCache();
-        const second = await loadPlayAreaByRelationId(999999);
-
-        expect(first.cacheSource).toBe("fetched");
-        expect(second.cacheSource).toBe("persisted");
-        expect(second.playArea.label).toBe("Osaka");
-        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-
-        const raw = await AsyncStorage.getItem(CACHE_KEY);
-        expect(JSON.parse(raw ?? "{}")).toMatchObject({
-            cachedAt: expect.any(String),
-            playArea: { osmId: 999999 },
-        });
-    });
-
-    it("warms persisted boundaries into the in-memory cache", async () => {
-        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
-        (globalThis.fetch as jest.Mock).mockResolvedValue(
-            makeOverpassResponse(),
-        );
-
-        await loadPlayAreaByRelationId(999999);
-        clearPlayAreaMemoryCache();
-        await warmBoundaryCacheFromStorage();
-        await AsyncStorage.removeItem(CACHE_KEY);
-
-        const result = await loadPlayAreaByRelationId(999999);
-
-        expect(result.cacheSource).toBe("memory");
-        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    });
-
-    it("refetches and replaces corrupted persisted boundaries", async () => {
-        await AsyncStorage.setItem("play-area-boundary:999999", "not json");
-        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
-        (globalThis.fetch as jest.Mock).mockResolvedValue(
-            makeOverpassResponse(),
-        );
-
-        const result = await loadPlayAreaByRelationId(999999);
-
-        expect(result.cacheSource).toBe("fetched");
-        expect(result.playArea.label).toBe("Osaka");
-    });
-
-    it("returns a fresh persisted boundary without revalidating it", async () => {
-        await storeCachedOsaka(new Date().toISOString());
-
-        const result = await loadPlayAreaByRelationId(999999);
-
-        expect(result.cacheSource).toBe("persisted");
-        expect(result.playArea.label).toBe("Osaka");
-        expect(globalThis.fetch).not.toHaveBeenCalled();
-    });
-
-    it("returns a stale boundary immediately and deduplicates its background refresh", async () => {
-        await storeCachedOsaka(
-            new Date(Date.now() - BOUNDARY_CACHE_TTL_MS - 1).toISOString(),
-            "Stale Osaka",
-        );
-        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
-        const response =
-            makeDeferred<ReturnType<typeof makeOverpassResponse>>();
-        (globalThis.fetch as jest.Mock).mockReturnValue(response.promise);
-
-        const persisted = await loadPlayAreaByRelationId(999999);
-        const memory = await loadPlayAreaByRelationId(999999);
-
-        expect(persisted).toMatchObject({
-            cacheSource: "persisted",
-            playArea: { label: "Stale Osaka" },
-        });
-        expect(memory).toMatchObject({
-            cacheSource: "memory",
-            playArea: { label: "Stale Osaka" },
-        });
-        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-
-        response.resolve(makeOverpassResponse());
-        await flushBackgroundWork();
-
-        const refreshed = await loadPlayAreaByRelationId(999999);
-        expect(refreshed).toMatchObject({
-            cacheSource: "memory",
-            playArea: { label: "Osaka" },
-        });
-        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-
-        await ensurePlayAreaBoundaryCached({ ...persisted.playArea });
-        const raw = await AsyncStorage.getItem(CACHE_KEY);
-        expect(JSON.parse(raw ?? "{}")).toMatchObject({
-            playArea: { label: "Osaka" },
-        });
-    });
-
-    it("keeps serving stale boundaries when background refresh fails", async () => {
-        await storeCachedOsaka(
-            new Date(Date.now() - BOUNDARY_CACHE_TTL_MS - 1).toISOString(),
-            "Stale Osaka",
-        );
-        (globalThis.fetch as jest.Mock).mockRejectedValue(
-            new Error("Overpass is unavailable"),
-        );
-
-        const result = await loadPlayAreaByRelationId(999999);
-        await flushBackgroundWork();
-
-        expect(result.playArea.label).toBe("Stale Osaka");
-        const raw = await AsyncStorage.getItem(CACHE_KEY);
-        expect(JSON.parse(raw ?? "{}")).toMatchObject({
-            playArea: { label: "Stale Osaka" },
-        });
-    });
-
-    it("does not revalidate stale boundaries during app-state cache writes", async () => {
-        await storeCachedOsaka(
-            new Date(Date.now() - BOUNDARY_CACHE_TTL_MS - 1).toISOString(),
-            "Stale Osaka",
-        );
-
-        await ensurePlayAreaBoundaryCached(makeCachedOsaka("App State Osaka"));
-
-        expect(globalThis.fetch).not.toHaveBeenCalled();
-        const raw = await AsyncStorage.getItem(CACHE_KEY);
-        expect(JSON.parse(raw ?? "{}")).toMatchObject({
-            playArea: { label: "Stale Osaka" },
-        });
-    });
-
-    it("revalidates legacy boundary entries without cache metadata", async () => {
-        await storeCachedOsaka(null, "Legacy Osaka");
-        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
-        (globalThis.fetch as jest.Mock).mockResolvedValue(
-            makeOverpassResponse(),
-        );
-
-        const result = await loadPlayAreaByRelationId(999999);
-        await flushBackgroundWork();
-
-        expect(result.playArea.label).toBe("Legacy Osaka");
-        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-        const raw = await AsyncStorage.getItem(CACHE_KEY);
-        expect(JSON.parse(raw ?? "{}")).toMatchObject({
-            cachedAt: expect.any(String),
-            playArea: { label: "Osaka" },
-        });
-    });
-
-    it("identifies bundled play area IDs", () => {
-        expect(isBundledPlayAreaId(19631009)).toBe(true);
-        expect(isBundledPlayAreaId(358674)).toBe(true);
-        expect(isBundledPlayAreaId(999999)).toBe(false);
     });
 
     it("throws when Overpass API returns non-ok", async () => {
@@ -312,6 +133,158 @@ describe("playAreaBoundary", () => {
 
         expect(() => buildPlayAreaFromBoundary(999999, empty)).toThrow(
             "No polygon boundary",
+        );
+    });
+
+    // -----------------------------------------------------------------------
+    // Query-backed integration tests
+    // -----------------------------------------------------------------------
+
+    it("returns bundled Tokyo without network", async () => {
+        const result = await loadPlayAreaByRelationId(19631009);
+
+        expect(result.cacheSource).toBe("bundled");
+        expect(result.playArea.label).toBe("Tokyo 23 Wards");
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it("fetches and caches a play area via the query client", async () => {
+        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
+        (globalThis.fetch as jest.Mock).mockResolvedValue(
+            makeOverpassResponse(),
+        );
+
+        const first = await loadPlayAreaByRelationId(999999);
+        expect(first.cacheSource).toBe("fetched");
+        expect(first.playArea.label).toBe("Osaka");
+
+        // Second call should hit the query cache.
+        (globalThis.fetch as jest.Mock).mockClear();
+        const second = await loadPlayAreaByRelationId(999999);
+        expect(second.cacheSource).toBe("memory");
+        expect(second.playArea.label).toBe("Osaka");
+        expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it("reads a persisted boundary from AsyncStorage as a fallback", async () => {
+        await storeCachedOsaka();
+
+        const result = await loadCachedPlayAreaByRelationId(999999);
+
+        expect(result).not.toBeNull();
+        expect(result!.cacheSource).toBe("persisted");
+        expect(result!.playArea.label).toBe("Osaka");
+    });
+
+    it("returns null for unknown relation IDs in loadCachedPlayAreaByRelationId", async () => {
+        const result = await loadCachedPlayAreaByRelationId(999999);
+
+        expect(result).toBeNull();
+    });
+
+    it("loadCachedPlayAreaByRelationId seeds the query cache from AsyncStorage", async () => {
+        await storeCachedOsaka();
+
+        await loadCachedPlayAreaByRelationId(999999);
+
+        // After seeding, the query cache should have the data.
+        const cached = queryClient.getQueryData(["play-area-boundary", 999999]);
+        expect(cached).not.toBeUndefined();
+        expect((cached as { label: string }).label).toBe("Osaka");
+    });
+
+    it("ensurePlayAreaBoundaryCached writes to the query cache and AsyncStorage", async () => {
+        const playArea = makeCachedOsaka();
+
+        await ensurePlayAreaBoundaryCached(playArea);
+
+        // Should be in the query cache.
+        expect(
+            queryClient.getQueryData(["play-area-boundary", 999999]),
+        ).toEqual(playArea);
+
+        // Should be persisted to AsyncStorage.
+        const raw = await AsyncStorage.getItem(CACHE_KEY);
+        expect(JSON.parse(raw ?? "{}")).toMatchObject({
+            label: "Osaka",
+            osmId: 999999,
+        });
+    });
+
+    it("ensurePlayAreaBoundaryCached does not replace an existing cache entry", async () => {
+        const original = makeCachedOsaka("Original Osaka");
+        queryClient.setQueryData(["play-area-boundary", 999999], original);
+
+        const replacement = makeCachedOsaka("Replacement Osaka");
+        await ensurePlayAreaBoundaryCached(replacement);
+
+        const cached = queryClient.getQueryData(["play-area-boundary", 999999]);
+        expect((cached as { label: string }).label).toBe("Original Osaka");
+    });
+
+    it("boundary remains durable after query cache eviction (gc-resistance)", async () => {
+        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
+        (globalThis.fetch as jest.Mock).mockResolvedValue(
+            makeOverpassResponse(),
+        );
+
+        // Simulate the app flow: fetch via applyRelationId, then persistAppState
+        // calls ensurePlayAreaBoundaryCached with the same object.
+        const { playArea } = await loadPlayAreaByRelationId(999999);
+        await ensurePlayAreaBoundaryCached(playArea);
+
+        // Simulate gc eviction — happens after 30 min with no active observer
+        // (usePlayAreaBoundary is not mounted; store reads imperatively).
+        queryClient.clear();
+
+        // The boundary must still resolve offline without a network call.
+        const result = await loadCachedPlayAreaByRelationId(999999);
+        expect(result).not.toBeNull();
+        expect(result!.cacheSource).toBe("persisted");
+        expect(result!.playArea.osmId).toBe(999999);
+        expect(globalThis.fetch).not.toHaveBeenCalledTimes(2);
+    });
+
+    it("ensurePlayAreaBoundaryCached is a no-op for bundled play areas", async () => {
+        const tokyo = (await loadPlayAreaByRelationId(19631009)).playArea;
+
+        await ensurePlayAreaBoundaryCached(tokyo);
+
+        // Bundled boundaries should not be in the query cache at this key.
+        expect(
+            queryClient.getQueryData(["play-area-boundary", 19631009]),
+        ).toBeUndefined();
+    });
+
+    it("handles corrupted persisted boundaries gracefully", async () => {
+        await AsyncStorage.setItem(CACHE_KEY, "not json");
+        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
+        (globalThis.fetch as jest.Mock).mockResolvedValue(
+            makeOverpassResponse(),
+        );
+
+        // loadCachedPlayAreaByRelationId should return null for corrupted data.
+        const cached = await loadCachedPlayAreaByRelationId(999999);
+        expect(cached).toBeNull();
+
+        // loadPlayAreaByRelationId should fall through to a fetch.
+        const fetched = await loadPlayAreaByRelationId(999999);
+        expect(fetched.cacheSource).toBe("fetched");
+        expect(fetched.playArea.label).toBe("Osaka");
+    });
+
+    it("accepts a signal parameter in fetchPlayAreaBoundary", async () => {
+        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
+        (globalThis.fetch as jest.Mock).mockResolvedValue(
+            makeOverpassResponse(),
+        );
+
+        const controller = new AbortController();
+        await fetchPlayAreaBoundary(999999, controller.signal);
+
+        expect(globalThis.fetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({ signal: controller.signal }),
         );
     });
 });

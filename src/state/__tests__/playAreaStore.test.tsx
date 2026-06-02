@@ -3,13 +3,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Text, View } from "react-native";
 
 import { defaultPlayArea } from "@/features/map/playArea";
-import {
-    clearPlayAreaMemoryCache,
-    loadPlayAreaByRelationId,
-} from "@/features/map/playAreaBoundary";
+import { loadPlayAreaByRelationId } from "@/features/map/playAreaBoundary";
 import { createAppStateV1 } from "@/state/appState";
 import { AppStateProviders } from "@/state/AppStateProviders";
 import { loadPersistedAppState, persistAppState } from "@/state/persistence";
+import { queryClient } from "@/state/queryClient";
 import { usePlayArea } from "@/state/playAreaStore";
 
 function Probe() {
@@ -42,7 +40,7 @@ function makeAppState(playArea = defaultPlayArea) {
 describe("PlayAreaProvider app-state persistence", () => {
     beforeEach(async () => {
         await AsyncStorage.clear();
-        clearPlayAreaMemoryCache();
+        queryClient.clear();
     });
 
     it("uses default play area when nothing is persisted", async () => {

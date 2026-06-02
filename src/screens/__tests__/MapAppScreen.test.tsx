@@ -11,7 +11,7 @@ import {
     loadHidingZonePresets,
 } from "@/features/hidingZone/hidingZoneData";
 import { defaultPlayArea } from "@/features/map/playArea";
-import { clearPlayAreaMemoryCache } from "@/features/map/playAreaBoundary";
+import { queryClient } from "@/state/queryClient";
 import { AppStateProviders } from "@/state/AppStateProviders";
 
 import { MapAppScreen } from "../MapAppScreen";
@@ -200,7 +200,7 @@ describe("MapAppScreen", () => {
     beforeEach(async () => {
         jest.useRealTimers();
         jest.clearAllMocks();
-        clearPlayAreaMemoryCache();
+        queryClient.clear();
         await AsyncStorage.clear();
         mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
         globalThis.fetch = jest.fn().mockResolvedValue({
@@ -1251,7 +1251,7 @@ describe("MapAppScreen", () => {
     describe("pin drag gesture", () => {
         beforeEach(async () => {
             jest.clearAllMocks();
-            clearPlayAreaMemoryCache();
+            queryClient.clear();
             await AsyncStorage.clear();
             mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
             globalThis.fetch = jest.fn().mockResolvedValue({
