@@ -1,7 +1,11 @@
 import {
+    buildOverpassBboxQuery,
     buildOverpassQuery,
+    buildStationBboxQuery,
+    fetchAndParseOverpassBboxFeatures,
     findMatchingFeatures,
     findNearestFeature,
+    findNearestMatchingFeature,
     parseOverpassElements,
 } from "../osmMatching";
 
@@ -476,5 +480,258 @@ describe("findMatchingFeatures", () => {
         expect(result).toHaveLength(1);
         expect(result[0].name).toBe("新宿");
         expect(result[0].nameLength).toBe(2);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// findNearestMatchingFeature
+// ---------------------------------------------------------------------------
+
+describe("findNearestMatchingFeature", () => {
+    const originalFetch = globalThis.fetch;
+
+    afterEach(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    function mockFetch(elements: unknown[]) {
+        globalThis.fetch = jest.fn().mockResolvedValue({
+            json: jest.fn().mockResolvedValue({ elements }),
+            ok: true,
+        });
+    }
+
+    it("returns the single nearest feature", async () => {
+        mockFetch([
+            {
+                id: 1,
+                lat: 35.7,
+                lon: 139.8,
+                tags: { name: "Far" },
+                type: "node",
+            },
+            {
+                id: 2,
+                lat: 35.681,
+                lon: 139.761,
+                tags: { name: "Near" },
+                type: "node",
+            },
+        ]);
+
+        const result = await findNearestMatchingFeature(
+            "park",
+            [139.76, 35.68],
+        );
+
+        expect(result).not.toBeNull();
+        expect(result!.name).toBe("Near");
+    });
+
+    it("returns null when no features match", async () => {
+        mockFetch([]);
+
+        const result = await findNearestMatchingFeature(
+            "park",
+            [139.76, 35.68],
+        );
+
+        expect(result).toBeNull();
+    });
+
+    it("uses custom search radius", async () => {
+        mockFetch([]);
+
+        await findNearestMatchingFeature("park", [139.76, 35.68], 20000);
+
+        expect(globalThis.fetch).toHaveBeenCalledWith(
+            expect.stringContaining("20000"),
+            expect.any(Object),
+        );
+    });
+});
+
+// ---------------------------------------------------------------------------
+// buildOverpassBboxQuery
+// ---------------------------------------------------------------------------
+
+describe("buildOverpassBboxQuery", () => {
+    it("builds a bbox query with the given tags and bounding box", () => {
+        const query = buildOverpassBboxQuery(
+            '["leisure"="park"]',
+            35.523,
+            139.654,
+            35.876,
+            139.987,
+        );
+
+        expect(query).toContain("[out:json][timeout:30]");
+        expect(query).toContain(
+            'node["leisure"="park"](35.523,139.654,35.876,139.987)',
+        );
+        expect(query).toContain(
+            'way["leisure"="park"](35.523,139.654,35.876,139.987)',
+        );
+        expect(query).toContain(
+            'relation["leisure"="park"](35.523,139.654,35.876,139.987)',
+        );
+        expect(query).toContain("out center tags qt;");
+    });
+
+    it("does not leak a numeric limit in the output format", () => {
+        const query = buildOverpassBboxQuery(
+            '["amenity"="cafe"]',
+            35.1,
+            139.1,
+            36.2,
+            140.3,
+        );
+
+        expect(query).not.toMatch(/out center tags qt\s*\d/);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// buildStationBboxQuery
+// ---------------------------------------------------------------------------
+
+describe("buildStationBboxQuery", () => {
+    it("builds a bbox query for railway and subway stations", () => {
+        const query = buildStationBboxQuery(35.523, 139.654, 35.876, 139.987);
+
+        expect(query).toContain("[out:json][timeout:30]");
+        expect(query).toContain(
+            'node["railway"="station"](35.523,139.654,35.876,139.987)',
+        );
+        expect(query).toContain(
+            'way["railway"="station"](35.523,139.654,35.876,139.987)',
+        );
+        expect(query).toContain(
+            'node["station"="subway"]["railway"="station"](35.523,139.654,35.876,139.987)',
+        );
+        expect(query).toContain(
+            'way["station"="subway"]["railway"="station"](35.523,139.654,35.876,139.987)',
+        );
+        expect(query).toContain("out center tags qt;");
+    });
+});
+
+// ---------------------------------------------------------------------------
+// fetchAndParseOverpassBboxFeatures
+// ---------------------------------------------------------------------------
+
+describe("fetchAndParseOverpassBboxFeatures", () => {
+    const originalFetch = globalThis.fetch;
+
+    afterEach(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    function mockFetch(elements: unknown[]) {
+        globalThis.fetch = jest.fn().mockResolvedValue({
+            json: jest.fn().mockResolvedValue({ elements }),
+            ok: true,
+        });
+    }
+
+    it("returns features from a bbox query for a tagged category", async () => {
+        mockFetch([
+            {
+                id: 1,
+                lat: 35.6,
+                lon: 139.7,
+                tags: { name: "Bbox Park" },
+                type: "node",
+            },
+        ]);
+
+        const result = await fetchAndParseOverpassBboxFeatures(
+            "park",
+            35.5,
+            139.5,
+            35.8,
+            140.0,
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe("Bbox Park");
+    });
+
+    it("returns empty array for categories without OSM query tags", async () => {
+        const result = await fetchAndParseOverpassBboxFeatures(
+            "transit-line",
+            35.5,
+            139.5,
+            35.8,
+            140.0,
+        );
+
+        expect(result).toEqual([]);
+    });
+
+    it("returns empty array when config is not found", async () => {
+        const result = await fetchAndParseOverpassBboxFeatures(
+            "nonexistent-category" as any,
+            35.5,
+            139.5,
+            35.8,
+            140.0,
+        );
+
+        expect(result).toEqual([]);
+    });
+
+    it("throws on Overpass API error for bbox query", async () => {
+        globalThis.fetch = jest.fn().mockResolvedValue({
+            ok: false,
+            status: 500,
+        });
+
+        await expect(
+            fetchAndParseOverpassBboxFeatures("park", 35.5, 139.5, 35.8, 140.0),
+        ).rejects.toThrow("Overpass API error 500");
+    });
+
+    it("uses station bbox query for station-name-length category", async () => {
+        mockFetch([
+            {
+                id: 1,
+                lat: 35.6,
+                lon: 139.7,
+                tags: { name: "Tokyo", "name:en": "Tokyo Station" },
+                type: "node",
+            },
+        ]);
+
+        const result = await fetchAndParseOverpassBboxFeatures(
+            "station-name-length",
+            35.5,
+            139.5,
+            35.8,
+            140.0,
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe("Tokyo Station");
+        expect(result[0].nameLength).toBe(13);
+    });
+
+    it("passes AbortSignal through to fetch for bbox queries", async () => {
+        mockFetch([]);
+        const controller = new AbortController();
+
+        await fetchAndParseOverpassBboxFeatures(
+            "park",
+            35.5,
+            139.5,
+            35.8,
+            140.0,
+            controller.signal,
+        );
+
+        expect(globalThis.fetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({ signal: controller.signal }),
+        );
     });
 });

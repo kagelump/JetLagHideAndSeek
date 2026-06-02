@@ -1,4 +1,4 @@
-import { inflateSync, strFromU8 } from "fflate";
+import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
 
 import { base64UrlToBytes, bytesToBase64Url } from "@/sharing/wire/base64url";
 import { canonicalize } from "@/sharing/wire/canonicalize";
@@ -173,6 +173,62 @@ describe("sharing wire codec", () => {
         if (decoded.ok) {
             const question = decoded.envelope.payload.questions?.[0];
             expect(question).toEqual(withMatching.payload.questions[0]);
+        }
+    });
+
+    // -------------------------------------------------------------------
+    // Error branches
+    // -------------------------------------------------------------------
+
+    it("returns inflate-failed for valid base64url that is not deflate data", () => {
+        // Raw bytes that are valid base64url but not valid deflate.
+        const garbage = bytesToBase64Url(
+            new Uint8Array([0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa]),
+        );
+
+        const result = decodeEnvelopePayload(garbage);
+
+        expect(result).toEqual({
+            error: { code: "inflate-failed" },
+            ok: false,
+        });
+    });
+
+    it("returns invalid-json for valid base64url + deflate with non-JSON content", () => {
+        // Deflate valid (non-JSON) text → the inflation succeeds but JSON.parse fails.
+        const nonJson = bytesToBase64Url(deflateSync(strToU8("hello world")));
+
+        const result = decodeEnvelopePayload(nonJson);
+
+        expect(result).toEqual({
+            error: { code: "invalid-json" },
+            ok: false,
+        });
+    });
+
+    it("returns unsupported-version for a payload with v !== 1", () => {
+        // A minified JSON object with version 2 — valid JSON but wrong version.
+        const v2Payload = bytesToBase64Url(deflateSync(strToU8('{"v":2}')));
+
+        const result = decodeEnvelopePayload(v2Payload);
+
+        expect(result).toEqual({
+            error: { code: "unsupported-version", version: 2 },
+            ok: false,
+        });
+    });
+
+    it("returns schema-invalid for a payload with v:1 but invalid schema", () => {
+        // v:1 but missing the required `kind` field.
+        const badSchemaPayload = bytesToBase64Url(
+            deflateSync(strToU8('{"v":1}')),
+        );
+
+        const result = decodeEnvelopePayload(badSchemaPayload);
+
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error.code).toBe("schema-invalid");
         }
     });
 });

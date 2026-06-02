@@ -874,4 +874,67 @@ describe("findMatchingFeaturesWithCellCache", () => {
         expect(result.candidates).toEqual([]);
         expect(mockFetchAndParseBbox).not.toHaveBeenCalled();
     });
+
+    it("force-refreshes all cells when forceRefresh is true", async () => {
+        // Seed the cell cache first.
+        await findMatchingFeaturesWithCellCache("hospital", tokyoCenter, {
+            requestedRadiusMeters: 1,
+        });
+        jest.clearAllMocks();
+
+        const freshFeatures = [
+            {
+                lat: 35.69,
+                lon: 139.78,
+                name: "Force Refreshed Hospital",
+                osmId: 99,
+                osmType: "node" as const,
+                tags: {},
+            },
+        ];
+        mockFetchAndParseBbox.mockResolvedValue(freshFeatures);
+
+        const result = await findMatchingFeaturesWithCellCache(
+            "hospital",
+            tokyoCenter,
+            { forceRefresh: true, requestedRadiusMeters: 1 },
+        );
+
+        expect(result.source).toBe("network");
+        expect(mockFetchAndParseBbox).toHaveBeenCalled();
+        expect(result.candidates[0].name).toBe("Force Refreshed Hospital");
+    });
+
+    it("returns stale from disk for cell cache when memory is cleared and TTL exceeded", async () => {
+        // Seed the cell cache — tiny radius so only 1 cell.
+        await findMatchingFeaturesWithCellCache("hospital", tokyoCenter, {
+            requestedRadiusMeters: 1,
+        });
+        // Remove from memory so we exercise the disk→stale path.
+        await clearOsmMatchingCellMemoryCache();
+        mockFetchAndParseBbox.mockClear();
+
+        jest.spyOn(Date, "now").mockReturnValue(
+            Date.now() + MATCHING_CACHE_TTL_MS + 1,
+        );
+
+        const result = await findMatchingFeaturesWithCellCache(
+            "hospital",
+            tokyoCenter,
+            { requestedRadiusMeters: 1 },
+        );
+
+        expect(result.source).toBe("stale");
+        expect(result.candidates.some((c) => c.name === "Tokyo Hospital")).toBe(
+            true,
+        );
+
+        // Let background refresh complete.
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(mockFetchAndParseBbox).toHaveBeenCalled();
+
+        jest.spyOn(Date, "now").mockRestore();
+    });
 });

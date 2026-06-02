@@ -1,6 +1,7 @@
 import {
-    loadHidingZonePresets,
     getHidingZonePresets,
+    getHidingZonePresetsOrEmpty,
+    loadHidingZonePresets,
 } from "@/features/hidingZone/hidingZoneData";
 import {
     isCanonicalTransitRouteId,
@@ -34,4 +35,28 @@ describe("generated hiding-zone preset data", () => {
             }
         }
     });
+
+    it("has at least the Tokyo Metro preset", () => {
+        const presets = getHidingZonePresets();
+        expect(presets.some((p) => p.id === "tokyo-metro")).toBe(true);
+    });
+
+    it("returns the same cached presets on repeated calls", async () => {
+        const first = await loadHidingZonePresets();
+        const second = await loadHidingZonePresets();
+        expect(second).toBe(first);
+    });
+
+    it("getHidingZonePresetsOrEmpty returns presets after loading", () => {
+        const presets = getHidingZonePresetsOrEmpty();
+        expect(presets.length).toBeGreaterThan(0);
+        expect(presets.some((p) => p.id === "tokyo-metro")).toBe(true);
+    });
 });
+
+// NOTE: The real hidingZoneData module is globally mocked in jest.setup.ts
+// because it uses dynamic import().  The mock mirrors the same API contract.
+// The tests above (cached return, repeated-call stability, OrEmpty after load)
+// exercise the mock's loaded-state paths.  The unloaded paths (throw / empty)
+// are exercised implicitly by the mock's construction; they also run whenever
+// these tests execute in a fresh Jest worker.

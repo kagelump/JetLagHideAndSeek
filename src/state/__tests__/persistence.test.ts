@@ -321,4 +321,83 @@ describe("app-state persistence", () => {
 
         await expect(loadPersistedAppState()).resolves.toBeNull();
     });
+
+    // -------------------------------------------------------------------
+    // Split-state error-recovery paths (L64–L109 in persistence.ts)
+    // -------------------------------------------------------------------
+
+    it("returns null when multiGet throws", async () => {
+        (AsyncStorage.multiGet as jest.Mock).mockRejectedValueOnce(
+            new Error("Storage unavailable"),
+        );
+
+        await expect(loadPersistedAppState()).resolves.toBeNull();
+    });
+
+    it("returns null and cleans up when some (but not all) slice keys are populated", async () => {
+        // Set only the metadata key — the other keys are absent → partial null.
+        await AsyncStorage.setItem(
+            "app-state:metadata:v1",
+            JSON.stringify(makeAppState().metadata),
+        );
+
+        await expect(loadPersistedAppState()).resolves.toBeNull();
+
+        // All split keys should have been cleaned up.
+        const metadata = await AsyncStorage.getItem("app-state:metadata:v1");
+        expect(metadata).toBeNull();
+    });
+
+    it("returns null and cleans up when play area reference is invalid", async () => {
+        // A play area reference without osmId.
+        await AsyncStorage.multiSet([
+            ["app-state:metadata:v1", JSON.stringify(makeAppState().metadata)],
+            ["app-state:play-area:v1", JSON.stringify({ notOsmId: true })],
+            [
+                "app-state:hiding-zones:v1",
+                JSON.stringify(makeAppState().hidingZones),
+            ],
+            [
+                "app-state:question-settings:v1",
+                JSON.stringify(makeAppState().questionSettings),
+            ],
+            [
+                "app-state:questions:v1",
+                JSON.stringify(makeAppState().questions),
+            ],
+        ]);
+
+        await expect(loadPersistedAppState()).resolves.toBeNull();
+
+        // All split keys should have been cleaned up.
+        const playArea = await AsyncStorage.getItem("app-state:play-area:v1");
+        expect(playArea).toBeNull();
+    });
+
+    it("returns null and cleans up when a slice contains invalid JSON", async () => {
+        await AsyncStorage.multiSet([
+            ["app-state:metadata:v1", JSON.stringify(makeAppState().metadata)],
+            [
+                "app-state:play-area:v1",
+                JSON.stringify({ osmId: defaultPlayArea.osmId }),
+            ],
+            ["app-state:hiding-zones:v1", "not valid json at all {{{"],
+            [
+                "app-state:question-settings:v1",
+                JSON.stringify(makeAppState().questionSettings),
+            ],
+            [
+                "app-state:questions:v1",
+                JSON.stringify(makeAppState().questions),
+            ],
+        ]);
+
+        await expect(loadPersistedAppState()).resolves.toBeNull();
+
+        // All split keys should have been cleaned up.
+        const hidingZones = await AsyncStorage.getItem(
+            "app-state:hiding-zones:v1",
+        );
+        expect(hidingZones).toBeNull();
+    });
 });

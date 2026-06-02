@@ -1,17 +1,22 @@
+import { act, renderHook } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import osmtogeojson from "osmtogeojson";
+import type { ReactNode } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 import type { GeoJsonFeatureCollection } from "../geojsonTypes";
 
 import {
     buildPlayAreaFromBoundary,
     buildPlayAreaFromOverpass,
+    cleanOrphanedBoundaryKeys,
     ensurePlayAreaBoundaryCached,
     fetchPlayAreaBoundary,
     isBundledPlayAreaId,
     loadCachedPlayAreaByRelationId,
     loadPlayAreaByRelationId,
     parseRelationId,
+    usePlayAreaBoundary,
 } from "../playAreaBoundary";
 import { queryClient } from "@/state/queryClient";
 
@@ -286,5 +291,148 @@ describe("playAreaBoundary", () => {
             expect.any(String),
             expect.objectContaining({ signal: controller.signal }),
         );
+    });
+
+    // -------------------------------------------------------------------
+    // cleanOrphanedBoundaryKeys
+    // -------------------------------------------------------------------
+
+    it("removes pre-migration boundary cache entries with cachedAt envelope", async () => {
+        // Pre-migration format: { cachedAt, playArea }
+        const legacyKey = "play-area-boundary:123456";
+        await AsyncStorage.setItem(
+            legacyKey,
+            JSON.stringify({
+                cachedAt: "2025-01-01T00:00:00.000Z",
+                playArea: makeCachedOsaka(),
+            }),
+        );
+
+        await cleanOrphanedBoundaryKeys();
+
+        const raw = await AsyncStorage.getItem(legacyKey);
+        expect(raw).toBeNull();
+    });
+
+    it("keeps new durable-backstop boundary entries", async () => {
+        // New format: plain PlayArea object (no cachedAt envelope)
+        const newKey = "play-area-boundary:789012";
+        const playArea = makeCachedOsaka();
+        await AsyncStorage.setItem(newKey, JSON.stringify(playArea));
+
+        await cleanOrphanedBoundaryKeys();
+
+        const raw = await AsyncStorage.getItem(newKey);
+        expect(raw).not.toBeNull();
+
+        const parsed = JSON.parse(raw!);
+        expect(parsed).toMatchObject({ osmId: 999999, label: "Osaka" });
+    });
+
+    it("cleans corrupted boundary keys", async () => {
+        const corruptKey = "play-area-boundary:corrupt";
+        await AsyncStorage.setItem(corruptKey, "not valid json at all");
+
+        await cleanOrphanedBoundaryKeys();
+
+        const raw = await AsyncStorage.getItem(corruptKey);
+        expect(raw).toBeNull();
+    });
+
+    it("removes persisted boundary that fails isPlayArea validation", async () => {
+        // Valid JSON, but not a PlayArea — missing required fields.
+        await AsyncStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({ type: "not-a-play-area" }),
+        );
+
+        // loadCachedPlayAreaByRelationId → readPersistedBoundary → isPlayArea
+        // should return false, causing the key to be removed.
+        const result = await loadCachedPlayAreaByRelationId(999999);
+
+        expect(result).toBeNull();
+
+        // The invalid key should have been cleaned up.
+        const raw = await AsyncStorage.getItem(CACHE_KEY);
+        expect(raw).toBeNull();
+    });
+
+    it("removes persisted boundary whose osmId does not match", async () => {
+        // A PlayArea-like object but with a different osmId.
+        const playArea = makeCachedOsaka();
+        // Store it under the wrong relation ID key.
+        await AsyncStorage.setItem(
+            "play-area-boundary:111111",
+            JSON.stringify(playArea),
+        );
+
+        // readPersistedBoundary should see osmId mismatch and remove the key.
+        const result = await loadCachedPlayAreaByRelationId(111111);
+
+        expect(result).toBeNull();
+
+        // The key should have been cleaned up.
+        const raw = await AsyncStorage.getItem("play-area-boundary:111111");
+        expect(raw).toBeNull();
+    });
+
+    // -------------------------------------------------------------------
+    // usePlayAreaBoundary hook
+    // -------------------------------------------------------------------
+
+    function QueryWrapper({ children }: { children: ReactNode }) {
+        return (
+            <QueryClientProvider client={queryClient}>
+                {children}
+            </QueryClientProvider>
+        );
+    }
+
+    it("resolves bundled play area as initialData without fetching", () => {
+        const { result } = renderHook(() => usePlayAreaBoundary(19631009), {
+            wrapper: QueryWrapper,
+        });
+
+        // Bundled Tokyo 23 Wards — enabled=false, initialData set.
+        expect(result.current.data).not.toBeUndefined();
+        expect(result.current.data!.label).toBe("Tokyo 23 Wards");
+    });
+
+    it("is disabled for null relationId", () => {
+        const { result } = renderHook(() => usePlayAreaBoundary(null), {
+            wrapper: QueryWrapper,
+        });
+
+        expect(result.current.fetchStatus).toBe("idle");
+        expect(result.current.data).toBeUndefined();
+    });
+
+    it("is disabled for bundled play area IDs", () => {
+        const { result } = renderHook(() => usePlayAreaBoundary(358674), {
+            wrapper: QueryWrapper,
+        });
+
+        // Bundled Osaka — enabled=false, should not fetch.
+        expect(result.current.fetchStatus).toBe("idle");
+    });
+
+    it("fetches a non-bundled boundary and returns the play area", async () => {
+        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
+        (globalThis.fetch as jest.Mock).mockResolvedValue(
+            makeOverpassResponse(),
+        );
+
+        const { result } = renderHook(() => usePlayAreaBoundary(999999), {
+            wrapper: QueryWrapper,
+        });
+
+        // Wait for the query to settle.
+        await act(async () => {
+            // useQuery is async — wait for it to resolve.
+            await new Promise((resolve) => setTimeout(resolve, 100));
+        });
+
+        expect(result.current.data).not.toBeUndefined();
+        expect(result.current.data!.osmId).toBe(999999);
     });
 });
