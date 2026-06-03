@@ -67,7 +67,7 @@ export function OsmMatchingCandidatesModal({
                                 selectedOsmType === candidate.osmType;
                             return (
                                 <Pressable
-                                    accessibilityLabel={`${candidate.name}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
+                                    accessibilityLabel={`${candidate.name}${candidate.iata ? ` (${candidate.iata})` : ""}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
                                     onPress={() => {
@@ -88,6 +88,9 @@ export function OsmMatchingCandidatesModal({
                                             numberOfLines={1}
                                         >
                                             {candidate.name}
+                                            {candidate.iata
+                                                ? ` (${candidate.iata})`
+                                                : ""}
                                         </Text>
                                     </View>
                                     {candidate.distanceMeters !== undefined ? (
