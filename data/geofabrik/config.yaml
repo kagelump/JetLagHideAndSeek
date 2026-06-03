@@ -5,6 +5,9 @@
 cacheDir: cache
 outputDir: generated
 notice: NOTICE.md
+# Base URL where packs are hosted (used in packs.json manifest).
+# Set to your CDN URL before publishing packs.
+packsBaseUrl: "https://<cdn>/poi"
 
 # POI tag keys — nodes with these tags are considered Points of Interest.
 # This is used by the legacy --poi stage (node-only, key-level).
@@ -30,6 +33,7 @@ poiNodeKeys:
 regions:
     - id: japan-kanto
       label: Kantō, Japan
+      bundle: true # shipped in the app binary
       url: "https://download.geofabrik.de/asia/japan/kanto-latest.osm.pbf"
       relations:
           - id: 19631009
@@ -38,3 +42,24 @@ regions:
           - id: 1543125
             name: Tokyo Prefecture
             name_ja: "東京都"
+    - id: japan-kansai
+      label: Kansai, Japan
+      url: "https://download.geofabrik.de/asia/japan/kansai-latest.osm.pbf"
+    - id: japan-chubu
+      label: Chūbu, Japan
+      url: "https://download.geofabrik.de/asia/japan/chubu-latest.osm.pbf"
+    - id: japan-tohoku
+      label: Tōhoku, Japan
+      url: "https://download.geofabrik.de/asia/japan/tohoku-latest.osm.pbf"
+    - id: japan-chugoku
+      label: Chūgoku, Japan
+      url: "https://download.geofabrik.de/asia/japan/chugoku-latest.osm.pbf"
+    - id: japan-kyushu
+      label: Kyūshū, Japan
+      url: "https://download.geofabrik.de/asia/japan/kyushu-latest.osm.pbf"
+    - id: japan-shikoku
+      label: Shikoku, Japan
+      url: "https://download.geofabrik.de/asia/japan/shikoku-latest.osm.pbf"
+    - id: japan-hokkaido
+      label: Hokkaidō, Japan
+      url: "https://download.geofabrik.de/asia/japan/hokkaido-latest.osm.pbf"

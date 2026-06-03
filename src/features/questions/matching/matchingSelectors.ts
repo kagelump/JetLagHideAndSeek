@@ -40,9 +40,7 @@ export const CATEGORY_SELECTORS: Partial<
     "movie-theater": [{ match: [{ key: "amenity", value: "cinema" }] }],
     hospital: [{ match: [{ key: "amenity", value: "hospital" }] }],
     library: [{ match: [{ key: "amenity", value: "library" }] }],
-    "foreign-consulate": [
-        { match: [{ key: "diplomatic", value: "consulate" }] },
-    ],
+    "foreign-consulate": [{ match: [{ key: "diplomatic", value: "embassy" }] }],
     // railway=station already covers station=subway (the latter is a subset).
     "station-name-length": [{ match: [{ key: "railway", value: "station" }] }],
     // admin-1st..4th map to boundary=administrative relations and are intentionally

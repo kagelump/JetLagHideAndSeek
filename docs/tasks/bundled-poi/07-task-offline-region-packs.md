@@ -2,8 +2,10 @@
 
 **Epic:** [Bundled Offline POIs](epic.md)
 **Phase:** 2 (scale)
-**Status:** Not started
-**Depends on:** 01–05 (registry, pipeline, loader, seam, cache integration)
+**Status:** In progress — all sub-deliverables implemented and verified (pipeline, runtime, UI, tests, native prebuild); CDN hosting deferred (out of scope). Remaining: on-device end-to-end test (install a pack, restart app, verify matching resolves locally).
+**Depends on:** 01–06 — **Phase 1 is shipped** (branch `bundled-offline-pois`). The registry,
+pipeline (`buildColumnar`/`runBundleStage`), loader (`bundledPois.ts`), seam
+(`resolveBboxFeatures`), and cache integration all exist; this task builds on them.
 **Blocks:** —
 
 ## Objective
@@ -16,6 +18,42 @@ task 04 seam serves it transparently.
 
 This is the scale-out path. Do not start it until Phase 1 (Kantō bundled) is shipped and
 validated.
+
+## Phase 1 baseline (reuse, don't rebuild)
+
+Phase 1 already shipped the machinery this task extends. Verify against the code (branch
+`bundled-offline-pois`), but as built:
+
+- **The registry is already dynamic.** `bundledPois.ts` exposes `regionLoaders`
+  (`Map<string, () => RawRegion>`) and a `REGIONS: RegionMeta[]` coverage list, with
+  `registerTestRegion(id, raw)` / `unregisterTestRegion(id)` already adding/removing both.
+  It is **not** a hard-coded switch — packs register through this same mechanism.
+  Generalize the `*TestRegion` helpers into a public `registerRegion`/`unregisterRegion`
+  (or a pack-specific sibling) rather than refactoring from scratch.
+- **Memoization + guards exist.** `loadRegionRaw` memoizes via `regionCache`,
+  `getBundledCategoryFeatures` via `categoryFeatureCache` (both cleared by
+  `clearBundledRegionCache`), and there is a `schemaVersion !== 1` reject guard. Packs get
+  all of this for free.
+- **The reducer exists.** `data/geofabrik/scripts/poiReducer.mjs` exports `buildColumnar` /
+  `computeStats`; `fetch-geofabrik.mjs` `runBundleStage` writes the per-region `.json` +
+  stats. Pack `.gz` emission extends this stage — no new reducer.
+- **The seam is coverage-driven and validated.** `resolveBboxFeatures` dispatches on
+  `regionCoveringBbox`; Phase 1 proved a region is served with **zero** changes to
+  `featureSource.ts` / `osmMatchingCache.ts` once registered.
+
+### ⚠️ Blocker to resolve first: the loader is synchronous
+
+`loadRegionRaw` is **sync** (`(): RawRegion | null`) and `regionLoaders` holds **sync**
+thunks (`() => RawRegion`) because Phase 1 loads via Metro `require()`. Downloaded packs
+live on the filesystem and `expo-file-system` reads are **async** — a sync thunk cannot
+call `readAsStringAsync`. Pick one:
+
+- **Recommended:** inflate + parse the pack into memory **once at install/registration**
+  and register a sync thunk returning the parsed object (`() => parsed`). Keeps the entire
+  Phase 1 loader path unchanged; pack stays resident (evict on `removePack`).
+- **Alternative:** make `loadRegionRaw` async and propagate up through
+  `getBundledCategoryFeatures` → `localBboxFeatures` → `resolveBboxFeatures` (already
+  `async`). More invasive; only if packs are too large to hold in memory.
 
 ## Context — why this is separate from Phase 1
 
@@ -61,6 +99,20 @@ Extend task 02's stage:
     ```
 - Add a CI size-budget check: fail if any pack exceeds a configured budget (e.g. 8 MB gz).
 
+> **Reuse, don't duplicate:** `runBundleStage` / `buildColumnar` / `computeStats` already
+> produce the per-region columnar object and gzip size. Add `.gz` _writing_ (the bundle
+> stage currently only sizes it for stats) for the non-bundled regions.
+>
+> **Pack outputs are build artifacts, not committed.** Write them to a dir (e.g.
+> `data/geofabrik/dist/poi/`) that is in **both** `.gitignore` and `.prettierignore` —
+> Phase 1 learned the hard way that `prettier`/`jest` don't read `.gitignore` and crash on
+> large generated files. (Contrast with Phase 1's `assets/poi/`, which **is** committed
+> because it ships in the binary.)
+>
+> **DX:** fold pack emission into the existing `pnpm data:poi` flow (or a sibling
+> `data:poi:packs`) — keep the "one command regenerates everything" property, don't add an
+> unrelated top-level command.
+
 ### B. Runtime: download, verify, persist, inflate
 
 `src/features/questions/matching/regionPacks.ts`:
@@ -76,18 +128,19 @@ Extend task 02's stage:
 
 ### C. Wire installed packs into coverage + loading
 
-Refactor task 03's `bundledPois.ts` so the region registry is **dynamic**:
+The registry is **already dynamic** (see [Phase 1 baseline](#phase-1-baseline-reuse-dont-rebuild)) —
+do not rebuild it. Instead:
 
-- Replace the static `regions.json` + `switch` with a registry that merges:
-    1. in-binary bundled regions (Phase 1), and
-    2. installed downloaded packs (from the installed-pack index).
-- `loadRegionRaw(regionId)` must load downloaded packs from the filesystem
-  (`FileSystem.readAsStringAsync` → `JSON.parse`), still **lazily** and memoized.
-- `regionCoveringBbox` / `regionCoveringPoint` consider both sources.
+- On app start, read the installed-pack index and **register** each pack into
+  `regionLoaders` + `REGIONS` (generalize `registerTestRegion`). Per the sync-loader
+  blocker above, register a thunk over an in-memory parsed pack (inflate at install).
+- `regionCoveringBbox` / `regionCoveringPoint` already iterate `REGIONS`, so registered
+  packs become covered automatically. `regionCoveringBbox` returns the **first** match →
+  make precedence deterministic (see Coverage overlap).
+- The `schemaVersion` guard and memoization caches already apply to registered packs.
 
-Because task 04's `resolveBboxFeatures` already dispatches on coverage, **no change to the
-seam or the cache is needed** — once a pack is installed and registered, its region is
-served locally automatically.
+Because `resolveBboxFeatures` dispatches purely on coverage, **no change to
+`featureSource.ts` or `osmMatchingCache.ts` is needed** — Phase 1 validated this.
 
 ### D. UI: pack management
 
@@ -108,9 +161,13 @@ served locally automatically.
 
 **Modify:**
 
-- `src/features/questions/matching/bundledPois.ts` — dynamic registry (downloaded + bundled)
-- `package.json` — add `expo-file-system`; add `data:geofabrik:packs` script
-- `config.yaml` — ensure all target regions are listed
+- `src/features/questions/matching/bundledPois.ts` — generalize `registerTestRegion`/
+  `unregisterTestRegion` into a public `registerRegion`/`unregisterRegion`; resolve the
+  sync-loader blocker (above).
+- `package.json` — add `expo-file-system` (**native dep → run `expo prebuild` + rebuild per
+  AGENTS "Native Build Rules"**); fold pack emission into the `data:poi` flow.
+- `config.yaml` — add the target regions (currently only `japan-kanto`).
+- `.gitignore` + `.prettierignore` — ignore the pack output dir (`data/geofabrik/dist/`).
 
 ## Edge cases
 
@@ -122,10 +179,10 @@ served locally automatically.
   packs if many are installed.
 - **Offline during download** — the mutation fails gracefully; the bundled region still
   works.
-- **Coverage overlap** — bundled Kantō vs a downloaded Japan-wide pack: prefer the more
-  specific / fresher source, or dedup at merge (`deduplicateFeatures` already runs in the
-  cell cache). Define a deterministic precedence (e.g. installed pack > bundled if newer
-  `generatedAt`).
+- **Coverage overlap** — bundled Kantō vs a downloaded Japan-wide pack: `regionCoveringBbox`
+  returns the **first** matching region in `REGIONS`, so precedence = registration/sort
+  order. Make it deterministic (e.g. sort `REGIONS` smallest-bbox-first, or prefer newer
+  `generatedAt`); overlaps are also deduped at merge by `deduplicateFeatures`.
 - **Inflate cost** — gunzip of a multi-MB pack on the JS thread can jank; inflate once at
   install time (write the plain `.json`), not on every load. Consider chunked/async inflate
   for large packs.
@@ -134,8 +191,9 @@ served locally automatically.
 
 - `regionPacks.ts`: mock `expo-file-system` + `fflate`; test download → verify → inflate →
   register; test sha mismatch rejection; test removal/eviction; test schema-version reject.
-- Dynamic registry: a region becomes "covered" after a pack is registered; coverage reverts
-  after removal.
+- Dynamic registry: a region becomes "covered" after registration; reverts after removal.
+  Reuse the existing `registerTestRegion`/`unregisterTestRegion` + `clearBundledRegionCache`
+  helpers and the `bundledPois.test.ts` / `featureSource.test.ts` patterns.
 - Integration: with a downloaded pack registered, `resolveBboxFeatures` serves it locally
   (no Overpass) — reuse task 04/05 tests with a filesystem-backed region.
 - Pipeline: pack manifest has correct `bytes`/`sha256`; size-budget guard fails on an
@@ -149,7 +207,7 @@ served locally automatically.
       resolve offline with zero Overpass calls.
 - [ ] Packs can be removed and storage is reclaimed.
 - [ ] Corrupt/oversized/old-schema packs are rejected safely.
-- [ ] No change required to `featureSource.ts` or `osmMatchingCache.ts` (coverage-driven).
+- [ ] No change to `featureSource.ts` or `osmMatchingCache.ts` (coverage-driven — validated in Phase 1).
 - [ ] `pnpm check` + `pnpm test` pass.
 
 ## Out of scope

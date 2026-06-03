@@ -1,6 +1,7 @@
 /* global console, process, fetch */
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
@@ -12,6 +13,7 @@ import YAML from "yaml";
 import {
     buildColumnar,
     computeStats,
+    deduplicateRecords,
     loadCategoryOf,
     reduceFeature,
 } from "./poiReducer.mjs";
@@ -33,6 +35,7 @@ async function main() {
     const cacheOnly = process.argv.includes("--cache-only");
     const extractPoi = process.argv.includes("--poi");
     const runBundle = process.argv.includes("--bundle");
+    const runPacks = process.argv.includes("--packs");
     const checkMode = process.argv.includes("--check");
     const cacheDir = resolve(geofabrikDir, config.cacheDir ?? "cache");
     const outputDir = resolve(geofabrikDir, config.outputDir ?? "generated");
@@ -45,13 +48,17 @@ async function main() {
           )
         : resolve(root, "assets", "poi");
 
+    // Pack artifacts go under data/geofabrik/dist/poi/ (git-ignored).
+    const packsDir = resolve(geofabrikDir, "dist", "poi");
+
     await mkdir(cacheDir, { recursive: true });
     await mkdir(outputDir, { recursive: true });
-    await mkdir(bundleDir, { recursive: true });
+    if (runBundle) await mkdir(bundleDir, { recursive: true });
+    if (runPacks) await mkdir(packsDir, { recursive: true });
 
-    // Load the selector registry for the bundle stage.
+    // Load the selector registry for the bundle / packs stage.
     let categoryOf;
-    if (runBundle) {
+    if (runBundle || runPacks) {
         const selectorsPath = resolve(geofabrikDir, "poi-selectors.json");
         if (!existsSync(selectorsPath)) {
             throw new Error(
@@ -62,6 +69,7 @@ async function main() {
     }
 
     const regionMetas = [];
+    const packMetas = [];
 
     for (const region of config.regions) {
         console.log(`\n=== ${region.label} (${region.id}) ===`);
@@ -99,21 +107,52 @@ async function main() {
             await runPoiStage(config, region, pbfPath, pbfStat, outputDir);
         }
 
-        // 3. Bundle stage (--bundle)
-        if (runBundle) {
-            const meta = await runBundleStage(
+        // 3. Bundle stage (--bundle) — only for regions flagged `bundle: true`.
+        const isBundled = Boolean(region.bundle);
+        if (runBundle && isBundled) {
+            const result = await runBundleStage(
                 region,
                 pbfPath,
                 categoryOf,
                 bundleDir,
             );
-            regionMetas.push(meta);
+            regionMetas.push(result.meta);
+            // If also running packs, reuse the serialized columnar.
+            if (runPacks) {
+                const packMeta = await emitPack(
+                    result.meta,
+                    result.serialized,
+                    packsDir,
+                    config.packsBaseUrl,
+                );
+                packMetas.push(packMeta);
+            }
+        } else if (runPacks) {
+            // Packs stage: process every region (both bundled and pack-only).
+            const result = await runBundleStage(
+                region,
+                pbfPath,
+                categoryOf,
+                packsDir,
+            );
+            const packMeta = await emitPack(
+                result.meta,
+                result.serialized,
+                packsDir,
+                config.packsBaseUrl,
+            );
+            packMetas.push(packMeta);
         }
     }
 
     // After all regions, write the regions index.
     if (runBundle) {
         await writeRegionsIndex(regionMetas, bundleDir, checkMode);
+    }
+
+    // After all regions, write the packs manifest.
+    if (runPacks) {
+        await writePacksManifest(packMetas, packsDir);
     }
 
     // In --check mode, compare generated bundle against committed.
@@ -325,9 +364,17 @@ async function runBundleStage(region, pbfPath, categoryOf, bundleDir) {
             `  [bundle] Reduced ${records.length.toLocaleString()} named features`,
         );
 
+        // 3a. Deduplicate: OSM may have both a node and a way for the same POI.
+        const deduped = deduplicateRecords(records);
+        if (deduped.length < records.length) {
+            console.log(
+                `  [bundle] Deduped: ${deduped.length.toLocaleString()} (removed ${(records.length - deduped.length).toLocaleString()} duplicates)`,
+            );
+        }
+
         // 4. Build columnar JSON.
         const generatedAt = new Date().toISOString();
-        const columnar = buildColumnar(records, {
+        const columnar = buildColumnar(deduped, {
             id: region.id,
             label: region.label,
             bbox: bbox ?? region.bbox ?? [0, 0, 0, 0],
@@ -367,11 +414,14 @@ async function runBundleStage(region, pbfPath, categoryOf, bundleDir) {
         }
 
         return {
-            id: region.id,
-            label: region.label,
-            bbox: columnar.bbox,
-            totalCount: columnar.totalCount,
-            file: `${region.id}.json`,
+            meta: {
+                id: region.id,
+                label: region.label,
+                bbox: columnar.bbox,
+                totalCount: columnar.totalCount,
+                file: `${region.id}.json`,
+            },
+            serialized,
         };
     } finally {
         // Clean up temp files.
@@ -382,6 +432,65 @@ async function runBundleStage(region, pbfPath, categoryOf, bundleDir) {
             // best-effort cleanup
         }
     }
+}
+
+// ─── Packs emission ─────────────────────────────────────────────────────
+
+/** Maximum gzipped pack size in bytes (8 MB). */
+const PACK_SIZE_BUDGET_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Gzips the columnar JSON, writes `<id>.json.gz` to packsDir, and returns
+ * pack manifest metadata with byte size and sha256.
+ */
+async function emitPack(meta, serialized, packsDir, packsBaseUrl) {
+    const gzipped = gzipSync(serialized, { level: 9 });
+    // sha256 = uncompressed JSON (verified at runtime after inflation).
+    const sha256 = createHash("sha256").update(serialized).digest("hex");
+    // md5 = gzipped bytes (verified at download time via expo-file-system).
+    const md5 = createHash("md5").update(gzipped).digest("hex");
+
+    if (gzipped.length > PACK_SIZE_BUDGET_BYTES) {
+        throw new Error(
+            `Pack ${meta.id} gzipped size ${(gzipped.length / 1024 / 1024).toFixed(2)} MB ` +
+                `exceeds budget of ${(PACK_SIZE_BUDGET_BYTES / 1024 / 1024).toFixed(0)} MB. ` +
+                `Consider splitting the region or raising the budget.`,
+        );
+    }
+
+    const gzPath = resolve(packsDir, `${meta.id}.json.gz`);
+    await writeFile(gzPath, gzipped);
+    console.log(
+        `  [packs] Wrote ${meta.id}.json.gz (${(gzipped.length / 1024 / 1024).toFixed(2)} MB, sha256: ${sha256.slice(0, 12)}…)`,
+    );
+
+    return {
+        id: meta.id,
+        label: meta.label,
+        bbox: meta.bbox,
+        totalCount: meta.totalCount,
+        url: `${packsBaseUrl ?? "https://<cdn>/poi"}/${meta.id}.json.gz`,
+        bytes: gzipped.length,
+        sha256,
+        md5,
+    };
+}
+
+async function writePacksManifest(packMetas, packsDir) {
+    // totalCount is filled from the bundle stage result — grab it from the
+    // per-region .json if available (written by runBundleStage when
+    // packs-only).
+    const generatedAt = new Date().toISOString();
+    const manifest = {
+        schemaVersion: 1,
+        generatedAt,
+        packs: packMetas,
+    };
+    const manifestPath = resolve(packsDir, "packs.json");
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+    console.log(
+        `\n  Wrote packs manifest (${packMetas.length} packs) to ${manifestPath}`,
+    );
 }
 
 // ─── Regions index ──────────────────────────────────────────────────────

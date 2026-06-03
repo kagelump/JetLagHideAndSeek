@@ -46,9 +46,21 @@ const REGIONS: RegionMeta[] = (
  * Injectable thunk registry: regionId → lazy loader function.
  *
  * Production populates this with `require()`-based thunks (one `case` per
- * bundled region). Tests inject fixtures without touching Metro's resolver.
+ * bundled region). Tests and installed packs register thunks dynamically.
  */
 export const regionLoaders = new Map<string, () => RawRegion>();
+
+// ─── Coverage precedence ────────────────────────────────────────────────
+
+/** Approximate bbox area in square degrees (for sort precedence). */
+function bboxArea(b: Bbox): number {
+    return (b[2] - b[0]) * (b[3] - b[1]);
+}
+
+/** Sort REGIONS smallest-bbox-first so more specific packs win coverage. */
+function sortRegionsByArea(): void {
+    REGIONS.sort((a, b) => bboxArea(a.bbox) - bboxArea(b.bbox));
+}
 
 // ─── Production loader registration ─────────────────────────────────────
 
@@ -69,6 +81,24 @@ for (const region of REGIONS) {
                     `[bundledPois] No loader registered for region "${region.id}" — it will not resolve.`,
                 );
             }
+    }
+}
+
+// Sort initially so bundled regions have deterministic precedence.
+sortRegionsByArea();
+
+// Guard: every entry in regions.json must have a loader registered above,
+// otherwise the region is "covered-but-empty" and matching silently returns
+// nothing instead of falling back to Overpass.
+if (__DEV__) {
+    for (const r of REGIONS) {
+        if (!regionLoaders.has(r.id)) {
+            console.error(
+                `[bundledPois] FATAL: region "${r.id}" listed in regions.json ` +
+                    `but no loader registered. Add a require() case in bundledPois.ts ` +
+                    `or remove the region from config.yaml's bundle list.`,
+            );
+        }
     }
 }
 
@@ -166,6 +196,29 @@ export function getBundledCategoryFeatures(
         return [];
     }
 
+    // Sanity bound — the largest real category is park (~30k in Kantō,
+    // ~200k across all Japan). 500k is generous headroom.
+    if (
+        col.count < 0 ||
+        col.count > 500_000 ||
+        col.lon.length !== col.count ||
+        col.lat.length !== col.count ||
+        col.name.length !== col.count ||
+        col.osmId.length !== col.count ||
+        col.osmType.length !== col.count ||
+        (col.nameLength && col.nameLength.length !== col.count)
+    ) {
+        if (__DEV__) {
+            console.error(
+                `[bundledPois] Category "${regionId}:${category}" has inconsistent ` +
+                    `column lengths (count=${col.count}, lon=${col.lon.length}, ` +
+                    `lat=${col.lat.length}) — treating as empty.`,
+            );
+        }
+        categoryFeatureCache.set(key, []);
+        return [];
+    }
+
     const out: OsmFeature[] = new Array(col.count);
     for (let i = 0; i < col.count; i++) {
         const f: OsmFeature = {
@@ -188,20 +241,34 @@ export function getRegionGeneratedAt(regionId: string): string | null {
     return loadRegionRaw(regionId)?.generatedAt ?? null;
 }
 
-// ─── Test support ────────────────────────────────────────────────────────
+// ─── Public registry management ─────────────────────────────────────────
+
+/** Purge per-region category-feature cache entries for a given region id. */
+function purgeCategoryCache(regionId: string): void {
+    const prefix = `${regionId}:`;
+    for (const key of categoryFeatureCache.keys()) {
+        if (key.startsWith(prefix)) categoryFeatureCache.delete(key);
+    }
+}
 
 /** Clears the in-memory region cache and restores module state. Call in tests to reset state. */
 export function clearBundledRegionCache(): void {
     regionCache.clear();
     categoryFeatureCache.clear();
-    // Empty REGIONS — tests re-register their fixtures via registerTestRegion.
+    // Empty REGIONS — tests re-register their fixtures via registerRegion.
     REGIONS.length = 0;
 }
 
-/** Registers a test fixture in the loader map. */
-export function registerTestRegion(id: string, raw: RawRegion): void {
+/**
+ * Registers a region's loader and metadata so coverage functions see it.
+ *
+ * Used by: bundled region registration at import time, test fixtures,
+ * and installed downloadable packs loaded from the filesystem.
+ */
+export function registerRegion(id: string, raw: RawRegion): void {
     regionLoaders.set(id, () => raw);
     regionCache.delete(id);
+    purgeCategoryCache(id);
     // Also register metadata so coverage functions see the region.
     const existing = REGIONS.findIndex((r) => r.id === id);
     const meta: RegionMeta = {
@@ -216,12 +283,23 @@ export function registerTestRegion(id: string, raw: RawRegion): void {
     } else {
         REGIONS.push(meta);
     }
+    // Keep precedence deterministic: smallest bbox first.
+    sortRegionsByArea();
 }
 
-/** Removes a test region from metadata and loaders. */
-export function unregisterTestRegion(id: string): void {
+/** Removes a region from metadata and loaders (e.g. pack eviction). */
+export function unregisterRegion(id: string): void {
     regionLoaders.delete(id);
     regionCache.delete(id);
+    purgeCategoryCache(id);
     const idx = REGIONS.findIndex((r) => r.id === id);
     if (idx >= 0) REGIONS.splice(idx, 1);
 }
+
+// ─── Backward-compat aliases (prefer registerRegion / unregisterRegion) ──
+
+/** @deprecated Use registerRegion instead. */
+export const registerTestRegion = registerRegion;
+
+/** @deprecated Use unregisterRegion instead. */
+export const unregisterTestRegion = unregisterRegion;

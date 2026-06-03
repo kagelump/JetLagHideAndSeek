@@ -31,6 +31,7 @@ import {
     QuestionDetailScreen,
 } from "@/features/questions/QuestionDetailScreen";
 import { QuestionsScreen } from "@/features/questions/QuestionsScreen";
+import { OfflineDataScreen } from "@/features/sheet/OfflineDataScreen";
 import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";
@@ -66,6 +67,7 @@ const routeEyebrows: Record<SheetRouteName, string> = {
     "hiding-zone": "Hiding Zones",
     main: "Mobile v2",
     matching: "Matching",
+    "offline-data": "Offline Data",
     "play-area": "Play Area",
     questions: "Questions",
     "question-detail": "Radar Question",
@@ -312,6 +314,15 @@ function renderRouteContent(
                     onBack={() => onNavigate("settings")}
                 >
                     <HidingZoneScreen />
+                </ChildSheetShell>
+            );
+        case "offline-data":
+            return (
+                <ChildSheetShell
+                    eyebrowLabel={eyebrowLabel}
+                    onBack={() => onNavigate("settings")}
+                >
+                    <OfflineDataScreen />
                 </ChildSheetShell>
             );
         case "questions":
