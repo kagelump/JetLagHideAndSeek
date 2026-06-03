@@ -152,6 +152,9 @@ export function OsmMatchingQuestionDetailScreen({
         osmId: number;
         osmType: "node" | "way" | "relation";
     }) => {
+        console.log(
+            `[detailTap] select: writing selectedOsmId=${candidate.osmId} selectedOsmType=${candidate.osmType}`,
+        );
         updateQuestion(question.id, (current) => {
             if (current.type !== "matching") return current;
             return {
@@ -197,11 +200,20 @@ export function OsmMatchingQuestionDetailScreen({
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
                                     onPress={() => {
+                                        const selId = question.selectedOsmId;
+                                        const selType =
+                                            question.selectedOsmType;
+                                        const candId = candidate.osmId;
+                                        const candType = candidate.osmType;
                                         const isSelected =
-                                            question.selectedOsmId ===
-                                                candidate.osmId &&
-                                            question.selectedOsmType ===
-                                                candidate.osmType;
+                                            selId === candId &&
+                                            selType === candType;
+                                        console.log(
+                                            `[detailTap] top3: selected=${String(selId)}/${String(selType)} ` +
+                                                `candidate=${candId}/${candType} ` +
+                                                `isSelected=${isSelected} → ` +
+                                                `${isSelected ? "openDetail" : "select"}`,
+                                        );
                                         if (isSelected) {
                                             setDetailFeature(candidate);
                                             setDetailVisible(true);

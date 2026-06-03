@@ -78,10 +78,17 @@ export function OsmMatchingCandidatesModal({
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
                                     onPress={() => {
+                                        const candId = candidate.osmId;
+                                        const candType = candidate.osmType;
                                         const isSelected =
-                                            selectedOsmId === candidate.osmId &&
-                                            selectedOsmType ===
-                                                candidate.osmType;
+                                            selectedOsmId === candId &&
+                                            selectedOsmType === candType;
+                                        console.log(
+                                            `[detailTap] modal: selected=${String(selectedOsmId)}/${String(selectedOsmType)} ` +
+                                                `candidate=${candId}/${candType} ` +
+                                                `isSelected=${isSelected} hasShowDetail=${!!onShowDetail} → ` +
+                                                `${isSelected && onShowDetail ? "openDetail" : "select"}`,
+                                        );
                                         if (isSelected && onShowDetail) {
                                             onShowDetail(candidate);
                                         } else {
