@@ -460,11 +460,13 @@ describe("MapAppScreen", () => {
             .props.shape;
         expect(radarShape.features).toHaveLength(1);
         expect(radarShape.features[0].properties.distanceMeters).toBe(500);
+        // Combined-inside-mask source is kept mounted to avoid MapLibre
+        // re-registration issues (PlayAreaMaskLayers.tsx).
         expect(
             screen
                 .getAllByTestId("map-shape-source")
                 .some((s) => s.props.id === "combined-inside-mask-19631009"),
-        ).toBe(false);
+        ).toBe(true);
         expect(
             screen
                 .getAllByTestId("map-shape-source")

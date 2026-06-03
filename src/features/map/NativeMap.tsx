@@ -258,6 +258,7 @@ export function NativeMap({ isQuestionDetailRoute, onPress }: NativeMapProps) {
                     />
                     <OsmMatchingLayers
                         osmMatching={questionMapRenderState.osmMatching}
+                        visible={isQuestionDetailRoute}
                     />
                     <PlayAreaBoundaryLayer playArea={playArea} />
 

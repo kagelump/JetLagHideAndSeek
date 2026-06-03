@@ -2,19 +2,29 @@ import type { OsmMatchingRenderState } from "@/features/questions/matching/match
 
 import { MLCircleLayer, MLShapeSource } from "./mapLibrePrimitives";
 
+const EMPTY_POI_FEATURES = {
+    features: [],
+    type: "FeatureCollection",
+} as const;
+
 type OsmMatchingLayersProps = {
     osmMatching: OsmMatchingRenderState;
+    visible: boolean;
 };
 
-export function OsmMatchingLayers({ osmMatching }: OsmMatchingLayersProps) {
-    const hasPois = osmMatching.poiFeatures.features.length > 0;
-
-    if (!hasPois) {
-        return null;
-    }
+export function OsmMatchingLayers({
+    osmMatching,
+    visible,
+}: OsmMatchingLayersProps) {
+    // Always render the ShapeSource — even with an empty FeatureCollection — so
+    // the source id stays registered in the MapLibre style. If we return null
+    // and later re-add a source with the same id, MapLibre GL Native can fail
+    // to re-register it (particularly during gestures), causing POI markers to
+    // disappear and never come back.
+    const poiFeatures = visible ? osmMatching.poiFeatures : EMPTY_POI_FEATURES;
 
     return (
-        <MLShapeSource id="osm-matching-pois" shape={osmMatching.poiFeatures}>
+        <MLShapeSource id="osm-matching-pois" shape={poiFeatures}>
             <MLCircleLayer
                 filter={["==", "isSelected", true]}
                 id="osm-matching-poi-selected"

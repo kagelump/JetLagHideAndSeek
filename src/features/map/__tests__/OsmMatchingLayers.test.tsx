@@ -39,9 +39,9 @@ const mockOsmMatching: OsmMatchingRenderState = {
 };
 
 describe("OsmMatchingLayers", () => {
-    it("renders shape source with POI features", () => {
+    it("renders shape source with POI features when visible", () => {
         const screen = render(
-            <OsmMatchingLayers osmMatching={mockOsmMatching} />,
+            <OsmMatchingLayers osmMatching={mockOsmMatching} visible />,
         );
 
         const source = screen
@@ -53,7 +53,7 @@ describe("OsmMatchingLayers", () => {
 
     it("renders selected POI layer with red stroke filter", () => {
         const screen = render(
-            <OsmMatchingLayers osmMatching={mockOsmMatching} />,
+            <OsmMatchingLayers osmMatching={mockOsmMatching} visible />,
         );
 
         const selectedLayer = screen
@@ -67,7 +67,7 @@ describe("OsmMatchingLayers", () => {
 
     it("renders unselected POI layer with black stroke filter", () => {
         const screen = render(
-            <OsmMatchingLayers osmMatching={mockOsmMatching} />,
+            <OsmMatchingLayers osmMatching={mockOsmMatching} visible />,
         );
 
         const unselectedLayer = screen
@@ -83,14 +83,34 @@ describe("OsmMatchingLayers", () => {
         expect(unselectedLayer?.props.style.circleRadius).toBe(6);
     });
 
-    it("renders nothing when no POI features", () => {
+    it("keeps shape source mounted even with empty POI features", () => {
         const emptyState: OsmMatchingRenderState = {
             hitMaskFeatures: { features: [], type: "FeatureCollection" },
             missMaskFeatures: { features: [], type: "FeatureCollection" },
             poiFeatures: { features: [], type: "FeatureCollection" },
         };
-        const screen = render(<OsmMatchingLayers osmMatching={emptyState} />);
+        const screen = render(
+            <OsmMatchingLayers osmMatching={emptyState} visible />,
+        );
 
-        expect(screen.queryByTestId("map-shape-source")).toBeNull();
+        // Source stays mounted with 0 features — prevents MapLibre from
+        // failing to re-register the source id when POIs come and go.
+        const source = screen
+            .getAllByTestId("map-shape-source")
+            .find((s) => s.props.id === "osm-matching-pois");
+        expect(source).toBeTruthy();
+        expect(source?.props.shape.features).toHaveLength(0);
+    });
+
+    it("clears POI features when not visible, keeping source mounted", () => {
+        const screen = render(
+            <OsmMatchingLayers osmMatching={mockOsmMatching} visible={false} />,
+        );
+
+        const source = screen
+            .getAllByTestId("map-shape-source")
+            .find((s) => s.props.id === "osm-matching-pois");
+        expect(source).toBeTruthy();
+        expect(source?.props.shape.features).toHaveLength(0);
     });
 });

@@ -35,9 +35,10 @@ export function CombinedInsideMaskLayer({
     combinedInsideMask,
     osmId,
 }: CombinedInsideMaskLayerProps) {
-    if (combinedInsideMask.features.length === 0) {
-        return null;
-    }
+    // Always render the ShapeSource — even with an empty FeatureCollection — so
+    // the source id stays registered in the MapLibre style (same reasoning as
+    // OsmMatchingLayers). Returning null and later re-adding with the same id
+    // can fail non-deterministically in MapLibre GL Native.
 
     return (
         <MLShapeSource
