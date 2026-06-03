@@ -3,8 +3,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Position } from "@/shared/geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
 
+import type { FetchDebugInfo, FetchOrigin } from "./fetchDebug";
+import { getBundledCategoryFeatures, regionCoveringPoint } from "./bundledPois";
 import { resolveBboxFeatures } from "./featureSource";
 import { getCategoryConfig } from "./matchingCategories";
+import { isBundleableCategory } from "./matchingSelectors";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
 import {
     DEFAULT_SEARCH_RADIUS_METERS,
@@ -66,6 +69,8 @@ export type OsmMatchingCacheSource = "memory" | "disk" | "stale" | "network";
 export type OsmMatchingFeaturesResult = {
     candidates: OsmFeatureWithDistance[];
     source: OsmMatchingCacheSource;
+    /** Fetch-debug metadata for the question-sheet footer. */
+    debug?: FetchDebugInfo;
 };
 
 // ─── Cell-based cache types ────────────────────────────────────────────────
@@ -120,13 +125,19 @@ let manifestMutex: Promise<void> = Promise.resolve();
 const cellMemoryLru = new Map<string, OsmMatchingCellEntry>();
 
 // Per-cell in-flight deduplication.
-const cellInflight = new Map<string, Promise<OsmFeature[]>>();
+const cellInflight = new Map<string, Promise<CellFetchResult>>();
 
 // Cell manifest loaded lazily.
 let cellManifestCache: OsmMatchingCellManifest | null = null;
 
 // Sequential promise chain for cell manifest mutations.
 let cellManifestMutex: Promise<void> = Promise.resolve();
+
+// Monotonically increasing epoch that is bumped on every clearOsmMatchingCache
+// call. In-flight fetchAndStoreCell / cellRevalidateInBackground captures the
+// epoch at start and skips persistCellEntry when it no longer matches, avoiding
+// a post-clear re-persist race.
+let cacheEpoch = 0;
 
 // ─── Spatial math ─────────────────────────────────────────────────────────────
 
@@ -591,9 +602,13 @@ function cellRevalidateInBackground(
 ): void {
     if (cellInflight.has(key)) return;
 
+    // Capture the epoch so that a clear() that fires while this revalidation
+    // is in flight prevents the resolved data from being re-persisted.
+    const epoch = cacheEpoch;
+
     const bbox = cellBbox(entry.cellIndex);
     const request = resolveBboxFeatures(entry.category, bbox)
-        .then(async (resolved) => {
+        .then(async (resolved): Promise<CellFetchResult> => {
             const fetchedAt =
                 resolved.source === "local" && resolved.generatedAt
                     ? Date.parse(resolved.generatedAt) || Date.now()
@@ -606,18 +621,19 @@ function cellRevalidateInBackground(
             cellMemorySet(key, updated);
             // Skip AsyncStorage persistence for local cells — the data
             // already lives in the app bundle. Persisting would duplicate it
-            // and bloat storage.
-            if (resolved.source !== "local") {
+            // and bloat storage. Also skip if a cache clear happened while
+            // this revalidation was in flight (epoch mismatch).
+            if (resolved.source !== "local" && cacheEpoch === epoch) {
                 await persistCellEntry(key, updated);
             }
-            return resolved.features;
+            return { features: resolved.features, sourceKind: resolved.source };
         })
-        .catch((err) => {
+        .catch(async (err): Promise<CellFetchResult> => {
             console.warn(
                 "[osmMatchingCache] cell background revalidation failed:",
                 err,
             );
-            return entry.features;
+            return { features: entry.features, sourceKind: "local" };
         })
         .finally(() => {
             cellInflight.delete(key);
@@ -626,18 +642,41 @@ function cellRevalidateInBackground(
     cellInflight.set(key, request);
 }
 
+type CellFetchResult = {
+    features: OsmFeature[];
+    /** Resolved source: "local" (bundled) or "overpass" (network). */
+    sourceKind: "local" | "overpass";
+};
+
 async function fetchAndStoreCell(
     key: string,
     category: MatchingCategory,
     cellId: string,
     bbox: { south: number; west: number; north: number; east: number },
     signal?: AbortSignal,
-): Promise<OsmFeature[]> {
+): Promise<CellFetchResult> {
     const existing = cellInflight.get(key);
-    if (existing) return existing;
+    if (existing) {
+        console.log(
+            `[fetchCell] ${category} ${cellId}: dedup — reusing in-flight`,
+        );
+        return existing;
+    }
 
+    console.log(
+        `[fetchCell] ${category} ${cellId}: fetching bbox=[${bbox.south.toFixed(2)},${bbox.west.toFixed(2)},${bbox.north.toFixed(2)},${bbox.east.toFixed(2)}]`,
+    );
+
+    // Capture the epoch so that a clear() that fires while this fetch is in
+    // flight prevents the resolved data from being re-persisted.
+    const epoch = cacheEpoch;
+
+    const t0 = Date.now();
     const request = resolveBboxFeatures(category, bbox, signal)
         .then(async (resolved) => {
+            console.log(
+                `[fetchCell] ${category} ${cellId}: resolved ${resolved.source} — ${resolved.features.length} features in ${Date.now() - t0}ms`,
+            );
             const fetchedAt =
                 resolved.source === "local" && resolved.generatedAt
                     ? Date.parse(resolved.generatedAt) || Date.now()
@@ -658,11 +697,18 @@ async function fetchAndStoreCell(
             cellMemorySet(key, entry);
             // Skip AsyncStorage persistence for local cells — the data
             // already lives in the app bundle. Persisting would duplicate it
-            // and bloat storage.
-            if (resolved.source !== "local") {
+            // and bloat storage. Also skip if a cache clear happened while
+            // this fetch was in flight (epoch mismatch).
+            if (resolved.source !== "local" && cacheEpoch === epoch) {
                 await persistCellEntry(key, entry);
             }
-            return resolved.features;
+            return { features: resolved.features, sourceKind: resolved.source };
+        })
+        .catch((err) => {
+            console.error(
+                `[fetchCell] ${category} ${cellId}: FAILED — ${String(err)}`,
+            );
+            throw err;
         })
         .finally(() => {
             cellInflight.delete(key);
@@ -840,7 +886,11 @@ export async function findMatchingFeaturesWithCellCache(
         signal?: AbortSignal;
     },
 ): Promise<OsmMatchingFeaturesResult> {
+    const startTime = Date.now();
+    let networkStartMs: number | undefined;
+
     if (!isCacheable(category)) {
+        console.log(`[cellCache] ${category}: not cacheable, returning []`);
         return { candidates: [], source: "network" };
     }
 
@@ -849,11 +899,65 @@ export async function findMatchingFeaturesWithCellCache(
         options?.requestedRadiusMeters ?? DEFAULT_SEARCH_RADIUS_METERS;
     const maxCandidates = options?.maxCandidates ?? 10;
 
+    // ── Local-bundle fast path ───────────────────────────────────────────
+    //
+    // When a bundled region covers the search center and contains the
+    // category, the cell-grid cache is pure overhead: it fetches the full
+    // bundle once per cell only to filter 99%+ of features out.  For sparse
+    // categories (e.g. commercial-airport with 10 features across all of
+    // Kantō) this turns a single-array-sort into thousands of cell fetches.
+    //
+    // Fast-path: get every feature from the covering bundle, rank by
+    // distance, and return — one region load, one sort, no cell grid.
+    if (isBundleableCategory(category)) {
+        const coveringRegion = regionCoveringPoint(lat, lon);
+        if (coveringRegion) {
+            const t0 = Date.now();
+            const all = getBundledCategoryFeatures(coveringRegion, category);
+            if (all.length > 0) {
+                const candidates = rankMatchingFeatures(
+                    all,
+                    center,
+                    maxCandidates,
+                );
+                const durationMs = Date.now() - t0;
+                console.log(
+                    `[cellCache] ${category} FAST-PATH: bundle region=${coveringRegion} all=${all.length} candidates=${candidates.length} in ${durationMs}ms`,
+                );
+                return {
+                    candidates,
+                    source: "memory",
+                    debug: {
+                        totalCount: candidates.length,
+                        origins: { "local-bundle": all.length },
+                        durationMs,
+                        status: "done",
+                        at: Date.now(),
+                    },
+                };
+            }
+            console.log(
+                `[cellCache] ${category} fast-path skipped: bundle has 0 features for this category`,
+            );
+        }
+    }
+
     // 1. Compute the set of cells that cover the search disk's bounding square.
     const neededCells = cellsForSearch(lat, lon, requestedRadius);
 
+    console.log(
+        `[cellCache] ${category} r=${requestedRadius} forceRefresh=${options?.forceRefresh ?? false} cells=${neededCells.length}`,
+    );
+
+    // Accumulate per-origin feature counts for debug metadata.
+    const originCounts: Partial<Record<FetchOrigin, number>> = {};
+
     // 2. When force-refreshing, discard cached cells and fetch everything fresh.
     if (options?.forceRefresh) {
+        console.log(
+            `[cellCache] ${category} force-refresh: fetching ${neededCells.length} cells fresh`,
+        );
+        networkStartMs = Date.now();
         const forcePromises = neededCells.map((cellId) => {
             const cellKey = makeCellCacheKey(category, cellId);
             // Discard any in-flight request so the caller does not receive a
@@ -868,16 +972,42 @@ export async function findMatchingFeaturesWithCellCache(
                 options?.signal,
             );
         });
-        const fetchedFeatures = (await Promise.allSettled(forcePromises))
-            .filter(
-                (r): r is PromiseFulfilledResult<OsmFeature[]> =>
-                    r.status === "fulfilled",
-            )
-            .flatMap((r) => r.value);
+        const settled = await Promise.allSettled(forcePromises);
+        const networkMs = Date.now() - networkStartMs;
+        const succeeded = settled.filter(
+            (r) => r.status === "fulfilled",
+        ).length;
+        const failed = settled.filter((r) => r.status === "rejected").length;
+        console.log(
+            `[cellCache] ${category} force-refresh done: ${succeeded} ok, ${failed} failed in ${networkMs}ms`,
+        );
+        const fetchedFeatures: OsmFeature[] = [];
+        for (const r of settled) {
+            if (r.status !== "fulfilled") continue;
+            const origin: FetchOrigin =
+                r.value.sourceKind === "local" ? "local-bundle" : "overpass";
+            originCounts[origin] =
+                (originCounts[origin] ?? 0) + r.value.features.length;
+            fetchedFeatures.push(...r.value.features);
+        }
+        console.log(
+            `[cellCache] ${category} force-refresh features: local=${originCounts["local-bundle"] ?? 0} overpass=${originCounts.overpass ?? 0} total=${fetchedFeatures.length}`,
+        );
         const merged = deduplicateFeatures(fetchedFeatures);
+        const candidates = rankMatchingFeatures(merged, center, maxCandidates);
+        const durationMs = Date.now() - startTime;
+        const hasOverpass = (originCounts.overpass ?? 0) > 0;
         return {
-            candidates: rankMatchingFeatures(merged, center, maxCandidates),
+            candidates,
             source: "network",
+            debug: {
+                totalCount: candidates.length,
+                origins: originCounts,
+                durationMs,
+                networkMs: hasOverpass ? networkMs : undefined,
+                status: "done",
+                at: Date.now(),
+            },
         };
     }
 
@@ -903,6 +1033,8 @@ export async function findMatchingFeaturesWithCellCache(
                 anyStale = true;
                 cellRevalidateInBackground(cellKey, memEntry);
             }
+            originCounts.memory =
+                (originCounts.memory ?? 0) + memEntry.features.length;
             allFeatures.push(...memEntry.features);
             continue;
         }
@@ -923,6 +1055,8 @@ export async function findMatchingFeaturesWithCellCache(
                     anyStale = true;
                     cellRevalidateInBackground(cellKey, diskEntry);
                 }
+                originCounts.disk =
+                    (originCounts.disk ?? 0) + diskEntry.features.length;
                 allFeatures.push(...diskEntry.features);
                 continue;
             }
@@ -932,16 +1066,36 @@ export async function findMatchingFeaturesWithCellCache(
         missingCells.push(cellId);
     }
 
+    console.log(
+        `[cellCache] ${category} cache walk: memory=${Object.keys(originCounts).includes("memory") ? (originCounts.memory ?? 0) : 0} disk=${originCounts.disk ?? 0} missing=${missingCells.length}`,
+    );
+
     // 4. All cells were cached — local ranking only.
     if (missingCells.length === 0) {
+        console.log(
+            `[cellCache] ${category} all cached, ranking ${allFeatures.length} features`,
+        );
         const deduped = deduplicateFeatures(allFeatures);
+        const candidates = rankMatchingFeatures(deduped, center, maxCandidates);
+        const durationMs = Date.now() - startTime;
         return {
-            candidates: rankMatchingFeatures(deduped, center, maxCandidates),
+            candidates,
             source: anyStale ? "stale" : overallSource,
+            debug: {
+                totalCount: candidates.length,
+                origins: originCounts,
+                durationMs,
+                status: "done",
+                at: Date.now(),
+            },
         };
     }
 
     // 5. Fetch missing cells in parallel.
+    console.log(
+        `[cellCache] ${category} fetching ${missingCells.length} missing cells`,
+    );
+    networkStartMs = Date.now();
     const fetchPromises = missingCells.map((cellId) => {
         const cellKey = makeCellCacheKey(category, cellId);
         const bbox = cellBbox(cellId);
@@ -953,20 +1107,46 @@ export async function findMatchingFeaturesWithCellCache(
             options?.signal,
         );
     });
-    const fetchedFeatures = (await Promise.allSettled(fetchPromises))
-        .filter(
-            (r): r is PromiseFulfilledResult<OsmFeature[]> =>
-                r.status === "fulfilled",
-        )
-        .flatMap((r) => r.value);
+    const settled = await Promise.allSettled(fetchPromises);
+    const networkMs = Date.now() - networkStartMs;
+    const succeeded = settled.filter((r) => r.status === "fulfilled").length;
+    const failed = settled.filter((r) => r.status === "rejected").length;
+    console.log(
+        `[cellCache] ${category} fetch done: ${succeeded} ok, ${failed} failed in ${networkMs}ms`,
+    );
+    const fetchedFeatures: OsmFeature[] = [];
+    for (const r of settled) {
+        if (r.status !== "fulfilled") continue;
+        const origin: FetchOrigin =
+            r.value.sourceKind === "local" ? "local-bundle" : "overpass";
+        originCounts[origin] =
+            (originCounts[origin] ?? 0) + r.value.features.length;
+        fetchedFeatures.push(...r.value.features);
+    }
+    console.log(
+        `[cellCache] ${category} fetch features: local=${originCounts["local-bundle"] ?? 0} overpass=${originCounts.overpass ?? 0}`,
+    );
 
     // 6. Merge all features, deduplicate, rank.
     // Fresh network data takes precedence over stale cached data at cell boundaries.
     const merged = deduplicateFeatures([...fetchedFeatures, ...allFeatures]);
-
+    console.log(
+        `[cellCache] ${category} merged: ${allFeatures.length} cached + ${fetchedFeatures.length} fetched → ${merged.length} deduped`,
+    );
+    const candidates = rankMatchingFeatures(merged, center, maxCandidates);
+    const durationMs = Date.now() - startTime;
+    const hasOverpass = (originCounts.overpass ?? 0) > 0;
     return {
-        candidates: rankMatchingFeatures(merged, center, maxCandidates),
+        candidates,
         source: anyStale ? "stale" : "network",
+        debug: {
+            totalCount: candidates.length,
+            origins: originCounts,
+            durationMs,
+            networkMs: hasOverpass ? networkMs : undefined,
+            status: "done",
+            at: Date.now(),
+        },
     };
 }
 
@@ -979,4 +1159,47 @@ export async function clearOsmMatchingCellMemoryCache(): Promise<void> {
     // that concurrent persistCellEntry calls do not race with the reset.
     await cellManifestMutex;
     cellManifestMutex = Promise.resolve();
+}
+
+/**
+ * Clears all OSM matching caches — memory and persisted AsyncStorage rows.
+ * Returns the number of persisted keys removed. Safe to call at any time;
+ * keeps other storage namespaces (game state, React Query, boundaries) intact.
+ *
+ * This is the manual workaround for the stale-selector bug (§4 of
+ * docs/settings-maintenance-and-fetch-debug.md) and the backing impl for
+ * Settings → Clear Cache.
+ */
+export async function clearOsmMatchingCache(): Promise<number> {
+    // Bump the epoch so any in-flight fetchAndStoreCell / cellRevalidateInBackground
+    // that resolves after this point skips re-persisting stale data.
+    cacheEpoch++;
+
+    // 1. Clear in-memory caches.
+    clearOsmMatchingMemoryCache();
+    await clearOsmMatchingCellMemoryCache();
+
+    // 2. Sweep persisted rows.
+    let keys: readonly string[];
+    try {
+        keys = await AsyncStorage.getAllKeys();
+    } catch {
+        return 0;
+    }
+
+    const ours = keys.filter(
+        (k) =>
+            k.startsWith(CACHE_KEY_PREFIX) ||
+            k === MANIFEST_KEY ||
+            k === `${MANIFEST_KEY}:cell`,
+    );
+
+    if (ours.length === 0) return 0;
+
+    try {
+        await AsyncStorage.multiRemove([...ours]);
+    } catch {
+        // Storage may be unavailable; memory is already cleared.
+    }
+    return ours.length;
 }

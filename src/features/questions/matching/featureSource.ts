@@ -41,11 +41,19 @@ export function localBboxFeatures(
 ): { features: OsmFeature[]; generatedAt: string } | null {
     // Non-bundleable categories (admin, transit-line) always fall through
     // to Overpass, even if a region covers the bbox.
-    if (!isBundleableCategory(category)) return null;
+    if (!isBundleableCategory(category)) {
+        console.log(`[localBbox] ${category}: not bundleable → null`);
+        return null;
+    }
 
     const tuple = toBbox(bbox);
     const regionId = regionCoveringBbox(tuple);
-    if (!regionId) return null;
+    if (!regionId) {
+        console.log(
+            `[localBbox] ${category} bbox=[${tuple.join(",")}]: no covering region → null`,
+        );
+        return null;
+    }
 
     const all = getBundledCategoryFeatures(regionId, category);
     const features = all.filter(
@@ -54,6 +62,9 @@ export function localBboxFeatures(
             f.lon < bbox.east &&
             f.lat >= bbox.south &&
             f.lat < bbox.north,
+    );
+    console.log(
+        `[localBbox] ${category} region=${regionId} totalInRegion=${all.length} inCell=${features.length}`,
     );
     return { features, generatedAt: getRegionGeneratedAt(regionId) ?? "" };
 }
@@ -70,12 +81,18 @@ export async function resolveBboxFeatures(
 ): Promise<ResolvedBboxFeatures> {
     const local = localBboxFeatures(category, bbox);
     if (local) {
+        console.log(
+            `[resolveBbox] ${category}: LOCAL — ${local.features.length} features`,
+        );
         return {
             features: local.features,
             source: "local",
             generatedAt: local.generatedAt || undefined,
         };
     }
+    console.log(
+        `[resolveBbox] ${category}: OVERPASS — local returned null, falling back`,
+    );
     const features = await fetchAndParseOverpassBboxFeatures(
         category,
         bbox.south,
@@ -83,6 +100,9 @@ export async function resolveBboxFeatures(
         bbox.north,
         bbox.east,
         signal,
+    );
+    console.log(
+        `[resolveBbox] ${category}: OVERPASS returned ${features.length} features`,
     );
     return { features, source: "overpass" };
 }

@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
+    clearOsmMatchingCache,
     clearOsmMatchingCellMemoryCache,
     clearOsmMatchingMemoryCache,
     containsSearchCircle,
@@ -39,6 +40,7 @@ jest.mock("../osmMatching", () => ({
 jest.mock("../bundledPois", () => ({
     ...jest.requireActual("../bundledPois"),
     regionCoveringBbox: () => null,
+    regionCoveringPoint: () => null,
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -943,5 +945,76 @@ describe("findMatchingFeaturesWithCellCache", () => {
         expect(mockFetchAndParseBbox).toHaveBeenCalled();
 
         jest.spyOn(Date, "now").mockRestore();
+    });
+});
+
+// ─── clearOsmMatchingCache ──────────────────────────────────────────────────
+
+describe("clearOsmMatchingCache", () => {
+    beforeEach(async () => {
+        await resetAll();
+    });
+
+    it("clears memory caches (radius + cell)", async () => {
+        // Seed both caches via a search.
+        mockFetchAndParseBbox.mockResolvedValueOnce(hospitalFeatures);
+        await findMatchingFeaturesWithCellCache("hospital", tokyoCenter, {
+            requestedRadiusMeters: 1_000,
+        });
+
+        await clearOsmMatchingCache();
+
+        // After a full clear a subsequent search must go to network again.
+        mockFetchAndParseBbox.mockResolvedValueOnce(hospitalFeatures);
+        const result = await findMatchingFeaturesWithCellCache(
+            "hospital",
+            tokyoCenter,
+            { requestedRadiusMeters: 1_000 },
+        );
+        expect(result.source).toBe("network");
+    });
+
+    it("removes persisted osm-matching keys from AsyncStorage", async () => {
+        // Persist some data.
+        mockFetchAndParseBbox.mockResolvedValueOnce(hospitalFeatures);
+        await findMatchingFeaturesWithCellCache("hospital", tokyoCenter, {
+            requestedRadiusMeters: 1_000,
+        });
+
+        const allKeysBefore = await AsyncStorage.getAllKeys();
+        expect(allKeysBefore.some((k) => k.startsWith("osm-matching-"))).toBe(
+            true,
+        );
+
+        const removedCount = await clearOsmMatchingCache();
+        expect(removedCount).toBeGreaterThan(0);
+
+        const allKeysAfter = await AsyncStorage.getAllKeys();
+        expect(allKeysAfter.some((k) => k.startsWith("osm-matching-"))).toBe(
+            false,
+        );
+    });
+
+    it("leaves non-OSM-matching keys intact", async () => {
+        await AsyncStorage.setItem("app-state:v1", "keep-me");
+        await AsyncStorage.setItem("REACT_QUERY_OFFLINE_CACHE", "keep-too");
+
+        mockFetchAndParseBbox.mockResolvedValueOnce(hospitalFeatures);
+        await findMatchingFeaturesWithCellCache("hospital", tokyoCenter, {
+            requestedRadiusMeters: 1_000,
+        });
+
+        await clearOsmMatchingCache();
+
+        expect(await AsyncStorage.getItem("app-state:v1")).toBe("keep-me");
+        expect(await AsyncStorage.getItem("REACT_QUERY_OFFLINE_CACHE")).toBe(
+            "keep-too",
+        );
+    });
+
+    it("returns 0 when there is nothing to clear", async () => {
+        // No searches → no keys.
+        const count = await clearOsmMatchingCache();
+        expect(count).toBe(0);
     });
 });
