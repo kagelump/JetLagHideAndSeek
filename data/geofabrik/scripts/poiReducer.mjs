@@ -76,6 +76,12 @@ export function reduceFeature(feature, categoryOf) {
     if (category === "commercial-airport") {
         record.iata = props.iata?.trim() || undefined;
     }
+    // Capture the English name so the label-language toggle can surface it
+    // at runtime even for bundle-sourced features (where tags is empty).
+    const nameEn = props["name:en"]?.trim();
+    if (nameEn && nameEn !== name) {
+        record.nameEn = nameEn;
+    }
     return record;
 }
 
@@ -205,6 +211,9 @@ export function buildColumnar(records, regionMeta) {
             cat === "station-name-length" ? new Array(count) : undefined;
         const iata =
             cat === "commercial-airport" ? new Array(count) : undefined;
+        // Include nameEn when at least one record in the category has it.
+        const hasNameEn = arr.some((r) => r.nameEn !== undefined);
+        const nameEn = hasNameEn ? new Array(count) : undefined;
 
         for (let i = 0; i < count; i++) {
             lon[i] = arr[i].lon;
@@ -218,11 +227,15 @@ export function buildColumnar(records, regionMeta) {
             if (iata !== undefined) {
                 iata[i] = arr[i].iata ?? null;
             }
+            if (nameEn !== undefined) {
+                nameEn[i] = arr[i].nameEn ?? null;
+            }
         }
 
         const catData = { count, lon, lat, name, osmId, osmType };
         if (nameLength !== undefined) catData.nameLength = nameLength;
         if (iata !== undefined) catData.iata = iata;
+        if (nameEn !== undefined) catData.nameEn = nameEn;
         categories[cat] = catData;
     }
 

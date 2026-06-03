@@ -1,11 +1,11 @@
 {
   "region": "japan-kanto",
   "label": "Kantō, Japan",
-  "generatedAt": "2026-06-03T15:50:57.715Z",
+  "generatedAt": "2026-06-03T16:25:39.759Z",
   "sourceSequence": null,
   "totalCount": 33757,
-  "gzipSizeBytes": 627648,
-  "gzipSizeMb": 0.6,
+  "gzipSizeBytes": 675838,
+  "gzipSizeMb": 0.64,
   "categoryCounts": {
     "amusement-park": 101,
     "aquarium": 31,

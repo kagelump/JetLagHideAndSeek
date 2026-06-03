@@ -13,6 +13,7 @@ export type RawCategory = {
     osmType: number[];
     nameLength?: number[]; // present only for station-name-length
     iata?: (string | null)[]; // present only for commercial-airport
+    nameEn?: (string | null)[]; // English name (name:en), for label-language toggle
 };
 
 export type RawRegion = {
@@ -207,7 +208,8 @@ export function getBundledCategoryFeatures(
         col.name.length !== col.count ||
         col.osmId.length !== col.count ||
         col.osmType.length !== col.count ||
-        (col.nameLength && col.nameLength.length !== col.count)
+        (col.nameLength && col.nameLength.length !== col.count) ||
+        (col.nameEn && col.nameEn.length !== col.count)
     ) {
         if (__DEV__) {
             console.error(
@@ -232,6 +234,7 @@ export function getBundledCategoryFeatures(
         };
         if (col.nameLength) f.nameLength = col.nameLength[i];
         if (col.iata?.[i]) f.iata = col.iata[i] ?? undefined;
+        if (col.nameEn?.[i]) f.tags["name:en"] = col.nameEn[i]!;
         out[i] = f;
     }
     categoryFeatureCache.set(key, out);
