@@ -3,6 +3,10 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { requestUserCoordinate } from "@/shared/location";
 import { OsmMatchingQuestionDetailScreen } from "@/features/questions/matching/OsmMatchingQuestionDetailScreen";
+import {
+    FetchDebugScope,
+    QuestionFetchDebugLine,
+} from "@/features/questions/matching/fetchDebug";
 import { RadarQuestionDetailScreen } from "@/features/questions/radar/RadarQuestionDetailScreen";
 import { TransitLineQuestionDetailScreen } from "@/features/questions/transitLine/TransitLineQuestionDetailScreen";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
@@ -37,35 +41,38 @@ export function QuestionDetailScreen({
     }
 
     return (
-        <SheetScrollView
-            contentContainerStyle={styles.scrollContent}
-            style={styles.container}
-        >
-            {activeQuestion.type === "radar" ? (
-                <RadarQuestionDetailScreen
-                    question={activeQuestion}
-                    sheetIndex={sheetIndex}
-                    updateQuestion={updateQuestion}
-                />
-            ) : activeQuestion.type === "matching" &&
-              activeQuestion.category === "transit-line" ? (
-                <TransitLineQuestionDetailScreen
-                    question={activeQuestion}
-                    updateQuestion={updateQuestion}
-                />
-            ) : activeQuestion.type === "matching" ? (
-                <OsmMatchingQuestionDetailScreen
-                    question={activeQuestion}
-                    updateQuestion={updateQuestion}
-                />
-            ) : (
-                <>
-                    <Text style={styles.emptyDetail}>
-                        This question type is not implemented yet.
-                    </Text>
-                </>
-            )}
-        </SheetScrollView>
+        <FetchDebugScope key={activeQuestion.id}>
+            <SheetScrollView
+                contentContainerStyle={styles.scrollContent}
+                style={styles.container}
+            >
+                {activeQuestion.type === "radar" ? (
+                    <RadarQuestionDetailScreen
+                        question={activeQuestion}
+                        sheetIndex={sheetIndex}
+                        updateQuestion={updateQuestion}
+                    />
+                ) : activeQuestion.type === "matching" &&
+                  activeQuestion.category === "transit-line" ? (
+                    <TransitLineQuestionDetailScreen
+                        question={activeQuestion}
+                        updateQuestion={updateQuestion}
+                    />
+                ) : activeQuestion.type === "matching" ? (
+                    <OsmMatchingQuestionDetailScreen
+                        question={activeQuestion}
+                        updateQuestion={updateQuestion}
+                    />
+                ) : (
+                    <>
+                        <Text style={styles.emptyDetail}>
+                            This question type is not implemented yet.
+                        </Text>
+                    </>
+                )}
+                <QuestionFetchDebugLine />
+            </SheetScrollView>
+        </FetchDebugScope>
     );
 }
 

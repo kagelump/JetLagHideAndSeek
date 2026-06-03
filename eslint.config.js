@@ -62,5 +62,63 @@ module.exports = [
             "no-redeclare": "off",
         },
     },
+    {
+        files: ["src/features/questions/**/*DetailScreen.tsx"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    paths: [
+                        {
+                            name: "@/features/questions/matching/osmMatching",
+                            importNames: [
+                                "fetchAndParseOverpassFeatures",
+                                "fetchAndParseOverpassBboxFeatures",
+                            ],
+                            message:
+                                "Use useMatchingSearch instead of raw fetchers in detail screens.",
+                        },
+                        {
+                            name: "@/features/questions/matching/osmMatchingCache",
+                            importNames: [
+                                "findMatchingFeaturesWithCache",
+                                "findMatchingFeaturesWithCellCache",
+                            ],
+                            message:
+                                "Use useMatchingSearch instead of raw fetchers in detail screens.",
+                        },
+                        {
+                            name: "@/features/questions/matching/featureSource",
+                            importNames: ["resolveBboxFeatures"],
+                            message:
+                                "Use useMatchingSearch instead of raw fetchers in detail screens.",
+                        },
+                        {
+                            name: "@/features/questions/matching/progressiveSearch",
+                            importNames: ["searchMatchingFeaturesProgressive"],
+                            message:
+                                "Use useMatchingSearch instead of calling progressiveSearch directly in detail screens.",
+                        },
+                    ],
+                    patterns: [
+                        {
+                            group: [
+                                "./osmMatching",
+                                "../osmMatching",
+                                "./osmMatchingCache",
+                                "../osmMatchingCache",
+                                "./featureSource",
+                                "../featureSource",
+                                "./progressiveSearch",
+                                "../progressiveSearch",
+                            ],
+                            message:
+                                "Use useMatchingSearch instead of raw fetchers in detail screens.",
+                        },
+                    ],
+                },
+            ],
+        },
+    },
     eslintConfigPrettier,
 ];
