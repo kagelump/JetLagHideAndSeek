@@ -7,6 +7,10 @@ module.exports = {
     setupFiles: ["./jest.setup.ts"],
     setupFilesAfterEnv: ["./jest.framework.ts"],
     testMatch: ["**/__tests__/**/*.test.{ts,tsx}"],
+    // Don't discover tests or modules inside git worktrees under .claude/
+    // (e.g. agent worktrees) — they duplicate suites and cause haste collisions.
+    testPathIgnorePatterns: ["/node_modules/", "<rootDir>/.claude/"],
+    modulePathIgnorePatterns: ["<rootDir>/.claude/"],
     transformIgnorePatterns: [
         "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|@maplibre/.*|@gorhom/.*|react-navigation|@react-navigation/.*)",
     ],
