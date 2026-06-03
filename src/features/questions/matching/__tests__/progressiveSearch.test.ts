@@ -102,12 +102,10 @@ describe("searchMatchingFeaturesProgressive", () => {
 
     it("doubles radius on each iteration when no stop condition met", async () => {
         // Return 3 candidates each time — never triggers the "> 10" stop.
-        mockFindMatchingFeaturesWithCellCache = jest
-            .fn()
-            .mockResolvedValue({
-                candidates: nCandidates(3),
-                source: "network",
-            });
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(3),
+            source: "network",
+        });
 
         // Use a huge far-away bbox so the encompass check fails at all radii.
         const farBbox: [number, number, number, number] = [
@@ -162,12 +160,10 @@ describe("searchMatchingFeaturesProgressive", () => {
     });
 
     it("stops on first iteration when initial radius already yields > 10", async () => {
-        mockFindMatchingFeaturesWithCellCache = jest
-            .fn()
-            .mockResolvedValue({
-                candidates: nCandidates(15),
-                source: "network",
-            });
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(15),
+            source: "network",
+        });
 
         await searchMatchingFeaturesProgressive(
             "park",
@@ -255,12 +251,10 @@ describe("searchMatchingFeaturesProgressive", () => {
 
     it("stops when radius encompasses entire play area", async () => {
         // 50 km from center easily covers Tokyo bbox.
-        mockFindMatchingFeaturesWithCellCache = jest
-            .fn()
-            .mockResolvedValue({
-                candidates: nCandidates(3),
-                source: "network",
-            });
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(3),
+            source: "network",
+        });
 
         // Start with stationRadius = 25000 so initial radius = 50000 which
         // covers the Tokyo bbox.
@@ -278,12 +272,10 @@ describe("searchMatchingFeaturesProgressive", () => {
     it("encompass check wins over item count when both satisfied", async () => {
         // Both conditions met on the same iteration — encompass check is
         // evaluated first and breaks immediately.
-        mockFindMatchingFeaturesWithCellCache = jest
-            .fn()
-            .mockResolvedValue({
-                candidates: nCandidates(15),
-                source: "network",
-            });
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(15),
+            source: "network",
+        });
 
         const result = await searchMatchingFeaturesProgressive(
             "park",
@@ -301,12 +293,10 @@ describe("searchMatchingFeaturesProgressive", () => {
     it("skips encompass check when playAreaBbox is null", async () => {
         // Return 4 candidates each time; stop condition is only item count.
         // With bbox=null and <10 items, it keeps doubling until the hard cap.
-        mockFindMatchingFeaturesWithCellCache = jest
-            .fn()
-            .mockResolvedValue({
-                candidates: nCandidates(5),
-                source: "network",
-            });
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(5),
+            source: "network",
+        });
 
         await searchMatchingFeaturesProgressive(
             "park",
@@ -320,17 +310,62 @@ describe("searchMatchingFeaturesProgressive", () => {
         expect(calls.length).toBeGreaterThan(1);
     });
 
+    // ── Unbounded (skip encompass check) ────────────────────────────
+
+    it("skips encompass check when unbounded is true", async () => {
+        // With unbounded=true, the encompass check is skipped even when the
+        // radius covers the play area. The search continues until >10
+        // candidates or the hard cap.
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(5),
+            source: "network",
+        });
+
+        // stationRadius=25000 → initial radius=50000 which covers Tokyo bbox.
+        // Without unbounded, this would stop after 1 iteration. With unbounded
+        // it should continue because < 10 candidates were found.
+        await searchMatchingFeaturesProgressive(
+            "commercial-airport",
+            TOKYO_CENTER,
+            25_000,
+            TOKYO_BBOX,
+            { unbounded: true },
+        );
+
+        // Should have made more than 1 call (encompass check skipped).
+        expect(
+            mockFindMatchingFeaturesWithCellCache.mock.calls.length,
+        ).toBeGreaterThan(1);
+    });
+
+    it("unbounded still stops on >10 candidates", async () => {
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(15),
+            source: "network",
+        });
+
+        const result = await searchMatchingFeaturesProgressive(
+            "commercial-airport",
+            TOKYO_CENTER,
+            25_000,
+            TOKYO_BBOX,
+            { unbounded: true },
+        );
+
+        // >10 candidates → stops after 1 iteration despite unbounded.
+        expect(mockFindMatchingFeaturesWithCellCache).toHaveBeenCalledTimes(1);
+        expect(result.candidates).toHaveLength(15);
+    });
+
     // ── Hard cap ────────────────────────────────────────────────────
 
     it("caps the search radius at PROGRESSIVE_MAX_RADIUS_METERS", async () => {
         // Return 1 candidate at every radius so it never stops on count.
         // Use a far-away bbox so it never stops on encompass.
-        mockFindMatchingFeaturesWithCellCache = jest
-            .fn()
-            .mockResolvedValue({
-                candidates: nCandidates(1),
-                source: "network",
-            });
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(1),
+            source: "network",
+        });
 
         const farBbox: [number, number, number, number] = [
             -74.05, 40.68, -73.93, 40.88,
@@ -378,12 +413,10 @@ describe("searchMatchingFeaturesProgressive", () => {
     // ── forceRefresh ────────────────────────────────────────────────
 
     it("passes forceRefresh through to the cache layer", async () => {
-        mockFindMatchingFeaturesWithCellCache = jest
-            .fn()
-            .mockResolvedValue({
-                candidates: nCandidates(15),
-                source: "network",
-            });
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(15),
+            source: "network",
+        });
 
         await searchMatchingFeaturesProgressive(
             "park",
@@ -398,6 +431,49 @@ describe("searchMatchingFeaturesProgressive", () => {
             TOKYO_CENTER,
             expect.objectContaining({ forceRefresh: true }),
         );
+    });
+
+    it("only force-refreshes the first iteration; subsequent iterations reuse cached cells (regression: Bug 2)", async () => {
+        // Bug: forceRefresh was passed to every iteration, so each
+        // larger-radius iteration discarded the prior cells and fetched
+        // everything fresh. At 200 km radius for commercial-airport this
+        // issued 1000+ parallel Overpass fetches, any of which could
+        // hang in React Native without a timeout.
+        //
+        // Regression: only iteration 1 gets forceRefresh=true. Iteration
+        // 2+ must receive forceRefresh=false so they reuse cells cached
+        // by iteration 1.
+        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+            candidates: nCandidates(5), // never triggers >10 stop
+            source: "network",
+        });
+
+        // Use a far-away bbox so encompass check never fires, forcing
+        // multiple iterations until the 200 km hard cap.
+        const farBbox: [number, number, number, number] = [
+            -74.05, 40.68, -73.93, 40.88,
+        ];
+
+        await searchMatchingFeaturesProgressive(
+            "commercial-airport",
+            TOKYO_CENTER,
+            600,
+            farBbox,
+            { forceRefresh: true, unbounded: true },
+        );
+
+        const calls = mockFindMatchingFeaturesWithCellCache.mock.calls;
+        expect(calls.length).toBeGreaterThan(1);
+
+        // First iteration: forceRefresh must be true.
+        expect(calls[0][2]).toMatchObject({ forceRefresh: true });
+
+        // Every subsequent iteration: forceRefresh must be false or
+        // undefined (not truthy).
+        for (let i = 1; i < calls.length; i++) {
+            const opts = calls[i][2] as { forceRefresh?: boolean };
+            expect(opts.forceRefresh).toBeFalsy();
+        }
     });
 
     // ── Returns source ──────────────────────────────────────────────

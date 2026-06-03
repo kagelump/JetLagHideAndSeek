@@ -13,15 +13,8 @@ import {
 import { colors } from "@/theme/colors";
 import type { MatchingQuestion } from "./matchingTypes";
 import { getCategoryTitle } from "./matchingCategories";
-import { type OsmMatchingCacheSource } from "./osmMatchingCache";
 import { OsmMatchingCandidatesModal } from "./OsmMatchingCandidatesModal";
-import { searchMatchingFeaturesProgressive } from "./progressiveSearch";
-
-/** Milliseconds to wait after the pin stops moving before querying Overpass. */
-const SEARCH_DEBOUNCE_MS = 400;
-
-const OVERPASS_ERROR_MESSAGE =
-    "Unable to search. Check your connection and try again.";
+import { useMatchingSearch } from "./useMatchingSearch";
 
 type OsmMatchingQuestionDetailScreenProps = {
     question: MatchingQuestion;
@@ -36,86 +29,47 @@ export function OsmMatchingQuestionDetailScreen({
     question,
     updateQuestion,
 }: OsmMatchingQuestionDetailScreenProps) {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [cacheSource, setCacheSource] =
-        useState<OsmMatchingCacheSource | null>(null);
     const [isShowAllModalVisible, setShowAllModalVisible] = useState(false);
+    const [cacheSource, setCacheSource] = useState<string | null>(null);
     const { radiusMeters: stationRadiusMeters } = useHidingZoneState();
     const { playArea } = usePlayArea();
     const categoryTitle = getCategoryTitle(question.category);
-    const searchGenerationRef = useRef(0);
     const lastSearchCenterRef = useRef<[number, number] | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
 
-    const performSearch = useCallback(
+    const { isLoading, error, performSearch } = useMatchingSearch(
+        question.category,
+        question.center,
+        stationRadiusMeters,
+        playArea.bbox,
+        { unbounded: question.category === "commercial-airport" },
+    );
+
+    // Wrap performSearch to update the question with results.
+    const searchAndUpdate = useCallback(
         async (forceRefresh = false) => {
-            // Cancel any in-flight request before starting a new one.
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            }
-            const abortController = new AbortController();
-            abortControllerRef.current = abortController;
-
-            const generation = ++searchGenerationRef.current;
             lastSearchCenterRef.current = question.center;
-            setIsLoading(true);
-            setError(null);
-            try {
-                const result = await searchMatchingFeaturesProgressive(
-                    question.category,
-                    question.center,
-                    stationRadiusMeters,
-                    playArea.bbox,
-                    {
-                        forceRefresh,
-                        signal: abortController.signal,
-                    },
-                );
-                // Ignore stale responses from earlier searches
-                if (generation !== searchGenerationRef.current) {
-                    return;
-                }
-                const { candidates } = result;
-                const nearest = candidates[0] ?? null;
-                setCacheSource(result.source);
-                updateQuestion(question.id, (current) => {
-                    if (current.type !== "matching") return current;
-                    return {
-                        ...current,
-                        candidates,
-                        selectedOsmId: nearest?.osmId ?? null,
-                        selectedOsmType: nearest?.osmType ?? null,
-                        targetName: nearest?.name ?? null,
-                        targetOsmId: nearest?.osmId ?? null,
-                        targetOsmType: nearest?.osmType ?? null,
-                        updatedAt: new Date().toISOString(),
-                    };
-                });
-            } catch (error) {
-                // Silently ignore aborted requests — a newer search is in flight.
-                if (error instanceof Error && error.name === "AbortError") {
-                    return;
-                }
-                if (generation === searchGenerationRef.current) {
-                    setError(OVERPASS_ERROR_MESSAGE);
-                    setCacheSource(null);
-                }
-            } finally {
-                if (generation === searchGenerationRef.current) {
-                    setIsLoading(false);
-                }
-            }
+            const result = await performSearch(forceRefresh);
+            if (!result) return;
+
+            const { candidates, source } = result;
+            const nearest = candidates[0] ?? null;
+            setCacheSource(source);
+            updateQuestion(question.id, (current) => {
+                if (current.type !== "matching") return current;
+                return {
+                    ...current,
+                    candidates,
+                    selectedOsmId: nearest?.osmId ?? null,
+                    selectedOsmType: nearest?.osmType ?? null,
+                    targetName: nearest?.name ?? null,
+                    targetOsmId: nearest?.osmId ?? null,
+                    targetOsmType: nearest?.osmType ?? null,
+                    updatedAt: new Date().toISOString(),
+                };
+            });
         },
-        [
-            question.category,
-            question.center,
-            question.id,
-            updateQuestion,
-            stationRadiusMeters,
-            playArea.bbox,
-        ],
+        [performSearch, question.center, question.id, updateQuestion],
     );
 
     // Schedule a debounced search. Clears any pending timer first.
@@ -125,20 +79,16 @@ export function OsmMatchingQuestionDetailScreen({
         }
         debounceTimerRef.current = setTimeout(() => {
             debounceTimerRef.current = null;
-            void performSearch();
-        }, SEARCH_DEBOUNCE_MS);
-    }, [performSearch]);
+            void searchAndUpdate();
+        }, 400);
+    }, [searchAndUpdate]);
 
-    // Clean up timers and in-flight requests on unmount.
+    // Clean up timers on unmount.
     useEffect(() => {
         return () => {
             if (debounceTimerRef.current !== null) {
                 clearTimeout(debounceTimerRef.current);
                 debounceTimerRef.current = null;
-            }
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-                abortControllerRef.current = null;
             }
         };
     }, []);
@@ -160,9 +110,6 @@ export function OsmMatchingQuestionDetailScreen({
         ) {
             // Pin moved since last search: clear derived state so the next
             // effect run will trigger a fresh search for the new center.
-            // Intentionally do NOT update lastSearchCenterRef here; the
-            // subsequent render with empty candidates must detect a mismatch.
-            setError(null);
             setCacheSource(null);
             updateQuestion(question.id, (current) => {
                 if (current.type !== "matching") return current;
@@ -322,7 +269,7 @@ export function OsmMatchingQuestionDetailScreen({
                     accessibilityRole="button"
                     disabled={isLoading}
                     onPress={() => {
-                        void performSearch(true);
+                        void searchAndUpdate(true);
                     }}
                     style={({ pressed }) => [
                         styles.refreshButton,

@@ -367,6 +367,78 @@ describe("OsmMatchingQuestionDetailScreen", () => {
         });
     });
 
+    it("refresh button writes search results back to question state (regression: Bug 1)", async () => {
+        // Bug: the Refresh button called performSearch(true) directly,
+        // which fetched data but never wrote it to the question store.
+        // Regression: pressing Refresh must update question.candidates,
+        // targetName, targetOsmId, etc. with the fresh search results.
+        const question: MatchingQuestion = {
+            answer: "unanswered",
+            candidates: mockCandidates,
+            category: "park",
+            center: mockPlayAreaCenter,
+            createdAt: "2026-05-30T00:00:00.000Z",
+            id: "matching-1",
+            lineId: null,
+            lineName: null,
+            selectedOsmId: 1,
+            selectedOsmType: "node",
+            targetName: "Nearest Park",
+            targetOsmId: 1,
+            targetOsmType: "node",
+            type: "matching",
+            updatedAt: "2026-05-30T00:00:00.000Z",
+        };
+        // Use a real updater so the question state actually changes.
+        let currentQuestion = { ...question };
+        const onUpdate = jest.fn(
+            (
+                _questionId: string,
+                updater: (q: QuestionState) => QuestionState,
+            ) => {
+                currentQuestion = updater(currentQuestion) as MatchingQuestion;
+                return currentQuestion;
+            },
+        );
+
+        const screen = render(
+            <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId("osm-matching-refresh")).toBeTruthy();
+        });
+
+        // Set up fresh search results different from the initial candidates.
+        mockSearchMatchingFeaturesProgressive.mockClear();
+        const freshCandidates = [
+            {
+                distanceMeters: 300,
+                lat: 35.69,
+                lon: 139.77,
+                name: "Refreshed Spot",
+                osmId: 99,
+                osmType: "node" as const,
+                tags: {},
+            },
+        ];
+        mockSearchMatchingFeaturesProgressive.mockResolvedValue({
+            candidates: freshCandidates,
+            source: "network",
+            searchRadiusMeters: 2400,
+        });
+
+        fireEvent.press(screen.getByTestId("osm-matching-refresh"));
+
+        // The question must reflect the new search results — not the old ones.
+        await waitFor(() => {
+            expect(currentQuestion.candidates).toEqual(freshCandidates);
+            expect(currentQuestion.targetName).toBe("Refreshed Spot");
+            expect(currentQuestion.targetOsmId).toBe(99);
+            expect(currentQuestion.targetOsmType).toBe("node");
+        });
+    });
+
     it("renders stale-cache banner when cache source is stale", async () => {
         mockSearchMatchingFeaturesProgressive.mockResolvedValue({
             candidates: mockCandidates,

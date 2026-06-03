@@ -1,6 +1,7 @@
 import type { Bbox, Position } from "@/shared/geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
 
+import type { FetchDebugInfo } from "./fetchDebug";
 import type { MatchingCategory } from "./matchingTypes";
 import {
     findMatchingFeaturesWithCellCache,
@@ -28,6 +29,8 @@ export type ProgressiveSearchResult = {
     source: OsmMatchingCacheSource;
     /** The final radius (meters) at which the search stopped. */
     searchRadiusMeters: number;
+    /** Fetch-debug metadata for the question-sheet footer. */
+    debug?: FetchDebugInfo;
 };
 
 /**
@@ -71,6 +74,9 @@ export async function searchMatchingFeaturesProgressive(
     options?: {
         forceRefresh?: boolean;
         signal?: AbortSignal;
+        /** When true, skip the play-area encompass stop condition so the
+         * search can find POIs outside the play area (e.g. airports). */
+        unbounded?: boolean;
     },
 ): Promise<ProgressiveSearchResult> {
     const [lon, lat] = center;
@@ -79,10 +85,25 @@ export async function searchMatchingFeaturesProgressive(
         MIN_INITIAL_RADIUS_METERS,
     );
 
+    let isFirstIteration = true;
+    let iter = 0;
+
+    console.log(
+        `[prog] start category=${category} center=[${lon.toFixed(4)},${lat.toFixed(4)}] ` +
+            `stationR=${stationRadiusMeters} initialR=${currentRadius} ` +
+            `unbounded=${options?.unbounded ?? false} forceRefresh=${options?.forceRefresh ?? false}`,
+    );
+
     while (true) {
+        iter++;
         const effectiveRadius = Math.min(
             currentRadius,
             PROGRESSIVE_MAX_RADIUS_METERS,
+        );
+        const doForceRefresh = isFirstIteration && options?.forceRefresh;
+
+        console.log(
+            `[prog] iter=${iter} radius=${effectiveRadius} forceRefresh=${doForceRefresh}`,
         );
 
         const result = await findMatchingFeaturesWithCellCache(
@@ -91,13 +112,19 @@ export async function searchMatchingFeaturesProgressive(
             {
                 requestedRadiusMeters: effectiveRadius,
                 maxCandidates: UNCAPPED_CANDIDATES,
-                forceRefresh: options?.forceRefresh,
+                forceRefresh: doForceRefresh,
                 signal: options?.signal,
             },
+        );
+        isFirstIteration = false;
+
+        console.log(
+            `[prog] iter=${iter} cacheResult: ${result.candidates.length} raw candidates, source=${result.source}`,
         );
 
         // Honour abort signals between iterations.
         if (options?.signal?.aborted) {
+            console.log(`[prog] iter=${iter} signal aborted, throwing`);
             const abortError = new Error("Aborted");
             abortError.name = "AbortError";
             throw abortError;
@@ -110,34 +137,60 @@ export async function searchMatchingFeaturesProgressive(
             (c) => c.distanceMeters <= effectiveRadius,
         );
 
+        console.log(
+            `[prog] iter=${iter} inRadius=${inRadius.length} ` +
+                `(filtered from ${result.candidates.length} raw)`,
+        );
+
         // Stop if the search disk now covers the entire play area.
+        // Skip this check for unbounded searches (e.g. commercial airports
+        // where the closest may lie outside the play area).
         if (
+            !options?.unbounded &&
             playAreaBbox !== null &&
             searchCoversBbox(lon, lat, effectiveRadius, playAreaBbox)
         ) {
+            console.log(
+                `[prog] iter=${iter} STOP: covers play area, returning ${inRadius.length}`,
+            );
             return {
                 candidates: inRadius,
                 source: result.source,
                 searchRadiusMeters: effectiveRadius,
+                debug: result.debug
+                    ? { ...result.debug, totalCount: inRadius.length }
+                    : undefined,
             };
         }
 
         // Stop if we have more than 10 in-radius candidates — the search
         // area is already dense enough for a good matching question.
         if (inRadius.length > 10) {
+            console.log(
+                `[prog] iter=${iter} STOP: >10 candidates (${inRadius.length}), returning`,
+            );
             return {
                 candidates: inRadius,
                 source: result.source,
                 searchRadiusMeters: effectiveRadius,
+                debug: result.debug
+                    ? { ...result.debug, totalCount: inRadius.length }
+                    : undefined,
             };
         }
 
         // Stop at the hard cap to prevent runaway expansion.
         if (effectiveRadius >= PROGRESSIVE_MAX_RADIUS_METERS) {
+            console.log(
+                `[prog] iter=${iter} STOP: hard cap ${PROGRESSIVE_MAX_RADIUS_METERS}, returning ${inRadius.length}`,
+            );
             return {
                 candidates: inRadius,
                 source: result.source,
                 searchRadiusMeters: effectiveRadius,
+                debug: result.debug
+                    ? { ...result.debug, totalCount: inRadius.length }
+                    : undefined,
             };
         }
 
