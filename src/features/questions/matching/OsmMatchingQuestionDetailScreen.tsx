@@ -216,7 +216,14 @@ export function OsmMatchingQuestionDetailScreen({
                                         );
                                         if (isSelected) {
                                             setDetailFeature(candidate);
-                                            setDetailVisible(true);
+                                            // Defer to next tick: presenting a
+                                            // Modal from inside a touch handler
+                                            // on another Modal can be swallowed
+                                            // by React Native's event loop.
+                                            setTimeout(
+                                                () => setDetailVisible(true),
+                                                0,
+                                            );
                                         } else {
                                             handleSelectCandidate(candidate);
                                         }
@@ -351,7 +358,7 @@ export function OsmMatchingQuestionDetailScreen({
                 onSelect={handleSelectCandidate}
                 onShowDetail={(candidate) => {
                     setDetailFeature(candidate);
-                    setDetailVisible(true);
+                    setTimeout(() => setDetailVisible(true), 0);
                 }}
                 onClose={() => setShowAllModalVisible(false)}
                 visible={isShowAllModalVisible}
