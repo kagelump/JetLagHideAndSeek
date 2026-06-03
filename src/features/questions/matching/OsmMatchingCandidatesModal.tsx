@@ -24,6 +24,9 @@ type OsmMatchingCandidatesModalProps = {
         osmId: number;
         osmType: "node" | "way" | "relation";
     }) => void;
+    onShowDetail?: (
+        candidate: OsmFeature & { distanceMeters?: number },
+    ) => void;
     onClose: () => void;
     visible: boolean;
 };
@@ -35,6 +38,7 @@ export function OsmMatchingCandidatesModal({
     selectedOsmId,
     selectedOsmType,
     onSelect,
+    onShowDetail,
     onClose,
     visible,
 }: OsmMatchingCandidatesModalProps) {
@@ -74,8 +78,15 @@ export function OsmMatchingCandidatesModal({
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
                                     onPress={() => {
-                                        onSelect(candidate);
-                                        onClose();
+                                        const isSelected =
+                                            selectedOsmId === candidate.osmId &&
+                                            selectedOsmType ===
+                                                candidate.osmType;
+                                        if (isSelected && onShowDetail) {
+                                            onShowDetail(candidate);
+                                        } else {
+                                            onSelect(candidate);
+                                        }
                                     }}
                                     style={[
                                         styles.candidateRow,

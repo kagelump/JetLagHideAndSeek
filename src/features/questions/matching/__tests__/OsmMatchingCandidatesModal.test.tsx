@@ -113,7 +113,39 @@ describe("OsmMatchingCandidatesModal", () => {
                 osmType: "way",
             }),
         );
-        expect(onClose).toHaveBeenCalled();
+        // Row taps no longer close the modal — close is via the Close button only.
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("tapping a selected candidate calls onShowDetail", () => {
+        const onSelect = jest.fn();
+        const onClose = jest.fn();
+        const onShowDetail = jest.fn();
+
+        const screen = render(
+            <OsmMatchingCandidatesModal
+                candidates={candidates}
+                categoryTitle="Park"
+                selectedOsmId={2}
+                selectedOsmType={"way"}
+                onSelect={onSelect}
+                onShowDetail={onShowDetail}
+                onClose={onClose}
+                visible={true}
+            />,
+        );
+
+        fireEvent.press(screen.getByTestId("osm-matching-all-candidate-2"));
+
+        expect(onShowDetail).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: "Farther Park",
+                osmId: 2,
+                osmType: "way",
+            }),
+        );
+        expect(onSelect).not.toHaveBeenCalled();
+        expect(onClose).not.toHaveBeenCalled();
     });
 
     it("close button calls onClose", () => {

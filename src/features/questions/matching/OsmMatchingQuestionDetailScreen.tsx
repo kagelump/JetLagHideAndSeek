@@ -12,10 +12,11 @@ import {
     useQuestionActions,
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
-import type { MatchingQuestion } from "./matchingTypes";
+import type { MatchingQuestion, OsmFeature } from "./matchingTypes";
 import { formatCandidateName } from "./formatCandidateName";
 import { getCategoryTitle } from "./matchingCategories";
 import { OsmMatchingCandidatesModal } from "./OsmMatchingCandidatesModal";
+import { OsmFeatureDetailModal } from "./OsmFeatureDetailModal";
 import { useMatchingSearch } from "./useMatchingSearch";
 
 type OsmMatchingQuestionDetailScreenProps = {
@@ -32,6 +33,10 @@ export function OsmMatchingQuestionDetailScreen({
     updateQuestion,
 }: OsmMatchingQuestionDetailScreenProps) {
     const [isShowAllModalVisible, setShowAllModalVisible] = useState(false);
+    const [detailFeature, setDetailFeature] = useState<
+        (OsmFeature & { distanceMeters?: number }) | null
+    >(null);
+    const [isDetailVisible, setDetailVisible] = useState(false);
     const [cacheSource, setCacheSource] = useState<string | null>(null);
     const { radiusMeters: stationRadiusMeters } = useHidingZoneState();
     const { playArea } = usePlayArea();
@@ -191,9 +196,19 @@ export function OsmMatchingQuestionDetailScreen({
                                     accessibilityLabel={`${formatCandidateName(candidate, labelLanguage)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
-                                    onPress={() =>
-                                        handleSelectCandidate(candidate)
-                                    }
+                                    onPress={() => {
+                                        const isSelected =
+                                            question.selectedOsmId ===
+                                                candidate.osmId &&
+                                            question.selectedOsmType ===
+                                                candidate.osmType;
+                                        if (isSelected) {
+                                            setDetailFeature(candidate);
+                                            setDetailVisible(true);
+                                        } else {
+                                            handleSelectCandidate(candidate);
+                                        }
+                                    }}
                                     style={[
                                         styles.candidateRow,
                                         isSelected
@@ -322,8 +337,21 @@ export function OsmMatchingQuestionDetailScreen({
                 selectedOsmId={question.selectedOsmId}
                 selectedOsmType={question.selectedOsmType}
                 onSelect={handleSelectCandidate}
+                onShowDetail={(candidate) => {
+                    setDetailFeature(candidate);
+                    setDetailVisible(true);
+                }}
                 onClose={() => setShowAllModalVisible(false)}
                 visible={isShowAllModalVisible}
+            />
+
+            <OsmFeatureDetailModal
+                feature={detailFeature}
+                categoryTitle={categoryTitle}
+                labelLanguage={labelLanguage}
+                searchCenter={question.center}
+                visible={isDetailVisible}
+                onClose={() => setDetailVisible(false)}
             />
         </>
     );
