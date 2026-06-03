@@ -12,8 +12,10 @@
             "supportsTablet": true,
             "bundleIdentifier": "com.raycatdev.hideandseek.v2",
             "infoPlist": {
-                "NSLocationWhenInUseUsageDescription": "Your location is shown on the map so you can see where you are relative to the current Hide & Seek play area. Location is never stored or shared."
-            }
+                "NSLocationWhenInUseUsageDescription": "Your location is shown on the map so you can see where you are relative to the current Hide & Seek play area. Location is never stored or shared.",
+                "ITSAppUsesNonExemptEncryption": false
+            },
+            "associatedDomains": ["applinks:jetlag.hinoka.org"]
         },
         "android": {
             "package": "com.raycatdev.hideandseek.v2",
