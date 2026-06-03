@@ -327,6 +327,8 @@ async function runBundleStage(region, pbfPath, categoryOf, bundleDir) {
                 "geojsonseq",
                 "-u",
                 "type_id",
+                "-a",
+                "id,type",
                 "-o",
                 geoSeqPath,
                 "-O",

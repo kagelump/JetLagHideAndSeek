@@ -96,7 +96,17 @@ export function reduceFeature(feature, categoryOf) {
     const [lon, lat] = centroid(feature.geometry);
     if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
 
-    const { osmId, osmType } = parseOsmId(feature.id);
+    // Prefer osmium's -a id,type attributes (real OSM IDs) over the
+    // synthetic type_id prefix (which uses area IDs like a35729975 for
+    // multipolygon relations, losing the original relation ID).
+    const osmId =
+        props["@id"] !== undefined
+            ? Number(props["@id"])
+            : parseOsmId(feature.id).osmId;
+    const osmType =
+        props["@type"] !== undefined
+            ? ID_PREFIX_TYPE[props["@type"][0]] ?? 0
+            : parseOsmId(feature.id).osmType;
 
     const record = {
         category,
