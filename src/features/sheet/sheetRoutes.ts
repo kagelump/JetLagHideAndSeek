@@ -6,7 +6,8 @@ export type SheetRouteName =
     | "question-detail"
     | "settings"
     | "play-area"
-    | "hiding-zone";
+    | "hiding-zone"
+    | "offline-data";
 
 export const SHEET_SNAP_INDEX = {
     compact: 0,

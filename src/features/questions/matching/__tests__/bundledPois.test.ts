@@ -5,7 +5,10 @@ import {
     getRegionGeneratedAt,
     regionCoveringBbox,
     regionCoveringPoint,
+    registerRegion,
     registerTestRegion,
+    unregisterRegion,
+    unregisterTestRegion,
 } from "../bundledPois";
 import type { MatchingCategory } from "../matchingTypes";
 
@@ -173,5 +176,85 @@ describe("schema mismatch", () => {
         const features = getBundledCategoryFeatures("v2", "park");
         expect(features).toEqual([]);
         expect(getRegionGeneratedAt("v2")).toBeNull();
+    });
+});
+
+// ─── Public registry (registerRegion / unregisterRegion) ─────────────────
+
+describe("registerRegion / unregisterRegion", () => {
+    it("registerTestRegion is an alias for registerRegion", () => {
+        expect(registerTestRegion).toBe(registerRegion);
+    });
+
+    it("unregisterTestRegion is an alias for unregisterRegion", () => {
+        expect(unregisterTestRegion).toBe(unregisterRegion);
+    });
+
+    it("unregisterRegion removes a region from coverage", () => {
+        clearBundledRegionCache();
+        registerRegion("temp", FIXTURE);
+        expect(regionCoveringPoint(35.6, 139.7)).toBe("temp");
+
+        unregisterRegion("temp");
+        expect(regionCoveringPoint(35.6, 139.7)).toBeNull();
+    });
+});
+
+// ─── Coverage precedence (bbox area sort) ────────────────────────────────
+
+describe("coverage precedence", () => {
+    beforeEach(() => {
+        clearBundledRegionCache();
+    });
+
+    it("prefers the smaller region when both cover the same area", () => {
+        // Small region: central Tokyo
+        const small: RawRegion = {
+            ...FIXTURE,
+            region: "small",
+            label: "Small Region",
+            bbox: [139.7, 35.65, 139.8, 35.7], // ~0.005 sq deg
+        };
+        // Large region: all of Japan
+        const large: RawRegion = {
+            ...FIXTURE,
+            region: "large",
+            label: "Large Region",
+            bbox: [128.0, 30.0, 146.0, 46.0], // ~288 sq deg
+        };
+
+        // Register large first to verify sort reorders it.
+        registerRegion("large", large);
+        registerRegion("small", small);
+
+        // A point inside both regions should resolve to the smaller one.
+        const result = regionCoveringPoint(35.68, 139.75);
+        expect(result).toBe("small");
+
+        // A bbox fully inside both should also resolve to the smaller one.
+        const bboxResult = regionCoveringBbox([139.71, 35.66, 139.79, 35.69]);
+        expect(bboxResult).toBe("small");
+    });
+
+    it("falls back to larger region when smaller one does not cover", () => {
+        const small: RawRegion = {
+            ...FIXTURE,
+            region: "small",
+            label: "Small Region",
+            bbox: [139.7, 35.65, 139.8, 35.7],
+        };
+        const large: RawRegion = {
+            ...FIXTURE,
+            region: "large",
+            label: "Large Region",
+            bbox: [128.0, 30.0, 146.0, 46.0],
+        };
+
+        registerRegion("small", small);
+        registerRegion("large", large);
+
+        // Point in Hokkaido — covered by large but not small.
+        const result = regionCoveringPoint(43.0, 141.0);
+        expect(result).toBe("large");
     });
 });

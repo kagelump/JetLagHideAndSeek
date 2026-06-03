@@ -17,5 +17,8 @@ data/odpt/odpt_api_files/
 # macOS-specific files
 .DS_Store
 
+# Geofabrik POI pack artifacts (downloaded on demand, not shipped in binary)
+data/geofabrik/dist/
+
 # jetbrains setting folder
 .idea/

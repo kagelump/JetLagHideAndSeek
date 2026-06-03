@@ -23,6 +23,7 @@ import {
     useHidingZoneState,
 } from "@/state/hidingZoneStore";
 import { cleanOrphanedBoundaryKeys } from "@/features/map/playAreaBoundary";
+import { loadInstalledPacks } from "@/features/questions/matching/regionPacks";
 import { loadPersistedAppState, persistAppState } from "@/state/persistence";
 import { PlayAreaProvider, usePlayArea } from "@/state/playAreaStore";
 import { queryClient, setupPersister } from "@/state/queryClient";
@@ -166,6 +167,10 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
             // Clean up orphaned pre-migration boundary cache keys in the
             // background — non-blocking.
             cleanOrphanedBoundaryKeys();
+
+            // Restore installed POI packs from the filesystem so matching
+            // resolves locally across app restarts (non-blocking).
+            void loadInstalledPacks();
         })();
 
         return () => {

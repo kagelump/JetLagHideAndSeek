@@ -54,6 +54,14 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     testID="settings-hiding-zone-row"
                     title="Hiding Zones"
                 />
+
+                <SheetListRow
+                    accessibilityLabel="Open Offline Data settings"
+                    description="Download offline POI packs for matching questions."
+                    onPress={() => onNavigate("offline-data")}
+                    testID="settings-offline-data-row"
+                    title="Offline Data"
+                />
             </View>
 
             <View style={styles.attribution}>
