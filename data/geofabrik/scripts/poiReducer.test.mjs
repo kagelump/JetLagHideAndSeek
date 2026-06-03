@@ -309,7 +309,11 @@ describe("buildCategoryOf", () => {
         const catOf = buildCategoryOf(SELECTORS_FIXTURE);
         // Haneda: aeroway=aerodrome + iata=HND (both conditions satisfied).
         assert.strictEqual(
-            catOf({ aeroway: "aerodrome", iata: "HND", name: "Haneda Airport" }),
+            catOf({
+                aeroway: "aerodrome",
+                iata: "HND",
+                name: "Haneda Airport",
+            }),
             "commercial-airport",
         );
     });
