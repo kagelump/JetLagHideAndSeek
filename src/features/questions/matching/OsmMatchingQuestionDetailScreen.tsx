@@ -12,6 +12,7 @@ import {
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 import type { MatchingQuestion } from "./matchingTypes";
+import { formatCandidateName } from "./formatCandidateName";
 import { getCategoryTitle } from "./matchingCategories";
 import { OsmMatchingCandidatesModal } from "./OsmMatchingCandidatesModal";
 import { useMatchingSearch } from "./useMatchingSearch";
@@ -185,7 +186,7 @@ export function OsmMatchingQuestionDetailScreen({
                                 question.selectedOsmType === candidate.osmType;
                             return (
                                 <Pressable
-                                    accessibilityLabel={`${candidate.name}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
+                                    accessibilityLabel={`${formatCandidateName(candidate)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
                                     onPress={() =>
@@ -204,17 +205,7 @@ export function OsmMatchingQuestionDetailScreen({
                                             style={styles.candidateName}
                                             numberOfLines={1}
                                         >
-                                            {candidate.name}
-                                            {question.category ===
-                                                "station-name-length" &&
-                                            candidate.nameLength !== undefined
-                                                ? ` (${candidate.nameLength})`
-                                                : ""}
-                                            {question.category ===
-                                                "commercial-airport" &&
-                                            candidate.iata
-                                                ? ` (${candidate.iata})`
-                                                : ""}
+                                            {formatCandidateName(candidate)}
                                         </Text>
                                     </View>
                                     {candidate.distanceMeters !== undefined ? (

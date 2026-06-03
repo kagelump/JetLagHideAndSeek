@@ -10,6 +10,7 @@ import {
 import { formatStationDistance } from "@/features/questions/radar/radarGeometry";
 import { colors } from "@/theme/colors";
 
+import { formatCandidateName } from "./formatCandidateName";
 import type { OsmFeature } from "./matchingTypes";
 
 type OsmMatchingCandidatesModalProps = {
@@ -67,7 +68,7 @@ export function OsmMatchingCandidatesModal({
                                 selectedOsmType === candidate.osmType;
                             return (
                                 <Pressable
-                                    accessibilityLabel={`${candidate.name}${candidate.iata ? ` (${candidate.iata})` : ""}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
+                                    accessibilityLabel={`${formatCandidateName(candidate)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
                                     onPress={() => {
@@ -87,10 +88,7 @@ export function OsmMatchingCandidatesModal({
                                             style={styles.candidateName}
                                             numberOfLines={1}
                                         >
-                                            {candidate.name}
-                                            {candidate.iata
-                                                ? ` (${candidate.iata})`
-                                                : ""}
+                                            {formatCandidateName(candidate)}
                                         </Text>
                                     </View>
                                     {candidate.distanceMeters !== undefined ? (
