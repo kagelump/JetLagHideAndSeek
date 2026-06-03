@@ -48,7 +48,7 @@ describe("deriveOsmQueryTags", () => {
 
     it('returns the Overpass QL tag string for "foreign-consulate"', () => {
         expect(deriveOsmQueryTags("foreign-consulate")).toBe(
-            `["diplomatic"="consulate"]`,
+            `["diplomatic"="embassy"]`,
         );
     });
 
@@ -127,9 +127,9 @@ describe("toTagsFilterArgs", () => {
         expect(args).toContain("natural=peak");
     });
 
-    it("includes diplomatic=consulate", () => {
+    it("includes diplomatic=embassy", () => {
         const args = toTagsFilterArgs();
-        expect(args).toContain("diplomatic=consulate");
+        expect(args).toContain("diplomatic=embassy");
     });
 
     it("includes railway=station", () => {
