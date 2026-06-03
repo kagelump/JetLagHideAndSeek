@@ -1,4 +1,5 @@
 import {
+    Linking,
     Modal,
     Pressable,
     ScrollView,
@@ -113,10 +114,23 @@ export function OsmFeatureDetailModal({
                                         label="Coordinates"
                                         value={`${formatCoordinate(feature.lat)}, ${formatCoordinate(feature.lon)}`}
                                     />
-                                    <InfoRow
-                                        label="OSM ID"
-                                        value={String(feature.osmId)}
-                                    />
+                                    <View style={styles.infoRow}>
+                                        <Text style={styles.infoLabel}>
+                                            OSM ID
+                                        </Text>
+                                        <Pressable
+                                            onPress={() =>
+                                                Linking.openURL(
+                                                    `https://www.openstreetmap.org/${feature.osmType}/${feature.osmId}`,
+                                                )
+                                            }
+                                        >
+                                            <Text style={styles.osmLink}>
+                                                {feature.osmType}/
+                                                {feature.osmId}
+                                            </Text>
+                                        </Pressable>
+                                    </View>
                                     <InfoRow
                                         label="OSM Type"
                                         value={feature.osmType}
@@ -157,6 +171,25 @@ export function OsmFeatureDetailModal({
                                 </Text>
                             )}
                         </View>
+
+                        {/* ── External Links ──────────────────────── */}
+                        {feature ? (
+                            <Pressable
+                                accessibilityLabel="Open in Google Maps"
+                                accessibilityRole="link"
+                                onPress={() =>
+                                    Linking.openURL(
+                                        `https://www.google.com/maps/search/?api=1&query=${feature.lat},${feature.lon}`,
+                                    )
+                                }
+                                style={styles.googleMapsButton}
+                                testID="poi-detail-google-maps"
+                            >
+                                <Text style={styles.googleMapsText}>
+                                    Open in Google Maps
+                                </Text>
+                            </Pressable>
+                        ) : null}
 
                         {/* ── Attribution ─────────────────────────── */}
                         <Text style={styles.attribution}>
@@ -296,6 +329,24 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         paddingHorizontal: 16,
         paddingVertical: 4,
+    },
+    googleMapsButton: {
+        alignItems: "center",
+        backgroundColor: colors.button,
+        borderRadius: 8,
+        justifyContent: "center",
+        paddingVertical: 12,
+    },
+    googleMapsText: {
+        color: "#ffffff",
+        fontSize: 15,
+        fontWeight: "800",
+    },
+    osmLink: {
+        color: colors.tint,
+        fontSize: 14,
+        fontWeight: "600",
+        textDecorationLine: "underline",
     },
     title: {
         color: colors.ink,
