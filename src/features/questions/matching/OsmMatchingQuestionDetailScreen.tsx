@@ -358,7 +358,11 @@ export function OsmMatchingQuestionDetailScreen({
                 onSelect={handleSelectCandidate}
                 onShowDetail={(candidate) => {
                     setDetailFeature(candidate);
-                    setTimeout(() => setDetailVisible(true), 0);
+                    setShowAllModalVisible(false);
+                    // Wait for the All modal dismiss animation (~300ms)
+                    // before presenting the detail modal so they don't
+                    // stack.
+                    setTimeout(() => setDetailVisible(true), 300);
                 }}
                 onClose={() => setShowAllModalVisible(false)}
                 visible={isShowAllModalVisible}
