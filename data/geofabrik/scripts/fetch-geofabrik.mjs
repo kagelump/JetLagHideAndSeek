@@ -436,7 +436,9 @@ const PACK_SIZE_BUDGET_BYTES = 8 * 1024 * 1024;
  */
 async function emitPack(meta, serialized, packsDir, packsBaseUrl) {
     const gzipped = gzipSync(serialized, { level: 9 });
-    const sha256 = createHash("sha256").update(gzipped).digest("hex");
+    // sha256 = uncompressed JSON (verified at runtime after inflation).
+    const sha256 = createHash("sha256").update(serialized).digest("hex");
+    // md5 = gzipped bytes (verified at download time via expo-file-system).
     const md5 = createHash("md5").update(gzipped).digest("hex");
 
     if (gzipped.length > PACK_SIZE_BUDGET_BYTES) {

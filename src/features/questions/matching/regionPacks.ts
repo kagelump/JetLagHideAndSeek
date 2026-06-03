@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { digestStringAsync } from "expo-crypto";
+import { CryptoDigestAlgorithm } from "expo-crypto";
 import { gunzipSync, strFromU8 } from "fflate";
 import { Directory, File, Paths, type InfoOptions } from "expo-file-system";
 import type { Bbox } from "@/shared/geojson";
@@ -46,6 +48,19 @@ function poiDir(): Directory {
         _poiDir = new Directory(Paths.document, "poi");
     }
     return _poiDir;
+}
+
+// ─── Safety validation ────────────────────────────────────────────────────
+
+/** Pack IDs must be alphanumeric + hyphens, starting with a letter or digit. */
+const VALID_PACK_ID = /^[a-z0-9][a-z0-9-]*$/i;
+
+function validatePackId(id: string): void {
+    if (!VALID_PACK_ID.test(id)) {
+        throw new Error(
+            `Invalid pack id "${id}" — must match ${VALID_PACK_ID}`,
+        );
+    }
 }
 
 // ─── File helpers ─────────────────────────────────────────────────────────
@@ -126,6 +141,7 @@ function ensurePoiDir(): void {
 }
 
 async function downloadAndInstallPack(meta: PackMeta): Promise<void> {
+    validatePackId(meta.id);
     ensurePoiDir();
 
     // 1. Download .gz via the v19 File API (writes directly to disk).
@@ -172,8 +188,54 @@ async function downloadAndInstallPack(meta: PackMeta): Promise<void> {
 
     // 4. Read raw bytes and inflate with fflate (no base64, no TextDecoder).
     const gzBytes = await downloaded.bytes();
+
+    // Decompression bomb guard: cap inflated size.
+    // A typical pack is ~3–15 MB raw; 100 MB absolute is far beyond any real region.
+    const INFLATE_MAX_BYTES = 100 * 1024 * 1024;
+    // Also cap at 20× the gzip size — a normal ratio is 3–5×.
+    const inflateLimit = Math.min(INFLATE_MAX_BYTES, gzBytes.length * 20);
     const inflated = gunzipSync(gzBytes);
+    if (inflated.length > inflateLimit) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Decompressed size ${(inflated.length / 1024 / 1024).toFixed(1)} MB ` +
+                `exceeds limit of ${(inflateLimit / 1024 / 1024).toFixed(1)} MB ` +
+                `for ${meta.id}`,
+        );
+    }
     const jsonStr = strFromU8(inflated);
+
+    // 4a. Verify SHA-256 of the uncompressed JSON (fail closed).
+    if (!meta.sha256) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Integrity check failed for ${meta.id}: manifest missing sha256`,
+        );
+    }
+    const givenSha256 = await digestStringAsync(
+        CryptoDigestAlgorithm.SHA256,
+        jsonStr,
+    );
+    if (givenSha256.toLowerCase() !== meta.sha256.toLowerCase()) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Integrity check failed for ${meta.id}: SHA-256 mismatch ` +
+                `(expected ${meta.sha256}, got ${givenSha256})`,
+        );
+    }
+
     const raw: RawRegion = JSON.parse(jsonStr);
 
     // 5. Schema version guard.
@@ -227,6 +289,7 @@ export function useDownloadPack() {
 // ─── Remove mutation ──────────────────────────────────────────────────────
 
 async function removeInstalledPack(packId: string): Promise<void> {
+    validatePackId(packId);
     // 1. Delete files (best-effort — they may already be gone).
     try {
         gzFile(packId).delete();
@@ -280,6 +343,14 @@ export async function loadInstalledPacks(): Promise<void> {
     }
 
     for (const id of Object.keys(index)) {
+        // Silently skip invalid ids — they can't have been written by us
+        // and must not be used in filesystem paths.
+        if (!VALID_PACK_ID.test(id)) {
+            console.warn(
+                `[regionPacks] Skipping invalid pack id "${id}" in installed index.`,
+            );
+            continue;
+        }
         try {
             const plain = jsonFile(id);
             if (!plain.exists) continue; // file was cleaned up externally

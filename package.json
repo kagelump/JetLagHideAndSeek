@@ -53,6 +53,7 @@
         "@turf/helpers": "^7.2.0",
         "@turf/voronoi": "^7.3.5",
         "expo": "~54.0.34",
+        "expo-crypto": "~15.0.9",
         "expo-dev-client": "~6.0.21",
         "expo-file-system": "~19.0.23",
         "expo-location": "~19.0.8",

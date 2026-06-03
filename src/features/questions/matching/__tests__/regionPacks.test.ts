@@ -27,6 +27,13 @@ jest.mock("fflate", () => {
 // expo-file-system v19: mock File, Directory, Paths — all inline in the
 // factory so Jest's hoisted jest.mock doesn't see uninitialized variables.
 
+const mockDigestStringAsync = jest.fn();
+
+jest.mock("expo-crypto", () => ({
+    digestStringAsync: (...args: unknown[]) => mockDigestStringAsync(...args),
+    CryptoDigestAlgorithm: { SHA256: "SHA-256" },
+}));
+
 jest.mock("expo-file-system", () => {
     // Inline mocks that tests can configure via the imported exports.
     const mockFileInfoFn = jest.fn();
@@ -233,6 +240,9 @@ beforeEach(async () => {
 
     // Default: gunzip pass-through.
     setupGunzipPassThrough(RAW_REGION);
+
+    // Default: digestStringAsync returns matching SHA-256.
+    mockDigestStringAsync.mockResolvedValue(PACK_META.sha256);
 
     // Clear fetch mock.
     (global as { fetch?: unknown }).fetch = undefined;

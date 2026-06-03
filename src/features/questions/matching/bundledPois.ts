@@ -196,6 +196,29 @@ export function getBundledCategoryFeatures(
         return [];
     }
 
+    // Sanity bound — the largest real category is park (~30k in Kantō,
+    // ~200k across all Japan). 500k is generous headroom.
+    if (
+        col.count < 0 ||
+        col.count > 500_000 ||
+        col.lon.length !== col.count ||
+        col.lat.length !== col.count ||
+        col.name.length !== col.count ||
+        col.osmId.length !== col.count ||
+        col.osmType.length !== col.count ||
+        (col.nameLength && col.nameLength.length !== col.count)
+    ) {
+        if (__DEV__) {
+            console.error(
+                `[bundledPois] Category "${regionId}:${category}" has inconsistent ` +
+                    `column lengths (count=${col.count}, lon=${col.lon.length}, ` +
+                    `lat=${col.lat.length}) — treating as empty.`,
+            );
+        }
+        categoryFeatureCache.set(key, []);
+        return [];
+    }
+
     const out: OsmFeature[] = new Array(col.count);
     for (let i = 0; i < col.count; i++) {
         const f: OsmFeature = {
