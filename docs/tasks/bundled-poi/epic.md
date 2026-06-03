@@ -1,8 +1,9 @@
 # Epic: Bundled Offline POIs
 
 **Date:** 2026-06-03
-**Status:** Proposed
+**Status:** Phase 1 complete (tasks 01–06 shipped); Phase 2 (task 07) pending
 **Author:** Datatype & architecture advisory
+**Review:** [review-01.md](review-01.md) — 8 findings, all resolved
 **Related:**
 
 - [`../../../data/geofabrik/SIZES.md`](../../../data/geofabrik/SIZES.md) — Kantō POI size analysis
@@ -20,8 +21,9 @@ data**, with Overpass kept as the online fallback and refresh path.
 
 The work is deliberately phased:
 
-- **Phase 1 (MVP):** Bundle the Kantō POI set into the app binary and serve matching
-  queries locally when the play area is inside Kantō. Tasks 01–06.
+- **Phase 1 (MVP — shipped):** Bundle the Kantō POI set into the app binary and serve matching
+  queries locally when the play area is inside Kantō. Tasks 01–06 implemented, reviewed,
+  and fixed. See [review-01.md](review-01.md).
 - **Phase 2 (scale):** On-demand downloadable region packs for the rest of Japan and,
   eventually, worldwide. Task 07.
 
@@ -80,7 +82,7 @@ even if the estimate is off by 2×.
 - A spatial index library. Linear scan is sufficient at these counts (see
   [Key decisions](#key-decisions)); an index is a future optimization, not a dependency.
 
-## Current data flow
+## Pre-Phase-1 data flow (historical)
 
 ```
 OsmMatchingQuestionDetailScreen.performSearch()
@@ -96,12 +98,12 @@ The active path is the **cell cache** (`findMatchingFeaturesWithCellCache`,
 `fetchAndParseOverpassBboxFeatures` (`osmMatching.ts:192`), called from
 `fetchAndStoreCell` and `cellRevalidateInBackground`.
 
-## Target data flow
+## Current data flow (Phase 1 shipped)
 
 ```
 findMatchingFeaturesWithCellCache(...)                          ← UNCHANGED
   └─ fetchAndStoreCell / cellRevalidateInBackground
-       └─ resolveBboxFeatures(category, bbox, signal)           ← NEW SEAM (task 04)
+       └─ resolveBboxFeatures(category, bbox, signal)           ← featureSource.ts
             ├─ if bundled region covers bbox → localBboxFeatures()   (in-memory scan)
             └─ else                          → fetchAndParseOverpassBboxFeatures()
 ```
@@ -159,12 +161,12 @@ two groups are intentionally excluded.
 
 ```
 Phase 1 (MVP — Kantō bundled, zero new deps):
-  01  Category → OSM selector registry        [keystone, no deps]
-  02  POI extraction pipeline stage            [deps: 01]
-  03  Bundle asset loader + in-memory index    [deps: 02 output format]
-  04  FeatureSource seam (local + Overpass)    [deps: 03]
-  05  Cache integration                        [deps: 04]
-  06  Attribution & licensing surface          [deps: 02]
+✅ 01  Category → OSM selector registry        [keystone, no deps]
+✅ 02  POI extraction pipeline stage            [deps: 01]
+✅ 03  Bundle asset loader + in-memory index    [deps: 02 output format]
+✅ 04  FeatureSource seam (local + Overpass)    [deps: 03]
+✅ 05  Cache integration                        [deps: 04]
+✅ 06  Attribution & licensing surface          [deps: 02]
 
 Phase 2 (scale):
   07  On-demand downloadable region packs      [deps: 01–05]
@@ -178,15 +180,28 @@ Dependency graph:
     └────────────────────────────┘
 ```
 
-| #   | File                                                                             | Outcome                                                                     |
-| --- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| 01  | [`01-task-category-selector-registry.md`](01-task-category-selector-registry.md) | One typed registry feeds both runtime QL and the pipeline; `--check` guard. |
-| 02  | [`02-task-poi-extraction-pipeline.md`](02-task-poi-extraction-pipeline.md)       | `data:geofabrik:poi` emits per-region columnar JSON + region index + stats. |
-| 03  | [`03-task-bundle-asset-loader.md`](03-task-bundle-asset-loader.md)               | Runtime loads/indexes a bundled region; coverage lookup.                    |
-| 04  | [`04-task-feature-source-seam.md`](04-task-feature-source-seam.md)               | `resolveBboxFeatures` dispatches local-or-Overpass.                         |
-| 05  | [`05-task-cache-integration.md`](05-task-cache-integration.md)                   | Cell cache calls the resolver; local cells stamped + SWR refresh.           |
-| 06  | [`06-task-attribution-licensing.md`](06-task-attribution-licensing.md)           | ODbL attribution in data + app UI.                                          |
-| 07  | [`07-task-offline-region-packs.md`](07-task-offline-region-packs.md)             | Download/persist/evict region packs beyond the bundle.                      |
+| #   | Status | Outcome                                                                                                |
+| --- | ------ | ------------------------------------------------------------------------------------------------------ |
+| 01  | ✅     | One typed registry feeds both runtime QL and the pipeline; `--check` CI guard.                         |
+| 02  | ✅     | `pnpm data:poi` emits per-region columnar JSON + region index + stats.                                 |
+| 03  | ✅     | Runtime loads/indexes a bundled region lazily via `require()`; coverage lookup.                        |
+| 04  | ✅     | `resolveBboxFeatures` in `featureSource.ts` dispatches local-or-Overpass.                              |
+| 05  | ✅     | Cell cache calls the resolver; local cells stamped with `generatedAt` + SWR refresh.                   |
+| 06  | ✅     | ODbL attribution in data artifact + `NOTICE.md`; `poiAttribution.ts` in-app surface.                   |
+| 07  | ⬜     | Download/persist/evict region packs beyond the bundle. See [07-task](07-task-offline-region-packs.md). |
+
+### Phase 1 artifacts
+
+| Artifact            | Path                                                                                         | Notes                                                                |
+| ------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Selector registry   | `src/features/questions/matching/matchingSelectors.ts` → `data/geofabrik/poi-selectors.json` | Drift-guarded by `pnpm test:data:poi-selectors` (in `check`)         |
+| Extraction pipeline | `data/geofabrik/scripts/poiReducer.mjs` + `fetch-geofabrik.mjs`                              | `pnpm data:poi`; tested by `pnpm test:data:geofabrik` (in `pretest`) |
+| Bundle data         | `assets/poi/japan-kanto.json` (3.14 MB raw, 0.97 MB gzip)                                    | 58,058 named features across 14 categories                           |
+| Region index        | `assets/poi/regions.json`                                                                    | Bbox `[134.04, 18.62, 155.60, 37.15]`                                |
+| Asset loader        | `src/features/questions/matching/bundledPois.ts`                                             | Lazy `require()`, memoized per-category reconstruction               |
+| Feature seam        | `src/features/questions/matching/featureSource.ts`                                           | `resolveBboxFeatures` → local or Overpass                            |
+| Cache integration   | `src/features/questions/matching/osmMatchingCache.ts`                                        | `fetchAndStoreCell` / `cellRevalidateInBackground` call the seam     |
+| Attribution         | `src/features/questions/matching/poiAttribution.ts` + `data/geofabrik/NOTICE.md`             | ODbL attribution surfaced in settings                                |
 
 ## Risks & mitigations
 
@@ -200,15 +215,18 @@ Dependency graph:
 | App-store size growth as regions are added                     | Phase 2 moves additional regions to on-demand downloads (task 07); keep the in-binary bundle to Kantō (or a small default set).                        |
 | ODbL share-alike obligations                                   | Attribution shipped in data + surfaced in-app (task 06); `NOTICE.md` already present.                                                                  |
 
-## Open questions
+## Resolved questions (from Phase 1)
 
-1. **Default in-binary region(s):** Kantō only, or Kantō + Kansai? Affects binary size
-   (~0.9 MB vs ~2 MB) vs. how many users get instant offline. Recommend Kantō-only for
-   Phase 1; decide before task 02 wiring.
-2. **Coordinate precision:** 6 decimals (~0.1 m) is specified; confirm acceptable for
-   centroid-based ranking (it is — ranking is by relative distance).
-3. **Per-category files vs one region file:** Phase 1 uses one region file (simpler Metro
-   wiring). Revisit per-category sharding if a single region file grows past ~5 MB.
+1. **Default in-binary region(s):** Kantō only. The single region file is 3.14 MB raw
+   (0.97 MB gzip). Kansai or additional regions can be added as separate files when the
+   bundle grows; for now Kantō provides offline coverage for the primary play-testing area.
+2. **Coordinate precision:** 6 decimal places (~0.1 m) confirmed. Centroid uses **bbox
+   center** (matching Overpass `out center`), fixed in review Finding 3. Coordinates are
+   rounded via `round6` in the reducer. Ranking is by relative haversine distance, so
+   sub-meter precision is unnecessary.
+3. **Per-category files vs one region file:** One region file. At 3.14 MB raw / 0.97 MB
+   gzip, this is well under the ~5 MB threshold for per-category sharding. Revisit if
+   additional regions push past that bound.
 
 ## Appendix: reproducing the measurement
 
