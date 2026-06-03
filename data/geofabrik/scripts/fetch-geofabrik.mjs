@@ -13,6 +13,7 @@ import YAML from "yaml";
 import {
     buildColumnar,
     computeStats,
+    deduplicateRecords,
     loadCategoryOf,
     reduceFeature,
 } from "./poiReducer.mjs";
@@ -363,9 +364,17 @@ async function runBundleStage(region, pbfPath, categoryOf, bundleDir) {
             `  [bundle] Reduced ${records.length.toLocaleString()} named features`,
         );
 
+        // 3a. Deduplicate: OSM may have both a node and a way for the same POI.
+        const deduped = deduplicateRecords(records);
+        if (deduped.length < records.length) {
+            console.log(
+                `  [bundle] Deduped: ${deduped.length.toLocaleString()} (removed ${(records.length - deduped.length).toLocaleString()} duplicates)`,
+            );
+        }
+
         // 4. Build columnar JSON.
         const generatedAt = new Date().toISOString();
-        const columnar = buildColumnar(records, {
+        const columnar = buildColumnar(deduped, {
             id: region.id,
             label: region.label,
             bbox: bbox ?? region.bbox ?? [0, 0, 0, 0],

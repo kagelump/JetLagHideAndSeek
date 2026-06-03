@@ -58,7 +58,7 @@
         },
         "foreign-consulate": {
             "selectors": [
-                { "match": [{ "key": "diplomatic", "value": "consulate" }] }
+                { "match": [{ "key": "diplomatic", "value": "embassy" }] }
             ]
         },
         "station-name-length": {
@@ -73,7 +73,7 @@
         "tourism=aquarium,attraction,museum,theme_park,zoo",
         "leisure=golf_course,park",
         "amenity=cinema,hospital,library",
-        "diplomatic=consulate",
+        "diplomatic=embassy",
         "railway=station"
     ]
 }

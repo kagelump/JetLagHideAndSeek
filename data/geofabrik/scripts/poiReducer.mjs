@@ -108,6 +108,38 @@ export function buildCategoryOf(selectorsJson) {
 }
 
 /**
+ * Deduplicates reduced records within each category.
+ *
+ * OSM often has both a node and a way (or multiple nodes) for the same POI.
+ * The centroid of each is nearly identical, and the name is the same. This
+ * groups by (category, name, lat@4dp, lon@4dp) — ~11 m tolerance — and keeps
+ * the record with the lowest osmId per group (deterministic).
+ *
+ * Returns a new array (does not mutate the input).
+ */
+export function deduplicateRecords(records) {
+    const round4 = (x) => Math.round(x * 1e4) / 1e4;
+    const seen = new Map();
+    const out = [];
+
+    for (const r of records) {
+        const key = `${r.category}\x00${r.name}\x00${round4(r.lat)}\x00${round4(r.lon)}`;
+        const prev = seen.get(key);
+        if (prev === undefined) {
+            seen.set(key, r);
+            out.push(r);
+        } else if (r.osmId < prev.osmId) {
+            // Replace with the lower-osmId entry (more likely the original).
+            const idx = out.indexOf(prev);
+            out[idx] = r;
+            seen.set(key, r);
+        }
+    }
+
+    return out;
+}
+
+/**
  * Builds the columnar per-region object from an array of reduced records.
  *
  * Features within each category are sorted by osmId for deterministic output.
