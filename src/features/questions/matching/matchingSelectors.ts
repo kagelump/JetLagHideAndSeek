@@ -2,8 +2,12 @@ import type { MatchingCategory } from "./matchingTypes";
 
 export type OsmElementType = "node" | "way" | "relation";
 
-/** A single ANDed tag condition, e.g. { key: "leisure", value: "park" }. */
-export type OsmTagCondition = { key: string; value: string };
+/**
+ * A single ANDed tag condition, e.g. { key: "leisure", value: "park" }.
+ * When `value` is omitted the condition matches any element that has the key
+ * set (Overpass exists-style filter `["key"]`).
+ */
+export type OsmTagCondition = { key: string; value?: string };
 
 /**
  * One selector = a set of ANDed conditions plus the element types to match.
@@ -28,7 +32,9 @@ export type OsmSelector = {
 export const CATEGORY_SELECTORS: Partial<
     Record<MatchingCategory, OsmSelector[]>
 > = {
-    "commercial-airport": [{ match: [{ key: "aeroway", value: "aerodrome" }] }],
+    "commercial-airport": [
+        { match: [{ key: "aeroway", value: "aerodrome" }, { key: "iata" }] },
+    ],
     mountain: [{ match: [{ key: "natural", value: "peak" }] }],
     landmark: [{ match: [{ key: "tourism", value: "attraction" }] }],
     park: [{ match: [{ key: "leisure", value: "park" }] }],
@@ -50,7 +56,13 @@ export const CATEGORY_SELECTORS: Partial<
 
 /** Converts ANDed conditions to an Overpass-QL tag-filter string. */
 export function selectorToOverpassTags(conditions: OsmTagCondition[]): string {
-    return conditions.map((c) => `["${c.key}"="${c.value}"]`).join("");
+    return conditions
+        .map((c) =>
+            c.value !== undefined
+                ? `["${c.key}"="${c.value}"]`
+                : `["${c.key}"]`,
+        )
+        .join("");
 }
 
 /**
@@ -75,19 +87,25 @@ export function isBundleableCategory(category: MatchingCategory): boolean {
  * "leisure=park", "amenity=hospital,cinema,library". Used by the emit script
  * and the pipeline.
  *
- * Groups single-condition selectors by key with comma-joined values; emits
- * multi-condition selectors as separate `key=value` args (osmium ANDs nothing,
- * so multi-condition AND selectors — none in Phase 1 — must be filtered
- * post-hoc).
+ * Groups value-bearing conditions by key with comma-joined values across ALL
+ * selectors (single- and multi-condition alike). Key-only conditions (e.g.
+ * `iata`) are skipped — osmium cannot filter "key exists" as a `key=value`
+ * arg; they are applied post-hoc by the reducer.
+ *
+ * osmium tags-filter ORs its arguments, so emitting every value-bearing
+ * condition produces a coarse superset; the reducer then applies the full AND
+ * selector (including key-only conditions) to assign each feature to the
+ * correct category.
  */
 export function toTagsFilterArgs(): string[] {
     const byKey = new Map<string, Set<string>>();
     for (const selectors of Object.values(CATEGORY_SELECTORS)) {
         for (const sel of selectors ?? []) {
-            if (sel.match.length !== 1) continue; // Phase 1 has none; guard anyway.
-            const { key, value } = sel.match[0];
-            if (!byKey.has(key)) byKey.set(key, new Set());
-            byKey.get(key)!.add(value);
+            for (const cond of sel.match) {
+                if (cond.value === undefined) continue; // key-only → post-hoc only
+                if (!byKey.has(cond.key)) byKey.set(cond.key, new Set());
+                byKey.get(cond.key)!.add(cond.value);
+            }
         }
     }
     return [...byKey.entries()].map(

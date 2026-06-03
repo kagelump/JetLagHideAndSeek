@@ -26,6 +26,19 @@ describe("selectorToOverpassTags", () => {
         ).toBe(`["boundary"="administrative"]["admin_level"="4"]`);
     });
 
+    it("formats a key-only condition (exists-style filter)", () => {
+        expect(selectorToOverpassTags([{ key: "iata" }])).toBe(`["iata"]`);
+    });
+
+    it("formats mixed value and key-only conditions", () => {
+        expect(
+            selectorToOverpassTags([
+                { key: "aeroway", value: "aerodrome" },
+                { key: "iata" },
+            ]),
+        ).toBe(`["aeroway"="aerodrome"]["iata"]`);
+    });
+
     it("formats empty conditions array as empty string", () => {
         expect(selectorToOverpassTags([])).toBe("");
     });
@@ -54,7 +67,7 @@ describe("deriveOsmQueryTags", () => {
 
     it('returns the Overpass QL tag string for "commercial-airport"', () => {
         expect(deriveOsmQueryTags("commercial-airport")).toBe(
-            `["aeroway"="aerodrome"]`,
+            `["aeroway"="aerodrome"]["iata"]`,
         );
     });
 
@@ -117,7 +130,7 @@ describe("isBundleableCategory", () => {
 // ─── toTagsFilterArgs ──────────────────────────────────────────────────────
 
 describe("toTagsFilterArgs", () => {
-    it("includes aeroway=aerodrome", () => {
+    it("includes aeroway=aerodrome from multi-condition airport selector", () => {
         const args = toTagsFilterArgs();
         expect(args).toContain("aeroway=aerodrome");
     });

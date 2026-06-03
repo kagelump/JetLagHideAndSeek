@@ -12,6 +12,16 @@ import {
 const SELECTORS_FIXTURE = {
     schemaVersion: 1,
     categories: {
+        "commercial-airport": {
+            selectors: [
+                {
+                    match: [
+                        { key: "aeroway", value: "aerodrome" },
+                        { key: "iata" },
+                    ],
+                },
+            ],
+        },
         park: { selectors: [{ match: [{ key: "leisure", value: "park" }] }] },
         hospital: {
             selectors: [{ match: [{ key: "amenity", value: "hospital" }] }],
@@ -293,6 +303,33 @@ describe("buildCategoryOf", () => {
         const catOf = buildCategoryOf(SELECTORS_FIXTURE);
         assert.strictEqual(catOf({ leisure: "golf_course" }), "golf-course");
         assert.strictEqual(catOf({ leisure: "park" }), "park");
+    });
+
+    it("matches multi-condition AND selector with key-only condition", () => {
+        const catOf = buildCategoryOf(SELECTORS_FIXTURE);
+        // Haneda: aeroway=aerodrome + iata=HND (both conditions satisfied).
+        assert.strictEqual(
+            catOf({ aeroway: "aerodrome", iata: "HND", name: "Haneda Airport" }),
+            "commercial-airport",
+        );
+    });
+
+    it("rejects when key-only condition is missing", () => {
+        const catOf = buildCategoryOf(SELECTORS_FIXTURE);
+        // Tokyo Heliport: aeroway=aerodrome but no iata tag → reject.
+        assert.strictEqual(
+            catOf({ aeroway: "aerodrome", name: "Tokyo Heliport" }),
+            null,
+        );
+    });
+
+    it("rejects when value-bearing condition mismatches", () => {
+        const catOf = buildCategoryOf(SELECTORS_FIXTURE);
+        // heliport is not aerodrome.
+        assert.strictEqual(
+            catOf({ aeroway: "heliport", iata: "XXX", name: "Heliport" }),
+            null,
+        );
     });
 });
 

@@ -95,9 +95,18 @@ export function buildCategoryOf(selectorsJson) {
             for (const sel of spec.selectors ?? []) {
                 let match = true;
                 for (const cond of sel.match ?? []) {
-                    if (props[cond.key] !== cond.value) {
-                        match = false;
-                        break;
+                    if (cond.value !== undefined) {
+                        // Value-bearing condition: exact match required.
+                        if (props[cond.key] !== cond.value) {
+                            match = false;
+                            break;
+                        }
+                    } else {
+                        // Key-only condition: tag must be present.
+                        if (!(cond.key in props)) {
+                            match = false;
+                            break;
+                        }
                     }
                 }
                 if (match) return category;

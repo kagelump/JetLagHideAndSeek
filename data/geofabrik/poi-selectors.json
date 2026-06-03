@@ -4,7 +4,12 @@
     "categories": {
         "commercial-airport": {
             "selectors": [
-                { "match": [{ "key": "aeroway", "value": "aerodrome" }] }
+                {
+                    "match": [
+                        { "key": "aeroway", "value": "aerodrome" },
+                        { "key": "iata" }
+                    ]
+                }
             ]
         },
         "mountain": {
