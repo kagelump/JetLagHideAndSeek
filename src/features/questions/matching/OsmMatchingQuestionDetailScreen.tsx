@@ -4,6 +4,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
 import { QuestionLocationSelector } from "@/features/questions/components/QuestionLocationSelector";
 import { formatStationDistance } from "@/features/questions/radar/radarGeometry";
+import { useHidingZoneState } from "@/state/hidingZoneStore";
+import { usePlayArea } from "@/state/playAreaStore";
 import {
     updateQuestionCenter,
     useQuestionActions,
@@ -11,10 +13,9 @@ import {
 import { colors } from "@/theme/colors";
 import type { MatchingQuestion } from "./matchingTypes";
 import { getCategoryTitle } from "./matchingCategories";
-import {
-    findMatchingFeaturesWithCellCache,
-    type OsmMatchingCacheSource,
-} from "./osmMatchingCache";
+import { type OsmMatchingCacheSource } from "./osmMatchingCache";
+import { OsmMatchingCandidatesModal } from "./OsmMatchingCandidatesModal";
+import { searchMatchingFeaturesProgressive } from "./progressiveSearch";
 
 /** Milliseconds to wait after the pin stops moving before querying Overpass. */
 const SEARCH_DEBOUNCE_MS = 400;
@@ -39,6 +40,9 @@ export function OsmMatchingQuestionDetailScreen({
     const [error, setError] = useState<string | null>(null);
     const [cacheSource, setCacheSource] =
         useState<OsmMatchingCacheSource | null>(null);
+    const [isShowAllModalVisible, setShowAllModalVisible] = useState(false);
+    const { radiusMeters: stationRadiusMeters } = useHidingZoneState();
+    const { playArea } = usePlayArea();
     const categoryTitle = getCategoryTitle(question.category);
     const searchGenerationRef = useRef(0);
     const lastSearchCenterRef = useRef<[number, number] | null>(null);
@@ -59,9 +63,11 @@ export function OsmMatchingQuestionDetailScreen({
             setIsLoading(true);
             setError(null);
             try {
-                const result = await findMatchingFeaturesWithCellCache(
+                const result = await searchMatchingFeaturesProgressive(
                     question.category,
                     question.center,
+                    stationRadiusMeters,
+                    playArea.bbox,
                     {
                         forceRefresh,
                         signal: abortController.signal,
@@ -102,7 +108,14 @@ export function OsmMatchingQuestionDetailScreen({
                 }
             }
         },
-        [question.category, question.center, question.id, updateQuestion],
+        [
+            question.category,
+            question.center,
+            question.id,
+            updateQuestion,
+            stationRadiusMeters,
+            playArea.bbox,
+        ],
     );
 
     // Schedule a debounced search. Clears any pending timer first.
@@ -219,7 +232,7 @@ export function OsmMatchingQuestionDetailScreen({
 
                 {hasCandidates ? (
                     <View style={styles.candidateList}>
-                        {question.candidates.map((candidate) => {
+                        {question.candidates.slice(0, 3).map((candidate) => {
                             const isSelected =
                                 question.selectedOsmId === candidate.osmId &&
                                 question.selectedOsmType === candidate.osmType;
@@ -262,6 +275,24 @@ export function OsmMatchingQuestionDetailScreen({
                                 </Pressable>
                             );
                         })}
+
+                        {question.candidates.length > 3 && (
+                            <Pressable
+                                accessibilityLabel={`Show all ${question.candidates.length} ${categoryTitle.toLowerCase()}s`}
+                                accessibilityRole="button"
+                                onPress={() => setShowAllModalVisible(true)}
+                                style={({ pressed }) => [
+                                    styles.showMoreButton,
+                                    pressed ? styles.actionPressed : null,
+                                ]}
+                                testID="osm-matching-show-more"
+                            >
+                                <Text style={styles.showMoreText}>
+                                    Show more... (
+                                    {question.candidates.length - 3} more)
+                                </Text>
+                            </Pressable>
+                        )}
                     </View>
                 ) : (
                     <Text style={styles.metadata}>
@@ -335,6 +366,16 @@ export function OsmMatchingQuestionDetailScreen({
                     testIDPrefix="matching-answer-option"
                 />
             </View>
+
+            <OsmMatchingCandidatesModal
+                candidates={question.candidates}
+                categoryTitle={categoryTitle}
+                selectedOsmId={question.selectedOsmId}
+                selectedOsmType={question.selectedOsmType}
+                onSelect={handleSelectCandidate}
+                onClose={() => setShowAllModalVisible(false)}
+                visible={isShowAllModalVisible}
+            />
         </>
     );
 }
@@ -416,5 +457,21 @@ const styles = StyleSheet.create({
         color: colors.ink,
         fontSize: 17,
         fontWeight: "800",
+    },
+    showMoreButton: {
+        alignItems: "center",
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        justifyContent: "center",
+        marginTop: 4,
+        minHeight: 48,
+        paddingHorizontal: 16,
+    },
+    showMoreText: {
+        color: colors.tint,
+        fontSize: 15,
+        fontWeight: "700",
     },
 });

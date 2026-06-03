@@ -86,8 +86,9 @@ export function metersToDegreesLon(lat: number, meters: number): number {
  * circle centered at (lat, lon) with the given radius in meters.
  *
  * The union of the returned cells' bboxes is guaranteed to cover the entire
- * search disk (plus some overshoot at the edges). After merging, a local
- * distance filter ensures correctness.
+ * search disk (plus some overshoot at the edges). Callers should apply a
+ * distance filter on the merged results to discard features outside the
+ * requested radius.
  */
 export function cellsForSearch(
     lat: number,

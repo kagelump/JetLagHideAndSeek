@@ -1,10 +1,14 @@
 import React from "react";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
-import { defaultPlayArea } from "@/features/map/playArea";
 import { OsmMatchingQuestionDetailScreen } from "@/features/questions/matching/OsmMatchingQuestionDetailScreen";
 import type { MatchingQuestion } from "@/features/questions/matching/matchingTypes";
 import type { QuestionState } from "@/features/questions/questionTypes";
+
+const mockPlayAreaCenter: [number, number] = [139.75, 35.675];
+const mockPlayAreaBbox: [number, number, number, number] = [
+    139.6, 35.55, 139.9, 35.8,
+];
 
 const mockCandidates = [
     {
@@ -36,11 +40,51 @@ const mockCandidates = [
     },
 ];
 
-let mockFindMatchingFeaturesWithCellCache: jest.Mock;
+const fiveCandidates = [
+    ...mockCandidates,
+    {
+        distanceMeters: 3200,
+        lat: 35.7,
+        lon: 139.78,
+        name: "Fourth Park",
+        osmId: 4,
+        osmType: "node" as const,
+        tags: {},
+    },
+    {
+        distanceMeters: 5000,
+        lat: 35.71,
+        lon: 139.79,
+        name: "Fifth Park",
+        osmId: 5,
+        osmType: "way" as const,
+        tags: {},
+    },
+];
 
-jest.mock("@/features/questions/matching/osmMatchingCache", () => ({
-    findMatchingFeaturesWithCellCache: (...args: unknown[]) =>
-        mockFindMatchingFeaturesWithCellCache(...args),
+let mockSearchMatchingFeaturesProgressive: jest.Mock;
+
+jest.mock("@/features/questions/matching/progressiveSearch", () => ({
+    searchCoversBbox: jest.fn(),
+    searchMatchingFeaturesProgressive: (...args: unknown[]) =>
+        mockSearchMatchingFeaturesProgressive(...args),
+}));
+
+jest.mock("@/state/hidingZoneStore", () => ({
+    useHidingZoneState: () => ({ radiusMeters: 600 }),
+}));
+
+jest.mock("@/state/playAreaStore", () => ({
+    usePlayArea: () => ({
+        playArea: {
+            bbox: [139.6, 35.55, 139.9, 35.8],
+            center: [139.75, 35.675],
+            label: "Test Area",
+            osmId: 1,
+            osmType: "R",
+            boundary: { type: "FeatureCollection", features: [] },
+        },
+    }),
 }));
 
 function TestScreen({
@@ -78,9 +122,10 @@ function TestScreen({
 describe("OsmMatchingQuestionDetailScreen", () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockFindMatchingFeaturesWithCellCache = jest.fn().mockResolvedValue({
+        mockSearchMatchingFeaturesProgressive = jest.fn().mockResolvedValue({
             candidates: mockCandidates,
             source: "network",
+            searchRadiusMeters: 1200,
         });
     });
 
@@ -89,7 +134,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             answer: "unanswered",
             candidates: mockCandidates,
             category: "park",
-            center: defaultPlayArea.center,
+            center: mockPlayAreaCenter,
             createdAt: "2026-05-30T00:00:00.000Z",
             id: "matching-1",
             lineId: null,
@@ -120,7 +165,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             answer: "unanswered",
             candidates: mockCandidates,
             category: "park",
-            center: defaultPlayArea.center,
+            center: mockPlayAreaCenter,
             createdAt: "2026-05-30T00:00:00.000Z",
             id: "matching-1",
             lineId: null,
@@ -151,7 +196,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             answer: "unanswered",
             candidates: mockCandidates,
             category: "park",
-            center: defaultPlayArea.center,
+            center: mockPlayAreaCenter,
             createdAt: "2026-05-30T00:00:00.000Z",
             id: "matching-1",
             lineId: null,
@@ -181,7 +226,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             answer: "unanswered",
             candidates: mockCandidates,
             category: "park",
-            center: defaultPlayArea.center,
+            center: mockPlayAreaCenter,
             createdAt: "2026-05-30T00:00:00.000Z",
             id: "matching-1",
             lineId: null,
@@ -230,7 +275,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             answer: "unanswered",
             candidates: [],
             category: "park",
-            center: defaultPlayArea.center,
+            center: mockPlayAreaCenter,
             createdAt: "2026-05-30T00:00:00.000Z",
             id: "matching-1",
             lineId: null,
@@ -250,7 +295,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
         render(<TestScreen initialQuestion={question} onUpdate={onUpdate} />);
 
         await waitFor(() => {
-            expect(mockFindMatchingFeaturesWithCellCache).toHaveBeenCalled();
+            expect(mockSearchMatchingFeaturesProgressive).toHaveBeenCalled();
         });
 
         const lastCall =
@@ -268,7 +313,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             answer: "unanswered",
             candidates: mockCandidates,
             category: "park",
-            center: defaultPlayArea.center,
+            center: mockPlayAreaCenter,
             createdAt: "2026-05-30T00:00:00.000Z",
             id: "matching-1",
             lineId: null,
@@ -291,7 +336,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             expect(screen.getByTestId("osm-matching-refresh")).toBeTruthy();
         });
 
-        mockFindMatchingFeaturesWithCellCache.mockClear();
+        mockSearchMatchingFeaturesProgressive.mockClear();
         const newCandidates = [
             {
                 distanceMeters: 300,
@@ -303,33 +348,37 @@ describe("OsmMatchingQuestionDetailScreen", () => {
                 tags: {},
             },
         ];
-        mockFindMatchingFeaturesWithCellCache.mockResolvedValue({
+        mockSearchMatchingFeaturesProgressive.mockResolvedValue({
             candidates: newCandidates,
             source: "network",
+            searchRadiusMeters: 2400,
         });
 
         fireEvent.press(screen.getByTestId("osm-matching-refresh"));
 
         await waitFor(() => {
-            expect(mockFindMatchingFeaturesWithCellCache).toHaveBeenCalledWith(
+            expect(mockSearchMatchingFeaturesProgressive).toHaveBeenCalledWith(
                 "park",
-                defaultPlayArea.center,
+                mockPlayAreaCenter,
+                600,
+                mockPlayAreaBbox,
                 expect.objectContaining({ forceRefresh: true }),
             );
         });
     });
 
     it("renders stale-cache banner when cache source is stale", async () => {
-        mockFindMatchingFeaturesWithCellCache.mockResolvedValue({
+        mockSearchMatchingFeaturesProgressive.mockResolvedValue({
             candidates: mockCandidates,
             source: "stale",
+            searchRadiusMeters: 1200,
         });
 
         const question: MatchingQuestion = {
             answer: "unanswered",
             candidates: [],
             category: "park",
-            center: defaultPlayArea.center,
+            center: mockPlayAreaCenter,
             createdAt: "2026-05-30T00:00:00.000Z",
             id: "matching-1",
             lineId: null,
@@ -358,7 +407,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             answer: "unanswered",
             candidates: mockCandidates,
             category: "park",
-            center: defaultPlayArea.center,
+            center: mockPlayAreaCenter,
             createdAt: "2026-05-30T00:00:00.000Z",
             id: "matching-1",
             lineId: null,
@@ -383,7 +432,7 @@ describe("OsmMatchingQuestionDetailScreen", () => {
             expect(screen.getByText("Nearest Park")).toBeTruthy();
         });
 
-        mockFindMatchingFeaturesWithCellCache.mockClear();
+        mockSearchMatchingFeaturesProgressive.mockClear();
 
         const movedQuestion: MatchingQuestion = {
             ...question,
@@ -395,9 +444,141 @@ describe("OsmMatchingQuestionDetailScreen", () => {
         );
 
         await waitFor(() => {
-            expect(mockFindMatchingFeaturesWithCellCache).toHaveBeenCalledWith(
+            expect(mockSearchMatchingFeaturesProgressive).toHaveBeenCalledWith(
                 "park",
                 [139.8, 35.8],
+                600,
+                mockPlayAreaBbox,
+                expect.objectContaining({ signal: expect.any(AbortSignal) }),
+            );
+        });
+    });
+
+    // ─── Show 3 + "Show more" tests ──────────────────────────────────
+
+    it("shows only first 3 candidates when more than 3 available", async () => {
+        const question: MatchingQuestion = {
+            answer: "unanswered",
+            candidates: fiveCandidates,
+            category: "park",
+            center: mockPlayAreaCenter,
+            createdAt: "2026-05-30T00:00:00.000Z",
+            id: "matching-1",
+            lineId: null,
+            lineName: null,
+            selectedOsmId: null,
+            selectedOsmType: null,
+            targetName: null,
+            targetOsmId: null,
+            targetOsmType: null,
+            type: "matching",
+            updatedAt: "2026-05-30T00:00:00.000Z",
+        };
+        const onUpdate = jest.fn();
+
+        const screen = render(
+            <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText("Nearest Park")).toBeTruthy();
+            expect(screen.getByText("Farther Park")).toBeTruthy();
+            expect(screen.getByText("Distant Park")).toBeTruthy();
+            // Fourth and Fifth should NOT be visible in the main list
+            expect(() => screen.getByText("Fourth Park")).toThrow();
+            expect(() => screen.getByText("Fifth Park")).toThrow();
+        });
+    });
+
+    it("shows 'Show more' button with correct count when > 3 candidates", async () => {
+        const question: MatchingQuestion = {
+            answer: "unanswered",
+            candidates: fiveCandidates,
+            category: "park",
+            center: mockPlayAreaCenter,
+            createdAt: "2026-05-30T00:00:00.000Z",
+            id: "matching-1",
+            lineId: null,
+            lineName: null,
+            selectedOsmId: null,
+            selectedOsmType: null,
+            targetName: null,
+            targetOsmId: null,
+            targetOsmType: null,
+            type: "matching",
+            updatedAt: "2026-05-30T00:00:00.000Z",
+        };
+        const onUpdate = jest.fn();
+
+        const screen = render(
+            <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId("osm-matching-show-more")).toBeTruthy();
+            expect(screen.getByText("Show more... (2 more)")).toBeTruthy();
+        });
+    });
+
+    it("does not show 'Show more' when exactly 3 candidates", async () => {
+        const question: MatchingQuestion = {
+            answer: "unanswered",
+            candidates: mockCandidates,
+            category: "park",
+            center: mockPlayAreaCenter,
+            createdAt: "2026-05-30T00:00:00.000Z",
+            id: "matching-1",
+            lineId: null,
+            lineName: null,
+            selectedOsmId: null,
+            selectedOsmType: null,
+            targetName: null,
+            targetOsmId: null,
+            targetOsmType: null,
+            type: "matching",
+            updatedAt: "2026-05-30T00:00:00.000Z",
+        };
+        const onUpdate = jest.fn();
+
+        const screen = render(
+            <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText("Distant Park")).toBeTruthy();
+        });
+
+        expect(() => screen.getByTestId("osm-matching-show-more")).toThrow();
+    });
+
+    it("progressive search is called with stationRadius and playArea bbox", async () => {
+        const question: MatchingQuestion = {
+            answer: "unanswered",
+            candidates: [],
+            category: "park",
+            center: mockPlayAreaCenter,
+            createdAt: "2026-05-30T00:00:00.000Z",
+            id: "matching-1",
+            lineId: null,
+            lineName: null,
+            selectedOsmId: null,
+            selectedOsmType: null,
+            targetName: null,
+            targetOsmId: null,
+            targetOsmType: null,
+            type: "matching",
+            updatedAt: "2026-05-30T00:00:00.000Z",
+        };
+        const onUpdate = jest.fn();
+
+        render(<TestScreen initialQuestion={question} onUpdate={onUpdate} />);
+
+        await waitFor(() => {
+            expect(mockSearchMatchingFeaturesProgressive).toHaveBeenCalledWith(
+                "park",
+                mockPlayAreaCenter,
+                600, // stationRadius from mocked useHidingZoneState
+                mockPlayAreaBbox,
                 expect.objectContaining({ signal: expect.any(AbortSignal) }),
             );
         });
