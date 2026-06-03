@@ -1,11 +1,19 @@
 import { useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+    Alert,
+    Linking,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import { SheetListRow } from "@/components/SheetListRow";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { POI_DATA_ATTRIBUTION } from "@/features/questions/matching/poiAttribution";
 import { ShareSetupModal } from "@/sharing/export/ShareSetupModal";
 import { useHidingZoneState } from "@/state/hidingZoneStore";
+import { clearAppCaches, useResetGame } from "@/state/maintenance";
 import { usePlayArea } from "@/state/playAreaStore";
 import { useQuestions } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
@@ -20,6 +28,48 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
         useHidingZoneState();
     const questions = useQuestions();
     const [isShareVisible, setIsShareVisible] = useState(false);
+    const [maintenanceResult, setMaintenanceResult] = useState<string | null>(
+        null,
+    );
+    const resetGame = useResetGame();
+
+    const handleResetGame = () => {
+        Alert.alert(
+            "Reset Game",
+            "Start a new game? This clears all questions and resets your play area and hiding zones.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Reset",
+                    style: "destructive",
+                    onPress: async () => {
+                        await resetGame();
+                        setMaintenanceResult("Game reset");
+                    },
+                },
+            ],
+        );
+    };
+
+    const handleClearCache = () => {
+        Alert.alert(
+            "Clear Cache",
+            "Clear cached map/POI data? Downloaded offline packs are kept.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Clear",
+                    style: "destructive",
+                    onPress: async () => {
+                        const count = await clearAppCaches();
+                        setMaintenanceResult(
+                            `Cleared ${count} cached item${count === 1 ? "" : "s"}`,
+                        );
+                    },
+                },
+            ],
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -62,6 +112,35 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     testID="settings-offline-data-row"
                     title="Offline Data"
                 />
+            </View>
+
+            <View style={styles.actions}>
+                <Text style={styles.sectionHeading}>Maintenance</Text>
+                <SheetListRow
+                    accessibilityLabel="Reset the game to a fresh state"
+                    description="Start a new game? This clears all questions and resets your play area and hiding zones."
+                    destructive
+                    onPress={handleResetGame}
+                    testID="settings-reset-game-row"
+                    title="Reset Game"
+                />
+                {__DEV__ ? (
+                    <SheetListRow
+                        accessibilityLabel="Clear cached map and POI data"
+                        description="Clear cached map/POI data? Downloaded offline packs are kept."
+                        onPress={handleClearCache}
+                        testID="settings-clear-cache-row"
+                        title="Clear Cache"
+                    />
+                ) : null}
+                {maintenanceResult ? (
+                    <Text
+                        style={styles.maintenanceResult}
+                        testID="settings-maintenance-result"
+                    >
+                        {maintenanceResult}
+                    </Text>
+                ) : null}
             </View>
 
             <View style={styles.attribution}>
@@ -163,6 +242,22 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 20,
         paddingTop: 0,
+    },
+    maintenanceResult: {
+        color: colors.ink,
+        fontSize: 14,
+        fontWeight: "600",
+        marginTop: 8,
+        textAlign: "center",
+    },
+    sectionHeading: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: "700",
+        letterSpacing: 0.5,
+        marginBottom: 8,
+        marginTop: 24,
+        textTransform: "uppercase",
     },
     shareButton: {
         alignSelf: "flex-end",

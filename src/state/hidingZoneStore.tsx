@@ -34,7 +34,7 @@ import type {
 import { usePlayArea } from "@/state/playAreaStore";
 import { fromMeters, toMeters } from "@/shared/distanceUnits";
 
-const DEFAULT_RADIUS_METERS = 600;
+export const DEFAULT_RADIUS_METERS = 600;
 const ZONE_GEOMETRY_DEBOUNCE_MS = 300;
 
 export type HidingZoneImportState = {
