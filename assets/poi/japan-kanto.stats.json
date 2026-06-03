@@ -1,0 +1,25 @@
+{
+  "region": "japan-kanto",
+  "label": "Kantō, Japan",
+  "generatedAt": "2026-06-02T16:49:42.825Z",
+  "sourceSequence": null,
+  "totalCount": 58058,
+  "gzipSizeBytes": 1015448,
+  "gzipSizeMb": 0.97,
+  "categoryCounts": {
+    "amusement-park": 169,
+    "aquarium": 48,
+    "commercial-airport": 62,
+    "foreign-consulate": 7,
+    "golf-course": 1407,
+    "hospital": 3332,
+    "landmark": 1426,
+    "library": 1412,
+    "mountain": 1346,
+    "movie-theater": 194,
+    "museum": 1826,
+    "park": 44506,
+    "station-name-length": 2188,
+    "zoo": 135
+  }
+}

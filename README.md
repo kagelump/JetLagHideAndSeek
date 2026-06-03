@@ -12,6 +12,9 @@ centered on a native MapLibre map and an Apple Maps-style bottom sheet.
 - **Hiding Zone presets** — Select transit presets (Tokyo Metro, Toei Subway)
   sourced from ODPT GTFS data. Adjust the hiding radius in meters, kilometers,
   or miles.
+- **Offline POI matching** — Matching questions resolve nearby places (parks,
+  museums, stations, …) from OSM data bundled in the app, working offline within
+  covered regions and falling back to Overpass elsewhere.
 - **E2E-tested** — Maestro smoke, play-area, hiding-zone, radar-question, and transit-line-question flows on iOS and Android via GitHub Actions.
 - **Dev build required** — Uses native modules (`@maplibre/maplibre-react-native`,
   AsyncStorage, Reanimated); Expo Go will not work.
@@ -66,22 +69,44 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
 
 ## Commands
 
-| Command                   | Description                            |
-| ------------------------- | -------------------------------------- |
-| `pnpm start`              | Start the Expo dev server              |
-| `pnpm ios`                | Run on iOS simulator or device         |
-| `pnpm android`            | Run on Android emulator or device      |
-| `pnpm lint`               | Lint with ESLint                       |
-| `pnpm format`             | Format with Prettier                   |
-| `pnpm format:check`       | Check formatting                       |
-| `pnpm fix`                | Auto-fix lint and format issues        |
-| `pnpm typecheck`          | Run TypeScript type checking           |
-| `pnpm check`              | Lint, format check, and typecheck      |
-| `pnpm test`               | Run Jest unit and component tests      |
-| `pnpm test:data:odpt`     | Run ODPT generator fixture tests       |
-| `pnpm test:e2e:ios`       | Run Maestro E2E flows                  |
-| `pnpm test:e2e:ios:stack` | Start Metro, run E2E flows, stop Metro |
-| `pnpm data:odpt`          | Regenerate ODPT hiding-zone presets    |
+| Command                   | Description                                                            |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `pnpm start`              | Start the Expo dev server                                              |
+| `pnpm ios`                | Run on iOS simulator or device                                         |
+| `pnpm android`            | Run on Android emulator or device                                      |
+| `pnpm lint`               | Lint with ESLint                                                       |
+| `pnpm format`             | Format with Prettier                                                   |
+| `pnpm format:check`       | Check formatting                                                       |
+| `pnpm fix`                | Auto-fix lint and format issues                                        |
+| `pnpm typecheck`          | Run TypeScript type checking                                           |
+| `pnpm check`              | Lint, format check, and typecheck                                      |
+| `pnpm test`               | Run Jest unit and component tests                                      |
+| `pnpm test:data:odpt`     | Run ODPT generator fixture tests                                       |
+| `pnpm test:e2e:ios`       | Run Maestro E2E flows                                                  |
+| `pnpm test:e2e:ios:stack` | Start Metro, run E2E flows, stop Metro                                 |
+| `pnpm data:odpt`          | Regenerate ODPT hiding-zone presets                                    |
+| `pnpm data:poi`           | Regenerate bundled offline POIs, then commit `assets/poi/` (see below) |
+
+## Bundled Offline Data
+
+Matching questions resolve POI lookups (parks, museums, stations, …) from a small
+OSM dataset **bundled in the app**, falling back to the Overpass API only outside
+covered regions. The data is **generated and committed** to the repo (CI cannot
+regenerate it — see below).
+
+```bash
+pnpm data:poi   # regenerate, then: git add assets/poi && commit
+```
+
+`pnpm data:poi` is the single regeneration command: it re-emits the category→tag
+registry, then extracts and reduces the OSM POIs into `assets/poi/`. The first run
+downloads a ~450 MB Geofabrik extract into the git-ignored `data/geofabrik/cache/`
+(reused afterward); the committed output is ~3 MB of JSON.
+
+Run it after **editing the matching category registry**
+(`src/features/questions/matching/matchingSelectors.ts`) or to **refresh OSM data**.
+You do not need to remember to verify: `pnpm check` runs the registry drift guard and
+fails if the committed data is stale, pointing you back to `pnpm data:poi`.
 
 ## E2E Testing on CI
 
@@ -120,8 +145,10 @@ locally. See `docs/implementation_notes.md` for local E2E stack setup.
 │   ├── index.tsx           # Main screen
 │   └── import.tsx          # Import/share screen
 ├── assets/
-│   └── default-zones/      # Bundled GeoJSON boundaries (Tokyo, Osaka)
+│   ├── default-zones/      # Bundled GeoJSON boundaries (Tokyo, Osaka)
+│   └── poi/                # Bundled offline POIs (committed; `pnpm data:poi`)
 ├── data/
+│   ├── geofabrik/          # OSM POI extraction pipeline (scripts + ignored cache/)
 │   └── odpt/               # ODPT GTFS config, fetch script, generated presets
 ├── docs/                   # Implementation notes, sharing design, archive pointer
 ├── e2e/                    # Maestro E2E test flows

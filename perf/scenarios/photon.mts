@@ -1,7 +1,6 @@
 import {
-    clearPlayAreaSearchCache,
+    fetchPhotonResults,
     mapPhotonFeaturesToPlayAreaResults,
-    searchPlayAreas,
 } from "../../src/features/playArea/playAreaSearch.ts";
 import {
     loadCapture,
@@ -30,30 +29,16 @@ export const photonScenarios: PerfScenario[] = [
         group: "photon",
         iterations: 20,
         name: "photon/tokyo-search-cold",
+        // react-query (usePlayAreaSearch) now owns search caching, so the
+        // module-level cache the old "memory-hit" scenario measured no longer
+        // exists. This scenario measures a plain fetch + parse of the response.
         setup: () => {
-            clearPlayAreaSearchCache();
             installFixtureFetch(tokyo);
         },
         run: async () => ({
-            output: await searchPlayAreas("Tokyo"),
+            output: await fetchPhotonResults("Tokyo"),
         }),
         warmups: 3,
-    },
-    {
-        fixtureHash: tokyo.responseSha256,
-        group: "photon",
-        iterations: 30,
-        name: "photon/tokyo-search-memory-hit",
-        setup: async () => {
-            clearPlayAreaSearchCache();
-            installFixtureFetch(tokyo);
-            await searchPlayAreas("Tokyo");
-        },
-        run: async () => ({
-            metrics: { expectedNetworkIntents: 0 },
-            output: await searchPlayAreas("  TOKYO  "),
-        }),
-        warmups: 5,
     },
     {
         fixtureHash: tokyo.responseSha256,

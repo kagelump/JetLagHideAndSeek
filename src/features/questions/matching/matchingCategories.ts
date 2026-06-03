@@ -1,4 +1,5 @@
 import type { MatchingCategory } from "./matchingTypes";
+import { deriveOsmQueryTags } from "./matchingSelectors";
 
 export type CategorySection =
     | "Administrative Divisions"
@@ -14,28 +15,35 @@ export type MatchingCategoryConfig = {
     title: string;
 };
 
+/**
+ * Base category definitions with section and title.
+ * osmQueryTags is derived from matchingSelectors.ts for bundleable categories
+ * (those in CATEGORY_SELECTORS). Categories with special query paths
+ * (station-name-length, transit-line) or multi-condition tags (admin-*)
+ * keep their literal strings.
+ */
 export const matchingCategories: MatchingCategoryConfig[] = [
     // Transit
     {
         category: "transit-line",
-        osmQueryTags: "",
+        osmQueryTags: "", // not OSM-tag based; handled by transit feature
         section: "Transit",
         title: "Transit Line",
     },
     {
         category: "station-name-length",
-        osmQueryTags: "",
+        osmQueryTags: "", // uses special buildStationQuery path
         section: "Transit",
         title: "Station's Name Length",
     },
     {
         category: "commercial-airport",
-        osmQueryTags: `["aeroway"="aerodrome"]`,
+        osmQueryTags: deriveOsmQueryTags("commercial-airport"),
         section: "Transit",
         title: "Commercial Airport",
     },
 
-    // Administrative Divisions
+    // Administrative Divisions (not bundleable in Phase 1 — keep literals)
     {
         category: "admin-1st",
         osmQueryTags: `["boundary"="administrative"]["admin_level"="4"]`,
@@ -64,19 +72,19 @@ export const matchingCategories: MatchingCategoryConfig[] = [
     // Natural
     {
         category: "mountain",
-        osmQueryTags: `["natural"="peak"]`,
+        osmQueryTags: deriveOsmQueryTags("mountain"),
         section: "Natural",
         title: "Mountain",
     },
     {
         category: "landmark",
-        osmQueryTags: `["tourism"="attraction"]`,
+        osmQueryTags: deriveOsmQueryTags("landmark"),
         section: "Natural",
         title: "Landmark",
     },
     {
         category: "park",
-        osmQueryTags: `["leisure"="park"]`,
+        osmQueryTags: deriveOsmQueryTags("park"),
         section: "Natural",
         title: "Park",
     },
@@ -84,37 +92,37 @@ export const matchingCategories: MatchingCategoryConfig[] = [
     // Places of Interest
     {
         category: "amusement-park",
-        osmQueryTags: `["tourism"="theme_park"]`,
+        osmQueryTags: deriveOsmQueryTags("amusement-park"),
         section: "Places of Interest",
         title: "Amusement Park",
     },
     {
         category: "zoo",
-        osmQueryTags: `["tourism"="zoo"]`,
+        osmQueryTags: deriveOsmQueryTags("zoo"),
         section: "Places of Interest",
         title: "Zoo",
     },
     {
         category: "aquarium",
-        osmQueryTags: `["tourism"="aquarium"]`,
+        osmQueryTags: deriveOsmQueryTags("aquarium"),
         section: "Places of Interest",
         title: "Aquarium",
     },
     {
         category: "golf-course",
-        osmQueryTags: `["leisure"="golf_course"]`,
+        osmQueryTags: deriveOsmQueryTags("golf-course"),
         section: "Places of Interest",
         title: "Golf Course",
     },
     {
         category: "museum",
-        osmQueryTags: `["tourism"="museum"]`,
+        osmQueryTags: deriveOsmQueryTags("museum"),
         section: "Places of Interest",
         title: "Museum",
     },
     {
         category: "movie-theater",
-        osmQueryTags: `["amenity"="cinema"]`,
+        osmQueryTags: deriveOsmQueryTags("movie-theater"),
         section: "Places of Interest",
         title: "Movie Theater",
     },
@@ -122,19 +130,19 @@ export const matchingCategories: MatchingCategoryConfig[] = [
     // Public Utilities
     {
         category: "hospital",
-        osmQueryTags: `["amenity"="hospital"]`,
+        osmQueryTags: deriveOsmQueryTags("hospital"),
         section: "Public Utilities",
         title: "Hospital",
     },
     {
         category: "library",
-        osmQueryTags: `["amenity"="library"]`,
+        osmQueryTags: deriveOsmQueryTags("library"),
         section: "Public Utilities",
         title: "Library",
     },
     {
         category: "foreign-consulate",
-        osmQueryTags: `["diplomatic"="consulate"]`,
+        osmQueryTags: deriveOsmQueryTags("foreign-consulate"),
         section: "Public Utilities",
         title: "Foreign Consulate",
     },

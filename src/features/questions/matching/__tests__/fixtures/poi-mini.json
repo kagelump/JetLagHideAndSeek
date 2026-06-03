@@ -1,0 +1,42 @@
+{
+    "schemaVersion": 1,
+    "region": "test-region",
+    "label": "Test Region",
+    "generatedAt": "2026-06-01T00:00:00Z",
+    "sourceSequence": 3320,
+    "source": "https://example.com/test.osm.pbf",
+    "bbox": [139.5, 35.5, 140.0, 36.0],
+    "attribution": {
+        "text": "© OpenStreetMap contributors. ODbL.",
+        "license": "ODbL-1.0",
+        "url": "https://www.openstreetmap.org/copyright"
+    },
+    "totalCount": 4,
+    "categories": {
+        "park": {
+            "count": 2,
+            "lon": [139.7, 139.8],
+            "lat": [35.66, 35.67],
+            "name": ["Yoyogi Park", "Ueno Park"],
+            "osmId": [100, 50],
+            "osmType": [1, 0]
+        },
+        "station-name-length": {
+            "count": 1,
+            "lon": [139.767],
+            "lat": [35.681],
+            "name": ["Shinjuku Station"],
+            "osmId": [200],
+            "osmType": [0],
+            "nameLength": [16]
+        },
+        "museum": {
+            "count": 1,
+            "lon": [139.776],
+            "lat": [35.704],
+            "name": ["Tokyo National Museum"],
+            "osmId": [300],
+            "osmType": [1]
+        }
+    }
+}

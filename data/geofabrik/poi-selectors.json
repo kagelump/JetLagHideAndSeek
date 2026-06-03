@@ -1,0 +1,80 @@
+{
+    "schemaVersion": 1,
+    "generatedFrom": "src/features/questions/matching/matchingSelectors.ts",
+    "categories": {
+        "commercial-airport": {
+            "selectors": [
+                { "match": [{ "key": "aeroway", "value": "aerodrome" }] }
+            ]
+        },
+        "mountain": {
+            "selectors": [{ "match": [{ "key": "natural", "value": "peak" }] }]
+        },
+        "landmark": {
+            "selectors": [
+                { "match": [{ "key": "tourism", "value": "attraction" }] }
+            ]
+        },
+        "park": {
+            "selectors": [{ "match": [{ "key": "leisure", "value": "park" }] }]
+        },
+        "amusement-park": {
+            "selectors": [
+                { "match": [{ "key": "tourism", "value": "theme_park" }] }
+            ]
+        },
+        "zoo": {
+            "selectors": [{ "match": [{ "key": "tourism", "value": "zoo" }] }]
+        },
+        "aquarium": {
+            "selectors": [
+                { "match": [{ "key": "tourism", "value": "aquarium" }] }
+            ]
+        },
+        "golf-course": {
+            "selectors": [
+                { "match": [{ "key": "leisure", "value": "golf_course" }] }
+            ]
+        },
+        "museum": {
+            "selectors": [
+                { "match": [{ "key": "tourism", "value": "museum" }] }
+            ]
+        },
+        "movie-theater": {
+            "selectors": [
+                { "match": [{ "key": "amenity", "value": "cinema" }] }
+            ]
+        },
+        "hospital": {
+            "selectors": [
+                { "match": [{ "key": "amenity", "value": "hospital" }] }
+            ]
+        },
+        "library": {
+            "selectors": [
+                { "match": [{ "key": "amenity", "value": "library" }] }
+            ]
+        },
+        "foreign-consulate": {
+            "selectors": [
+                { "match": [{ "key": "diplomatic", "value": "consulate" }] }
+            ]
+        },
+        "station-name-length": {
+            "selectors": [
+                { "match": [{ "key": "railway", "value": "station" }] }
+            ]
+        }
+    },
+    "tagsFilterArgs": [
+        "aeroway=aerodrome",
+        "natural=peak",
+        "tourism=aquarium,attraction,museum,theme_park,zoo",
+        "leisure=golf_course,park",
+        "amenity=cinema,hospital,library",
+        "diplomatic=consulate",
+        "railway=station"
+    ]
+}
+

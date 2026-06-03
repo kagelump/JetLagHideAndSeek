@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { SheetListRow } from "@/components/SheetListRow";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
+import { POI_DATA_ATTRIBUTION } from "@/features/questions/matching/poiAttribution";
 import { ShareSetupModal } from "@/sharing/export/ShareSetupModal";
 import { useHidingZoneState } from "@/state/hidingZoneStore";
 import { usePlayArea } from "@/state/playAreaStore";
@@ -54,6 +55,49 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     title="Hiding Zones"
                 />
             </View>
+
+            <View style={styles.attribution}>
+                <Text style={styles.attributionHeading}>
+                    Data & Attribution
+                </Text>
+                <Text style={styles.attributionText}>
+                    {POI_DATA_ATTRIBUTION.text}
+                </Text>
+                <View style={styles.attributionLinks}>
+                    <Text
+                        accessibilityLabel="OpenStreetMap copyright"
+                        accessibilityRole="link"
+                        onPress={() =>
+                            Linking.openURL(
+                                POI_DATA_ATTRIBUTION.osmCopyrightUrl,
+                            )
+                        }
+                        style={styles.attributionLink}
+                    >
+                        OpenStreetMap Copyright
+                    </Text>
+                    <Text
+                        accessibilityLabel="Open Database License"
+                        accessibilityRole="link"
+                        onPress={() =>
+                            Linking.openURL(POI_DATA_ATTRIBUTION.odblUrl)
+                        }
+                        style={styles.attributionLink}
+                    >
+                        ODbL 1.0
+                    </Text>
+                    <Text
+                        accessibilityLabel="Geofabrik downloads"
+                        accessibilityRole="link"
+                        onPress={() =>
+                            Linking.openURL(POI_DATA_ATTRIBUTION.geofabrikUrl)
+                        }
+                        style={styles.attributionLink}
+                    >
+                        Geofabrik
+                    </Text>
+                </View>
+            </View>
             <ShareSetupModal
                 hidingZones={{
                     radiusMeters,
@@ -76,6 +120,36 @@ const styles = StyleSheet.create({
     actions: {
         gap: 8,
         marginTop: 12,
+    },
+    attribution: {
+        borderTopColor: colors.border,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        marginTop: 24,
+        paddingTop: 20,
+    },
+    attributionHeading: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: "700",
+        letterSpacing: 0.5,
+        marginBottom: 8,
+        textTransform: "uppercase",
+    },
+    attributionLink: {
+        color: colors.tint,
+        fontSize: 13,
+        fontWeight: "600",
+        marginRight: 16,
+    },
+    attributionLinks: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        marginTop: 8,
+    },
+    attributionText: {
+        color: colors.muted,
+        fontSize: 13,
+        lineHeight: 18,
     },
     container: {
         flex: 1,
