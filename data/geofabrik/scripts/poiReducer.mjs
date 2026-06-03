@@ -43,10 +43,38 @@ export function centroid(geometry) {
 const round6 = (x) => Math.round(x * 1e6) / 1e6;
 
 /**
+ * Picks the shorter non-empty name between a primary tag (e.g. name) and an
+ * alternative tag (e.g. alt_name). OSM alt_name is a semicolon-separated list
+ * — the shortest entry is compared against the primary.
+ */
+function pickShorterName(primary, alt) {
+    const p = primary?.trim() || "";
+    const a = alt?.trim() || "";
+    if (!p && !a) return "";
+    if (!p) return a;
+    if (!a) return p;
+
+    const altEntries = a
+        .split(";")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    const bestAlt =
+        altEntries.length > 0
+            ? altEntries.reduce((x, y) => (x.length <= y.length ? x : y))
+            : a;
+
+    return bestAlt.length < p.length ? bestAlt : p;
+}
+
+/**
  * Reduces a GeoJSONSeq line (already 0x1e-stripped, JSON-parsed Feature) to a
  * compact record, or null if it has no name. `categoryOf(props)` maps a
  * feature's tags to one of the bundle categories (or null). For station
  * features, computes English name + length.
+ *
+ * For both the primary name and the stored English name, the shorter of
+ * (name / alt_name) and (name:en / alt_name:en) is picked so that long
+ * official names don't waste horizontal space in the UI.
  */
 export function reduceFeature(feature, categoryOf) {
     const props = feature.properties ?? {};
@@ -54,9 +82,15 @@ export function reduceFeature(feature, categoryOf) {
     if (!category) return null;
 
     const isStation = category === "station-name-length";
+
+    // Pick the shortest non-empty name from (name / alt_name) or,
+    // for stations, prefer English names.
+    const nativeName = pickShorterName(props.name, props.alt_name);
+    const englishName = pickShorterName(props["name:en"], props["alt_name:en"]);
+
     const name = isStation
-        ? props["name:en"]?.trim() || props.name?.trim() || ""
-        : props.name?.trim() || "";
+        ? englishName || nativeName
+        : nativeName;
     if (!name) return null;
 
     const [lon, lat] = centroid(feature.geometry);
@@ -78,9 +112,8 @@ export function reduceFeature(feature, categoryOf) {
     }
     // Capture the English name so the label-language toggle can surface it
     // at runtime even for bundle-sourced features (where tags is empty).
-    const nameEn = props["name:en"]?.trim();
-    if (nameEn && nameEn !== name) {
-        record.nameEn = nameEn;
+    if (englishName && englishName !== name) {
+        record.nameEn = englishName;
     }
     return record;
 }
