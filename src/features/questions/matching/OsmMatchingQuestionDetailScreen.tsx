@@ -210,6 +210,11 @@ export function OsmMatchingQuestionDetailScreen({
                                             candidate.nameLength !== undefined
                                                 ? ` (${candidate.nameLength})`
                                                 : ""}
+                                            {question.category ===
+                                                "commercial-airport" &&
+                                            candidate.iata
+                                                ? ` (${candidate.iata})`
+                                                : ""}
                                         </Text>
                                     </View>
                                     {candidate.distanceMeters !== undefined ? (

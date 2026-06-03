@@ -12,6 +12,7 @@ export type RawCategory = {
     osmId: number[];
     osmType: number[];
     nameLength?: number[]; // present only for station-name-length
+    iata?: (string | null)[]; // present only for commercial-airport
 };
 
 export type RawRegion = {
@@ -230,6 +231,7 @@ export function getBundledCategoryFeatures(
             tags: {},
         };
         if (col.nameLength) f.nameLength = col.nameLength[i];
+        if (col.iata?.[i]) f.iata = col.iata[i] ?? undefined;
         out[i] = f;
     }
     categoryFeatureCache.set(key, out);

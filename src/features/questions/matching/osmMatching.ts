@@ -266,6 +266,11 @@ export function parseOverpassElements(
             feature.nameLength = displayName.length;
         }
 
+        // For commercial-airport, surface the IATA code for display.
+        if (category === "commercial-airport" && element.tags?.iata) {
+            feature.iata = element.tags.iata.trim();
+        }
+
         features.push(feature);
     }
 

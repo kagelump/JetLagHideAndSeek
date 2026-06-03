@@ -48,6 +48,8 @@ export type OsmFeature = {
     name: string;
     /** Length of the English name (name:en or name) — set for station-name-length. */
     nameLength?: number;
+    /** IATA airport code — set for commercial-airport. */
+    iata?: string;
     osmId: number;
     osmType: "node" | "way" | "relation";
     tags: Record<string, string>;

@@ -40,7 +40,7 @@ export const matchingCategories: MatchingCategoryConfig[] = [
         category: "commercial-airport",
         osmQueryTags: deriveOsmQueryTags("commercial-airport"),
         section: "Transit",
-        title: "Commercial Airport",
+        title: "Airport",
     },
 
     // Administrative Divisions (not bundleable in Phase 1 — keep literals)

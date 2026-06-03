@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-03T14:52:21.776Z",
+  "generatedAt": "2026-06-03T15:50:57.865Z",
   "regions": [
     {
       "id": "japan-kanto",
@@ -11,7 +11,7 @@
         155.605818,
         37.15988
       ],
-      "totalCount": 33758,
+      "totalCount": 33757,
       "file": "japan-kanto.json"
     }
   ]

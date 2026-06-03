@@ -73,6 +73,9 @@ export function reduceFeature(feature, categoryOf) {
         osmType,
     };
     if (isStation) record.nameLength = name.length;
+    if (category === "commercial-airport") {
+        record.iata = props.iata?.trim() || undefined;
+    }
     return record;
 }
 
@@ -120,9 +123,10 @@ export function buildCategoryOf(selectorsJson) {
  * Deduplicates reduced records within each category.
  *
  * OSM often has both a node and a way (or multiple nodes) for the same POI.
- * The centroid of each is nearly identical, and the name is the same. This
- * groups by (category, name, lat@4dp, lon@4dp) — ~11 m tolerance — and keeps
- * the record with the lowest osmId per group (deterministic).
+ * For commercial-airport the primary dedup key is the IATA code (globally
+ * unique); for all other categories the key is (category, name, lat@4dp,
+ * lon@4dp) — ~11 m tolerance.  Keeps the record with the lowest osmId per
+ * group (deterministic).
  *
  * Returns a new array (does not mutate the input).
  */
@@ -132,7 +136,10 @@ export function deduplicateRecords(records) {
     const out = [];
 
     for (const r of records) {
-        const key = `${r.category}\x00${r.name}\x00${round4(r.lat)}\x00${round4(r.lon)}`;
+        const key =
+            r.category === "commercial-airport" && r.iata
+                ? `${r.category}\x00iata:${r.iata}`
+                : `${r.category}\x00${r.name}\x00${round4(r.lat)}\x00${round4(r.lon)}`;
         const prev = seen.get(key);
         if (prev === undefined) {
             seen.set(key, r);
@@ -196,6 +203,8 @@ export function buildColumnar(records, regionMeta) {
         const osmType = new Array(count);
         const nameLength =
             cat === "station-name-length" ? new Array(count) : undefined;
+        const iata =
+            cat === "commercial-airport" ? new Array(count) : undefined;
 
         for (let i = 0; i < count; i++) {
             lon[i] = arr[i].lon;
@@ -206,10 +215,14 @@ export function buildColumnar(records, regionMeta) {
             if (nameLength !== undefined && arr[i].nameLength !== undefined) {
                 nameLength[i] = arr[i].nameLength;
             }
+            if (iata !== undefined) {
+                iata[i] = arr[i].iata ?? null;
+            }
         }
 
         const catData = { count, lon, lat, name, osmId, osmType };
         if (nameLength !== undefined) catData.nameLength = nameLength;
+        if (iata !== undefined) catData.iata = iata;
         categories[cat] = catData;
     }
 
