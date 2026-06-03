@@ -1,0 +1,40 @@
+# Geofabrik data pipeline config
+# Maps regions to relation IDs for boundary extraction,
+# and defines POI tag filters for POI extraction.
+
+cacheDir: cache
+outputDir: generated
+notice: NOTICE.md
+
+# POI tag keys — nodes with these tags are considered Points of Interest.
+# This is used by the legacy --poi stage (node-only, key-level).
+# The curated --bundle stage reads poi-selectors.json instead
+# (generated from src/features/questions/matching/matchingSelectors.ts).
+poiNodeKeys:
+    - amenity
+    - shop
+    - tourism
+    - leisure
+    - historic
+    - craft
+    - office
+    - healthcare
+    - public_transport
+    - railway
+    - highway
+    - aeroway
+    - man_made
+    - natural
+    - barrier
+
+regions:
+    - id: japan-kanto
+      label: Kantō, Japan
+      url: "https://download.geofabrik.de/asia/japan/kanto-latest.osm.pbf"
+      relations:
+          - id: 19631009
+            name: Tokyo 23 Wards
+            name_ja: "東京23区"
+          - id: 1543125
+            name: Tokyo Prefecture
+            name_ja: "東京都"

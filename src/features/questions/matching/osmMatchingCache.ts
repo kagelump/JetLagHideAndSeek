@@ -3,11 +3,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Position } from "@/shared/geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
 
+import { resolveBboxFeatures } from "./featureSource";
 import { getCategoryConfig } from "./matchingCategories";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
 import {
     DEFAULT_SEARCH_RADIUS_METERS,
-    fetchAndParseOverpassBboxFeatures,
     fetchAndParseOverpassFeatures,
     rankMatchingFeatures,
     type OsmFeatureWithDistance,
@@ -592,22 +592,25 @@ function cellRevalidateInBackground(
     if (cellInflight.has(key)) return;
 
     const bbox = cellBbox(entry.cellIndex);
-    const request = fetchAndParseOverpassBboxFeatures(
-        entry.category,
-        bbox.south,
-        bbox.west,
-        bbox.north,
-        bbox.east,
-    )
-        .then(async (features) => {
+    const request = resolveBboxFeatures(entry.category, bbox)
+        .then(async (resolved) => {
+            const fetchedAt =
+                resolved.source === "local" && resolved.generatedAt
+                    ? Date.parse(resolved.generatedAt) || Date.now()
+                    : Date.now();
             const updated: OsmMatchingCellEntry = {
                 ...entry,
-                features,
-                fetchedAt: Date.now(),
+                features: resolved.features,
+                fetchedAt,
             };
             cellMemorySet(key, updated);
-            await persistCellEntry(key, updated);
-            return features;
+            // Skip AsyncStorage persistence for local cells — the data
+            // already lives in the app bundle. Persisting would duplicate it
+            // and bloat storage.
+            if (resolved.source !== "local") {
+                await persistCellEntry(key, updated);
+            }
+            return resolved.features;
         })
         .catch((err) => {
             console.warn(
@@ -633,15 +636,12 @@ async function fetchAndStoreCell(
     const existing = cellInflight.get(key);
     if (existing) return existing;
 
-    const request = fetchAndParseOverpassBboxFeatures(
-        category,
-        bbox.south,
-        bbox.west,
-        bbox.north,
-        bbox.east,
-        signal,
-    )
-        .then(async (features) => {
+    const request = resolveBboxFeatures(category, bbox, signal)
+        .then(async (resolved) => {
+            const fetchedAt =
+                resolved.source === "local" && resolved.generatedAt
+                    ? Date.parse(resolved.generatedAt) || Date.now()
+                    : Date.now();
             const entry: OsmMatchingCellEntry = {
                 schemaVersion: CELL_SCHEMA_VERSION,
                 category,
@@ -652,12 +652,17 @@ async function fetchAndStoreCell(
                     north: bbox.north,
                     east: bbox.east,
                 },
-                fetchedAt: Date.now(),
-                features,
+                fetchedAt,
+                features: resolved.features,
             };
             cellMemorySet(key, entry);
-            await persistCellEntry(key, entry);
-            return features;
+            // Skip AsyncStorage persistence for local cells — the data
+            // already lives in the app bundle. Persisting would duplicate it
+            // and bloat storage.
+            if (resolved.source !== "local") {
+                await persistCellEntry(key, entry);
+            }
+            return resolved.features;
         })
         .finally(() => {
             cellInflight.delete(key);

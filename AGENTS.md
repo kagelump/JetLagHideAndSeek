@@ -34,6 +34,7 @@ pnpm test
 pnpm test:data:odpt
 pnpm test -- NativeMap.test.tsx
 pnpm data:odpt
+pnpm data:poi
 ```
 
 For local app work:
@@ -100,10 +101,34 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
 - `src/state/`: React state providers. Keep them mobile-specific.
 - `data/odpt/`: ODPT source config, fetch script, attribution docs, ignored
   download cache, and checked-in processed preset JSON.
+- `data/geofabrik/`: OSM POI extraction pipeline (config, scripts, attribution).
+  The PBF cache and heavy intermediate extracts are git-ignored; the committed
+  runtime artifact is `assets/poi/`.
+- `assets/poi/`: committed bundled offline POIs consumed by matching questions
+  (`src/features/questions/matching/bundledPois.ts`). Regenerate with `pnpm data:poi`.
 - `src/theme/colors.ts`: shared color tokens for the mobile app.
 - `src/types/`: local ambient types for JSON and third-party packages.
 - `docs/implementation_notes.md`: milestone-specific native, map, and E2E
   notes. Update it when you learn a new durable setup/debugging fact.
+
+## Bundled POI Data
+
+- One command regenerates everything: `pnpm data:poi` (re-emits the
+  category→tag registry to `data/geofabrik/poi-selectors.json`, then extracts and
+  reduces OSM POIs into `assets/poi/`). Do not chain the sub-steps by hand.
+- The output in `assets/poi/` is **committed** — CI cannot regenerate it (the
+  ~450 MB Geofabrik PBF is not available there). After running `pnpm data:poi`,
+  `git add assets/poi data/geofabrik/poi-selectors.json` and commit.
+- `bundledPois.ts` `require()`s `assets/poi/<region>.json` with a literal path, so a
+  missing artifact is a **Metro build break**, not a runtime fallback. Keep it committed.
+- You do not need to remember to verify: `pnpm check` runs the registry drift guard
+  (`test:data:poi-selectors`) and `pnpm test` runs the reducer tests
+  (`data/geofabrik/scripts/poiReducer.test.mjs`). If you edit
+  `matchingSelectors.ts`, `pnpm check` fails until you rerun `pnpm data:poi`.
+- The category→tag mapping lives **only** in `matchingSelectors.ts`; `matchingCategories.ts`
+  derives its Overpass-QL from it. Never hand-edit `poi-selectors.json`.
+- The legacy `data/geofabrik/generated/` extracts (`*.osm.pbf`, `*.geojson*`) are
+  git-ignored intermediates — never commit them.
 
 ## Architecture Direction
 

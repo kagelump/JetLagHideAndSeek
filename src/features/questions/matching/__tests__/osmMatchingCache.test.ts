@@ -34,6 +34,13 @@ jest.mock("../osmMatching", () => ({
         jest.requireActual("../osmMatching").rankMatchingFeatures,
 }));
 
+// Disable the bundled POI path so cell-cache tests always exercise the
+// mocked Overpass path regardless of committed region data.
+jest.mock("../bundledPois", () => ({
+    ...jest.requireActual("../bundledPois"),
+    regionCoveringBbox: () => null,
+}));
+
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const tokyoCenter: [number, number] = [139.767125, 35.681236];

@@ -1,0 +1,8 @@
+# Raw PBF downloads (hundreds of MB)
+cache/
+
+# Heavy intermediate extracts from the legacy --poi stats stage.
+# The runtime artifact is the small JSON under assets/poi/ (committed).
+generated/*.osm.pbf
+generated/*.geojson
+generated/*.geojson.gz

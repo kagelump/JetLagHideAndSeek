@@ -8,14 +8,14 @@
 
 ## Headline Numbers
 
-|                   | Previous run | This run | Δ       |
-| ----------------- | ------------ | -------- | ------- |
-| **Statements**    | 89.14 %      | 88.76 %  | −0.38   |
-| **Branches**      | 77.01 %      | 76.54 %  | −0.47   |
-| **Functions**     | 87.94 %      | 86.95 %  | −0.99   |
-| **Lines**         | 90.64 %      | 90.04 %  | −0.60   |
-| **Tests passing** | 342 / 346    | 377 / 378| +35 net |
-| **Suites failing**| 2            | 1        | −1      |
+|                    | Previous run | This run  | Δ       |
+| ------------------ | ------------ | --------- | ------- |
+| **Statements**     | 89.14 %      | 88.76 %   | −0.38   |
+| **Branches**       | 77.01 %      | 76.54 %   | −0.47   |
+| **Functions**      | 87.94 %      | 86.95 %   | −0.99   |
+| **Lines**          | 90.64 %      | 90.04 %   | −0.60   |
+| **Tests passing**  | 342 / 346    | 377 / 378 | +35 net |
+| **Suites failing** | 2            | 1         | −1      |
 
 The slight headline dip is expected: several new source files were added across the recent
 commits (spatial grid cache, debounce hook, query client, expanded OSM matching) and new
@@ -50,11 +50,11 @@ explicit `jest.setTimeout` for that test or mock the query-client in the test wr
 
 ### New source files (and their coverage)
 
-| File | Stmts | Branch | Funcs | Key uncovered |
-| --- | --- | --- | --- | --- |
-| `state/queryClient.ts` | **100 %** | **100 %** | **100 %** | — |
-| `features/questions/matching/osmMatchingGrid.ts` | 94.6 % | 83.3 % | 83.3 % | L49, L65 |
-| `shared/useDebouncedValue.ts` | 85.7 % | **100 %** | 75 % | — (line-covered) |
+| File                                             | Stmts     | Branch    | Funcs     | Key uncovered    |
+| ------------------------------------------------ | --------- | --------- | --------- | ---------------- |
+| `state/queryClient.ts`                           | **100 %** | **100 %** | **100 %** | —                |
+| `features/questions/matching/osmMatchingGrid.ts` | 94.6 %    | 83.3 %    | 83.3 %    | L49, L65         |
+| `shared/useDebouncedValue.ts`                    | 85.7 %    | **100 %** | 75 %      | — (line-covered) |
 
 `queryClient.ts` (TanStack Query setup) is fully covered via the framework test. The grid
 cache is well covered with two branches and one function not yet exercised.
@@ -62,7 +62,7 @@ cache is well covered with two branches and one function not yet exercised.
 
 ### Coverage regressions (new code added, tests not yet updated)
 
-These files have *lower* coverage than the previous run because new code paths were added
+These files have _lower_ coverage than the previous run because new code paths were added
 by the recent performance and refactor commits.
 
 **`osmMatching.ts`: 95 % → 77 % statements**
@@ -261,10 +261,10 @@ All files                             |   88.76 |    76.54 |   86.95 |   90.04
 
 ## What Improved vs Last Run
 
-| File | Before | After | Note |
-| --- | --- | --- | --- |
-| `playAreaSearch.ts` | 88.6 % stmts | 95.7 % | Refactored + better-tested in `ceb8bb9` |
-| `questionGeometry.ts` | 100 % (but failing) | 100 % ✅ | Test fixed in `b5525d5` |
-| `osmMatchingGrid.ts` | — | 94.6 % 🆕 | New file, well-covered from the start |
-| `queryClient.ts` | — | 100 % 🆕 | New file, fully tested via framework |
-| `useDebouncedValue.ts` | — | 85.7 % 🆕 | New utility, needs unmount-cleanup test |
+| File                   | Before              | After     | Note                                    |
+| ---------------------- | ------------------- | --------- | --------------------------------------- |
+| `playAreaSearch.ts`    | 88.6 % stmts        | 95.7 %    | Refactored + better-tested in `ceb8bb9` |
+| `questionGeometry.ts`  | 100 % (but failing) | 100 % ✅  | Test fixed in `b5525d5`                 |
+| `osmMatchingGrid.ts`   | —                   | 94.6 % 🆕 | New file, well-covered from the start   |
+| `queryClient.ts`       | —                   | 100 % 🆕  | New file, fully tested via framework    |
+| `useDebouncedValue.ts` | —                   | 85.7 % 🆕 | New utility, needs unmount-cleanup test |
