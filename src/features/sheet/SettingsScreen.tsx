@@ -4,6 +4,7 @@ import {
     Linking,
     Pressable,
     StyleSheet,
+    Switch,
     Text,
     View,
 } from "react-native";
@@ -15,7 +16,11 @@ import { ShareSetupModal } from "@/sharing/export/ShareSetupModal";
 import { useHidingZoneState } from "@/state/hidingZoneStore";
 import { clearAppCaches, useResetGame } from "@/state/maintenance";
 import { usePlayArea } from "@/state/playAreaStore";
-import { useQuestions } from "@/state/questionStore";
+import {
+    useLabelLanguage,
+    useQuestionActions,
+    useQuestions,
+} from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
 type SettingsScreenProps = {
@@ -27,6 +32,8 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
     const { radiusMeters, radiusUnit, selectedPresetIds } =
         useHidingZoneState();
     const questions = useQuestions();
+    const labelLanguage = useLabelLanguage();
+    const { setLabelLanguage } = useQuestionActions();
     const [isShareVisible, setIsShareVisible] = useState(false);
     const [maintenanceResult, setMaintenanceResult] = useState<string | null>(
         null,
@@ -111,6 +118,29 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     onPress={() => onNavigate("offline-data")}
                     testID="settings-offline-data-row"
                     title="Offline Data"
+                />
+            </View>
+
+            <View style={styles.actions}>
+                <Text style={styles.sectionHeading}>Display</Text>
+                <SheetListRow
+                    accessibilityLabel="Toggle POI label language between native and English"
+                    description="Show POI names in English when available"
+                    onPress={() =>
+                        setLabelLanguage(
+                            labelLanguage === "english" ? "native" : "english",
+                        )
+                    }
+                    testID="settings-label-language-row"
+                    title="English Labels"
+                    trailing={
+                        <Switch
+                            value={labelLanguage === "english"}
+                            onValueChange={(v) =>
+                                setLabelLanguage(v ? "english" : "native")
+                            }
+                        />
+                    }
                 />
             </View>
 

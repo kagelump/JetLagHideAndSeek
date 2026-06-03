@@ -98,6 +98,7 @@ describe("AppStateV1 schema", () => {
         expect(state.questionSettings).toEqual({
             activeQuestionId: null,
             isPinLocked: false,
+            labelLanguage: "native",
         });
         expect(state.questions).toEqual([]);
     });
@@ -198,7 +199,11 @@ describe("AppStateV1 schema", () => {
     it("accepts question settings", () => {
         const state = {
             ...makeAppState(),
-            questionSettings: { activeQuestionId: null, isPinLocked: true },
+            questionSettings: {
+                activeQuestionId: null,
+                isPinLocked: true,
+                labelLanguage: "native" as const,
+            },
         };
         expect(migratePersistedAppState(state)).toEqual(state);
     });

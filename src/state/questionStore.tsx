@@ -36,6 +36,7 @@ type QuestionStateValue = {
     activeQuestionId: string | null;
     isPinLocked: boolean;
     isRestored: boolean;
+    labelLanguage: "native" | "english";
 };
 
 const QuestionStateContext = createContext<QuestionStateValue | null>(null);
@@ -56,6 +57,7 @@ export function useQuestionState(): QuestionStateValue {
 // ---------------------------------------------------------------------------
 
 const IsPinLockedContext = createContext<boolean>(false);
+const LabelLanguageContext = createContext<"native" | "english">("native");
 const QuestionIdsContext = createContext<string[] | null>(null);
 const QuestionsByIdContext = createContext<Record<
     string,
@@ -69,6 +71,10 @@ const QuestionsByIdContext = createContext<Record<
  */
 export function useIsPinLocked(): boolean {
     return useContext(IsPinLockedContext);
+}
+
+export function useLabelLanguage(): "native" | "english" {
+    return useContext(LabelLanguageContext);
 }
 
 export function useQuestionIds(): string[] {
@@ -106,6 +112,7 @@ type QuestionActionsValue = {
     importQuestions: (questions: QuestionsImportState) => void;
     markRestored: () => void;
     setActiveQuestionId: (questionId: string | null) => void;
+    setLabelLanguage: (language: "native" | "english") => void;
     setPinLocked: (isLocked: boolean) => void;
     updateQuestion: (
         questionId: string,
@@ -152,6 +159,7 @@ export function useQuestionDerived(): QuestionDerivedValue {
 export type QuestionSettingsImportState = {
     activeQuestionId: string | null;
     isPinLocked: boolean;
+    labelLanguage: "native" | "english";
 };
 
 type NormalizedQuestions = {
@@ -171,6 +179,9 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         string | null
     >(null);
     const [isPinLocked, setPinLockedState] = useState(false);
+    const [labelLanguage, setLabelLanguageState] = useState<
+        "native" | "english"
+    >("native");
     const [isRestored, setIsRestored] = useState(false);
 
     const activeQuestion = useMemo(
@@ -269,10 +280,15 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setPinLockedState(isLocked);
     }, []);
 
+    const setLabelLanguage = useCallback((language: "native" | "english") => {
+        setLabelLanguageState(language);
+    }, []);
+
     const importQuestionSettings = useCallback(
         (settings: QuestionSettingsImportState) => {
             setPinLockedState(settings.isPinLocked);
             setActiveQuestionIdState(settings.activeQuestionId);
+            setLabelLanguageState(settings.labelLanguage ?? "native");
         },
         [],
     );
@@ -286,8 +302,9 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             activeQuestionId,
             isPinLocked,
             isRestored,
+            labelLanguage,
         }),
-        [activeQuestionId, isPinLocked, isRestored],
+        [activeQuestionId, isPinLocked, isRestored, labelLanguage],
     );
 
     const actionsValue = useMemo<QuestionActionsValue>(
@@ -298,6 +315,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             importQuestions,
             markRestored,
             setActiveQuestionId,
+            setLabelLanguage,
             setPinLocked,
             updateQuestion,
         }),
@@ -308,6 +326,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             importQuestions,
             markRestored,
             setActiveQuestionId,
+            setLabelLanguage,
             setPinLocked,
             updateQuestion,
         ],
@@ -327,7 +346,11 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                     <QuestionIdsContext.Provider value={questions.allIds}>
                         <QuestionsByIdContext.Provider value={questions.byId}>
                             <IsPinLockedContext.Provider value={isPinLocked}>
-                                {children}
+                                <LabelLanguageContext.Provider
+                                    value={labelLanguage}
+                                >
+                                    {children}
+                                </LabelLanguageContext.Provider>
                             </IsPinLockedContext.Provider>
                         </QuestionsByIdContext.Provider>
                     </QuestionIdsContext.Provider>

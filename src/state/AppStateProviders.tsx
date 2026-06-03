@@ -213,6 +213,7 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
                 questionSettings: {
                     activeQuestionId: questionState.activeQuestionId,
                     isPinLocked: questionState.isPinLocked,
+                    labelLanguage: questionState.labelLanguage,
                 },
                 questions,
             }),
@@ -225,6 +226,7 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
         playAreaStore.playArea,
         questionState.activeQuestionId,
         questionState.isPinLocked,
+        questionState.labelLanguage,
         questions,
     ]);
 

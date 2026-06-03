@@ -16,6 +16,7 @@ import type { OsmFeature } from "./matchingTypes";
 type OsmMatchingCandidatesModalProps = {
     candidates: (OsmFeature & { distanceMeters?: number })[];
     categoryTitle: string;
+    labelLanguage?: "native" | "english";
     selectedOsmId: number | null;
     selectedOsmType: "node" | "way" | "relation" | null;
     onSelect: (candidate: {
@@ -30,6 +31,7 @@ type OsmMatchingCandidatesModalProps = {
 export function OsmMatchingCandidatesModal({
     candidates,
     categoryTitle,
+    labelLanguage = "native",
     selectedOsmId,
     selectedOsmType,
     onSelect,
@@ -68,7 +70,7 @@ export function OsmMatchingCandidatesModal({
                                 selectedOsmType === candidate.osmType;
                             return (
                                 <Pressable
-                                    accessibilityLabel={`${formatCandidateName(candidate)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
+                                    accessibilityLabel={`${formatCandidateName(candidate, labelLanguage)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
                                     onPress={() => {
@@ -88,7 +90,10 @@ export function OsmMatchingCandidatesModal({
                                             style={styles.candidateName}
                                             numberOfLines={1}
                                         >
-                                            {formatCandidateName(candidate)}
+                                            {formatCandidateName(
+                                                candidate,
+                                                labelLanguage,
+                                            )}
                                         </Text>
                                     </View>
                                     {candidate.distanceMeters !== undefined ? (

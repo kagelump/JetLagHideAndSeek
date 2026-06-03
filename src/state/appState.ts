@@ -152,6 +152,7 @@ export const appStateQuestionsSchema = z.array(
 export const appStateQuestionSettingsSchema = z.object({
     activeQuestionId: z.string().nullable().default(null),
     isPinLocked: z.boolean(),
+    labelLanguage: z.enum(["native", "english"]).default("native"),
 });
 
 export const appStateV1Schema = z.object({
@@ -213,6 +214,7 @@ export function createAppStateV1({
         questionSettings: {
             activeQuestionId: questionSettings?.activeQuestionId ?? null,
             isPinLocked: questionSettings?.isPinLocked ?? false,
+            labelLanguage: questionSettings?.labelLanguage ?? "native",
         },
         questions: questions ? [...questions] : [],
         version: 1,
@@ -238,7 +240,11 @@ function addMissingV1Slices(value: unknown): unknown {
         questionSettings:
             "questionSettings" in value
                 ? value.questionSettings
-                : { activeQuestionId: null, isPinLocked: false },
+                : {
+                      activeQuestionId: null,
+                      isPinLocked: false,
+                      labelLanguage: "native",
+                  },
         questions,
     };
 }
@@ -311,5 +317,6 @@ export function appStateQuestionSettingsToImportState(
     return {
         activeQuestionId: questionSettings.activeQuestionId,
         isPinLocked: questionSettings.isPinLocked,
+        labelLanguage: questionSettings.labelLanguage,
     };
 }

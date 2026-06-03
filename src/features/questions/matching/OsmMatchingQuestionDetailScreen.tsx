@@ -8,6 +8,7 @@ import { useHidingZoneState } from "@/state/hidingZoneStore";
 import { usePlayArea } from "@/state/playAreaStore";
 import {
     updateQuestionCenter,
+    useLabelLanguage,
     useQuestionActions,
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
@@ -35,6 +36,7 @@ export function OsmMatchingQuestionDetailScreen({
     const { radiusMeters: stationRadiusMeters } = useHidingZoneState();
     const { playArea } = usePlayArea();
     const categoryTitle = getCategoryTitle(question.category);
+    const labelLanguage = useLabelLanguage();
     const lastSearchCenterRef = useRef<[number, number] | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -186,7 +188,7 @@ export function OsmMatchingQuestionDetailScreen({
                                 question.selectedOsmType === candidate.osmType;
                             return (
                                 <Pressable
-                                    accessibilityLabel={`${formatCandidateName(candidate)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
+                                    accessibilityLabel={`${formatCandidateName(candidate, labelLanguage)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
                                     accessibilityRole="button"
                                     key={`${candidate.osmType}-${candidate.osmId}`}
                                     onPress={() =>
@@ -205,7 +207,10 @@ export function OsmMatchingQuestionDetailScreen({
                                             style={styles.candidateName}
                                             numberOfLines={1}
                                         >
-                                            {formatCandidateName(candidate)}
+                                            {formatCandidateName(
+                                                candidate,
+                                                labelLanguage,
+                                            )}
                                         </Text>
                                     </View>
                                     {candidate.distanceMeters !== undefined ? (
@@ -313,6 +318,7 @@ export function OsmMatchingQuestionDetailScreen({
             <OsmMatchingCandidatesModal
                 candidates={question.candidates}
                 categoryTitle={categoryTitle}
+                labelLanguage={labelLanguage}
                 selectedOsmId={question.selectedOsmId}
                 selectedOsmType={question.selectedOsmType}
                 onSelect={handleSelectCandidate}

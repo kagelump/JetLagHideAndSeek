@@ -69,4 +69,70 @@ describe("formatCandidateName", () => {
             ),
         ).toBe("C");
     });
+
+    // ── English label preference ──────────────────────────────────────
+
+    it("uses feature.name in native mode (default)", () => {
+        expect(
+            formatCandidateName(
+                feature({
+                    name: "東京",
+                    tags: { name: "東京", "name:en": "Tokyo" },
+                }),
+            ),
+        ).toBe("東京");
+    });
+
+    it("uses tags['name:en'] in english mode when available", () => {
+        expect(
+            formatCandidateName(
+                feature({
+                    name: "東京",
+                    tags: { name: "東京", "name:en": "Tokyo" },
+                }),
+                "english",
+            ),
+        ).toBe("Tokyo");
+    });
+
+    it("falls back to feature.name in english mode when tags['name:en'] is missing", () => {
+        expect(
+            formatCandidateName(
+                feature({
+                    name: "東京",
+                    tags: { name: "東京" },
+                }),
+                "english",
+            ),
+        ).toBe("東京");
+    });
+
+    it("falls back to feature.name in english mode when tags is empty (bundle path)", () => {
+        expect(
+            formatCandidateName(
+                feature({
+                    name: "成田国際空港",
+                    tags: {},
+                    iata: "NRT",
+                }),
+                "english",
+            ),
+        ).toBe("成田国際空港 (NRT)");
+    });
+
+    it("uses english name with annotations", () => {
+        expect(
+            formatCandidateName(
+                feature({
+                    name: "成田国際空港",
+                    tags: {
+                        name: "成田国際空港",
+                        "name:en": "Narita International Airport",
+                    },
+                    iata: "NRT",
+                }),
+                "english",
+            ),
+        ).toBe("Narita International Airport (NRT)");
+    });
 });

@@ -24,6 +24,7 @@ const defaultHidingZoneSetup = {
 const defaultQuestionSettings = {
     activeQuestionId: null as string | null,
     isPinLocked: false,
+    labelLanguage: "native" as const,
 };
 
 // ─── Reset Game ────────────────────────────────────────────────────────────
