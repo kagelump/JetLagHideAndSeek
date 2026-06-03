@@ -9,6 +9,9 @@ Use these docs as the current references:
   active improvement list.
 - [`codebase-refactor-plan.md`](./codebase-refactor-plan.md) — remaining
   structural cleanup plan.
+- [`settings-maintenance-and-fetch-debug.md`](./settings-maintenance-and-fetch-debug.md)
+  — proposed Settings reset/clear-cache actions and an enforced question
+  fetch-debug line.
 
 Historical planning docs:
 
