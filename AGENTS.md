@@ -11,9 +11,11 @@ patterns wholesale.
   and `app/index.tsx` renders `src/screens/MapAppScreen.tsx`.
 - Main screen: `MapAppScreen` composes `NativeMap` and `AppBottomSheet` inside
   `PlayAreaProvider` and `HidingZoneProvider`.
-- Current milestone: MapLibre map plus Settings -> Play Area, Settings ->
-  Hiding Zones, and Questions -> Radar. App-state persistence and the
-  copy/paste wire format cover play area, hiding zones, and radar questions.
+- Current milestone: MapLibre map, bottom-sheet navigation, Settings → Play
+  Area and Hiding Zones, Questions → Radar and Matching (with Voronoi overlays),
+  and kdbush/geokdbush spatial index for bundled OSM POI searches. App-state
+  persistence and copy/paste wire format cover play area, hiding zones, and
+  questions.
 - Default play area: Tokyo 23 Wards, OSM relation `19631009`, loaded from
   `assets/default-zones/tokyo.json`.
 - Deterministic E2E play-area fixture: Osaka, OSM relation `358674`, loaded from
@@ -97,7 +99,12 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
 - `src/features/hidingZone/`: Hiding Zones settings UI, preset data adapters,
   radius/unit helpers, and derived GeoJSON overlays.
 - `src/features/questions/`: question catalog, radar question UI/controller,
-  question map render-state helpers, and future question type definitions.
+  matching question subsystem (OSM candidates, Voronoi masks, bundled POIs,
+  kdbush spatial index), map render-state helpers, and future question types.
+- `src/features/questions/matching/spatialIndex.ts`: kdbush/geokdbush spatial
+  index built from columnar bundle data for O(log n) nearest-neighbor queries.
+- `src/features/questions/clipVoronoiCells.ts`: clips `@turf/voronoi` cells
+  to the play-area boundary with a bbox-pre-filtered polyclip-ts pipeline.
 - `src/state/`: React state providers. Keep them mobile-specific.
 - `data/odpt/`: ODPT source config, fetch script, attribution docs, ignored
   download cache, and checked-in processed preset JSON.
@@ -230,6 +237,21 @@ put that state in a focused feature/store and let the map render derived data.
 - `pnpm data:odpt` requires network access and `ODPT_KEY` for
   Tokyo Metro.
 
+## POI Spatial Index
+
+- kdbush/geokdbush (~5 KB total, pure JS) replaces the old dual-path
+  (fast-path for ≤5k features + cell-grid for dense categories) with a single
+  O(log n) nearest-neighbor query per category/region.
+- The index is built in `spatialIndex.ts` directly from columnar bundle arrays
+  (`col.lon[i]`, `col.lat[i]`) — no `OsmFeature` allocation during construction.
+- `findMatchingFeaturesWithIndex` in `osmMatchingCache.ts` is the unified entry
+  point: spatial index for bundleable categories, Overpass fallback otherwise.
+- Perf test: `pnpm test -- --testPathPattern "poiSearch"`.
+- `@turf/voronoi` produces `undefined` entries in `features[]` for input
+  points whose cell does not intersect the bbox. `computeVoronoiCells` filters
+  these out. When writing new code that iterates `cells.features`, guard against
+  undefined entries or route through `computeVoronoiCells`.
+
 ## Question Rules
 
 - Use original game terminology: the circle question is `radar`, not `radius`.
@@ -331,11 +353,13 @@ surface, and Maestro as the integration test for that surface.
 
 ## Current Sharp Edges
 
-- The docs and E2E flows historically asserted visible map control text such as
-  `Fit Tokyo 23 Wards` and `Locate me`. The current controls are icon-only, so
-  keep Maestro focused on stable sheet rows and visible play-area state unless
-  native-accessible labels are added to the map buttons.
 - Photon and Overpass are live services. Keep happy-path unit tests independent
   of those networks, and reserve live checks for manual verification.
 - Native dependency changes can require prebuild plus a dev-client rebuild even
   when TypeScript and Jest pass.
+- `@turf/voronoi` produces `undefined` entries in `features[]` for input points
+  whose Voronoi cell does not intersect the bbox. `computeVoronoiCells` filters
+  them out, but any code iterating raw `@turf/voronoi` output must also guard.
+- The kdbush index is built lazily on first query per (region, category).
+  First search for a dense category (park: 22k features) includes a one-time
+  ~200 ms index-construction cost. Subsequent searches are <5 ms.
