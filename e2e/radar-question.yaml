@@ -9,7 +9,6 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn: "Questions"
 - waitForAnimationToEnd:
       timeout: 1000
-- assertVisible: ".*No questions yet.*"
 - tapOn: "Add question"
 - waitForAnimationToEnd:
       timeout: 1000

@@ -35,7 +35,6 @@ import { OfflineDataScreen } from "@/features/sheet/OfflineDataScreen";
 import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";
-import { useQuestionDerived } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
 const SHEET_WIDTH = Dimensions.get("window").width;
@@ -57,25 +56,7 @@ type MainDrawerProps = {
     sheetIndex: number;
 };
 
-const mainContent = {
-    detail: "Choose a workflow to start shaping the game.",
-    title: "Game Setup",
-};
-
-const routeEyebrows: Record<SheetRouteName, string> = {
-    "add-question": "Add Question",
-    "hiding-zone": "Hiding Zones",
-    main: "Mobile v2",
-    matching: "Matching",
-    "offline-data": "Offline Data",
-    "play-area": "Play Area",
-    questions: "Questions",
-    "question-detail": "Radar Question",
-    settings: "Settings",
-};
-
 export function MainDrawer({ route, onNavigate, sheetIndex }: MainDrawerProps) {
-    const { activeQuestion } = useQuestionDerived();
     const [displayedRoute, setDisplayedRoute] = useState(route);
     const displayedRouteRef = useRef(route);
     const [transition, setTransition] = useState<SheetTransition | null>(null);
@@ -217,7 +198,6 @@ export function MainDrawer({ route, onNavigate, sheetIndex }: MainDrawerProps) {
                         transition.from,
                         handleNavigate,
                         sheetIndex,
-                        getRouteEyebrow(transition.from, activeQuestion?.type),
                     )}
                 </Animated.View>
             ) : null}
@@ -240,12 +220,7 @@ export function MainDrawer({ route, onNavigate, sheetIndex }: MainDrawerProps) {
                         : null,
                 ]}
             >
-                {renderRouteContent(
-                    currentRoute,
-                    handleNavigate,
-                    sheetIndex,
-                    getRouteEyebrow(currentRoute, activeQuestion?.type),
-                )}
+                {renderRouteContent(currentRoute, handleNavigate, sheetIndex)}
             </Animated.View>
 
             {backTarget ? (
@@ -286,69 +261,47 @@ function renderRouteContent(
     routeName: SheetRouteName,
     onNavigate: (route: SheetRouteName) => void,
     sheetIndex: number,
-    eyebrowLabel: string,
 ) {
     switch (routeName) {
         case "settings":
             return (
-                <ChildSheetShell
-                    eyebrowLabel={eyebrowLabel}
-                    onBack={() => onNavigate("main")}
-                >
+                <ChildSheetShell onBack={() => onNavigate("main")}>
                     <SettingsScreen onNavigate={onNavigate} />
                 </ChildSheetShell>
             );
         case "play-area":
             return (
-                <ChildSheetShell
-                    eyebrowLabel={eyebrowLabel}
-                    onBack={() => onNavigate("settings")}
-                >
+                <ChildSheetShell onBack={() => onNavigate("settings")}>
                     <PlayAreaScreen />
                 </ChildSheetShell>
             );
         case "hiding-zone":
             return (
-                <ChildSheetShell
-                    eyebrowLabel={eyebrowLabel}
-                    onBack={() => onNavigate("settings")}
-                >
+                <ChildSheetShell onBack={() => onNavigate("settings")}>
                     <HidingZoneScreen />
                 </ChildSheetShell>
             );
         case "offline-data":
             return (
-                <ChildSheetShell
-                    eyebrowLabel={eyebrowLabel}
-                    onBack={() => onNavigate("settings")}
-                >
+                <ChildSheetShell onBack={() => onNavigate("settings")}>
                     <OfflineDataScreen />
                 </ChildSheetShell>
             );
         case "questions":
             return (
-                <ChildSheetShell
-                    eyebrowLabel={eyebrowLabel}
-                    onBack={() => onNavigate("main")}
-                >
+                <ChildSheetShell onBack={() => onNavigate("main")}>
                     <QuestionsScreen onNavigate={onNavigate} />
                 </ChildSheetShell>
             );
         case "add-question":
             return (
-                <ChildSheetShell
-                    eyebrowLabel={eyebrowLabel}
-                    onBack={() => onNavigate("questions")}
-                >
+                <ChildSheetShell onBack={() => onNavigate("questions")}>
                     <AddQuestionScreen onNavigate={onNavigate} />
                 </ChildSheetShell>
             );
         case "matching":
             return (
-                <ChildSheetShell
-                    eyebrowLabel={eyebrowLabel}
-                    onBack={() => onNavigate("add-question")}
-                >
+                <ChildSheetShell onBack={() => onNavigate("add-question")}>
                     <MatchingQuestionScreen onNavigate={onNavigate} />
                 </ChildSheetShell>
             );
@@ -356,7 +309,6 @@ function renderRouteContent(
             return (
                 <ChildSheetShell
                     accessory={<QuestionActionsMenu onNavigate={onNavigate} />}
-                    eyebrowLabel={eyebrowLabel}
                     onBack={() => onNavigate("questions")}
                 >
                     <QuestionDetailScreen sheetIndex={sheetIndex} />
@@ -365,41 +317,17 @@ function renderRouteContent(
         default: {
             return (
                 <View style={styles.container}>
-                    <View style={styles.header}>
-                        {routeName !== "main" ? (
-                            <BackButton onPress={() => onNavigate("main")} />
-                        ) : null}
-                        <Text
-                            style={styles.eyebrow}
-                            accessibilityLabel="Mobile v2"
-                        >
-                            Mobile v2
-                        </Text>
-                        <Text
-                            style={styles.title}
-                            accessibilityLabel={mainContent.title}
-                        >
-                            {mainContent.title}
-                        </Text>
-                        <Text
-                            style={styles.detail}
-                            accessibilityLabel={mainContent.detail}
-                        >
-                            {mainContent.detail}
-                        </Text>
-                    </View>
-
                     <View style={styles.actions}>
                         <DrawerAction
                             title="Questions"
-                            description="Review answers and question geometry."
+                            description=""
                             isActive={false}
                             onPress={() => onNavigate("questions")}
                             testID="main-questions-row"
                         />
                         <DrawerAction
                             title="Settings"
-                            description="Adjust the play area and app preferences."
+                            description=""
                             isActive={false}
                             onPress={() => onNavigate("settings")}
                             testID="main-settings-row"
@@ -411,41 +339,19 @@ function renderRouteContent(
     }
 }
 
-function getRouteEyebrow(
-    routeName: SheetRouteName,
-    activeQuestionType?: NonNullable<
-        ReturnType<typeof useQuestionDerived>["activeQuestion"]
-    >["type"],
-) {
-    if (routeName === "question-detail") {
-        return activeQuestionType === "matching"
-            ? "Matching"
-            : "Radar Question";
-    }
-    return routeEyebrows[routeName];
-}
-
 function ChildSheetShell({
     accessory,
     children,
-    eyebrowLabel,
     onBack,
 }: {
     accessory?: ReactNode;
     children: ReactNode;
-    eyebrowLabel: string;
     onBack: () => void;
 }) {
     return (
         <View style={styles.fullContainer}>
             <View style={styles.childHeader}>
                 <BackButton onPress={onBack} />
-                <Text
-                    accessibilityLabel={eyebrowLabel}
-                    style={styles.childHeaderEyebrow}
-                >
-                    {eyebrowLabel}
-                </Text>
                 {accessory ? (
                     <View style={styles.childHeaderAccessory}>{accessory}</View>
                 ) : null}
@@ -502,12 +408,14 @@ function DrawerAction({
                 <Text style={styles.actionTitle} accessibilityLabel={title}>
                     {title}
                 </Text>
-                <Text
-                    style={styles.actionDescription}
-                    accessibilityLabel={description}
-                >
-                    {description}
-                </Text>
+                {description ? (
+                    <Text
+                        style={styles.actionDescription}
+                        accessibilityLabel={description}
+                    >
+                        {description}
+                    </Text>
+                ) : null}
             </View>
             <Text style={styles.chevron}>›</Text>
         </Pressable>

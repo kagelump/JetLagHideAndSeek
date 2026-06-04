@@ -22,14 +22,7 @@ export function QuestionsScreen({ onNavigate }: QuestionsScreenProps) {
 
     return (
         <SheetScrollView contentContainerStyle={styles.scrollContent}>
-            {questions.length === 0 ? (
-                <View style={styles.emptyCard} testID="questions-empty-card">
-                    <Text style={styles.emptyTitle}>No questions yet</Text>
-                    <Text style={styles.metadata}>
-                        Add a radar question to preview an area on the map.
-                    </Text>
-                </View>
-            ) : (
+            {questions.length > 0 && (
                 <View style={styles.list}>
                     {questions.map((question, index) => {
                         const definition = getQuestionDefinition(question.type);
@@ -103,7 +96,6 @@ export function QuestionsScreen({ onNavigate }: QuestionsScreenProps) {
             >
                 <View style={styles.questionCopy}>
                     <Text style={styles.questionTitle}>Add Question</Text>
-                    <Text style={styles.metadata}>Start a radar question.</Text>
                 </View>
                 <Text style={styles.chevron}>›</Text>
             </Pressable>

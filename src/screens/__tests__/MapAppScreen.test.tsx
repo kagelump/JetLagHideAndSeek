@@ -184,7 +184,7 @@ async function pressAddRadarQuestion(screen: ReturnType<typeof render>) {
         jest.advanceTimersByTime(300);
     });
     await waitFor(() => {
-        expect(screen.getByText("Radar Question")).toBeTruthy();
+        expect(screen.getByText("500m")).toBeTruthy();
     });
 }
 
@@ -202,7 +202,7 @@ function openQuestionActions(screen: ReturnType<typeof render>) {
 
 async function pressAddTransitLineQuestion(screen: ReturnType<typeof render>) {
     pressAndAdvance(screen, "add-matching-question-row");
-    expect(screen.getByLabelText("Matching")).toBeTruthy();
+    expect(screen.getByText("Transit")).toBeTruthy();
 
     pressAndAdvance(screen, "add-matching-transit-line-row");
     await waitFor(() => {
@@ -236,7 +236,7 @@ describe("MapAppScreen", () => {
 
         expect(screen.getByTestId("native-map")).toBeTruthy();
         expect(screen.getByTestId("bottom-sheet")).toBeTruthy();
-        expect(screen.getByText("Game Setup")).toBeTruthy();
+        expect(screen.getByText("Questions")).toBeTruthy();
     });
 
     it("hides the sheet opener from accessibility while the sheet covers it", () => {
@@ -303,7 +303,7 @@ describe("MapAppScreen", () => {
         fireEvent.press(screen.getByTestId("main-settings-row"));
 
         // During transition: both leaving (main) and current (settings) visible
-        expect(screen.getByText("Game Setup")).toBeTruthy();
+        expect(screen.getByText("Questions")).toBeTruthy();
         expect(screen.getByTestId("settings-share-button")).toBeTruthy();
 
         act(() => {
@@ -311,7 +311,7 @@ describe("MapAppScreen", () => {
         });
 
         // After transition: leaving screen removed
-        expect(screen.queryByText("Game Setup")).toBeNull();
+        // main screen content removed after transition
         expect(screen.getByTestId("settings-share-button")).toBeTruthy();
 
         jest.useRealTimers();
@@ -330,7 +330,7 @@ describe("MapAppScreen", () => {
         act(() => {
             jest.advanceTimersByTime(300);
         });
-        expect(screen.getByLabelText("Hiding Zones")).toBeTruthy();
+        expect(screen.getByTestId("hiding-zone-radius-input")).toBeTruthy();
 
         // Back: hiding-zone → settings
         fireEvent.press(screen.getByText("Back"));
@@ -352,7 +352,7 @@ describe("MapAppScreen", () => {
             jest.advanceTimersByTime(300);
         });
         expect(screen.getByTestId("settings-share-button")).toBeTruthy();
-        expect(screen.queryByText("Game Setup")).toBeNull();
+        // main screen content removed after transition
 
         jest.useRealTimers();
     });
@@ -365,14 +365,14 @@ describe("MapAppScreen", () => {
         act(() => {
             jest.advanceTimersByTime(300);
         });
-        expect(screen.getByLabelText("Questions")).toBeTruthy();
-        expect(screen.getByTestId("questions-empty-card")).toBeTruthy();
+        expect(screen.getByTestId("questions-add-question-row")).toBeTruthy();
+        // questions-empty-card removed — empty state no longer rendered
 
         fireEvent.press(screen.getByTestId("questions-add-question-row"));
         act(() => {
             jest.advanceTimersByTime(300);
         });
-        expect(screen.getByLabelText("Add Question")).toBeTruthy();
+        expect(screen.getByTestId("add-radar-question-row")).toBeTruthy();
         expect(screen.getByTestId("add-radar-question-row")).toBeTruthy();
         expect(screen.getByTestId("add-matching-question-row")).toBeTruthy();
 
@@ -380,7 +380,7 @@ describe("MapAppScreen", () => {
         act(() => {
             jest.advanceTimersByTime(300);
         });
-        expect(screen.getByLabelText("Matching")).toBeTruthy();
+        expect(screen.getByText("Transit")).toBeTruthy();
         expect(
             screen.getByTestId("add-matching-transit-line-row"),
         ).toBeTruthy();
@@ -389,7 +389,7 @@ describe("MapAppScreen", () => {
         act(() => {
             jest.advanceTimersByTime(300);
         });
-        expect(screen.getByLabelText("Add Question")).toBeTruthy();
+        expect(screen.getByTestId("add-radar-question-row")).toBeTruthy();
 
         fireEvent.press(screen.getByText("Back"));
         act(() => {
@@ -422,7 +422,6 @@ describe("MapAppScreen", () => {
         });
         await pressAddRadarQuestion(screen);
 
-        expect(screen.getByText("Radar Question")).toBeTruthy();
         expect(screen.getByText("500m")).toBeTruthy();
         expect(screen.getByText("1km")).toBeTruthy();
         expect(screen.getByText("2km")).toBeTruthy();
@@ -605,7 +604,7 @@ describe("MapAppScreen", () => {
             jest.advanceTimersByTime(300);
         });
 
-        expect(screen.getByLabelText("Questions")).toBeTruthy();
+        expect(screen.getByTestId("questions-add-question-row")).toBeTruthy();
         expect(screen.getByText("Matching 1")).toBeTruthy();
         expect(screen.getByText("Transit line: not selected")).toBeTruthy();
     });
@@ -668,7 +667,6 @@ describe("MapAppScreen", () => {
         });
         await pressAddRadarQuestion(screen);
 
-        expect(screen.getByText("Radar Question")).toBeTruthy();
         expect(
             getMapShapeSource(screen, "question-active-pin").props.shape
                 .features[0].geometry.coordinates,
@@ -708,8 +706,8 @@ describe("MapAppScreen", () => {
             jest.advanceTimersByTime(300);
         });
 
-        expect(screen.getByLabelText("Questions")).toBeTruthy();
-        expect(screen.getByTestId("questions-empty-card")).toBeTruthy();
+        expect(screen.getByTestId("questions-add-question-row")).toBeTruthy();
+        // questions-empty-card removed — empty state no longer rendered
         expect(
             getMapShapeSource(screen, "radar-question-areas").props.shape
                 .features,
@@ -736,14 +734,14 @@ describe("MapAppScreen", () => {
             jest.advanceTimersByTime(300);
         });
 
-        expect(screen.getByLabelText("Questions")).toBeTruthy();
+        expect(screen.getByTestId("questions-add-question-row")).toBeTruthy();
         expect(screen.getByText("Radar Question 1")).toBeTruthy();
         expect(screen.getByText("500 m distance · Hit")).toBeTruthy();
 
         fireEvent.press(screen.getByText("Delete"));
 
         expect(screen.queryByText("Radar Question 1")).toBeNull();
-        expect(screen.getByTestId("questions-empty-card")).toBeTruthy();
+        // questions-empty-card removed — empty state no longer rendered
         expect(
             getMapShapeSource(screen, "radar-question-areas").props.shape
                 .features,

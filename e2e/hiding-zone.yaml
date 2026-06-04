@@ -26,7 +26,7 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn: "Hiding zone radius"
 - eraseText
 - inputText: "500"
-- tapOn: "Hiding Zones"
+- tapOn: "Station radius"
 - extendedWaitUntil:
       visible: ".*Stored as 500 m"
       timeout: 30000
