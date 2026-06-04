@@ -35,6 +35,8 @@ import { OfflineDataScreen } from "@/features/sheet/OfflineDataScreen";
 import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";
+import { getQuestionDefinition } from "@/features/questions/questionRegistry";
+import { useQuestionDerived } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
 const SHEET_WIDTH = Dimensions.get("window").width;
@@ -187,7 +189,7 @@ export function MainDrawer({ route, onNavigate, sheetIndex }: MainDrawerProps) {
         <View style={styles.transitionContainer}>
             {transition ? (
                 <Animated.View
-                    key={`leaving-${transition.id}-${transition.from}`}
+                    key={`route-${transition.from}`}
                     style={[
                         styles.animatedFill,
                         getLeavingLayerStyle(transition.direction),
@@ -203,11 +205,7 @@ export function MainDrawer({ route, onNavigate, sheetIndex }: MainDrawerProps) {
             ) : null}
 
             <Animated.View
-                key={
-                    transition
-                        ? `entering-${transition.id}-${transition.to}`
-                        : `current-${displayedRoute}`
-                }
+                key={`route-${currentRoute}`}
                 style={[
                     styles.animatedFill,
                     transition
@@ -307,12 +305,11 @@ function renderRouteContent(
             );
         case "question-detail":
             return (
-                <ChildSheetShell
-                    accessory={<QuestionActionsMenu onNavigate={onNavigate} />}
+                <QuestionDetailShell
                     onBack={() => onNavigate("questions")}
-                >
-                    <QuestionDetailScreen sheetIndex={sheetIndex} />
-                </ChildSheetShell>
+                    onNavigate={onNavigate}
+                    sheetIndex={sheetIndex}
+                />
             );
         default: {
             return (
@@ -343,15 +340,22 @@ function ChildSheetShell({
     accessory,
     children,
     onBack,
+    title,
 }: {
     accessory?: ReactNode;
     children: ReactNode;
     onBack: () => void;
+    title?: string;
 }) {
     return (
         <View style={styles.fullContainer}>
             <View style={styles.childHeader}>
                 <BackButton onPress={onBack} />
+                {title ? (
+                    <Text numberOfLines={1} style={styles.childHeaderTitle}>
+                        {title}
+                    </Text>
+                ) : null}
                 <View style={styles.childHeaderSpacer} />
                 {accessory ? (
                     <View style={styles.childHeaderAccessory}>{accessory}</View>
@@ -359,6 +363,36 @@ function ChildSheetShell({
             </View>
             {children}
         </View>
+    );
+}
+
+function QuestionDetailShell({
+    onBack,
+    onNavigate,
+    sheetIndex,
+}: {
+    onBack: () => void;
+    onNavigate: (route: SheetRouteName) => void;
+    sheetIndex: number;
+}) {
+    const { activeQuestion } = useQuestionDerived();
+    const title = activeQuestion
+        ? (() => {
+              const def = getQuestionDefinition(activeQuestion.type);
+              return typeof def.title === "function"
+                  ? def.title(activeQuestion)
+                  : def.title;
+          })()
+        : undefined;
+
+    return (
+        <ChildSheetShell
+            accessory={<QuestionActionsMenu onNavigate={onNavigate} />}
+            onBack={onBack}
+            title={title}
+        >
+            <QuestionDetailScreen sheetIndex={sheetIndex} />
+        </ChildSheetShell>
     );
 }
 
@@ -485,6 +519,15 @@ const styles = StyleSheet.create({
     },
     childHeaderSpacer: {
         flex: 1,
+    },
+    childHeaderTitle: {
+        color: colors.ink,
+        fontSize: 16,
+        fontWeight: "700",
+        left: 0,
+        position: "absolute",
+        right: 0,
+        textAlign: "center",
     },
     fullContainer: {
         flex: 1,

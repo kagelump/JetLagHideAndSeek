@@ -19,16 +19,16 @@ export const radarQuestionConfig = {
     mapBehavior: { usesMovableAnchor: true },
     summary: (question) =>
         question.type === "radar"
-            ? [
-                  `${Math.round(question.distanceMeters)} m distance`,
-                  question.answer === "unanswered"
-                      ? null
-                      : answerLabels[question.answer],
-              ]
-                  .filter(Boolean)
-                  .join(" · ")
+            ? question.answer !== "unanswered"
+                ? answerLabels[question.answer]
+                : ""
             : "",
     time: "5 minutes",
-    title: "Radar Question",
+    title: (question) =>
+        question.type === "radar"
+            ? question.distanceOption !== "other"
+                ? `${question.distanceOption} Radar`
+                : `${Math.round(question.distanceMeters)}m Radar`
+            : "Radar Question",
     type: "radar",
 } satisfies QuestionDefinition;
