@@ -96,9 +96,14 @@ export function NativeMap({ isQuestionDetailRoute, onPress }: NativeMapProps) {
                 ...asSeparateMaskConstraints(
                     questionMapRenderState.radar.hitMaskFeatures,
                 ),
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.transitLine.hitMaskFeatures,
-                ),
+                // Transit-line hit mask contains one circle per station
+                // on the selected line. asSeparateMaskConstraints would
+                // decompose them into individual required constraints,
+                // and buildCombinedEligibilityMask intersects all required
+                // constraints — producing an empty result for any line
+                // with non-overlapping station circles. Pass the whole
+                // collection so the circles are treated as a union.
+                questionMapRenderState.transitLine.hitMaskFeatures,
                 ...asSeparateMaskConstraints(
                     questionMapRenderState.osmMatching.hitMaskFeatures,
                 ),

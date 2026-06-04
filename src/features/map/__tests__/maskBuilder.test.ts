@@ -254,6 +254,49 @@ describe("buildCombinedEligibilityMask", () => {
         expect(polygonArea(coords)).toBeCloseTo(44, 1);
     });
 
+    it("treats multiple non-overlapping hit features as a union, not an intersection", () => {
+        // Regression: asSeparateMaskConstraints decomposes a hit
+        // FeatureCollection into individual required constraints.
+        // buildCombinedEligibilityMask intersects all required
+        // constraints — for non-overlapping station circles on a
+        // transit line, the intersection is empty (everything dimmed).
+        // The correct behaviour is to pass the whole collection so the
+        // features are treated as a union.
+        const hidingZone = makeSquareFC(1, 1, 9, 9);
+        const twoStationHit: GeoJsonFeatureCollection = {
+            features: [
+                makeSquareFeature(2, 2, 4, 4), // station A
+                makeSquareFeature(6, 6, 8, 8), // station B — non-overlapping
+            ],
+            type: "FeatureCollection",
+        };
+
+        // Decomposed → intersection of A ∩ B = empty → everything dimmed
+        const decomposed = buildCombinedEligibilityMask(PLAY_AREA, [
+            hidingZone,
+            ...asSeparateMaskConstraints(twoStationHit),
+        ]);
+        expect(decomposed.features).toHaveLength(1);
+        const decomposedArea = polygonArea(
+            decomposed.features[0].geometry.coordinates as Position[][][],
+        );
+        // With intersection of non-overlapping squares, the eligible
+        // area is empty → mask covers the entire play area (100 sq units).
+        expect(decomposedArea).toBeCloseTo(100, 1);
+
+        // Whole collection → union of A ∪ B → both stations eligible
+        const unioned = buildCombinedEligibilityMask(PLAY_AREA, [
+            hidingZone,
+            twoStationHit,
+        ]);
+        expect(unioned.features).toHaveLength(1);
+        const unionedArea = polygonArea(
+            unioned.features[0].geometry.coordinates as Position[][][],
+        );
+        // Mask area = playArea (100) − eligible (4+4=8) = 92
+        expect(unionedArea).toBeCloseTo(92, 1);
+    });
+
     it("does not reuse a cached mask for distinct polygons with similar starting coordinates", () => {
         const first = makeSquareFC(1.0001, 1.0001, 5, 5);
         const second = makeSquareFC(1.0002, 1.0002, 9, 9);
