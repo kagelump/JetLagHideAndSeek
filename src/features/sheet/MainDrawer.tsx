@@ -352,6 +352,7 @@ function ChildSheetShell({
         <View style={styles.fullContainer}>
             <View style={styles.childHeader}>
                 <BackButton onPress={onBack} />
+                <View style={styles.childHeaderSpacer} />
                 {accessory ? (
                     <View style={styles.childHeaderAccessory}>{accessory}</View>
                 ) : null}
@@ -482,13 +483,8 @@ const styles = StyleSheet.create({
         alignItems: "flex-end",
         minWidth: 94,
     },
-    childHeaderEyebrow: {
-        color: colors.tint,
+    childHeaderSpacer: {
         flex: 1,
-        fontSize: 12,
-        fontWeight: "800",
-        letterSpacing: 0,
-        textTransform: "uppercase",
     },
     fullContainer: {
         flex: 1,
