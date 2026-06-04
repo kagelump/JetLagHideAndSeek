@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { getImportErrorMessage } from "@/sharing/errors";
 import { applyImport } from "@/sharing/import/applyImport";
 import { buildImportPreview } from "@/sharing/import/preview";
+import { QuestionRequestImport } from "@/sharing/import/QuestionRequestImport";
 import { parseImportPayload } from "@/sharing/links/parseLink";
 import { useHidingZoneActions } from "@/state/hidingZoneStore";
 import { usePlayArea } from "@/state/playAreaStore";
@@ -21,14 +22,19 @@ export function ImportScreen() {
 
     const parsed = useMemo(() => parseImportPayload(d), [d]);
     const preview = useMemo(
-        () => (parsed.ok ? buildImportPreview(parsed.envelope) : null),
+        () =>
+            parsed.ok && parsed.envelope.kind === "app-state"
+                ? buildImportPreview(parsed.envelope)
+                : null,
         [parsed],
     );
     const importErrorMessage = !parsed.ok
         ? getImportErrorMessage(parsed.error)
         : null;
 
-    const confirmImport = () => {
+    const cancel = () => router.replace("/");
+
+    const applyEnvelope = () => {
         if (!parsed.ok) return;
         const result = applyImport({
             envelope: parsed.envelope,
@@ -45,7 +51,15 @@ export function ImportScreen() {
         router.replace("/");
     };
 
-    const cancel = () => router.replace("/");
+    if (parsed.ok && parsed.envelope.kind === "question-request") {
+        return (
+            <QuestionRequestImport
+                envelope={parsed.envelope}
+                onAddQuestion={applyEnvelope}
+                onCancel={cancel}
+            />
+        );
+    }
 
     return (
         <View style={styles.screen}>
@@ -91,7 +105,7 @@ export function ImportScreen() {
                             <Pressable
                                 accessibilityLabel="Replace current game setup"
                                 accessibilityRole="button"
-                                onPress={confirmImport}
+                                onPress={applyEnvelope}
                                 style={({ pressed }) => [
                                     styles.primaryButton,
                                     pressed ? styles.actionPressed : null,

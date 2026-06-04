@@ -2,9 +2,29 @@ import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
 
 import { base64UrlToBytes, bytesToBase64Url } from "@/sharing/wire/base64url";
 import { canonicalize } from "@/sharing/wire/canonicalize";
-import { decodeEnvelopePayload, encodeEnvelope } from "@/sharing/wire/codec";
+import {
+    decodeEnvelopePayload as decodeEnvelopePayloadRaw,
+    type DecodeEnvelopeResult,
+    encodeEnvelope,
+} from "@/sharing/wire/codec";
 import { FIELD_MAP } from "@/sharing/wire/minified";
 import type { AppStateEnvelopeV1 } from "@/sharing/wire/schema";
+
+// These tests cover app-state payloads; narrow the widened WireEnvelope union
+// success branch back to AppStateEnvelopeV1 so existing assertions stay valid.
+type AppStateDecodeResult =
+    | { envelope: AppStateEnvelopeV1; ok: true }
+    | Extract<DecodeEnvelopeResult, { ok: false }>;
+
+function decodeEnvelopePayload(payload: string): AppStateDecodeResult {
+    const decoded = decodeEnvelopePayloadRaw(payload);
+    if (decoded.ok && decoded.envelope.kind !== "app-state") {
+        throw new Error(
+            `Expected app-state envelope, got ${decoded.envelope.kind}`,
+        );
+    }
+    return decoded as AppStateDecodeResult;
+}
 
 const envelope: AppStateEnvelopeV1 = {
     kind: "app-state",

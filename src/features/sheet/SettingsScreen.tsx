@@ -17,6 +17,7 @@ import { useHidingZoneState } from "@/state/hidingZoneStore";
 import { clearAppCaches, useResetGame } from "@/state/maintenance";
 import { usePlayArea } from "@/state/playAreaStore";
 import {
+    useGameMode,
     useLabelLanguage,
     useQuestionActions,
     useQuestions,
@@ -33,7 +34,8 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
         useHidingZoneState();
     const questions = useQuestions();
     const labelLanguage = useLabelLanguage();
-    const { setLabelLanguage } = useQuestionActions();
+    const gameMode = useGameMode();
+    const { setGameMode, setLabelLanguage } = useQuestionActions();
     const [isShareVisible, setIsShareVisible] = useState(false);
     const [maintenanceResult, setMaintenanceResult] = useState<string | null>(
         null,
@@ -118,6 +120,27 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     onPress={() => onNavigate("offline-data")}
                     testID="settings-offline-data-row"
                     title="Offline Data"
+                />
+            </View>
+
+            <View style={styles.actions}>
+                <Text style={styles.sectionHeading}>Mode</Text>
+                <SheetListRow
+                    accessibilityLabel="Toggle hider mode"
+                    description="Opening a shared question link answers it from your current location"
+                    onPress={() =>
+                        setGameMode(gameMode === "hider" ? "seeker" : "hider")
+                    }
+                    testID="settings-hider-mode-row"
+                    title="Hider Mode"
+                    trailing={
+                        <Switch
+                            onValueChange={(v) =>
+                                setGameMode(v ? "hider" : "seeker")
+                            }
+                            value={gameMode === "hider"}
+                        />
+                    }
                 />
             </View>
 

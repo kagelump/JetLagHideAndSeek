@@ -23,6 +23,7 @@ const defaultHidingZoneSetup = {
 
 const defaultQuestionSettings = {
     activeQuestionId: null as string | null,
+    gameMode: "seeker" as const,
     isPinLocked: false,
     labelLanguage: "native" as const,
 };

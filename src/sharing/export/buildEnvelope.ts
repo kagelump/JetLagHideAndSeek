@@ -1,7 +1,13 @@
 import type { HidingZoneUnit } from "@/features/hidingZone/hidingZoneTypes";
 import type { PlayArea } from "@/features/map/playArea";
-import type { QuestionsImportState } from "@/features/questions/questionTypes";
-import type { AppStateEnvelopeV1 } from "@/sharing/wire/schema";
+import type {
+    QuestionState,
+    QuestionsImportState,
+} from "@/features/questions/questionTypes";
+import type {
+    AppStateEnvelopeV1,
+    QuestionRequestEnvelopeV1,
+} from "@/sharing/wire/schema";
 
 export type HidingZoneExportState = {
     radiusMeters: number;
@@ -50,8 +56,40 @@ export function buildAppStateEnvelope({
     };
 }
 
+/**
+ * Wraps a single question in a `question-request` envelope for seeker → hider
+ * sharing. Matching candidates are stripped (the recipient re-searches locally)
+ * to keep the shared link short.
+ */
+export function buildQuestionRequestEnvelope({
+    now = new Date(),
+    question,
+}: {
+    now?: Date;
+    question: QuestionState;
+}): QuestionRequestEnvelopeV1 {
+    return {
+        kind: "question-request",
+        payload: {
+            createdAt: now.toISOString(),
+            question:
+                question.type === "matching"
+                    ? { ...question, candidates: [] }
+                    : question,
+            requestId: createRequestId(),
+        },
+        version: 1,
+    };
+}
+
 function createGameId(): string {
     return `s-${Date.now().toString(36)}-${Math.random()
+        .toString(36)
+        .slice(2, 6)}`;
+}
+
+function createRequestId(): string {
+    return `r-${Date.now().toString(36)}-${Math.random()
         .toString(36)
         .slice(2, 6)}`;
 }

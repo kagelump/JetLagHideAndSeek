@@ -10,6 +10,7 @@ import {
     updateRadarAnswer,
     updateRadarDistanceOption,
     updateQuestionCenter,
+    useGameMode,
     useQuestionActions,
     useQuestionDerived,
     useQuestionIds,
@@ -594,5 +595,272 @@ describe("QuestionProvider", () => {
                 questions: [{ type: "radar" }],
             });
         });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// addImportedQuestion, gameMode, and importQuestionSettings
+// ---------------------------------------------------------------------------
+
+function GameModeProbe() {
+    const gameMode = useGameMode();
+    const questions = useQuestions();
+    const { activeQuestion } = useQuestionDerived();
+    const { addImportedQuestion, importQuestionSettings, setGameMode } =
+        useQuestionActions();
+
+    return (
+        <View>
+            <Text testID="probe-game-mode">{gameMode}</Text>
+            <Text testID="probe-count">{questions.length}</Text>
+            <Text testID="probe-active-id">{activeQuestion?.id ?? "none"}</Text>
+            <Text testID="probe-question-ids">
+                {questions.map((q) => q.id).join(",")}
+            </Text>
+            <Text testID="probe-first-answer">
+                {questions[0]?.answer ?? "none"}
+            </Text>
+            <Text testID="probe-first-type">
+                {questions[0]?.type ?? "none"}
+            </Text>
+            <Pressable
+                accessibilityRole="button"
+                testID="action-set-hider"
+                onPress={() => setGameMode("hider")}
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-set-seeker"
+                onPress={() => setGameMode("seeker")}
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-add-imported-radar"
+                onPress={() =>
+                    addImportedQuestion({
+                        answer: "positive",
+                        center: [139.7, 35.66],
+                        createdAt: "2026-05-01T00:00:00.000Z",
+                        distanceMeters: 2000,
+                        distanceOption: "2km",
+                        distanceUnit: "m",
+                        id: "q-shared-1",
+                        type: "radar",
+                        updatedAt: "2026-05-01T00:00:00.000Z",
+                    })
+                }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-import-settings-hider"
+                onPress={() =>
+                    importQuestionSettings({
+                        activeQuestionId: null,
+                        gameMode: "hider",
+                        isPinLocked: true,
+                        labelLanguage: "english",
+                    })
+                }
+            />
+        </View>
+    );
+}
+
+function renderGameModeProvider() {
+    return render(
+        <AppStateProviders>
+            <GameModeProbe />
+        </AppStateProviders>,
+    );
+}
+
+describe("addImportedQuestion", () => {
+    beforeEach(async () => {
+        await AsyncStorage.clear();
+    });
+
+    it("appends an imported question with a fresh local id", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-add-imported-radar"));
+        });
+
+        expect(screen.getByTestId("probe-count")).toHaveTextContent("1");
+
+        // The local id should be fresh, not the shared id.
+        const localId = screen.getByTestId("probe-active-id").props.children;
+        expect(localId).not.toBe("q-shared-1");
+        expect(localId).toMatch(/^q-/);
+
+        // The shared id should NOT appear in the question list.
+        expect(screen.getByTestId("probe-question-ids")).not.toHaveTextContent(
+            "q-shared-1",
+        );
+    });
+
+    it("resets answer to unanswered on import", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-add-imported-radar"));
+        });
+
+        // The shared question had answer "positive", but import resets to
+        // "unanswered".
+        expect(screen.getByTestId("probe-first-answer")).toHaveTextContent(
+            "unanswered",
+        );
+    });
+
+    it("preserves question type and domain fields on import", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-add-imported-radar"));
+        });
+
+        expect(screen.getByTestId("probe-first-type")).toHaveTextContent(
+            "radar",
+        );
+    });
+
+    it("appends rather than replacing existing questions", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-add-imported-radar"));
+        });
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-add-imported-radar"));
+        });
+
+        expect(screen.getByTestId("probe-count")).toHaveTextContent("2");
+        // Both ids should be different (fresh per import).
+        const ids = screen
+            .getByTestId("probe-question-ids")
+            .props.children.split(",");
+        expect(ids).toHaveLength(2);
+        expect(ids[0]).not.toBe(ids[1]);
+    });
+});
+
+describe("gameMode", () => {
+    beforeEach(async () => {
+        await AsyncStorage.clear();
+    });
+
+    it("defaults to seeker mode", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        expect(screen.getByTestId("probe-game-mode")).toHaveTextContent(
+            "seeker",
+        );
+    });
+
+    it("toggles between hider and seeker", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-set-hider"));
+        });
+        expect(screen.getByTestId("probe-game-mode")).toHaveTextContent(
+            "hider",
+        );
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-set-seeker"));
+        });
+        expect(screen.getByTestId("probe-game-mode")).toHaveTextContent(
+            "seeker",
+        );
+    });
+
+    it("persists gameMode changes", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-set-hider"));
+        });
+
+        await waitFor(async () => {
+            const persisted = await loadPersistedAppState();
+            expect(persisted?.questionSettings.gameMode).toBe("hider");
+        });
+    });
+});
+
+describe("importQuestionSettings", () => {
+    beforeEach(async () => {
+        await AsyncStorage.clear();
+    });
+
+    it("restores gameMode from imported settings", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-import-settings-hider"));
+        });
+
+        expect(screen.getByTestId("probe-game-mode")).toHaveTextContent(
+            "hider",
+        );
+    });
+
+    it("defaults gameMode to seeker when missing from import", async () => {
+        // Persist state with no gameMode set, then restore.
+        await persistAppState(
+            createAppStateV1({
+                hidingZones: {
+                    radiusMeters: 600,
+                    radiusUnit: "m",
+                    selectedPresetIds: [],
+                },
+                playArea: defaultPlayArea,
+            }),
+        );
+
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        // Should default to "seeker".
+        expect(screen.getByTestId("probe-game-mode")).toHaveTextContent(
+            "seeker",
+        );
     });
 });

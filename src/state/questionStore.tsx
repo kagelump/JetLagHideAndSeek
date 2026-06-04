@@ -28,12 +28,15 @@ import {
     type DistanceUnit,
 } from "@/shared/distanceUnits";
 
+export type GameMode = "hider" | "seeker";
+
 // ---------------------------------------------------------------------------
 // State context — scalar values that change frequently
 // ---------------------------------------------------------------------------
 
 type QuestionStateValue = {
     activeQuestionId: string | null;
+    gameMode: GameMode;
     isPinLocked: boolean;
     isRestored: boolean;
     labelLanguage: "native" | "english";
@@ -58,6 +61,7 @@ export function useQuestionState(): QuestionStateValue {
 
 const IsPinLockedContext = createContext<boolean>(false);
 const LabelLanguageContext = createContext<"native" | "english">("native");
+const GameModeContext = createContext<GameMode>("seeker");
 const QuestionIdsContext = createContext<string[] | null>(null);
 const QuestionsByIdContext = createContext<Record<
     string,
@@ -75,6 +79,10 @@ export function useIsPinLocked(): boolean {
 
 export function useLabelLanguage(): "native" | "english" {
     return useContext(LabelLanguageContext);
+}
+
+export function useGameMode(): GameMode {
+    return useContext(GameModeContext);
 }
 
 export function useQuestionIds(): string[] {
@@ -103,6 +111,7 @@ export function useQuestions(): QuestionState[] {
 // ---------------------------------------------------------------------------
 
 type QuestionActionsValue = {
+    addImportedQuestion: (question: QuestionState) => QuestionState;
     createQuestion: (
         type: ImplementedQuestionType,
         options: { center: Position; category?: MatchingCategory },
@@ -112,6 +121,7 @@ type QuestionActionsValue = {
     importQuestions: (questions: QuestionsImportState) => void;
     markRestored: () => void;
     setActiveQuestionId: (questionId: string | null) => void;
+    setGameMode: (mode: GameMode) => void;
     setLabelLanguage: (language: "native" | "english") => void;
     setPinLocked: (isLocked: boolean) => void;
     updateQuestion: (
@@ -158,6 +168,7 @@ export function useQuestionDerived(): QuestionDerivedValue {
 
 export type QuestionSettingsImportState = {
     activeQuestionId: string | null;
+    gameMode: GameMode;
     isPinLocked: boolean;
     labelLanguage: "native" | "english";
 };
@@ -182,6 +193,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const [labelLanguage, setLabelLanguageState] = useState<
         "native" | "english"
     >("native");
+    const [gameMode, setGameModeState] = useState<GameMode>("seeker");
     const [isRestored, setIsRestored] = useState(false);
 
     const activeQuestion = useMemo(
@@ -246,6 +258,27 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         [],
     );
 
+    const addImportedQuestion = useCallback((question: QuestionState) => {
+        const now = new Date().toISOString();
+        const imported = normalizeQuestionState({
+            ...question,
+            answer: "unanswered",
+            createdAt: now,
+            id: createQuestionId(),
+            updatedAt: now,
+        });
+        setQuestions((current) => {
+            const byId = cloneQuestionsById(current.byId);
+            byId[imported.id] = imported;
+            return {
+                allIds: [...current.allIds, imported.id],
+                byId,
+            };
+        });
+        setActiveQuestionIdState(imported.id);
+        return imported;
+    }, []);
+
     const deleteQuestion = useCallback((questionId: string) => {
         setQuestions((current) => {
             if (!hasQuestionId(current.byId, questionId)) return current;
@@ -284,11 +317,16 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setLabelLanguageState(language);
     }, []);
 
+    const setGameMode = useCallback((mode: GameMode) => {
+        setGameModeState(mode);
+    }, []);
+
     const importQuestionSettings = useCallback(
         (settings: QuestionSettingsImportState) => {
             setPinLockedState(settings.isPinLocked);
             setActiveQuestionIdState(settings.activeQuestionId);
             setLabelLanguageState(settings.labelLanguage ?? "native");
+            setGameModeState(settings.gameMode ?? "seeker");
         },
         [],
     );
@@ -300,32 +338,37 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const stateValue = useMemo<QuestionStateValue>(
         () => ({
             activeQuestionId,
+            gameMode,
             isPinLocked,
             isRestored,
             labelLanguage,
         }),
-        [activeQuestionId, isPinLocked, isRestored, labelLanguage],
+        [activeQuestionId, gameMode, isPinLocked, isRestored, labelLanguage],
     );
 
     const actionsValue = useMemo<QuestionActionsValue>(
         () => ({
+            addImportedQuestion,
             createQuestion,
             deleteQuestion,
             importQuestionSettings,
             importQuestions,
             markRestored,
             setActiveQuestionId,
+            setGameMode,
             setLabelLanguage,
             setPinLocked,
             updateQuestion,
         }),
         [
+            addImportedQuestion,
             createQuestion,
             deleteQuestion,
             importQuestionSettings,
             importQuestions,
             markRestored,
             setActiveQuestionId,
+            setGameMode,
             setLabelLanguage,
             setPinLocked,
             updateQuestion,
@@ -349,7 +392,9 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                                 <LabelLanguageContext.Provider
                                     value={labelLanguage}
                                 >
-                                    {children}
+                                    <GameModeContext.Provider value={gameMode}>
+                                        {children}
+                                    </GameModeContext.Provider>
                                 </LabelLanguageContext.Provider>
                             </IsPinLockedContext.Provider>
                         </QuestionsByIdContext.Provider>

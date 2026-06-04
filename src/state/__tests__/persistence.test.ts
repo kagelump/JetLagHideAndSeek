@@ -97,6 +97,7 @@ describe("AppStateV1 schema", () => {
         expect(result.success).toBe(true);
         expect(state.questionSettings).toEqual({
             activeQuestionId: null,
+            gameMode: "seeker",
             isPinLocked: false,
             labelLanguage: "native",
         });
@@ -201,6 +202,7 @@ describe("AppStateV1 schema", () => {
             ...makeAppState(),
             questionSettings: {
                 activeQuestionId: null,
+                gameMode: "seeker" as const,
                 isPinLocked: true,
                 labelLanguage: "native" as const,
             },
