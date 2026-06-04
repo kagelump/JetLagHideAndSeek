@@ -352,7 +352,11 @@ function ChildSheetShell({
             <View style={styles.childHeader}>
                 <BackButton onPress={onBack} />
                 {title ? (
-                    <Text numberOfLines={1} style={styles.childHeaderTitle}>
+                    <Text
+                        numberOfLines={1}
+                        pointerEvents="none"
+                        style={styles.childHeaderTitle}
+                    >
                         {title}
                     </Text>
                 ) : null}
@@ -402,7 +406,6 @@ function BackButton({ onPress }: { onPress: () => void }) {
             accessible
             accessibilityLabel="Back"
             accessibilityRole="button"
-            hitSlop={8}
             onPress={onPress}
             style={styles.backButton}
         >
