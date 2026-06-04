@@ -63,4 +63,5 @@ export type OsmMatchingRenderState = {
         Point,
         { isSelected: boolean; name: string; osmId: number }
     >;
+    voronoiOutlineFeatures: FeatureCollection<Polygon | MultiPolygon>;
 };

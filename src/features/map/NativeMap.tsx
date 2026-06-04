@@ -51,6 +51,7 @@ import {
 import { RadarQuestionLayers } from "./RadarQuestionLayers";
 import { usePinDrag } from "./usePinDrag";
 import { useUserLocation } from "./useUserLocation";
+import { VoronoiOutlineLayers } from "./VoronoiOutlineLayers";
 
 setAccessToken(null);
 
@@ -258,6 +259,12 @@ export function NativeMap({ isQuestionDetailRoute, onPress }: NativeMapProps) {
                     />
                     <OsmMatchingLayers
                         osmMatching={questionMapRenderState.osmMatching}
+                        visible={isQuestionDetailRoute}
+                    />
+                    <VoronoiOutlineLayers
+                        voronoiOutlineFeatures={
+                            questionMapRenderState.voronoiOutlineFeatures
+                        }
                         visible={isQuestionDetailRoute}
                     />
                     <PlayAreaBoundaryLayer playArea={playArea} />

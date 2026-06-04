@@ -1,5 +1,10 @@
 import { point } from "@turf/helpers";
-import type { Feature, MultiPolygon, Polygon } from "geojson";
+import type {
+    Feature,
+    FeatureCollection,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
 
 import type { Bbox } from "@/shared/geojson";
 import type { QuestionState } from "@/features/questions/questionTypes";
@@ -7,15 +12,17 @@ import type { OsmMatchingRenderState } from "@/features/questions/matching/match
 import {
     buildNameLengthMasks,
     buildOsmMatchingHitMask,
-    buildOsmMatchingMissMask,
     computeVoronoiCells,
     makeOsmKey,
 } from "@/features/questions/matching/matchingVoronoi";
+import { clipCellsToPlayArea } from "@/features/questions/clipVoronoiCells";
 
 export function buildOsmMatchingRenderState(
     questions: QuestionState[],
     playAreaBbox: Bbox,
+    playAreaBoundary: FeatureCollection<Polygon | MultiPolygon>,
 ): OsmMatchingRenderState {
+    const t0 = Date.now();
     const osmMatchingQuestions = questions.filter(
         (q): q is Extract<QuestionState, { type: "matching" }> =>
             q.type === "matching" &&
@@ -29,15 +36,25 @@ export function buildOsmMatchingRenderState(
             hitMaskFeatures: { features: [], type: "FeatureCollection" },
             missMaskFeatures: { features: [], type: "FeatureCollection" },
             poiFeatures: { features: [], type: "FeatureCollection" },
+            voronoiOutlineFeatures: {
+                features: [],
+                type: "FeatureCollection",
+            },
         };
     }
 
     const hitFeatures: Feature<Polygon | MultiPolygon>[] = [];
     const missFeatures: Feature<Polygon | MultiPolygon>[] = [];
     const poiFeatures: OsmMatchingRenderState["poiFeatures"]["features"] = [];
+    const outlineFeatures: Feature<Polygon | MultiPolygon>[] = [];
 
     for (const question of osmMatchingQuestions) {
         const cells = computeVoronoiCells(question.candidates, playAreaBbox);
+
+        // Clip Voronoi cells to the play area boundary for outline rendering
+        const clippedOutlines = clipCellsToPlayArea(cells, playAreaBoundary);
+        outlineFeatures.push(...clippedOutlines.features);
+
         const selectedOsmKey =
             question.selectedOsmType !== null && question.selectedOsmId !== null
                 ? makeOsmKey(question.selectedOsmType, question.selectedOsmId)
@@ -67,7 +84,13 @@ export function buildOsmMatchingRenderState(
             const hitMask = buildOsmMatchingHitMask(cells, selectedOsmKey);
             hitFeatures.push(...hitMask.features);
         } else if (question.answer === "negative") {
-            const missMask = buildOsmMatchingMissMask(cells, selectedOsmKey);
+            // For a negative answer the selected cell is the *excluded*
+            // one — the user is saying "the target is NOT here." The miss
+            // mask must be just the selected cell, not the union of all
+            // other cells. (Using buildOsmMatchingMissMask — which
+            // returns every cell *except* the selected one — would make
+            // the inside mask visually identical to a positive answer.)
+            const missMask = buildOsmMatchingHitMask(cells, selectedOsmKey);
             missFeatures.push(...missMask.features);
         }
 
@@ -85,6 +108,14 @@ export function buildOsmMatchingRenderState(
         }
     }
 
+    const durationMs = Date.now() - t0;
+    console.log(
+        `[renderState] osmMatching: ${osmMatchingQuestions.length} questions, ` +
+            `${hitFeatures.length} hit / ${missFeatures.length} miss / ` +
+            `${poiFeatures.length} pois / ${outlineFeatures.length} outlines ` +
+            `in ${durationMs}ms`,
+    );
+
     return {
         hitMaskFeatures: { features: hitFeatures, type: "FeatureCollection" },
         missMaskFeatures: {
@@ -92,5 +123,9 @@ export function buildOsmMatchingRenderState(
             type: "FeatureCollection",
         },
         poiFeatures: { features: poiFeatures, type: "FeatureCollection" },
+        voronoiOutlineFeatures: {
+            features: outlineFeatures,
+            type: "FeatureCollection",
+        },
     };
 }

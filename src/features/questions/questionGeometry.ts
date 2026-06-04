@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import type { Bbox } from "@/shared/geojson";
 import type { QuestionMapRenderState } from "@/features/questions/radar/radarTypes";
@@ -19,8 +20,14 @@ export function buildQuestionMapRenderState(
     stations: TransitStation[],
     radiusMeters: number,
     playAreaBbox: Bbox,
+    playAreaBoundary: FeatureCollection<Polygon | MultiPolygon>,
 ): QuestionMapRenderState {
     const radar = buildRadarQuestionRenderState(questions);
+    const osmMatching = buildOsmMatchingRenderState(
+        questions,
+        playAreaBbox,
+        playAreaBoundary,
+    );
     const matchingQuestions = questions.filter(
         (question): question is Extract<QuestionState, { type: "matching" }> =>
             question.type === "matching" && question.lineId !== null,
@@ -33,7 +40,7 @@ export function buildQuestionMapRenderState(
         null;
 
     return {
-        osmMatching: buildOsmMatchingRenderState(questions, playAreaBbox),
+        osmMatching,
         radar,
         radarAreaFeatures: radar.previewFeatures,
         transitLine: {
@@ -47,6 +54,13 @@ export function buildQuestionMapRenderState(
                 missLine?.lineId ?? null,
                 radiusMeters,
             ),
+        },
+        voronoiOutlineFeatures: {
+            type: "FeatureCollection",
+            features: [
+                ...osmMatching.voronoiOutlineFeatures.features,
+                // ...tentacles.voronoiOutlineFeatures.features  (future)
+            ],
         },
     };
 }
@@ -64,7 +78,14 @@ export function useQuestionMapRenderState(): QuestionMapRenderState {
                 selectedStations,
                 radiusMeters,
                 playArea.bbox,
+                playArea.boundary as FeatureCollection<Polygon | MultiPolygon>,
             ),
-        [questions, selectedStations, radiusMeters, playArea.bbox],
+        [
+            questions,
+            selectedStations,
+            radiusMeters,
+            playArea.bbox,
+            playArea.boundary,
+        ],
     );
 }

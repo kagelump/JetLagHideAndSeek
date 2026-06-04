@@ -36,6 +36,7 @@ const mockOsmMatching: OsmMatchingRenderState = {
         ],
         type: "FeatureCollection",
     },
+    voronoiOutlineFeatures: { features: [], type: "FeatureCollection" },
 };
 
 describe("OsmMatchingLayers", () => {
@@ -88,6 +89,7 @@ describe("OsmMatchingLayers", () => {
             hitMaskFeatures: { features: [], type: "FeatureCollection" },
             missMaskFeatures: { features: [], type: "FeatureCollection" },
             poiFeatures: { features: [], type: "FeatureCollection" },
+            voronoiOutlineFeatures: { features: [], type: "FeatureCollection" },
         };
         const screen = render(
             <OsmMatchingLayers osmMatching={emptyState} visible />,

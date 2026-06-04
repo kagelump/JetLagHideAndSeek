@@ -1,3 +1,5 @@
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
+
 import type { TransitStation } from "@/features/hidingZone/hidingZoneTypes";
 import { defaultPlayArea } from "@/features/map/playArea";
 import { buildQuestionMapRenderState } from "@/features/questions/questionGeometry";
@@ -10,6 +12,9 @@ import type { TransitLineQuestion } from "@/features/questions/transitLine/trans
 
 const HIBIYA_LINE_ID = "gtfs:odpt-tokyo-metro:route:3";
 const playAreaBbox = defaultPlayArea.bbox;
+const playAreaBoundary = defaultPlayArea.boundary as FeatureCollection<
+    Polygon | MultiPolygon
+>;
 const stations: TransitStation[] = [
     {
         id: "hiroo",
@@ -88,6 +93,7 @@ describe("buildQuestionMapRenderState transit line masks", () => {
             stations,
             600,
             playAreaBbox,
+            playAreaBoundary,
         );
 
         expect(renderState.transitLine.hitMaskFeatures.features).toEqual([]);
@@ -109,12 +115,14 @@ describe("buildQuestionMapRenderState transit line masks", () => {
             stations,
             600,
             playAreaBbox,
+            playAreaBoundary,
         );
         const missState = buildQuestionMapRenderState(
             [{ ...selected, answer: "negative" }],
             stations,
             600,
             playAreaBbox,
+            playAreaBoundary,
         );
 
         expect(selected.lineId).toBe(HIBIYA_LINE_ID);
@@ -133,6 +141,7 @@ describe("buildQuestionMapRenderState OSM matching", () => {
             stations,
             600,
             playAreaBbox,
+            playAreaBoundary,
         );
 
         expect(renderState.osmMatching.hitMaskFeatures.features).toHaveLength(
@@ -141,6 +150,10 @@ describe("buildQuestionMapRenderState OSM matching", () => {
         expect(renderState.osmMatching.missMaskFeatures.features).toHaveLength(
             0,
         );
+        // Top-level aggregate should be populated from matching outlines
+        expect(
+            renderState.voronoiOutlineFeatures.features.length,
+        ).toBeGreaterThan(0);
     });
 
     it("includes osmMatching miss mask for negative-answered OSM matching", () => {
@@ -149,6 +162,7 @@ describe("buildQuestionMapRenderState OSM matching", () => {
             stations,
             600,
             playAreaBbox,
+            playAreaBoundary,
         );
 
         expect(renderState.osmMatching.hitMaskFeatures.features).toHaveLength(
@@ -165,6 +179,7 @@ describe("buildQuestionMapRenderState OSM matching", () => {
             stations,
             600,
             playAreaBbox,
+            playAreaBoundary,
         );
 
         expect(renderState.osmMatching.poiFeatures.features).toHaveLength(2);
@@ -176,6 +191,7 @@ describe("buildQuestionMapRenderState OSM matching", () => {
             stations,
             600,
             playAreaBbox,
+            playAreaBoundary,
         );
 
         expect(renderState.osmMatching.hitMaskFeatures.features).toHaveLength(

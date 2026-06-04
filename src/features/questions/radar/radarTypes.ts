@@ -89,6 +89,8 @@ export type QuestionMapRenderState = {
         hitMaskFeatures: TransitLineQuestionFeatureCollection;
         missMaskFeatures: TransitLineQuestionFeatureCollection;
     };
+    /** Voronoi cell outlines clipped to the play area, merged across all candidate-based question types. */
+    voronoiOutlineFeatures: FeatureCollection<Polygon | MultiPolygon>;
 };
 
 export type NearestStationInfo = {
