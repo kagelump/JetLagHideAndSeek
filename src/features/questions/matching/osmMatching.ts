@@ -82,7 +82,62 @@ export function rankMatchingFeatures(
     maxCandidates = 10,
 ): OsmFeatureWithDistance[] {
     const [lon, lat] = center;
-    const withDistance = features.map((feature) => ({
+
+    // For small feature sets the overhead of a pre-filter is not worth it —
+    // compute haversine directly.
+    if (features.length <= 2000) {
+        const withDistance = features.map((feature) => ({
+            ...feature,
+            distanceMeters: haversineDistanceMeters(
+                lat,
+                lon,
+                feature.lat,
+                feature.lon,
+            ),
+        }));
+
+        withDistance.sort((a, b) => a.distanceMeters - b.distanceMeters);
+
+        return withDistance.slice(0, maxCandidates);
+    }
+
+    // Large feature set (>2000): use a cheap equirectangular approximation
+    // to pre-rank, then compute accurate haversine only for the top
+    // candidates. Without this, dense categories like park (22k+ features
+    // in Kantō) spend ~100ms in haversine trig for features the caller
+    // will never use.
+    //
+    // The equirectangular approximation produces negligible ordering error
+    // at mid-latitude distances (<0.5% at <100 km). A 2× overscan on the
+    // pre-filter window makes it essentially impossible for a true top-N
+    // feature to be excluded by the approximation.
+    const METERS_PER_DEG_LAT = 111_320;
+    const metersPerDegLon = 111_320 * Math.cos((lat * Math.PI) / 180);
+
+    const approx = features.map((feature, index) => {
+        const dLat = (feature.lat - lat) * METERS_PER_DEG_LAT;
+        const dLon = (feature.lon - lon) * metersPerDegLon;
+        return {
+            feature,
+            approxDist: Math.sqrt(dLat * dLat + dLon * dLon),
+            index,
+        };
+    });
+
+    approx.sort((a, b) => a.approxDist - b.approxDist);
+
+    // 2× overscan ensures the pre-filter window is wide enough that true
+    // top-N features cannot be excluded by the approximation's tiny
+    // ordering error. Floor at 500 so small maxCandidates (e.g. the
+    // default 10) still get enough headroom.
+    const preFilterCount = Math.min(
+        Math.max(maxCandidates * 2, 500),
+        features.length,
+    );
+
+    const topApprox = approx.slice(0, preFilterCount);
+
+    const withDistance = topApprox.map(({ feature }) => ({
         ...feature,
         distanceMeters: haversineDistanceMeters(
             lat,

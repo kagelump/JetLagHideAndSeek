@@ -37,7 +37,7 @@ export type RegionMeta = {
 
 // ─── Module-level state ─────────────────────────────────────────────────
 
-const OSM_TYPES = ["node", "way", "relation"] as const;
+export const OSM_TYPES = ["node", "way", "relation"] as const;
 
 /** Parsed regions.json registry (small, eager import). */
 const REGIONS: RegionMeta[] = (
@@ -171,6 +171,38 @@ export function regionCoveringPoint(lat: number, lon: number): string | null {
         if (bboxContainsPoint(r.bbox, lat, lon)) return r.id;
     }
     return null;
+}
+
+/**
+ * Returns the feature count for a category in a region WITHOUT reconstructing
+ * OsmFeature objects. Reads the `count` field directly from the raw columnar
+ * data. Returns 0 when the region or category is unavailable.
+ *
+ * This is an O(1) check after the region JSON is loaded — use it to decide
+ * whether to take the fast-path or cell-grid path without paying the full
+ * reconstruction cost for dense categories.
+ */
+export function getBundledCategoryCount(
+    regionId: string,
+    category: MatchingCategory,
+): number {
+    const region = loadRegionRaw(regionId);
+    return region?.categories[category]?.count ?? 0;
+}
+
+/**
+ * Returns raw columnar data for a category WITHOUT reconstructing OsmFeature
+ * objects. Used by the spatial index to build kdbush trees directly from the
+ * column arrays.
+ *
+ * Returns null when the region is unavailable or the category has no data.
+ */
+export function getBundledCategoryColumns(
+    regionId: string,
+    category: MatchingCategory,
+): RawCategory | null {
+    const region = loadRegionRaw(regionId);
+    return region?.categories[category] ?? null;
 }
 
 // ─── Category accessor ───────────────────────────────────────────────────

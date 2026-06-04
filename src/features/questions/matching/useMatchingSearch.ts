@@ -103,9 +103,15 @@ export function useMatchingSearch(
                 }
 
                 // Record fetch-debug info so the centralized footer renders.
-                if (result.debug) {
-                    reportDebug(result.debug);
-                }
+                reportDebug(
+                    result.debug ?? {
+                        totalCount: result.candidates.length,
+                        origins: {},
+                        durationMs: Date.now() - t0,
+                        status: "done",
+                        at: Date.now(),
+                    },
+                );
 
                 return result;
             } catch (err) {

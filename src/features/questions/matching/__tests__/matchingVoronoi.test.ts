@@ -365,4 +365,38 @@ describe("buildNameLengthMasks", () => {
         expect(hitMask.features).toHaveLength(0);
         expect(missMask.features).toHaveLength(1);
     });
+
+    it("filters out undefined features from turf/voronoi sparse array output", () => {
+        // Regression: @turf/voronoi produces undefined entries in
+        // features[] for points whose cell lies entirely outside the
+        // bbox. computeVoronoiCells must filter these out so downstream
+        // .find(), .filter(), and clipCellsToPlayArea don't crash.
+        const centerCoords = [
+            { lon: 139.76, lat: 35.68 }, // inside Tokyo 23 wards
+            { lon: 140.39, lat: 35.77 }, // Narita — outside bbox edge
+            { lon: 138.0, lat: 34.5 }, // far southwest — outside
+        ];
+        const candidates = centerCoords.map((c, i) => ({
+            distanceMeters: i * 100,
+            lat: c.lat,
+            lon: c.lon,
+            name: `POI ${i + 1}`,
+            osmId: i + 1,
+            osmType: "node" as const,
+            tags: {},
+        }));
+
+        const cells = computeVoronoiCells(candidates, playAreaBbox);
+
+        // All features must be defined (no undefined entries).
+        expect(cells.features.every((f) => f !== undefined)).toBe(true);
+        // Cells outside the bbox produce no polygon → filtered out.
+        // At least the inside candidate should produce a cell.
+        expect(cells.features.length).toBeGreaterThanOrEqual(1);
+        expect(cells.features.length).toBeLessThanOrEqual(candidates.length);
+
+        // Downstream consumers must not crash on the result.
+        expect(() => buildOsmMatchingHitMask(cells, "node/1")).not.toThrow();
+        expect(() => buildOsmMatchingMissMask(cells, "node/1")).not.toThrow();
+    });
 });

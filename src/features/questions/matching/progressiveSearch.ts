@@ -4,7 +4,7 @@ import { haversineDistanceMeters } from "@/shared/geojson";
 import type { FetchDebugInfo } from "./fetchDebug";
 import type { MatchingCategory } from "./matchingTypes";
 import {
-    findMatchingFeaturesWithCellCache,
+    findMatchingFeaturesWithIndex,
     type OsmMatchingCacheSource,
 } from "./osmMatchingCache";
 import type { OsmFeatureWithDistance } from "./osmMatching";
@@ -17,12 +17,9 @@ const PROGRESSIVE_MAX_RADIUS_METERS = 200_000;
  */
 const MIN_INITIAL_RADIUS_METERS = 1_200;
 
-/**
- * Upper bound for maxCandidates so that rankMatchingFeatures returns all features
- * without practical truncation. The progressive loop needs the true total count
- * to decide whether to expand the radius.
- */
-const UNCAPPED_CANDIDATES = 999;
+/** Soft upper bound for maxCandidates so the progressive loop gets enough
+ *  features to evaluate stop conditions reliably. */
+const PROGRESSIVE_CANDIDATE_CAP = 999;
 
 export type ProgressiveSearchResult = {
     candidates: OsmFeatureWithDistance[];
@@ -106,16 +103,12 @@ export async function searchMatchingFeaturesProgressive(
             `[prog] iter=${iter} radius=${effectiveRadius} forceRefresh=${doForceRefresh}`,
         );
 
-        const result = await findMatchingFeaturesWithCellCache(
-            category,
-            center,
-            {
-                requestedRadiusMeters: effectiveRadius,
-                maxCandidates: UNCAPPED_CANDIDATES,
-                forceRefresh: doForceRefresh,
-                signal: options?.signal,
-            },
-        );
+        const result = await findMatchingFeaturesWithIndex(category, center, {
+            requestedRadiusMeters: effectiveRadius,
+            maxCandidates: PROGRESSIVE_CANDIDATE_CAP,
+            forceRefresh: doForceRefresh,
+            signal: options?.signal,
+        });
         isFirstIteration = false;
 
         console.log(

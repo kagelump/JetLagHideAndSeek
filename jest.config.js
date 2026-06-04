@@ -12,7 +12,7 @@ module.exports = {
     testPathIgnorePatterns: ["/node_modules/", "<rootDir>/.claude/"],
     modulePathIgnorePatterns: ["<rootDir>/.claude/"],
     transformIgnorePatterns: [
-        "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|@maplibre/.*|@gorhom/.*|react-navigation|@react-navigation/.*)",
+        "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|@maplibre/.*|@gorhom/.*|react-navigation|@react-navigation/.*|kdbush|geokdbush|tinyqueue)",
     ],
     collectCoverageFrom: [
         "src/**/*.{ts,tsx}",

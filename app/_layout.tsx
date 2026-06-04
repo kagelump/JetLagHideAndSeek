@@ -1,3 +1,21 @@
+// ── Global console timestamps ─────────────────────────────────────────
+// Override console.* at module-load time so every log across the app
+// gets an automatic HH:MM:SS.mmm timestamp without per-call changes.
+const _origLog = console.log;
+const _origWarn = console.warn;
+const _origError = console.error;
+
+function _ts(): string {
+    const d = new Date();
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, "0")}`;
+}
+
+console.log = (...a: unknown[]) => _origLog(`[${_ts()}]`, ...a);
+console.warn = (...a: unknown[]) => _origWarn(`[${_ts()}]`, ...a);
+console.error = (...a: unknown[]) => _origError(`[${_ts()}]`, ...a);
+// ──────────────────────────────────────────────────────────────────────
+
 import "react-native-gesture-handler";
 
 import { Stack } from "expo-router";

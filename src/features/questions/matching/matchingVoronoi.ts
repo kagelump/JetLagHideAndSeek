@@ -84,23 +84,37 @@ export function computeVoronoiCells(
 
     const cells = voronoi(featureCollection(points), { bbox });
 
-    // Ensure each cell preserves the osmKey property and nameLength (if present)
+    // Ensure each cell preserves the osmKey property and nameLength (if present).
+    // @turf/voronoi may produce a sparse features array (undefined entries for
+    // input points whose Voronoi cell does not intersect the bbox). Filter them
+    // out so downstream .find(), .filter(), and clipCellsToPlayArea don't crash.
     const result = {
         ...cells,
-        features: cells.features.map((feature, index) => {
-            const candidate = deduped[index];
-            const props: Record<string, unknown> = {
-                ...feature.properties,
-                osmKey: makeOsmKey(candidate.osmType, candidate.osmId),
-            };
-            if (candidate.nameLength !== undefined) {
-                props.nameLength = candidate.nameLength;
-            }
-            return {
-                ...feature,
-                properties: props,
-            };
-        }),
+        features: cells.features
+            .map((feature, index) => {
+                if (!feature?.geometry) return undefined;
+                const candidate = deduped[index];
+                if (!candidate) return undefined;
+                const props: Record<string, unknown> = {
+                    ...feature.properties,
+                    osmKey: makeOsmKey(candidate.osmType, candidate.osmId),
+                };
+                if (candidate.nameLength !== undefined) {
+                    props.nameLength = candidate.nameLength;
+                }
+                return {
+                    ...feature,
+                    properties: props,
+                };
+            })
+            .filter(
+                (
+                    f,
+                ): f is Feature<
+                    Polygon,
+                    { osmKey: string; nameLength?: number }
+                > => f !== undefined,
+            ),
     } as FeatureCollection<Polygon, { osmKey: string; nameLength?: number }>;
 
     // Evict oldest entry when cache exceeds max size.
