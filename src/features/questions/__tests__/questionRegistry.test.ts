@@ -33,9 +33,7 @@ describe("questionRegistry", () => {
         expect(getQuestionAnswerLabel("thermometer", "negative")).toBe(
             "Colder",
         );
-        expect(getQuestionAnswerLabel("radar", "unanswered")).toBe(
-            "Unanswered",
-        );
+        expect(getQuestionAnswerLabel("radar", "unanswered")).toBe("N/A");
     });
 
     it("keeps radar answer defaults and map semantics in config", () => {

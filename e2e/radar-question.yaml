@@ -16,7 +16,7 @@ appId: com.raycatdev.hideandseek.v2
 - extendedWaitUntil:
       visible: ".*Current distance 500 m"
       timeout: 30000
-- assertVisible: ".*Unanswered answer.*"
+- assertVisible: ".*N/A answer.*"
 - tapOn: "Radar distance 1km"
 - extendedWaitUntil:
       visible: ".*Current distance 1000 m"

@@ -52,6 +52,6 @@ export function getQuestionAnswerLabel(
     type: QuestionType,
     answer: QuestionAnswer,
 ): string {
-    if (answer === "unanswered") return "Unanswered";
+    if (answer === "unanswered") return "N/A";
     return questionDefinitions[type].answerLabels[answer];
 }
