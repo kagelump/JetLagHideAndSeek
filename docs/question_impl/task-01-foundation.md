@@ -1,6 +1,56 @@
 # Task 01: Foundation
 
-Wire up the type system, registry, and dispatch so all three new question types are recognized throughout the codebase. After this task `pnpm typecheck` passes with stub placeholder screens. No geometry or search is implemented yet.
+**Depends on**: nothing
+**Audience**: intern-friendly (mechanical), but read the "Store integration"
+section carefully — it covers breakages the original draft missed.
+
+Wire up the type system, registry, dispatch, **and store integration** so all
+three new question types are recognized throughout the codebase. After this task
+`pnpm typecheck` and `pnpm test` pass with stub placeholder screens. No geometry
+or search is implemented yet.
+
+> ⚠️ The original draft of this task claimed a green typecheck after only editing
+> the type unions. That is wrong: `createDefaultQuestion` is a non-exhaustive
+> `switch` and `updateQuestionCenter` is type-gated to radar/matching. Adding the
+> new types to `ImplementedQuestionType` *breaks the build* until the Store
+> integration section is also done. Treat that section as mandatory.
+
+## Test plan (write first)
+
+Add/extend these before touching implementation. They should fail first.
+
+### `src/state/__tests__/questionStore.test.tsx` (extend)
+
+- `createQuestion("measuring", { center, category: "rail-station" })` returns a
+  well-formed `MeasuringQuestion` with `answer: "unanswered"`, `candidates: []`,
+  `selectedOsmId: null`, the given category, and the given center.
+- `createQuestion("thermometer", { center })` returns a `ThermometerQuestion`
+  with `previousPosition` and `currentPosition` both set to `center` (or the
+  documented offset — see Task 09; for Task 01 co-located is acceptable).
+- `createQuestion("tentacles", { center, category: "museum" })` returns a
+  `TentaclesQuestion` with `distanceOption: "2km"`, `distanceMeters: 2000`,
+  `answer: "unanswered"`, `selectedOsmId: null`.
+- `updateQuestionCenter(measuringQuestion, newCenter)` returns a question whose
+  `center` changed (currently it no-ops for non radar/matching — this assertion
+  fails until the guard is widened).
+- `updateQuestionCenter(tentaclesQuestion, newCenter)` likewise updates center.
+- `updateQuestionCenter(thermometerQuestion, newCenter)` should **not** change
+  anything (Thermometer has no single `center`; it uses two explicit pins). Assert
+  it returns the question unchanged.
+
+### `src/features/questions/__tests__/questionRegistry.test.ts` (extend)
+
+- `implementedQuestionTypes` contains all five types once the three configs are
+  flipped to `implemented: true`.
+- `questionDefinitions.measuring.implemented === true` (and thermometer,
+  tentacles).
+
+### Exhaustiveness guard (compile-time, no runtime test needed)
+
+Add a `default` branch to `createDefaultQuestion` that does
+`assertNever(type)` (a `(value: never) => never` helper). This converts "forgot a
+case" into a typecheck error instead of an `undefined` return. If `@/shared`
+has no `assertNever`, add one in `src/shared/assertNever.ts` with a tiny test.
 
 ## Files to Create
 
@@ -16,14 +66,14 @@ import type { Position } from "@/shared/geojson";
 export type MeasuringCategory =
     // Transit
     | "commercial-airport"
-    | "high-speed-rail"    // deferred – see task-05
+    | "high-speed-rail"    // line-distance – see task-06
     | "rail-station"
     // Border
-    | "admin-1st-border"   // deferred – see task-05
-    | "admin-2nd-border"   // deferred – see task-05
+    | "admin-1st-border"   // polygon-edge distance – see task-06
+    | "admin-2nd-border"   // polygon-edge distance – see task-06
     // Natural
-    | "body-of-water"      // deferred – see task-05
-    | "coastline"          // deferred – see task-05
+    | "body-of-water"      // polygon-edge distance – see task-06
+    | "coastline"          // line-distance – see task-06
     | "mountain"
     | "park"
     // Places of Interest
@@ -86,9 +136,10 @@ export type ThermometerRenderState = {
     /** Half-plane where the hider must be, clipped to the play area. */
     hitMaskFeatures: FeatureCollection<Polygon | MultiPolygon>;
     /**
-     * Preview features shown while unanswered:
+     * Preview features shown while editing:
      * – travel segment line (P1 → P2)
      * – three range-ring circles from P1 at 1 km, 5 km, and 15 km
+     * Each feature carries a `role` property (see Task 08).
      */
     previewFeatures: FeatureCollection<LineString | Polygon>;
 };
@@ -103,48 +154,38 @@ export const EMPTY_THERMOMETER_RENDER_STATE: ThermometerRenderState = {
 
 ```typescript
 import type { Feature, FeatureCollection, MultiPolygon, Point, Polygon } from "geojson";
-import type { BaseQuestion, QuestionAnswer } from "@/features/questions/coreTypes";
+import type { BaseQuestion } from "@/features/questions/coreTypes";
 import type { OsmFeature } from "@/features/questions/matching/matchingTypes";
 import type { Position } from "@/shared/geojson";
 
 export type TentaclesCategory =
     // 2 km group
-    | "museum"
-    | "library"
-    | "movie-theater"
-    | "hospital"
+    | "museum" | "library" | "movie-theater" | "hospital"
     // 25 km group
-    | "transit-line"
-    | "zoo"
-    | "aquarium"
-    | "amusement-park";
+    | "transit-line" | "zoo" | "aquarium" | "amusement-park";
 
 export type TentaclesDistanceOption = "2km" | "25km";
 
 export const tentaclesCategoryDistance: Record<TentaclesCategory, TentaclesDistanceOption> = {
-    "museum":        "2km",
-    "library":       "2km",
-    "movie-theater": "2km",
-    "hospital":      "2km",
-    "transit-line":  "25km",
-    "zoo":           "25km",
-    "aquarium":      "25km",
-    "amusement-park":"25km",
+    "museum": "2km", "library": "2km", "movie-theater": "2km", "hospital": "2km",
+    "transit-line": "25km", "zoo": "25km", "aquarium": "25km", "amusement-park": "25km",
 };
 
 export const tentaclesDistanceMeters: Record<TentaclesDistanceOption, number> = {
-    "2km":  2000,
-    "25km": 25000,
+    "2km": 2000, "25km": 25000,
 };
 
 export type TentaclesQuestion = BaseQuestion & {
     type: "tentacles";
     /**
-     * "unanswered" until the seeker records which POI the hider named.
-     * "positive" once selectedOsmId is set.
-     * "negative" is unused for Tentacles.
+     * The answer to a Tentacles question is the *named POI* the hider is
+     * closest to, represented by `selectedOsmId` / `selectedOsmType` /
+     * `selectedName`. The legacy `answer` status field is retained only so
+     * generic store/list code can ask "is this answered?" — it is
+     * "unanswered" until a POI is chosen, then "positive". There is no
+     * meaningful "negative". See Task 02 (answer model).
      */
-    answer: QuestionAnswer;
+    answer: "unanswered" | "positive";
     candidates: OsmFeature[];
     category: TentaclesCategory;
     /** Seeker's position – center of the radius search. */
@@ -153,6 +194,8 @@ export type TentaclesQuestion = BaseQuestion & {
     distanceOption: TentaclesDistanceOption;
     selectedOsmId: number | null;
     selectedOsmType: "node" | "way" | "relation" | null;
+    /** Display name of the selected POI; the human-readable answer. */
+    selectedName: string | null;
 };
 
 export type TentaclesRenderState = {
@@ -173,15 +216,20 @@ export const EMPTY_TENTACLES_RENDER_STATE: TentaclesRenderState = {
 };
 ```
 
+> Note: `selectedName` is added to `TentaclesQuestion` so the answer is
+> self-describing without a candidate lookup. Task 02 formalizes the
+> POI-answer model; Task 11 populates `selectedName` on selection.
+
 ### Stub detail screens
 
-Create three placeholder files (identical structure):
+Create three placeholders (identical structure), each returning
+`<Text>Not yet implemented</Text>` in a `<View>`:
 
 - `src/features/questions/measuring/MeasuringQuestionDetailScreen.tsx`
 - `src/features/questions/thermometer/ThermometerQuestionDetailScreen.tsx`
 - `src/features/questions/tentacles/TentaclesQuestionDetailScreen.tsx`
 
-Each returns a simple `<Text>Not yet implemented</Text>` wrapped in a `<View>`. These are replaced in Tasks 02–04.
+These are replaced in Tasks 05 / 09 / 11.
 
 ## Files to Modify
 
@@ -190,178 +238,91 @@ Each returns a simple `<Text>Not yet implemented</Text>` wrapped in a `<View>`. 
 ```diff
 -export type ImplementedQuestionType = "radar" | "matching";
 +export type ImplementedQuestionType =
-+    | "radar"
-+    | "matching"
-+    | "measuring"
-+    | "thermometer"
-+    | "tentacles";
++    | "radar" | "matching" | "measuring" | "thermometer" | "tentacles";
 ```
+
+`QuestionType` already lists all five — no change needed there.
 
 ### `src/features/questions/questionTypes.ts`
 
-Add imports and extend the union:
-
-```diff
-+import type { MeasuringQuestion } from "./measuring/measuringTypes";
-+import type { ThermometerQuestion } from "./thermometer/thermometerTypes";
-+import type { TentaclesQuestion } from "./tentacles/tentaclesTypes";
-
--export type QuestionState = RadarQuestion | MatchingQuestion;
-+export type QuestionState =
-+    | RadarQuestion
-+    | MatchingQuestion
-+    | MeasuringQuestion
-+    | ThermometerQuestion
-+    | TentaclesQuestion;
-```
+Add imports and extend the union with the three new question types
+(`MeasuringQuestion`, `ThermometerQuestion`, `TentaclesQuestion`).
 
 ### `src/features/questions/radar/radarTypes.ts`
 
-Import the new render state types and extend `QuestionMapRenderState`:
-
-```diff
-+import type { MeasuringRenderState } from "@/features/questions/measuring/measuringTypes";
-+import type { ThermometerRenderState } from "@/features/questions/thermometer/thermometerTypes";
-+import type { TentaclesRenderState } from "@/features/questions/tentacles/tentaclesTypes";
-
- export type QuestionMapRenderState = {
-+    measuring: MeasuringRenderState;
-     osmMatching: OsmMatchingRenderState;
-     radar: RadarQuestionRenderState;
-     radarAreaFeatures: RadarQuestionFeatureCollection;
-+    tentacles: TentaclesRenderState;
-+    thermometer: ThermometerRenderState;
-     transitLine: {
-         hitMaskFeatures: TransitLineQuestionFeatureCollection;
-         missMaskFeatures: TransitLineQuestionFeatureCollection;
-     };
-     voronoiOutlineFeatures: FeatureCollection<Polygon | MultiPolygon>;
- };
-```
+Import the three new render-state types and add `measuring`, `tentacles`,
+`thermometer` keys to `QuestionMapRenderState`.
 
 ### `src/features/questions/questionGeometry.ts`
 
-Import empty render states and stub out the new builders:
+For this task, populate the three new keys with the `EMPTY_*_RENDER_STATE`
+constants (real builders arrive in Tasks 05/08/10). Keep `voronoiOutlineFeatures`
+as-is for now.
 
-```diff
-+import {
-+    EMPTY_MEASURING_RENDER_STATE,
-+} from "./measuring/measuringTypes";
-+import {
-+    EMPTY_THERMOMETER_RENDER_STATE,
-+} from "./thermometer/thermometerTypes";
-+import {
-+    EMPTY_TENTACLES_RENDER_STATE,
-+} from "./tentacles/tentaclesTypes";
+### Config flips
 
- export function buildQuestionMapRenderState(...): QuestionMapRenderState {
-     const radar = buildRadarQuestionRenderState(questions);
-     const osmMatching = buildOsmMatchingRenderState(...);
-     // ... transitLine logic ...
-     return {
-+        measuring: EMPTY_MEASURING_RENDER_STATE,   // TODO task-02
-+        osmMatching,
-         radar,
-         radarAreaFeatures: radar.previewFeatures,
-+        tentacles: EMPTY_TENTACLES_RENDER_STATE,   // TODO task-04
-+        thermometer: EMPTY_THERMOMETER_RENDER_STATE, // TODO task-03
-         transitLine: { ... },
-         voronoiOutlineFeatures: { ... },
-     };
- }
-```
+In `measuringConfig.ts`, `thermometerConfig.ts`, `tentaclesConfig.ts`:
 
-### `src/features/questions/measuring/measuringConfig.ts`
+- `implemented: false → true`
+- Fix answer labels:
+  - Measuring: `positive: "Closer"`, `negative: "Farther"`
+  - Thermometer: `positive: "Hotter"`, `negative: "Colder"` (currently "Warmer")
+  - Tentacles: labels become irrelevant once Task 02 introduces the POI answer
+    model. For Task 01, set `positive: "Answered"`, `negative: "—"` as a
+    placeholder and leave a `// TODO(task-02): poi answer model` comment.
+- `summary`: return a real string. For Task 01 a minimal summary keyed off
+  stored fields is fine (e.g. `"Measuring: ${category}"`); richer summaries land
+  with each type's UI task.
 
-```diff
--implemented: false,
-+implemented: true,
- answerLabels: {
--    negative: "Miss",
--    positive: "Hit",
-+    negative: "Farther",
-+    positive: "Closer",
- },
--mapBehavior: { usesMovableAnchor: false },
-+mapBehavior: { usesMovableAnchor: true },
-```
-
-Update `summary` to return something like `"Measuring: ${categoryTitle}, ${answerLabel}"`.
-
-### `src/features/questions/thermometer/thermometerConfig.ts`
-
-```diff
--implemented: false,
-+implemented: true,
- answerLabels: {
-     negative: "Colder",
--    positive: "Warmer",
-+    positive: "Hotter",
- },
-```
-
-Update `summary` to return something like `"Thermometer: ${computedDistanceLabel}, ${answerLabel}"` where `computedDistanceLabel` comes from the stored positions (e.g., "3.2 km traveled").
-
-`usesMovableAnchor` stays `false` — Thermometer uses a bespoke two-pin model (see Task 03).
-
-### `src/features/questions/tentacles/tentaclesConfig.ts`
-
-```diff
--implemented: false,
-+implemented: true,
- answerLabels: {
--    negative: "Miss",
--    positive: "Hit",
-+    negative: "—",
-+    positive: "Answered",
- },
-```
-
-Update `summary` to return `"Tentacles: ${categoryTitle} (${distanceOption}), ${selectedName ?? 'Unanswered'}"`.
-
-### `src/features/questions/questionRegistry.ts`
-
-If `implementedQuestionTypes` is a hardcoded array rather than derived from the config `implemented` flags, update it:
-
-```diff
--export const implementedQuestionTypes: ImplementedQuestionType[] = ["radar", "matching"];
-+export const implementedQuestionTypes: ImplementedQuestionType[] = [
-+    "radar",
-+    "matching",
-+    "measuring",
-+    "thermometer",
-+    "tentacles",
-+];
-```
+> `implementedQuestionTypes` is **derived** from the config `implemented` flags
+> (`questionRegistry.ts` filters `questionDefinitions` by `implemented`). Flipping
+> the three flags is sufficient — there is no hardcoded array to edit. (The
+> original draft's "if hardcoded, update it" instruction was stale.)
 
 ### `src/features/questions/QuestionDetailScreen.tsx`
 
-Add dispatch branches before the "Not yet implemented" fallback:
-
-```diff
-+} else if (question.type === "measuring") {
-+    return <MeasuringQuestionDetailScreen question={question} />;
-+} else if (question.type === "thermometer") {
-+    return <ThermometerQuestionDetailScreen question={question} />;
-+} else if (question.type === "tentacles") {
-+    return <TentaclesQuestionDetailScreen question={question} />;
- } else {
-     return <Text>Not yet implemented</Text>;
- }
-```
+Add dispatch branches for `measuring` / `thermometer` / `tentacles` before the
+fallback, each rendering the corresponding stub screen.
 
 ### `src/features/questions/AddQuestionScreen.tsx`
 
-Add the three new question types to the visible list. The creation flow details (especially for Measuring and Tentacles, which need a category selected before creation) are finalized in Tasks 02 and 04. For this task, adding them to the list with a temporary "navigate to detail with a default state" creation action is acceptable.
+`AddQuestionScreen` currently hardcodes one `Pressable` per type (no
+`implemented`-driven loop). Add three rows following the existing Radar/Matching
+pattern. Each row's `onPress`:
 
-**Thermometer creation**: create a `ThermometerQuestion` with both positions `null` and navigate to `question-detail`. The detail screen (Task 03) handles position setup.
+- **Thermometer**: `createQuestion("thermometer", { center: gpsOrPlayAreaCenter })`,
+  then navigate to `question-detail`.
+- **Measuring / Tentacles**: `createQuestion(type, { center, category: <first implemented category> })`,
+  then navigate to `question-detail`. The category picker lives in the detail
+  screen (Tasks 05 / 11).
 
-**Measuring / Tentacles creation**: navigate to their detail screens; the category picker lives inside the detail screen (Tasks 02 and 04). Create with a placeholder category (first in list) that the user changes in the detail screen.
+### Store integration — **mandatory, this is where the build breaks**
+
+`src/state/questionStore.tsx`:
+
+1. **Widen the create signature.** `createQuestion` / `createDefaultQuestion`
+   currently accept `options: { center; category?: MatchingCategory }`. Change
+   `category` to `MatchingCategory | MeasuringCategory | TentaclesCategory`
+   (or a generic `string` narrowed per case). The new cases need their category.
+
+2. **Add `createDefaultQuestion` cases** for `measuring`, `thermometer`,
+   `tentacles`, each returning the fully-initialized shape (see the test plan for
+   the expected fields). Add a `default: assertNever(type)` branch so future
+   gaps fail at compile time.
+
+3. **Widen `updateQuestionCenter`.** Change the guard so `measuring` and
+   `tentacles` (both of which carry a single `center`) are updated, while
+   `radar` and `matching` keep working. `thermometer` has no single `center` —
+   it must remain a no-op (Thermometer pins are updated by dedicated helpers in
+   Task 09). The simplest correct form is an allow-list:
+   `if (!["radar", "matching", "measuring", "tentacles"].includes(question.type)) return question;`
 
 ## Acceptance Criteria
 
-- `pnpm typecheck` passes
-- `pnpm test` passes (no new tests required yet)
+- `pnpm typecheck` passes (exhaustiveness guard in place)
+- `pnpm test` passes (the Task 01 test-plan cases are green)
 - The three new question types appear in `AddQuestionScreen`
 - Creating and opening each type shows the stub "Not yet implemented" screen
+- Dragging is not wired yet, but `updateQuestionCenter` unit tests prove
+  measuring/tentacles centers update and thermometer does not
 - No regressions to Radar or Matching
