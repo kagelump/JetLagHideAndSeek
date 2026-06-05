@@ -2,11 +2,14 @@ import { getCategoryTitle } from "@/features/questions/matching/matchingCategori
 import type { QuestionState } from "@/features/questions/questionTypes";
 import type { RadarQuestion } from "@/features/questions/radar/radarTypes";
 import type { Position } from "@/shared/geojson";
+import { fromMeters } from "@/shared/distanceUnits";
 
 function formatRadarDistance(question: RadarQuestion): string {
-    return question.distanceOption !== "other"
-        ? question.distanceOption
-        : `${Math.round(question.distanceMeters)}m`;
+    if (question.distanceOption !== "other") {
+        return question.distanceOption;
+    }
+    const value = fromMeters(question.distanceMeters, question.distanceUnit);
+    return `${value}${question.distanceUnit}`;
 }
 
 function formatCoordinate(center: Position): string {

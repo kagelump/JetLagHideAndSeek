@@ -20,6 +20,26 @@ function makeRadarQuestion(): QuestionState {
     };
 }
 
+function makeMatchingQuestion(): QuestionState {
+    return {
+        answer: "unanswered",
+        candidates: [],
+        category: "park",
+        center: [139.7, 35.7],
+        createdAt: "2026-06-05T00:00:00.000Z",
+        id: "q-matching-1",
+        lineId: null,
+        lineName: null,
+        selectedOsmId: null,
+        selectedOsmType: null,
+        targetName: "Ueno Park",
+        targetOsmId: 456,
+        targetOsmType: "way",
+        type: "matching",
+        updatedAt: "2026-06-05T00:00:00.000Z",
+    };
+}
+
 function makeStores(overrides?: Partial<AppStores>): {
     stores: AppStores;
     addedQuestions: QuestionState[];
@@ -79,6 +99,26 @@ describe("applyImport — question-request", () => {
         expect(addedQuestions[0].type).toBe("radar");
         if (addedQuestions[0].type === "radar") {
             expect(addedQuestions[0].distanceMeters).toBe(5000);
+        }
+    });
+
+    it("calls addImportedQuestion for a matching question-request envelope", () => {
+        const envelope = buildQuestionRequestEnvelope({
+            now: new Date("2026-06-05T00:00:00.000Z"),
+            question: makeMatchingQuestion(),
+        });
+
+        const { addedQuestions, stores } = makeStores();
+        const result = applyImport({ envelope, stores });
+
+        expect(result).toEqual({ ok: true });
+        expect(addedQuestions).toHaveLength(1);
+        expect(addedQuestions[0].type).toBe("matching");
+        if (addedQuestions[0].type === "matching") {
+            expect(addedQuestions[0].category).toBe("park");
+            expect(addedQuestions[0].targetName).toBe("Ueno Park");
+            expect(addedQuestions[0].targetOsmId).toBe(456);
+            expect(addedQuestions[0].targetOsmType).toBe("way");
         }
     });
 

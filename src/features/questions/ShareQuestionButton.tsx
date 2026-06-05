@@ -13,17 +13,23 @@ const SHARE_ICON_NAME =
 
 export function ShareQuestionButton({ question }: { question: QuestionState }) {
     const handleShare = async () => {
-        const url = buildImportLink({
-            envelope: buildQuestionRequestEnvelope({ question }),
-            mode: "https",
-        });
-        const message = `${buildQuestionSharePrompt(question)}\n${url}`;
         try {
+            const url = buildImportLink({
+                envelope: buildQuestionRequestEnvelope({ question }),
+                mode: "https",
+            });
+            const message = `${buildQuestionSharePrompt(question)}\n${url}`;
             // The native share sheet already includes a "Copy" action. Pass the
             // URL inside `message` only, so iOS doesn't append a duplicate link.
             await Share.share({ message });
-        } catch {
-            // User dismissed the sheet, or sharing is unavailable — no-op.
+        } catch (err) {
+            // Android throws { dismissedAction: true } on dismissal. iOS rejects
+            // with an error when no share target is available. Both are expected.
+            if (err && typeof err === "object" && "dismissedAction" in err) {
+                return; // user dismissed — no-op
+            }
+            // Unexpected error — log it so we can debug.
+            console.warn("ShareQuestionButton: share failed", err);
         }
     };
 
