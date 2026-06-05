@@ -1,6 +1,7 @@
 import type { Bbox, Position } from "@/shared/geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
 
+import type { AdminDivisionNamePack } from "./adminDivisionConfig";
 import type { FetchDebugInfo } from "./fetchDebug";
 import type { MatchingCategory } from "./matchingTypes";
 import {
@@ -74,6 +75,7 @@ export async function searchMatchingFeaturesProgressive(
         /** When true, skip the play-area encompass stop condition so the
          * search can find POIs outside the play area (e.g. airports). */
         unbounded?: boolean;
+        adminDivisionPack?: AdminDivisionNamePack;
     },
 ): Promise<ProgressiveSearchResult> {
     const [lon, lat] = center;
@@ -108,6 +110,7 @@ export async function searchMatchingFeaturesProgressive(
             maxCandidates: PROGRESSIVE_CANDIDATE_CAP,
             forceRefresh: doForceRefresh,
             signal: options?.signal,
+            adminDivisionPack: options?.adminDivisionPack,
         });
         isFirstIteration = false;
 

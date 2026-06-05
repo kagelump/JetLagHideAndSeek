@@ -96,7 +96,8 @@ export const AppBottomSheet = forwardRef<
 function getRouteSnapIndex(route: SheetRouteName): number {
     return route === "play-area" ||
         route === "hiding-zone" ||
-        route === "matching"
+        route === "matching" ||
+        route === "admin-divisions"
         ? SHEET_SNAP_INDEX.large
         : SHEET_SNAP_INDEX.medium;
 }

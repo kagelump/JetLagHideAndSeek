@@ -7,7 +7,8 @@ export type SheetRouteName =
     | "settings"
     | "play-area"
     | "hiding-zone"
-    | "offline-data";
+    | "offline-data"
+    | "admin-divisions";
 
 export const SHEET_SNAP_INDEX = {
     compact: 0,

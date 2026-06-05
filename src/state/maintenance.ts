@@ -3,6 +3,10 @@ import { useCallback } from "react";
 
 import { cleanOrphanedBoundaryKeys } from "@/features/map/playAreaBoundary";
 import { defaultPlayArea } from "@/features/map/playArea";
+import {
+    DEFAULT_ADMIN_DIVISION_PACK,
+    DEFAULT_ADMIN_DIVISION_PRESET_NAME,
+} from "@/features/questions/matching/adminDivisionConfig";
 import { clearOsmMatchingCache } from "@/features/questions/matching/osmMatchingCache";
 import {
     DEFAULT_RADIUS_METERS,
@@ -23,6 +27,8 @@ const defaultHidingZoneSetup = {
 
 const defaultQuestionSettings = {
     activeQuestionId: null as string | null,
+    adminDivisionPack: DEFAULT_ADMIN_DIVISION_PACK,
+    adminDivisionPresetName: DEFAULT_ADMIN_DIVISION_PRESET_NAME,
     gameMode: "seeker" as const,
     isPinLocked: false,
     labelLanguage: "native" as const,

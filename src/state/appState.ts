@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import type { GeoJsonFeatureCollection } from "@/features/map/geojsonTypes";
+import {
+    DEFAULT_ADMIN_DIVISION_PACK,
+    clonePack,
+} from "@/features/questions/matching/adminDivisionConfig";
 import { derivePoiAnswer } from "@/features/questions/questionRegistry";
 import { normalizeTransitLineQuestion } from "@/features/questions/transitLine/transitLineNormalization";
 import type { QuestionsImportState } from "@/features/questions/questionTypes";
@@ -266,8 +270,27 @@ export const appStateQuestionsSchema = z.array(
     ]),
 );
 
+const adminDivisionLevelEntrySchema = z.object({
+    labelEn: z.string(),
+    labelNative: z.string(),
+    osmLevel: z.string(),
+});
+
+const adminDivisionPackSchema = z.tuple([
+    adminDivisionLevelEntrySchema,
+    adminDivisionLevelEntrySchema,
+    adminDivisionLevelEntrySchema,
+    adminDivisionLevelEntrySchema,
+]);
+
+const adminDivisionPresetNameSchema = z.enum(["generic", "japan"]);
+
 export const appStateQuestionSettingsSchema = z.object({
     activeQuestionId: z.string().nullable().default(null),
+    adminDivisionPack: adminDivisionPackSchema.default(() =>
+        clonePack(DEFAULT_ADMIN_DIVISION_PACK),
+    ),
+    adminDivisionPresetName: adminDivisionPresetNameSchema.default("generic"),
     gameMode: z.enum(["hider", "seeker"]).default("seeker"),
     isPinLocked: z.boolean(),
     labelLanguage: z.enum(["native", "english"]).default("native"),
@@ -331,6 +354,11 @@ export function createAppStateV1({
         },
         questionSettings: {
             activeQuestionId: questionSettings?.activeQuestionId ?? null,
+            adminDivisionPack:
+                questionSettings?.adminDivisionPack ??
+                DEFAULT_ADMIN_DIVISION_PACK,
+            adminDivisionPresetName:
+                questionSettings?.adminDivisionPresetName ?? "generic",
             gameMode: questionSettings?.gameMode ?? "seeker",
             isPinLocked: questionSettings?.isPinLocked ?? false,
             labelLanguage: questionSettings?.labelLanguage ?? "native",
@@ -361,6 +389,8 @@ function addMissingV1Slices(value: unknown): unknown {
                 ? value.questionSettings
                 : {
                       activeQuestionId: null,
+                      adminDivisionPack: DEFAULT_ADMIN_DIVISION_PACK,
+                      adminDivisionPresetName: "generic",
                       gameMode: "seeker",
                       isPinLocked: false,
                       labelLanguage: "native",
@@ -436,6 +466,8 @@ export function appStateQuestionSettingsToImportState(
 ): QuestionSettingsImportState {
     return {
         activeQuestionId: questionSettings.activeQuestionId,
+        adminDivisionPack: questionSettings.adminDivisionPack,
+        adminDivisionPresetName: questionSettings.adminDivisionPresetName,
         gameMode: questionSettings.gameMode,
         isPinLocked: questionSettings.isPinLocked,
         labelLanguage: questionSettings.labelLanguage,

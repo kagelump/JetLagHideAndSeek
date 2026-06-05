@@ -41,7 +41,13 @@ export function ImportScreen() {
             stores: {
                 hidingZones: hidingZoneStore,
                 playArea: playAreaStore,
-                questions: questionStore,
+                questions: {
+                    ...questionStore,
+                    importAdminDivisions: (pack, presetName) => {
+                        questionStore.setAdminDivisionPack(pack);
+                        questionStore.setAdminDivisionPresetName(presetName);
+                    },
+                },
             },
         });
         if (!result.ok) {

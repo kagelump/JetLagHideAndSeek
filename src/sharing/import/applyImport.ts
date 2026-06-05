@@ -1,6 +1,11 @@
 import type { HidingZoneImportState } from "@/state/hidingZoneStore";
 import type { PlayAreaImportState } from "@/state/playAreaStore";
 import type {
+    AdminDivisionNamePack,
+    AdminDivisionPresetName,
+} from "@/features/questions/matching/adminDivisionConfig";
+import { reconstructPackFromWire } from "@/features/questions/matching/adminDivisionConfig";
+import type {
     QuestionState,
     QuestionsImportState,
 } from "@/features/questions/questionTypes";
@@ -16,6 +21,10 @@ export type AppStores = {
     };
     questions?: {
         addImportedQuestion: (question: QuestionState) => void;
+        importAdminDivisions?: (
+            pack: AdminDivisionNamePack,
+            presetName: AdminDivisionPresetName,
+        ) => void;
         importQuestions: (questions: QuestionsImportState) => void;
     };
 };
@@ -44,7 +53,8 @@ export function applyImport({
         return { error: "Unsupported share link type.", ok: false };
     }
 
-    const { hidingZones, playArea, questions } = envelope.payload;
+    const { adminDivisions, hidingZones, playArea, questions } =
+        envelope.payload;
     if (playArea) {
         const resolvedPlayArea = resolvePlayArea(playArea);
         if (!resolvedPlayArea) {
@@ -57,6 +67,10 @@ export function applyImport({
     }
     if (hidingZones) {
         stores.hidingZones.replaceSetup(hidingZones);
+    }
+    if (adminDivisions && stores.questions?.importAdminDivisions) {
+        const pack = reconstructPackFromWire(adminDivisions);
+        stores.questions.importAdminDivisions(pack, adminDivisions.pack);
     }
     if (questions && stores.questions) {
         stores.questions.importQuestions(questions);

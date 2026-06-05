@@ -263,7 +263,13 @@ export const questionWireSchema = z.union([
     tentaclesQuestionWireSchema,
 ]);
 
+export const adminDivisionsWireSchema = z.object({
+    pack: z.enum(["generic", "japan"]),
+    levels: z.tuple([z.string(), z.string(), z.string(), z.string()]),
+});
+
 export const appStatePayloadSchema = z.object({
+    adminDivisions: adminDivisionsWireSchema.optional(),
     gameId: z.string().min(1),
     hidingZones: hidingZonesWireSchema.optional(),
     metadata: z.object({
@@ -309,4 +315,5 @@ export type QuestionRequestEnvelopeV1 = z.infer<
     typeof questionRequestEnvelopeSchema
 >;
 export type RadarQuestionWireV1 = z.infer<typeof radarQuestionWireSchema>;
+export type AdminDivisionsWireV1 = z.infer<typeof adminDivisionsWireSchema>;
 export type WireEnvelope = z.infer<typeof wireEnvelopeSchema>;

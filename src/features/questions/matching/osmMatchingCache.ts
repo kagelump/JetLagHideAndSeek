@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Position } from "@/shared/geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
 
+import type { AdminDivisionNamePack } from "./adminDivisionConfig";
 import type { FetchDebugInfo } from "./fetchDebug";
 import { regionCoveringPoint } from "./bundledPois";
 import { getCategoryConfig } from "./matchingCategories";
@@ -329,6 +330,7 @@ function isStale(entry: OsmMatchingCacheEntry): boolean {
 function revalidateInBackground(
     key: string,
     entry: OsmMatchingCacheEntry,
+    adminDivisionPack?: AdminDivisionNamePack,
 ): void {
     if (inflight.has(key)) return;
 
@@ -337,6 +339,8 @@ function revalidateInBackground(
         entry.category,
         revalidateCenter,
         entry.radiusMeters,
+        undefined,
+        adminDivisionPack,
     )
         .then(async (features) => {
             const updated: OsmMatchingCacheEntry = {
@@ -371,6 +375,7 @@ async function fetchAndStore(
     center: Position,
     radiusMeters: number,
     signal?: AbortSignal,
+    adminDivisionPack?: AdminDivisionNamePack,
 ): Promise<OsmFeature[]> {
     const existing = inflight.get(key);
     if (existing) return existing;
@@ -381,6 +386,7 @@ async function fetchAndStore(
         center,
         radiusMeters,
         signal,
+        adminDivisionPack,
     )
         .then(async (features) => {
             const entry: OsmMatchingCacheEntry = {
@@ -432,6 +438,7 @@ export async function findMatchingFeaturesWithCache(
         requestedRadiusMeters?: number;
         forceRefresh?: boolean;
         signal?: AbortSignal;
+        adminDivisionPack?: AdminDivisionNamePack;
     },
 ): Promise<OsmMatchingFeaturesResult> {
     if (!isCacheable(category)) {
@@ -453,7 +460,11 @@ export async function findMatchingFeaturesWithCache(
             memoryLru.set(memHit.key, memHit.entry);
 
             if (isStale(memHit.entry)) {
-                revalidateInBackground(memHit.key, memHit.entry);
+                revalidateInBackground(
+                    memHit.key,
+                    memHit.entry,
+                    options?.adminDivisionPack,
+                );
                 return {
                     candidates: rankMatchingFeatures(
                         memHit.entry.features,
@@ -487,7 +498,11 @@ export async function findMatchingFeaturesWithCache(
             if (diskEntry) {
                 memorySet(row.key, diskEntry);
                 if (isStale(diskEntry)) {
-                    revalidateInBackground(row.key, diskEntry);
+                    revalidateInBackground(
+                        row.key,
+                        diskEntry,
+                        options?.adminDivisionPack,
+                    );
                     return {
                         candidates: rankMatchingFeatures(
                             diskEntry.features,
@@ -523,6 +538,7 @@ export async function findMatchingFeaturesWithCache(
         center,
         overscanRadius,
         options?.signal,
+        options?.adminDivisionPack,
     );
 
     return {
@@ -556,6 +572,7 @@ export async function findMatchingFeaturesWithIndex(
         requestedRadiusMeters?: number;
         forceRefresh?: boolean;
         signal?: AbortSignal;
+        adminDivisionPack?: AdminDivisionNamePack;
     },
 ): Promise<OsmMatchingFeaturesResult> {
     const [lon, lat] = center;
@@ -618,6 +635,7 @@ export async function findMatchingFeaturesWithIndex(
         requestedRadiusMeters: requestedRadius,
         forceRefresh: options?.forceRefresh,
         signal: options?.signal,
+        adminDivisionPack: options?.adminDivisionPack,
     });
 }
 

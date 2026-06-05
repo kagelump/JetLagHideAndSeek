@@ -10,6 +10,7 @@ const routeDepth: Record<SheetRouteName, number> = {
     "play-area": 2,
     "hiding-zone": 2,
     "offline-data": 2,
+    "admin-divisions": 2,
 };
 
 export function getNavDirection(
@@ -35,6 +36,7 @@ export function getBackTarget(route: SheetRouteName): SheetRouteName | null {
         case "play-area":
         case "hiding-zone":
         case "offline-data":
+        case "admin-divisions":
             return "settings";
     }
 }

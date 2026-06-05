@@ -23,6 +23,7 @@ import {
     useHidingZoneState,
 } from "@/state/hidingZoneStore";
 import { cleanOrphanedBoundaryKeys } from "@/features/map/playAreaBoundary";
+import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
 import { loadInstalledPacks } from "@/features/questions/matching/regionPacks";
 import { loadPersistedAppState, persistAppState } from "@/state/persistence";
 import { PlayAreaProvider, usePlayArea } from "@/state/playAreaStore";
@@ -191,6 +192,16 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
         };
     }, [flushPersist]);
 
+    // Keep module-level defaults in matchingCategories.ts in sync so
+    // code paths without React context access (e.g. matchingConfig.summary)
+    // use the current admin division pack and label language.
+    useEffect(() => {
+        setDefaultAdminConfig(
+            questionState.adminDivisionPack,
+            questionState.labelLanguage,
+        );
+    }, [questionState.adminDivisionPack, questionState.labelLanguage]);
+
     useEffect(() => {
         if (!isRestored) return;
 
@@ -212,6 +223,9 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
                 playArea: playAreaStore.playArea,
                 questionSettings: {
                     activeQuestionId: questionState.activeQuestionId,
+                    adminDivisionPack: questionState.adminDivisionPack,
+                    adminDivisionPresetName:
+                        questionState.adminDivisionPresetName,
                     gameMode: questionState.gameMode,
                     isPinLocked: questionState.isPinLocked,
                     labelLanguage: questionState.labelLanguage,
@@ -226,6 +240,8 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
         isRestored,
         playAreaStore.playArea,
         questionState.activeQuestionId,
+        questionState.adminDivisionPack,
+        questionState.adminDivisionPresetName,
         questionState.gameMode,
         questionState.isPinLocked,
         questionState.labelLanguage,

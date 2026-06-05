@@ -4,7 +4,9 @@ import {
     getCategoryTitle,
     matchingCategories,
     matchingCategoriesBySection,
+    setDefaultAdminConfig,
 } from "../matchingCategories";
+import { DEFAULT_ADMIN_DIVISION_PACK } from "../adminDivisionConfig";
 
 describe("matchingCategories", () => {
     it("has a config for every category", () => {
@@ -23,9 +25,11 @@ describe("matchingCategories", () => {
             6,
         );
         expect(matchingCategoriesBySection["Public Utilities"]).toHaveLength(3);
+        // Admin entries have been removed from the static array — they are
+        // now configured dynamically via adminDivisionConfig.
         expect(
             matchingCategoriesBySection["Administrative Divisions"],
-        ).toHaveLength(4);
+        ).toBeUndefined();
     });
 
     it("looks up category config by category id", () => {
@@ -42,7 +46,12 @@ describe("matchingCategories", () => {
 
     it("returns the title for a category", () => {
         expect(getCategoryTitle("zoo")).toBe("Zoo");
-        expect(getCategoryTitle("admin-2nd")).toBe("2nd Admin. Division");
+        // Admin categories need the module-level defaults to be synced
+        // before they return the configured label.
+        setDefaultAdminConfig(DEFAULT_ADMIN_DIVISION_PACK, "native");
+        expect(getCategoryTitle("admin-2nd")).toBe(
+            "2nd Admin Division (OSM level 7)",
+        );
     });
 
     it("returns the section for a category", () => {

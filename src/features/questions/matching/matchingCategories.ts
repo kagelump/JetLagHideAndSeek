@@ -1,5 +1,10 @@
 import type { MatchingCategory } from "./matchingTypes";
 import { deriveOsmQueryTags } from "./matchingSelectors";
+import {
+    type AdminDivisionNamePack,
+    buildAdminCategoryConfig,
+    isAdminCategory,
+} from "./adminDivisionConfig";
 
 export type CategorySection =
     | "Administrative Divisions"
@@ -43,31 +48,10 @@ export const matchingCategories: MatchingCategoryConfig[] = [
         title: "Airport",
     },
 
-    // Administrative Divisions (not bundleable in Phase 1 — keep literals)
-    {
-        category: "admin-1st",
-        osmQueryTags: `["boundary"="administrative"]["admin_level"="4"]`,
-        section: "Administrative Divisions",
-        title: "1st Admin. Division",
-    },
-    {
-        category: "admin-2nd",
-        osmQueryTags: `["boundary"="administrative"]["admin_level"="7"]`,
-        section: "Administrative Divisions",
-        title: "2nd Admin. Division",
-    },
-    {
-        category: "admin-3rd",
-        osmQueryTags: `["boundary"="administrative"]["admin_level"="9"]`,
-        section: "Administrative Divisions",
-        title: "3rd Admin. Division",
-    },
-    {
-        category: "admin-4th",
-        osmQueryTags: `["boundary"="administrative"]["admin_level"="10"]`,
-        section: "Administrative Divisions",
-        title: "4th Admin. Division",
-    },
+    // Administrative Divisions are configured dynamically via
+    // adminDivisionConfig.ts. Static fallback entries have been removed —
+    // setDefaultAdminConfig() is called synchronously during state
+    // initialisation so getCategoryConfig always has a pack available.
 
     // Natural
     {
@@ -160,18 +144,59 @@ export const matchingCategoriesBySection = matchingCategories.reduce<
     {} as Record<CategorySection, MatchingCategoryConfig[]>,
 );
 
+// ---------------------------------------------------------------------------
+// Module-level defaults for code paths that cannot access React context
+// (e.g. matchingConfig.summary).
+// ---------------------------------------------------------------------------
+
+let _defaultAdminDivisionPack: AdminDivisionNamePack | undefined;
+let _defaultLabelLanguage: "native" | "english" = "native";
+
+/**
+ * Set the admin division defaults used by `getCategoryTitle()` and
+ * `getCategoryConfig()` when explicit overrides are not passed. Call this
+ * from the app initialisation path whenever the admin division pack or label
+ * language changes.
+ */
+export function setDefaultAdminConfig(
+    pack: AdminDivisionNamePack,
+    language: "native" | "english",
+): void {
+    _defaultAdminDivisionPack = pack;
+    _defaultLabelLanguage = language;
+}
+
 export function getCategoryConfig(
     category: MatchingCategory,
+    adminDivisionPack?: AdminDivisionNamePack,
+    labelLanguage?: "native" | "english",
 ): MatchingCategoryConfig | undefined {
+    const pack = adminDivisionPack ?? _defaultAdminDivisionPack;
+    const lang = labelLanguage ?? _defaultLabelLanguage;
+
+    if (isAdminCategory(category) && pack) {
+        return buildAdminCategoryConfig(pack, category, lang);
+    }
+
     return matchingCategories.find((c) => c.category === category);
 }
 
-export function getCategoryTitle(category: MatchingCategory): string {
-    return getCategoryConfig(category)?.title ?? category;
+export function getCategoryTitle(
+    category: MatchingCategory,
+    adminDivisionPack?: AdminDivisionNamePack,
+    labelLanguage?: "native" | "english",
+): string {
+    return (
+        getCategoryConfig(category, adminDivisionPack, labelLanguage)?.title ??
+        category
+    );
 }
 
 export function getCategorySection(
     category: MatchingCategory,
 ): CategorySection {
+    // Admin categories are configured dynamically; their section is always
+    // "Administrative Divisions".
+    if (isAdminCategory(category)) return "Administrative Divisions";
     return getCategoryConfig(category)?.section ?? "Natural";
 }

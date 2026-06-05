@@ -31,6 +31,7 @@ import {
     QuestionDetailScreen,
 } from "@/features/questions/QuestionDetailScreen";
 import { QuestionsScreen } from "@/features/questions/QuestionsScreen";
+import { AdminDivisionScreen } from "@/features/sheet/AdminDivisionScreen";
 import { OfflineDataScreen } from "@/features/sheet/OfflineDataScreen";
 import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
@@ -283,6 +284,12 @@ function renderRouteContent(
             return (
                 <ChildSheetShell onBack={() => onNavigate("settings")}>
                     <OfflineDataScreen />
+                </ChildSheetShell>
+            );
+        case "admin-divisions":
+            return (
+                <ChildSheetShell onBack={() => onNavigate("settings")}>
+                    <AdminDivisionScreen />
                 </ChildSheetShell>
             );
         case "questions":

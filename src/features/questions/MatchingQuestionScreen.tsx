@@ -1,15 +1,22 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { usePlayArea } from "@/state/playAreaStore";
-import { useQuestionActions } from "@/state/questionStore";
+import {
+    useAdminDivisionPack,
+    useLabelLanguage,
+    useQuestionActions,
+} from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 import type { MatchingCategory } from "./matching/matchingTypes";
 import {
     matchingCategoriesBySection,
     type CategorySection,
+    type MatchingCategoryConfig,
 } from "./matching/matchingCategories";
+import { buildAdminMatchingCategoryConfigs } from "./matching/adminDivisionConfig";
 
 type MatchingQuestionScreenProps = {
     onNavigate: (route: SheetRouteName) => void;
@@ -28,6 +35,19 @@ export function MatchingQuestionScreen({
 }: MatchingQuestionScreenProps) {
     const { playArea } = usePlayArea();
     const { createQuestion } = useQuestionActions();
+    const adminDivisionPack = useAdminDivisionPack();
+    const labelLanguage = useLabelLanguage();
+
+    const categoriesBySection = useMemo<
+        Record<CategorySection, MatchingCategoryConfig[]>
+    >(() => {
+        // Start with the static groupings, then replace admin entries
+        // with dynamic configs derived from current settings.
+        const sections = { ...matchingCategoriesBySection };
+        sections["Administrative Divisions"] =
+            buildAdminMatchingCategoryConfigs(adminDivisionPack, labelLanguage);
+        return sections;
+    }, [adminDivisionPack, labelLanguage]);
 
     const addMatchingQuestion = (category: MatchingCategory) => {
         createQuestion("matching", {
@@ -40,7 +60,7 @@ export function MatchingQuestionScreen({
     return (
         <SheetScrollView contentContainerStyle={styles.scrollContent}>
             {sectionOrder.map((section) => {
-                const categories = matchingCategoriesBySection[section];
+                const categories = categoriesBySection[section];
                 if (!categories || categories.length === 0) return null;
                 return (
                     <View key={section} style={styles.section}>

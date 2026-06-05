@@ -8,6 +8,7 @@ import { useHidingZoneState } from "@/state/hidingZoneStore";
 import { usePlayArea } from "@/state/playAreaStore";
 import {
     updateQuestionCenter,
+    useAdminDivisionPack,
     useLabelLanguage,
     useQuestionActions,
 } from "@/state/questionStore";
@@ -40,8 +41,13 @@ export function OsmMatchingQuestionDetailScreen({
     const [cacheSource, setCacheSource] = useState<string | null>(null);
     const { radiusMeters: stationRadiusMeters } = useHidingZoneState();
     const { playArea } = usePlayArea();
-    const categoryTitle = getCategoryTitle(question.category);
+    const adminDivisionPack = useAdminDivisionPack();
     const labelLanguage = useLabelLanguage();
+    const categoryTitle = getCategoryTitle(
+        question.category,
+        adminDivisionPack,
+        labelLanguage,
+    );
     const lastSearchCenterRef = useRef<[number, number] | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

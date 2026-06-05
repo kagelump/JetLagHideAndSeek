@@ -11,12 +11,17 @@ import {
 } from "react-native";
 
 import type { PlayArea } from "@/features/map/playArea";
+import { extractWireState } from "@/features/questions/matching/adminDivisionConfig";
 import type { QuestionsImportState } from "@/features/questions/questionTypes";
 import type { HidingZoneExportState } from "@/sharing/export/buildEnvelope";
 import { buildAppStateEnvelope } from "@/sharing/export/buildEnvelope";
 import { buildImportLink } from "@/sharing/links/buildLink";
 import { QRCodeView } from "@/sharing/qr/QRCodeView";
 import { minifyEnvelope } from "@/sharing/wire/minified";
+import {
+    useAdminDivisionPack,
+    useAdminDivisionPresetName,
+} from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
 type ShareSetupModalProps = {
@@ -47,14 +52,27 @@ export function ShareSetupModal({
         };
     }, []);
 
+    const adminDivisionPack = useAdminDivisionPack();
+    const adminDivisionPresetName = useAdminDivisionPresetName();
+
     const envelope = useMemo(
         () =>
             buildAppStateEnvelope({
+                adminDivisions: extractWireState(
+                    adminDivisionPack,
+                    adminDivisionPresetName,
+                ),
                 hidingZones,
                 playArea,
                 questions,
             }),
-        [hidingZones, playArea, questions],
+        [
+            adminDivisionPack,
+            adminDivisionPresetName,
+            hidingZones,
+            playArea,
+            questions,
+        ],
     );
 
     const link = useMemo(

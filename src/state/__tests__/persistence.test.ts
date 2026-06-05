@@ -97,6 +97,29 @@ describe("AppStateV1 schema", () => {
         expect(result.success).toBe(true);
         expect(state.questionSettings).toEqual({
             activeQuestionId: null,
+            adminDivisionPack: [
+                {
+                    osmLevel: "4",
+                    labelNative: "",
+                    labelEn: "",
+                },
+                {
+                    osmLevel: "7",
+                    labelNative: "",
+                    labelEn: "",
+                },
+                {
+                    osmLevel: "9",
+                    labelNative: "",
+                    labelEn: "",
+                },
+                {
+                    osmLevel: "10",
+                    labelNative: "",
+                    labelEn: "",
+                },
+            ],
+            adminDivisionPresetName: "generic",
             gameMode: "seeker",
             isPinLocked: false,
             labelLanguage: "native",
@@ -202,6 +225,29 @@ describe("AppStateV1 schema", () => {
             ...makeAppState(),
             questionSettings: {
                 activeQuestionId: null,
+                adminDivisionPack: [
+                    {
+                        osmLevel: "4",
+                        labelNative: "",
+                        labelEn: "",
+                    },
+                    {
+                        osmLevel: "7",
+                        labelNative: "",
+                        labelEn: "",
+                    },
+                    {
+                        osmLevel: "9",
+                        labelNative: "",
+                        labelEn: "",
+                    },
+                    {
+                        osmLevel: "10",
+                        labelNative: "",
+                        labelEn: "",
+                    },
+                ],
+                adminDivisionPresetName: "generic" as const,
                 gameMode: "seeker" as const,
                 isPinLocked: true,
                 labelLanguage: "native" as const,

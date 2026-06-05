@@ -165,6 +165,13 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                         />
                     }
                 />
+                <SheetListRow
+                    accessibilityLabel="Configure admin division categories"
+                    description="Set OSM levels and labels for admin division questions"
+                    onPress={() => onNavigate("admin-divisions")}
+                    testID="settings-admin-divisions-row"
+                    title="Admin Divisions"
+                />
             </View>
 
             <View style={styles.actions}>

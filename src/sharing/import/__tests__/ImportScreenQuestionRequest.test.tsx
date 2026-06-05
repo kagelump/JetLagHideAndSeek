@@ -208,6 +208,29 @@ describe("ImportScreen — question-request", () => {
                     gameMode: "hider",
                     isPinLocked: false,
                     labelLanguage: "native",
+                    adminDivisionPack: [
+                        {
+                            osmLevel: "4",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "7",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "9",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "10",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                    ],
+                    adminDivisionPresetName: "generic",
                 },
             }),
         );
@@ -268,6 +291,29 @@ describe("ImportScreen — question-request", () => {
                     gameMode: "hider",
                     isPinLocked: false,
                     labelLanguage: "native",
+                    adminDivisionPack: [
+                        {
+                            osmLevel: "4",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "7",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "9",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "10",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                    ],
+                    adminDivisionPresetName: "generic",
                 },
             }),
         );
@@ -318,6 +364,29 @@ describe("ImportScreen — question-request", () => {
                     gameMode: "hider",
                     isPinLocked: false,
                     labelLanguage: "native",
+                    adminDivisionPack: [
+                        {
+                            osmLevel: "4",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "7",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "9",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "10",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                    ],
+                    adminDivisionPresetName: "generic",
                 },
             }),
         );
@@ -381,6 +450,29 @@ describe("ImportScreen — question-request", () => {
                     gameMode: "hider",
                     isPinLocked: false,
                     labelLanguage: "native",
+                    adminDivisionPack: [
+                        {
+                            osmLevel: "4",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "7",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "9",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "10",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                    ],
+                    adminDivisionPresetName: "generic",
                 },
             }),
         );
@@ -440,6 +532,29 @@ describe("ImportScreen — question-request", () => {
                     gameMode: "hider",
                     isPinLocked: false,
                     labelLanguage: "native",
+                    adminDivisionPack: [
+                        {
+                            osmLevel: "4",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "7",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "9",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "10",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                    ],
+                    adminDivisionPresetName: "generic",
                 },
             }),
         );
@@ -480,6 +595,29 @@ describe("ImportScreen — question-request", () => {
                     gameMode: "hider",
                     isPinLocked: false,
                     labelLanguage: "native",
+                    adminDivisionPack: [
+                        {
+                            osmLevel: "4",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "7",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "9",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                        {
+                            osmLevel: "10",
+                            labelNative: "",
+                            labelEn: "",
+                        },
+                    ],
+                    adminDivisionPresetName: "generic",
                 },
             }),
         );

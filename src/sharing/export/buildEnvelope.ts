@@ -1,5 +1,6 @@
 import type { HidingZoneUnit } from "@/features/hidingZone/hidingZoneTypes";
 import type { PlayArea } from "@/features/map/playArea";
+import type { AdminDivisionsWireState } from "@/features/questions/matching/adminDivisionConfig";
 import type {
     QuestionState,
     QuestionsImportState,
@@ -16,12 +17,14 @@ export type HidingZoneExportState = {
 };
 
 export function buildAppStateEnvelope({
+    adminDivisions,
     gameId = createGameId(),
     hidingZones,
     now = new Date(),
     playArea,
     questions = [],
 }: {
+    adminDivisions?: AdminDivisionsWireState;
     gameId?: string;
     hidingZones: HidingZoneExportState;
     now?: Date;
@@ -51,6 +54,7 @@ export function buildAppStateEnvelope({
                 osmType: playArea.osmType,
             },
             questions: [...questions],
+            ...(adminDivisions ? { adminDivisions } : {}),
         },
         version: 1,
     };

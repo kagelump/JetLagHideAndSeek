@@ -1,4 +1,5 @@
 import { type Position, haversineDistanceMeters } from "@/shared/geojson";
+import type { AdminDivisionNamePack } from "./adminDivisionConfig";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
 import { getCategoryConfig } from "./matchingCategories";
 
@@ -31,8 +32,9 @@ export async function fetchAndParseOverpassFeatures(
     center: Position,
     radiusMeters: number,
     signal?: AbortSignal,
+    adminDivisionPack?: AdminDivisionNamePack,
 ): Promise<OsmFeature[]> {
-    const config = getCategoryConfig(category);
+    const config = getCategoryConfig(category, adminDivisionPack);
     if (!config) return [];
     if (!config.osmQueryTags && category !== "station-name-length") return [];
 
@@ -62,6 +64,7 @@ export async function findMatchingFeatures(
         maxCandidates?: number;
         searchRadiusMeters?: number;
         signal?: AbortSignal;
+        adminDivisionPack?: AdminDivisionNamePack;
     },
 ): Promise<OsmFeatureWithDistance[]> {
     const searchRadiusMeters =
@@ -72,6 +75,7 @@ export async function findMatchingFeatures(
         center,
         searchRadiusMeters,
         options?.signal,
+        options?.adminDivisionPack,
     );
     return rankMatchingFeatures(features, center, maxCandidates);
 }
@@ -251,8 +255,9 @@ export async function fetchAndParseOverpassBboxFeatures(
     north: number,
     east: number,
     signal?: AbortSignal,
+    adminDivisionPack?: AdminDivisionNamePack,
 ): Promise<OsmFeature[]> {
-    const config = getCategoryConfig(category);
+    const config = getCategoryConfig(category, adminDivisionPack);
     if (!config) return [];
     if (!config.osmQueryTags && category !== "station-name-length") return [];
 

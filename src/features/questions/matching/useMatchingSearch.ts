@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Bbox, Position } from "@/shared/geojson";
+import { useAdminDivisionPack } from "@/state/questionStore";
 import type { MatchingCategory } from "./matchingTypes";
 import {
     searchMatchingFeaturesProgressive,
@@ -51,6 +52,7 @@ export function useMatchingSearch(
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const reportDebug = useReportFetchDebug();
+    const adminDivisionPack = useAdminDivisionPack();
     const searchGenerationRef = useRef(0);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -88,6 +90,7 @@ export function useMatchingSearch(
                         forceRefresh,
                         signal: abortController.signal,
                         unbounded: options?.unbounded,
+                        adminDivisionPack,
                     },
                 );
                 console.log(
@@ -151,6 +154,7 @@ export function useMatchingSearch(
             }
         },
         [
+            adminDivisionPack,
             category,
             center,
             stationRadiusMeters,

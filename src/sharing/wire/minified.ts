@@ -14,6 +14,9 @@ import type {
 } from "./schema";
 
 export const FIELD_MAP = {
+    adminDivisions: "ad",
+    adminLevels: "al",
+    adminPack: "ap",
     answer: "e",
     candidates: "cd",
     category: "b",
@@ -77,6 +80,16 @@ const playAreaMinifiedSchema = z.object({
 const hidingZonesMinifiedSchema = z.object({
     [FIELD_MAP.radiusMeters]: z.number().nonnegative(),
     [FIELD_MAP.selectedPresetIds]: z.array(z.string()),
+});
+
+const adminDivisionsMinifiedSchema = z.object({
+    [FIELD_MAP.adminPack]: z.enum(["generic", "japan"]),
+    [FIELD_MAP.adminLevels]: z.tuple([
+        z.string(),
+        z.string(),
+        z.string(),
+        z.string(),
+    ]),
 });
 
 const radarQuestionMinifiedSchema = z.object({
@@ -205,6 +218,7 @@ const metadataMinifiedSchema = z.object({
 });
 
 const appStatePayloadMinifiedSchema = z.object({
+    [FIELD_MAP.adminDivisions]: adminDivisionsMinifiedSchema.optional(),
     [FIELD_MAP.gameId]: z.string().min(1),
     [FIELD_MAP.hidingZones]: hidingZonesMinifiedSchema.optional(),
     [FIELD_MAP.metadata]: metadataMinifiedSchema,
@@ -582,6 +596,13 @@ function minifyAppState(appState: AppStateEnvelopeV1): WireEnvelopeMinified {
         payload[FIELD_MAP.questions] = p.questions.map(minifyQuestion);
     }
 
+    if (p.adminDivisions) {
+        payload[FIELD_MAP.adminDivisions] = {
+            [FIELD_MAP.adminPack]: p.adminDivisions.pack,
+            [FIELD_MAP.adminLevels]: p.adminDivisions.levels,
+        };
+    }
+
     mini[FIELD_MAP.payload] = payload;
     return mini as unknown as WireEnvelopeMinified;
 }
@@ -876,6 +897,14 @@ function unminifyAppState(mini: WireEnvelopeMinified): AppStateEnvelopeV1 {
                 index,
             }),
         );
+    }
+
+    if (p[FIELD_MAP.adminDivisions]) {
+        const ad = p[FIELD_MAP.adminDivisions]!;
+        payload.adminDivisions = {
+            pack: ad[FIELD_MAP.adminPack],
+            levels: ad[FIELD_MAP.adminLevels],
+        };
     }
 
     full.payload = payload;

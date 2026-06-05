@@ -8,6 +8,13 @@ import {
 } from "react";
 
 import type { MatchingCategory } from "@/features/questions/matching/matchingTypes";
+import {
+    type AdminDivisionNamePack,
+    type AdminDivisionPresetName,
+    DEFAULT_ADMIN_DIVISION_PACK,
+    DEFAULT_ADMIN_DIVISION_PRESET_NAME,
+} from "@/features/questions/matching/adminDivisionConfig";
+import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
 import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
 import { radarQuestionConfig } from "@/features/questions/radar/radarConfig";
 import {
@@ -49,6 +56,8 @@ export type GameMode = "hider" | "seeker";
 
 type QuestionStateValue = {
     activeQuestionId: string | null;
+    adminDivisionPack: AdminDivisionNamePack;
+    adminDivisionPresetName: AdminDivisionPresetName;
     gameMode: GameMode;
     isPinLocked: boolean;
     isRestored: boolean;
@@ -75,6 +84,12 @@ export function useQuestionState(): QuestionStateValue {
 const IsPinLockedContext = createContext<boolean>(false);
 const LabelLanguageContext = createContext<"native" | "english">("native");
 const GameModeContext = createContext<GameMode>("seeker");
+const AdminDivisionPackContext = createContext<AdminDivisionNamePack>(
+    DEFAULT_ADMIN_DIVISION_PACK,
+);
+const AdminDivisionPresetNameContext = createContext<AdminDivisionPresetName>(
+    DEFAULT_ADMIN_DIVISION_PRESET_NAME,
+);
 const QuestionIdsContext = createContext<string[] | null>(null);
 const QuestionsByIdContext = createContext<Record<
     string,
@@ -96,6 +111,14 @@ export function useLabelLanguage(): "native" | "english" {
 
 export function useGameMode(): GameMode {
     return useContext(GameModeContext);
+}
+
+export function useAdminDivisionPack(): AdminDivisionNamePack {
+    return useContext(AdminDivisionPackContext);
+}
+
+export function useAdminDivisionPresetName(): AdminDivisionPresetName {
+    return useContext(AdminDivisionPresetNameContext);
 }
 
 export function useQuestionIds(): string[] {
@@ -137,6 +160,12 @@ type QuestionActionsValue = {
     importQuestions: (questions: QuestionsImportState) => void;
     markRestored: () => void;
     setActiveQuestionId: (questionId: string | null) => void;
+    setAdminDivisionPack: (
+        packOrUpdater:
+            | AdminDivisionNamePack
+            | ((prev: AdminDivisionNamePack) => AdminDivisionNamePack),
+    ) => void;
+    setAdminDivisionPresetName: (name: AdminDivisionPresetName) => void;
     setGameMode: (mode: GameMode) => void;
     setLabelLanguage: (language: "native" | "english") => void;
     setPinLocked: (isLocked: boolean) => void;
@@ -184,6 +213,8 @@ export function useQuestionDerived(): QuestionDerivedValue {
 
 export type QuestionSettingsImportState = {
     activeQuestionId: string | null;
+    adminDivisionPack: AdminDivisionNamePack;
+    adminDivisionPresetName: AdminDivisionPresetName;
     gameMode: GameMode;
     isPinLocked: boolean;
     labelLanguage: "native" | "english";
@@ -210,6 +241,10 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         "native" | "english"
     >("native");
     const [gameMode, setGameModeState] = useState<GameMode>("seeker");
+    const [adminDivisionPack, setAdminDivisionPackState] =
+        useState<AdminDivisionNamePack>(DEFAULT_ADMIN_DIVISION_PACK);
+    const [adminDivisionPresetName, setAdminDivisionPresetNameState] =
+        useState<AdminDivisionPresetName>(DEFAULT_ADMIN_DIVISION_PRESET_NAME);
     const [isRestored, setIsRestored] = useState(false);
 
     const activeQuestion = useMemo(
@@ -346,13 +381,46 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setPinLockedState(isLocked);
     }, []);
 
-    const setLabelLanguage = useCallback((language: "native" | "english") => {
-        setLabelLanguageState(language);
-    }, []);
+    const setLabelLanguage = useCallback(
+        (language: "native" | "english") => {
+            setLabelLanguageState(language);
+            setDefaultAdminConfig(adminDivisionPack, language);
+        },
+        [adminDivisionPack],
+    );
 
     const setGameMode = useCallback((mode: GameMode) => {
         setGameModeState(mode);
     }, []);
+
+    const setAdminDivisionPack = useCallback(
+        (
+            packOrUpdater:
+                | AdminDivisionNamePack
+                | ((prev: AdminDivisionNamePack) => AdminDivisionNamePack),
+        ) => {
+            setAdminDivisionPackState((prev) => {
+                const next =
+                    typeof packOrUpdater === "function"
+                        ? (
+                              packOrUpdater as (
+                                  p: AdminDivisionNamePack,
+                              ) => AdminDivisionNamePack
+                          )(prev)
+                        : packOrUpdater;
+                setDefaultAdminConfig(next, labelLanguage);
+                return next;
+            });
+        },
+        [labelLanguage],
+    );
+
+    const setAdminDivisionPresetName = useCallback(
+        (name: AdminDivisionPresetName) => {
+            setAdminDivisionPresetNameState(name);
+        },
+        [],
+    );
 
     const importQuestionSettings = useCallback(
         (settings: QuestionSettingsImportState) => {
@@ -360,6 +428,17 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setActiveQuestionIdState(settings.activeQuestionId);
             setLabelLanguageState(settings.labelLanguage ?? "native");
             setGameModeState(settings.gameMode ?? "seeker");
+            const pack =
+                settings.adminDivisionPack ?? DEFAULT_ADMIN_DIVISION_PACK;
+            setAdminDivisionPackState(pack);
+            setAdminDivisionPresetNameState(
+                settings.adminDivisionPresetName ??
+                    DEFAULT_ADMIN_DIVISION_PRESET_NAME,
+            );
+            // Sync module-level defaults synchronously so non-React code
+            // paths (matchingConfig.summary, questionSharePrompt) see the
+            // correct admin division labels from the first render.
+            setDefaultAdminConfig(pack, settings.labelLanguage ?? "native");
         },
         [],
     );
@@ -371,12 +450,22 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const stateValue = useMemo<QuestionStateValue>(
         () => ({
             activeQuestionId,
+            adminDivisionPack,
+            adminDivisionPresetName,
             gameMode,
             isPinLocked,
             isRestored,
             labelLanguage,
         }),
-        [activeQuestionId, gameMode, isPinLocked, isRestored, labelLanguage],
+        [
+            activeQuestionId,
+            adminDivisionPack,
+            adminDivisionPresetName,
+            gameMode,
+            isPinLocked,
+            isRestored,
+            labelLanguage,
+        ],
     );
 
     const actionsValue = useMemo<QuestionActionsValue>(
@@ -388,6 +477,8 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             importQuestions,
             markRestored,
             setActiveQuestionId,
+            setAdminDivisionPack,
+            setAdminDivisionPresetName,
             setGameMode,
             setLabelLanguage,
             setPinLocked,
@@ -401,6 +492,8 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             importQuestions,
             markRestored,
             setActiveQuestionId,
+            setAdminDivisionPack,
+            setAdminDivisionPresetName,
             setGameMode,
             setLabelLanguage,
             setPinLocked,
@@ -426,7 +519,15 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                                     value={labelLanguage}
                                 >
                                     <GameModeContext.Provider value={gameMode}>
-                                        {children}
+                                        <AdminDivisionPackContext.Provider
+                                            value={adminDivisionPack}
+                                        >
+                                            <AdminDivisionPresetNameContext.Provider
+                                                value={adminDivisionPresetName}
+                                            >
+                                                {children}
+                                            </AdminDivisionPresetNameContext.Provider>
+                                        </AdminDivisionPackContext.Provider>
                                     </GameModeContext.Provider>
                                 </LabelLanguageContext.Provider>
                             </IsPinLockedContext.Provider>
