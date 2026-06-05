@@ -20,7 +20,7 @@ import type {
 const RADAR_FRAGMENT_VERSION = 1;
 
 /** Fixed step count for Turf circle generation. */
-const RADAR_CIRCLE_STEPS = 64;
+const RADAR_CIRCLE_STEPS = 32;
 
 /** Maximum number of cached circle fragments. */
 const RADAR_CIRCLE_CACHE_MAX = 200;
@@ -41,9 +41,8 @@ const circleCache = new Map<
 
 /**
  * Returns a deterministic cache key for a radar question's circle fragment.
- * Includes the question id, center coordinates, distance, step count, answer
- * state, and algorithm version so that geometry and property changes both
- * produce distinct cache entries.
+ * Keyed by geometry parameters only (center, distance, steps) so that the
+ * same circle can be reused across hit / miss / preview / outline collections.
  */
 function radarCircleKey(question: RadarQuestion): string {
     return [
@@ -53,7 +52,6 @@ function radarCircleKey(question: RadarQuestion): string {
         question.center[1].toFixed(7),
         question.distanceMeters,
         RADAR_CIRCLE_STEPS,
-        question.answer,
     ].join(":");
 }
 
@@ -76,7 +74,6 @@ function getRadarCircle(
 
     const feature = circle(question.center, question.distanceMeters / 1000, {
         properties: {
-            answer: question.answer,
             distanceMeters: question.distanceMeters,
             id: question.id,
         },

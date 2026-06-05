@@ -88,9 +88,7 @@ export function reduceFeature(feature, categoryOf) {
     const nativeName = pickShorterName(props.name, props.alt_name);
     const englishName = pickShorterName(props["name:en"], props["alt_name:en"]);
 
-    const name = isStation
-        ? englishName || nativeName
-        : nativeName;
+    const name = isStation ? englishName || nativeName : nativeName;
     if (!name) return null;
 
     const [lon, lat] = centroid(feature.geometry);
@@ -105,7 +103,7 @@ export function reduceFeature(feature, categoryOf) {
             : parseOsmId(feature.id).osmId;
     const osmType =
         props["@type"] !== undefined
-            ? ID_PREFIX_TYPE[props["@type"][0]] ?? 0
+            ? (ID_PREFIX_TYPE[props["@type"][0]] ?? 0)
             : parseOsmId(feature.id).osmType;
 
     const record = {

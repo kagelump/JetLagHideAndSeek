@@ -27,7 +27,7 @@ export type QuestionDefinition = {
     };
     summary: (question: QuestionState, index: number) => string;
     time: string;
-    title: string;
+    title: string | ((question: QuestionState) => string);
     type: QuestionType;
 };
 

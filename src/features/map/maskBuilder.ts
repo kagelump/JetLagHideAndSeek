@@ -108,8 +108,38 @@ const featureCacheIds = new WeakMap<PolygonFeature, number>();
 const featurePolygonCache = new WeakMap<PolygonFeature, Position[][][]>();
 let nextFeatureCacheId = 1;
 
+// Fast-path cache for the common case of a single required constraint and no
+// excluded areas (e.g. hiding-zones only). Uses object identity for O(1)
+// lookup without the string-key overhead of maskResultCache.
+const playAreaMinusSingleRequiredCache = new WeakMap<
+    PolygonFeatureCollection,
+    WeakMap<PolygonFeatureCollection, GeoJsonFeatureCollection>
+>();
+
 export function clearMaskResultCache() {
     maskResultCache.clear();
+}
+
+function getCachedPlayAreaMinusSingleRequired(
+    playArea: PolygonFeatureCollection,
+    required: PolygonFeatureCollection,
+): GeoJsonFeatureCollection | undefined {
+    const inner = playAreaMinusSingleRequiredCache.get(playArea);
+    if (!inner) return undefined;
+    return inner.get(required);
+}
+
+function setCachedPlayAreaMinusSingleRequired(
+    playArea: PolygonFeatureCollection,
+    required: PolygonFeatureCollection,
+    result: GeoJsonFeatureCollection,
+): void {
+    let inner = playAreaMinusSingleRequiredCache.get(playArea);
+    if (!inner) {
+        inner = new WeakMap();
+        playAreaMinusSingleRequiredCache.set(playArea, inner);
+    }
+    inner.set(required, result);
 }
 
 /**
@@ -156,6 +186,17 @@ export function buildCombinedEligibilityMask(
         return cached;
     }
 
+    // Fast path: single required constraint, no excluded areas.
+    if (requiredConstraints.length === 1 && excludedAreas.length === 0) {
+        const cached = getCachedPlayAreaMinusSingleRequired(
+            playArea,
+            requiredConstraints[0],
+        );
+        if (cached) {
+            return cached;
+        }
+    }
+
     const playAreaPolygons = getPolygons(playArea);
 
     if (playAreaPolygons.length === 0) {
@@ -175,9 +216,13 @@ export function buildCombinedEligibilityMask(
     } else if (requiredGeoms.length === 1) {
         eligibleArea = requiredGeoms[0];
     } else {
+        const t0 = performance.now();
         eligibleArea = intersection(
             requiredGeoms[0],
             ...requiredGeoms.slice(1),
+        );
+        console.log(
+            `[maskBuilder] intersection(${requiredGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
         );
     }
 
@@ -186,13 +231,23 @@ export function buildCombinedEligibilityMask(
     }
 
     if (excludedGeoms.length > 0) {
+        const t0 = performance.now();
         const excludedArea =
             excludedGeoms.length === 1
                 ? excludedGeoms[0]
                 : union(excludedGeoms[0], ...excludedGeoms.slice(1));
+        if (excludedGeoms.length > 1) {
+            console.log(
+                `[maskBuilder] union(${excludedGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
+            );
+        }
 
         if (hasGeomArea(excludedArea)) {
+            const t1 = performance.now();
             eligibleArea = difference(eligibleArea, excludedArea) as Geom;
+            console.log(
+                `[maskBuilder] difference(eligibleArea, excludedArea) in ${(performance.now() - t1).toFixed(2)}ms`,
+            );
         }
     }
 
@@ -200,12 +255,25 @@ export function buildCombinedEligibilityMask(
         return buildMultiPolygonFeatureCollection(playAreaPolygons);
     }
 
+    const t2 = performance.now();
     const maskedArea = difference(
         playAreaPolygons as Geom,
         eligibleArea,
     ) as Position[][][];
+    console.log(
+        `[maskBuilder] difference(playArea, eligibleArea) in ${(performance.now() - t2).toFixed(2)}ms`,
+    );
 
     const result = buildMultiPolygonFeatureCollection(maskedArea);
+
+    // Cache single-required-constraint results for fast-path reuse.
+    if (requiredConstraints.length === 1 && excludedAreas.length === 0) {
+        setCachedPlayAreaMinusSingleRequired(
+            playArea,
+            requiredConstraints[0],
+            result,
+        );
+    }
 
     // Evict oldest entry when cache exceeds max size.
     if (maskResultCache.size >= MAX_MASK_CACHE_SIZE) {

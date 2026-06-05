@@ -8,6 +8,7 @@ import {
     QuestionFetchDebugLine,
 } from "@/features/questions/matching/fetchDebug";
 import { RadarQuestionDetailScreen } from "@/features/questions/radar/RadarQuestionDetailScreen";
+import { ShareQuestionButton } from "@/features/questions/ShareQuestionButton";
 import { TransitLineQuestionDetailScreen } from "@/features/questions/transitLine/TransitLineQuestionDetailScreen";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
@@ -117,18 +118,21 @@ export function QuestionActionsMenu({ onNavigate }: QuestionActionsMenuProps) {
 
     return (
         <>
-            <Pressable
-                accessibilityLabel="Open question actions"
-                accessibilityRole="button"
-                onPress={() => setVisible(true)}
-                style={({ pressed }) => [
-                    styles.menuButton,
-                    pressed ? styles.actionPressed : null,
-                ]}
-                testID="question-actions-menu-button"
-            >
-                <Text style={styles.menuButtonText}>...</Text>
-            </Pressable>
+            <View style={styles.headerActions}>
+                <ShareQuestionButton question={activeQuestion} />
+                <Pressable
+                    accessibilityLabel="Open question actions"
+                    accessibilityRole="button"
+                    onPress={() => setVisible(true)}
+                    style={({ pressed }) => [
+                        styles.menuButton,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                    testID="question-actions-menu-button"
+                >
+                    <Text style={styles.menuButtonText}>...</Text>
+                </Pressable>
+            </View>
             <Modal
                 animationType="fade"
                 onRequestClose={closeMenu}
@@ -272,6 +276,11 @@ const styles = StyleSheet.create({
         color: colors.ink,
         fontSize: 18,
         fontWeight: "800",
+    },
+    headerActions: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 8,
     },
     menuButton: {
         alignItems: "center",

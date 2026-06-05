@@ -140,6 +140,12 @@ const legacyRadiusQuestionWireSchema = z
         updatedAt: question.updatedAt,
     }));
 
+export const questionWireSchema = z.union([
+    radarQuestionWireSchema,
+    legacyRadiusQuestionWireSchema,
+    matchingQuestionWireSchema,
+]);
+
 export const appStatePayloadSchema = z.object({
     gameId: z.string().min(1),
     hidingZones: hidingZonesWireSchema.optional(),
@@ -148,15 +154,13 @@ export const appStatePayloadSchema = z.object({
         updatedAt: z.string().min(1),
     }),
     playArea: playAreaWireSchema.optional(),
-    questions: z
-        .array(
-            z.union([
-                radarQuestionWireSchema,
-                legacyRadiusQuestionWireSchema,
-                matchingQuestionWireSchema,
-            ]),
-        )
-        .optional(),
+    questions: z.array(questionWireSchema).optional(),
+});
+
+export const questionRequestPayloadSchema = z.object({
+    createdAt: z.string().min(1),
+    question: questionWireSchema,
+    requestId: z.string().min(1),
 });
 
 export const appStateEnvelopeSchema = z.object({
@@ -165,13 +169,27 @@ export const appStateEnvelopeSchema = z.object({
     version: z.literal(1),
 });
 
+export const questionRequestEnvelopeSchema = z.object({
+    kind: z.literal("question-request"),
+    payload: questionRequestPayloadSchema,
+    version: z.literal(1),
+});
+
 export const wireEnvelopeSchema = z.discriminatedUnion("kind", [
     appStateEnvelopeSchema,
+    questionRequestEnvelopeSchema,
 ]);
 
 export type AppStateEnvelopeV1 = z.infer<typeof appStateEnvelopeSchema>;
 export type AppStatePayloadV1 = z.infer<typeof appStatePayloadSchema>;
 export type HidingZonesWireV1 = z.infer<typeof hidingZonesWireSchema>;
 export type PlayAreaWireV1 = z.infer<typeof playAreaWireSchema>;
+export type QuestionWireV1 = z.infer<typeof questionWireSchema>;
+export type QuestionRequestPayloadV1 = z.infer<
+    typeof questionRequestPayloadSchema
+>;
+export type QuestionRequestEnvelopeV1 = z.infer<
+    typeof questionRequestEnvelopeSchema
+>;
 export type RadarQuestionWireV1 = z.infer<typeof radarQuestionWireSchema>;
 export type WireEnvelope = z.infer<typeof wireEnvelopeSchema>;

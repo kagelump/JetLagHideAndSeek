@@ -4,12 +4,31 @@ import {
     compactCoord,
     compactPolyline,
     FIELD_MAP,
-    minifyEnvelope,
+    minifyEnvelope as minifyEnvelopeRaw,
     uncompactCoord,
     uncompactPolyline,
-    unminifyEnvelope,
+    unminifyEnvelope as unminifyEnvelopeRaw,
 } from "@/sharing/wire/minified";
+import type { AppStateEnvelopeMinified } from "@/sharing/wire/minified";
 import type { AppStateEnvelopeV1 } from "@/sharing/wire/schema";
+
+// These tests cover app-state round-trips; narrow the widened WireEnvelope
+// union back to the app-state members so existing assertions stay valid.
+function minifyEnvelope(
+    envelope: Parameters<typeof minifyEnvelopeRaw>[0],
+): AppStateEnvelopeMinified {
+    return minifyEnvelopeRaw(envelope) as AppStateEnvelopeMinified;
+}
+
+function unminifyEnvelope(
+    mini: Parameters<typeof unminifyEnvelopeRaw>[0],
+): AppStateEnvelopeV1 {
+    const restored = unminifyEnvelopeRaw(mini);
+    if (restored.kind !== "app-state") {
+        throw new Error(`Expected app-state envelope, got ${restored.kind}`);
+    }
+    return restored;
+}
 
 function makeEnvelope(
     overrides?: Partial<AppStateEnvelopeV1["payload"]>,

@@ -1,7 +1,11 @@
 import osmtogeojson from "osmtogeojson";
+import simplify from "@turf/simplify";
 
-import type { GeoJsonFeatureCollection } from "./geojsonTypes";
+import type { GeoJsonFeature, GeoJsonFeatureCollection } from "./geojsonTypes";
 import { calculateBbox, calculateCenter, type PlayArea } from "./playArea";
+
+/** Tolerance for boundary simplification (~30 metres in degrees). */
+const BOUNDARY_SIMPLIFY_TOLERANCE = 0.0003;
 
 export function buildPlayAreaFromOverpass(
     relationId: number,
@@ -23,14 +27,30 @@ export function buildPlayAreaFromBoundary(
         throw new Error(`No polygon boundary found for relation ${relationId}`);
     }
 
-    const bbox = calculateBbox(boundary);
+    const simplified = simplifyPlayAreaBoundary(boundary);
+    const bbox = calculateBbox(simplified);
     return {
         bbox,
-        boundary,
+        boundary: simplified,
         center: calculateCenter(bbox),
-        label: getBoundaryLabel(boundary, relationId),
+        label: getBoundaryLabel(simplified, relationId),
         osmId: relationId,
         osmType: "R",
+    };
+}
+
+function simplifyPlayAreaBoundary(
+    boundary: GeoJsonFeatureCollection,
+): GeoJsonFeatureCollection {
+    return {
+        ...boundary,
+        features: boundary.features.map(
+            (feature) =>
+                simplify(feature as unknown as Parameters<typeof simplify>[0], {
+                    tolerance: BOUNDARY_SIMPLIFY_TOLERANCE,
+                    highQuality: false,
+                }) as unknown as GeoJsonFeature,
+        ),
     };
 }
 

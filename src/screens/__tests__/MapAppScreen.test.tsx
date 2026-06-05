@@ -422,6 +422,7 @@ describe("MapAppScreen", () => {
         });
         await pressAddRadarQuestion(screen);
 
+        expect(screen.getByText("500m Radar")).toBeTruthy();
         expect(screen.getByText("500m")).toBeTruthy();
         expect(screen.getByText("1km")).toBeTruthy();
         expect(screen.getByText("2km")).toBeTruthy();
@@ -735,12 +736,12 @@ describe("MapAppScreen", () => {
         });
 
         expect(screen.getByTestId("questions-add-question-row")).toBeTruthy();
-        expect(screen.getByText("Radar Question 1")).toBeTruthy();
-        expect(screen.getByText("500 m distance · Hit")).toBeTruthy();
+        expect(screen.getByText("500m Radar")).toBeTruthy();
+        expect(screen.getByText("Hit")).toBeTruthy();
 
         fireEvent.press(screen.getByText("Delete"));
 
-        expect(screen.queryByText("Radar Question 1")).toBeNull();
+        expect(screen.queryByText("500m Radar")).toBeNull();
         // questions-empty-card removed — empty state no longer rendered
         expect(
             getMapShapeSource(screen, "radar-question-areas").props.shape

@@ -2,7 +2,13 @@ import { z } from "zod";
 
 import { normalizeTransitLineQuestion } from "@/features/questions/transitLine/transitLineNormalization";
 
-import type { AppStateEnvelopeV1, WireEnvelope } from "./schema";
+import type {
+    AppStateEnvelopeV1,
+    QuestionRequestEnvelopeV1,
+    QuestionWireV1,
+    RadarQuestionWireV1,
+    WireEnvelope,
+} from "./schema";
 
 export const FIELD_MAP = {
     answer: "e",
@@ -20,6 +26,8 @@ export const FIELD_MAP = {
     payload: "p",
     playArea: "a",
     questions: "q",
+    question: "qq",
+    requestId: "rq",
     radiusMeters: "r",
     radiusOption: "d",
     questionType: "t",
@@ -115,6 +123,11 @@ const matchingQuestionMinifiedSchema = z.object({
         .optional(),
 });
 
+const questionMinifiedSchema = z.union([
+    radarQuestionMinifiedSchema,
+    matchingQuestionMinifiedSchema,
+]);
+
 const metadataMinifiedSchema = z.object({
     [FIELD_MAP.createdAt]: z.string().min(1),
 });
@@ -124,14 +137,7 @@ const appStatePayloadMinifiedSchema = z.object({
     [FIELD_MAP.hidingZones]: hidingZonesMinifiedSchema.optional(),
     [FIELD_MAP.metadata]: metadataMinifiedSchema,
     [FIELD_MAP.playArea]: playAreaMinifiedSchema.optional(),
-    [FIELD_MAP.questions]: z
-        .array(
-            z.union([
-                radarQuestionMinifiedSchema,
-                matchingQuestionMinifiedSchema,
-            ]),
-        )
-        .optional(),
+    [FIELD_MAP.questions]: z.array(questionMinifiedSchema).optional(),
 });
 
 const appStateEnvelopeMinifiedSchema = z.object({
@@ -140,8 +146,21 @@ const appStateEnvelopeMinifiedSchema = z.object({
     [FIELD_MAP.payload]: appStatePayloadMinifiedSchema,
 });
 
+const questionRequestPayloadMinifiedSchema = z.object({
+    [FIELD_MAP.createdAt]: z.string().min(1),
+    [FIELD_MAP.question]: questionMinifiedSchema,
+    [FIELD_MAP.requestId]: z.string().min(1),
+});
+
+const questionRequestEnvelopeMinifiedSchema = z.object({
+    [FIELD_MAP.kind]: z.literal("question-request"),
+    [FIELD_MAP.version]: z.literal(1),
+    [FIELD_MAP.payload]: questionRequestPayloadMinifiedSchema,
+});
+
 export const wireEnvelopeMinifiedSchema = z.discriminatedUnion(FIELD_MAP.kind, [
     appStateEnvelopeMinifiedSchema,
+    questionRequestEnvelopeMinifiedSchema,
 ]);
 
 export type CompactCoord = z.infer<typeof compactCoordSchema>;
@@ -150,6 +169,9 @@ export type AppStatePayloadMinified = z.infer<
 >;
 export type AppStateEnvelopeMinified = z.infer<
     typeof appStateEnvelopeMinifiedSchema
+>;
+export type QuestionRequestEnvelopeMinified = z.infer<
+    typeof questionRequestEnvelopeMinifiedSchema
 >;
 export type WireEnvelopeMinified = z.infer<typeof wireEnvelopeMinifiedSchema>;
 
@@ -263,12 +285,93 @@ export function uncompactPolyline(
     return result;
 }
 
-export function minifyEnvelope(env: WireEnvelope): WireEnvelopeMinified {
-    if (env.kind !== "app-state") {
-        throw new Error(`Cannot minify unsupported envelope kind: ${env.kind}`);
+function minifyQuestion(question: QuestionWireV1): Record<string, unknown> {
+    if (question.type === "radar") {
+        const result: Record<string, unknown> = {
+            [FIELD_MAP.center]: compactCoord(
+                question.center[0],
+                question.center[1],
+            ),
+            [FIELD_MAP.id]: question.id,
+            [FIELD_MAP.questionType]: "r",
+            [FIELD_MAP.radiusMeters]: question.distanceMeters,
+            [FIELD_MAP.radiusOption]: question.distanceOption,
+        };
+
+        if (question.answer !== "unanswered") {
+            result[FIELD_MAP.answer] = ANSWER_TO_MINIFIED[question.answer];
+        }
+
+        return result;
     }
 
-    const appState = env as AppStateEnvelopeV1;
+    const result: Record<string, unknown> = {
+        [FIELD_MAP.category]: question.category,
+        [FIELD_MAP.center]: compactCoord(
+            question.center[0],
+            question.center[1],
+        ),
+        [FIELD_MAP.id]: question.id,
+        [FIELD_MAP.questionType]: "m",
+        [FIELD_MAP.lineId]: question.lineId,
+        [FIELD_MAP.lineName]: question.lineName,
+    };
+
+    if (question.answer !== "unanswered") {
+        result[FIELD_MAP.answer] = ANSWER_TO_MINIFIED[question.answer];
+    }
+
+    if (question.selectedOsmId !== null) {
+        result[FIELD_MAP.selectedOsmId] = question.selectedOsmId;
+    }
+
+    if (question.selectedOsmType !== null) {
+        result[FIELD_MAP.selectedOsmType] = question.selectedOsmType;
+    }
+
+    if (question.targetName !== null) {
+        result[FIELD_MAP.targetName] = question.targetName;
+    }
+
+    if (question.targetOsmId !== null) {
+        result[FIELD_MAP.targetOsmId] = question.targetOsmId;
+    }
+
+    if (question.targetOsmType !== null) {
+        result[FIELD_MAP.targetOsmType] = question.targetOsmType;
+    }
+
+    if (question.candidates.length > 0) {
+        result[FIELD_MAP.candidates] =
+            question.candidates.map(compactCandidate);
+    }
+
+    return result;
+}
+
+export function minifyEnvelope(env: WireEnvelope): WireEnvelopeMinified {
+    if (env.kind === "question-request") {
+        return minifyQuestionRequest(env);
+    }
+    return minifyAppState(env);
+}
+
+function minifyQuestionRequest(
+    env: QuestionRequestEnvelopeV1,
+): WireEnvelopeMinified {
+    const mini: Record<string, unknown> = {
+        [FIELD_MAP.kind]: env.kind,
+        [FIELD_MAP.payload]: {
+            [FIELD_MAP.createdAt]: env.payload.createdAt,
+            [FIELD_MAP.question]: minifyQuestion(env.payload.question),
+            [FIELD_MAP.requestId]: env.payload.requestId,
+        },
+        [FIELD_MAP.version]: env.version,
+    };
+    return mini as unknown as WireEnvelopeMinified;
+}
+
+function minifyAppState(appState: AppStateEnvelopeV1): WireEnvelopeMinified {
     const p = appState.payload;
     const mini: Record<string, unknown> = {};
 
@@ -300,79 +403,132 @@ export function minifyEnvelope(env: WireEnvelope): WireEnvelopeMinified {
     }
 
     if (p.questions && p.questions.length > 0) {
-        payload[FIELD_MAP.questions] = p.questions.map((question) => {
-            if (question.type === "radar") {
-                const result: Record<string, unknown> = {
-                    [FIELD_MAP.center]: compactCoord(
-                        question.center[0],
-                        question.center[1],
-                    ),
-                    [FIELD_MAP.id]: question.id,
-                    [FIELD_MAP.questionType]: "r",
-                    [FIELD_MAP.radiusMeters]: question.distanceMeters,
-                    [FIELD_MAP.radiusOption]: question.distanceOption,
-                };
-
-                if (question.answer !== "unanswered") {
-                    result[FIELD_MAP.answer] =
-                        ANSWER_TO_MINIFIED[question.answer];
-                }
-
-                return result;
-            }
-
-            const result: Record<string, unknown> = {
-                [FIELD_MAP.category]: question.category,
-                [FIELD_MAP.center]: compactCoord(
-                    question.center[0],
-                    question.center[1],
-                ),
-                [FIELD_MAP.id]: question.id,
-                [FIELD_MAP.questionType]: "m",
-                [FIELD_MAP.lineId]: question.lineId,
-                [FIELD_MAP.lineName]: question.lineName,
-            };
-
-            if (question.answer !== "unanswered") {
-                result[FIELD_MAP.answer] = ANSWER_TO_MINIFIED[question.answer];
-            }
-
-            if (question.selectedOsmId !== null) {
-                result[FIELD_MAP.selectedOsmId] = question.selectedOsmId;
-            }
-
-            if (question.selectedOsmType !== null) {
-                result[FIELD_MAP.selectedOsmType] = question.selectedOsmType;
-            }
-
-            if (question.targetName !== null) {
-                result[FIELD_MAP.targetName] = question.targetName;
-            }
-
-            if (question.targetOsmId !== null) {
-                result[FIELD_MAP.targetOsmId] = question.targetOsmId;
-            }
-
-            if (question.targetOsmType !== null) {
-                result[FIELD_MAP.targetOsmType] = question.targetOsmType;
-            }
-
-            if (question.candidates.length > 0) {
-                result[FIELD_MAP.candidates] =
-                    question.candidates.map(compactCandidate);
-            }
-
-            return result;
-        });
+        payload[FIELD_MAP.questions] = p.questions.map(minifyQuestion);
     }
 
     mini[FIELD_MAP.payload] = payload;
     return mini as unknown as WireEnvelopeMinified;
 }
 
-export function unminifyEnvelope(
+function unminifyQuestion(
+    question: unknown,
+    options: {
+        createdAt: string;
+        fallbackCenter?: [number, number];
+        index: number;
+    },
+): QuestionWireV1 {
+    const { createdAt, fallbackCenter, index } = options;
+    const q = question as Record<string, unknown>;
+    const answer = q[FIELD_MAP.answer] as
+        | keyof typeof ANSWER_FROM_MINIFIED
+        | undefined;
+    const resolvedAnswer = answer ? ANSWER_FROM_MINIFIED[answer] : "unanswered";
+    const questionType =
+        (q[FIELD_MAP.questionType] as "r" | "m" | undefined) ?? "r";
+
+    if (questionType === "m") {
+        const compactCenter = q[FIELD_MAP.center] as
+            | [number, number]
+            | undefined;
+        const center = compactCenter
+            ? uncompactCoord(compactCenter[0], compactCenter[1])
+            : (fallbackCenter ?? [0, 0]);
+        const compactCandidates = q[FIELD_MAP.candidates] as
+            | z.infer<typeof compactCandidateSchema>[]
+            | undefined;
+        return normalizeTransitLineQuestion({
+            answer: resolvedAnswer,
+            candidates: compactCandidates?.map(uncompactCandidate) ?? [],
+            category:
+                (q[FIELD_MAP.category] as
+                    | ReturnType<
+                          typeof normalizeTransitLineQuestion
+                      >["category"]
+                    | undefined) ?? "transit-line",
+            center,
+            createdAt,
+            id:
+                (q[FIELD_MAP.id] as string | undefined) ??
+                `q-imported-${index + 1}`,
+            lineId: (q[FIELD_MAP.lineId] as string | null | undefined) ?? null,
+            lineName:
+                (q[FIELD_MAP.lineName] as string | null | undefined) ?? null,
+            selectedOsmId:
+                (q[FIELD_MAP.selectedOsmId] as number | null | undefined) ??
+                null,
+            selectedOsmType:
+                (q[FIELD_MAP.selectedOsmType] as
+                    | "node"
+                    | "way"
+                    | "relation"
+                    | null
+                    | undefined) ?? null,
+            targetName:
+                (q[FIELD_MAP.targetName] as string | null | undefined) ?? null,
+            targetOsmId:
+                (q[FIELD_MAP.targetOsmId] as number | null | undefined) ?? null,
+            targetOsmType:
+                (q[FIELD_MAP.targetOsmType] as
+                    | "node"
+                    | "way"
+                    | "relation"
+                    | null
+                    | undefined) ?? null,
+            type: "matching",
+            updatedAt: createdAt,
+        });
+    }
+
+    const compactCenter = q[FIELD_MAP.center] as [number, number];
+    const radar: RadarQuestionWireV1 = {
+        answer: resolvedAnswer,
+        center: uncompactCoord(compactCenter[0], compactCenter[1]),
+        createdAt,
+        distanceMeters: q[FIELD_MAP.radiusMeters] as number,
+        distanceOption:
+            (q[FIELD_MAP.radiusOption] as
+                | RadarQuestionWireV1["distanceOption"]
+                | undefined) ?? "other",
+        distanceUnit: "m",
+        id:
+            (q[FIELD_MAP.id] as string | undefined) ??
+            `q-imported-${index + 1}`,
+        type: "radar",
+        updatedAt: createdAt,
+    };
+    return radar;
+}
+
+export function unminifyEnvelope(mini: WireEnvelopeMinified): WireEnvelope {
+    if (mini[FIELD_MAP.kind] === "question-request") {
+        return unminifyQuestionRequest(mini);
+    }
+    return unminifyAppState(mini);
+}
+
+function unminifyQuestionRequest(
     mini: WireEnvelopeMinified,
-): AppStateEnvelopeV1 {
+): QuestionRequestEnvelopeV1 {
+    const payload = mini[
+        FIELD_MAP.payload
+    ] as QuestionRequestEnvelopeMinified[typeof FIELD_MAP.payload];
+    const createdAt = payload[FIELD_MAP.createdAt];
+    return {
+        kind: "question-request",
+        payload: {
+            createdAt,
+            question: unminifyQuestion(payload[FIELD_MAP.question], {
+                createdAt,
+                index: 0,
+            }),
+            requestId: payload[FIELD_MAP.requestId],
+        },
+        version: 1,
+    };
+}
+
+function unminifyAppState(mini: WireEnvelopeMinified): AppStateEnvelopeV1 {
     const p = mini[FIELD_MAP.payload] as AppStatePayloadMinified;
     const full: Record<string, unknown> = {};
 
@@ -415,105 +571,16 @@ export function unminifyEnvelope(
     }
 
     if (p[FIELD_MAP.questions]) {
-        payload.questions = p[FIELD_MAP.questions]!.map((question, index) => {
-            const createdAt = metadata[FIELD_MAP.createdAt];
-            const q = question as Record<string, unknown>;
-            const answer = q[FIELD_MAP.answer] as
-                | keyof typeof ANSWER_FROM_MINIFIED
-                | undefined;
-            const resolvedAnswer = answer
-                ? ANSWER_FROM_MINIFIED[answer]
-                : "unanswered";
-            const questionType =
-                (q[FIELD_MAP.questionType] as "r" | "m" | undefined) ?? "r";
-
-            if (questionType === "m") {
-                const compactCenter = q[FIELD_MAP.center] as
-                    | [number, number]
-                    | undefined;
-                const center = compactCenter
-                    ? uncompactCoord(compactCenter[0], compactCenter[1])
-                    : ((
-                          payload.playArea as
-                              | { center?: [number, number] }
-                              | undefined
-                      )?.center ?? [0, 0]);
-                const compactCandidates = q[FIELD_MAP.candidates] as
-                    | z.infer<typeof compactCandidateSchema>[]
-                    | undefined;
-                return normalizeTransitLineQuestion({
-                    answer: resolvedAnswer,
-                    candidates:
-                        compactCandidates?.map(uncompactCandidate) ?? [],
-                    category:
-                        (q[FIELD_MAP.category] as
-                            | ReturnType<
-                                  typeof normalizeTransitLineQuestion
-                              >["category"]
-                            | undefined) ?? "transit-line",
-                    center,
-                    createdAt,
-                    id:
-                        (q[FIELD_MAP.id] as string | undefined) ??
-                        `q-imported-${index + 1}`,
-                    lineId:
-                        (q[FIELD_MAP.lineId] as string | null | undefined) ??
-                        null,
-                    lineName:
-                        (q[FIELD_MAP.lineName] as string | null | undefined) ??
-                        null,
-                    selectedOsmId:
-                        (q[FIELD_MAP.selectedOsmId] as
-                            | number
-                            | null
-                            | undefined) ?? null,
-                    selectedOsmType:
-                        (q[FIELD_MAP.selectedOsmType] as
-                            | "node"
-                            | "way"
-                            | "relation"
-                            | null
-                            | undefined) ?? null,
-                    targetName:
-                        (q[FIELD_MAP.targetName] as
-                            | string
-                            | null
-                            | undefined) ?? null,
-                    targetOsmId:
-                        (q[FIELD_MAP.targetOsmId] as
-                            | number
-                            | null
-                            | undefined) ?? null,
-                    targetOsmType:
-                        (q[FIELD_MAP.targetOsmType] as
-                            | "node"
-                            | "way"
-                            | "relation"
-                            | null
-                            | undefined) ?? null,
-                    type: "matching",
-                    updatedAt: createdAt,
-                });
-            }
-
-            const center = q[FIELD_MAP.center] as [number, number];
-            const [lon, lat] = uncompactCoord(center[0], center[1]);
-            return {
-                answer: resolvedAnswer,
-                center: [lon, lat],
+        const fallbackCenter = (
+            payload.playArea as { center?: [number, number] } | undefined
+        )?.center;
+        payload.questions = p[FIELD_MAP.questions]!.map((question, index) =>
+            unminifyQuestion(question, {
                 createdAt,
-                id:
-                    (q[FIELD_MAP.id] as string | undefined) ??
-                    `q-imported-${index + 1}`,
-                distanceMeters: q[FIELD_MAP.radiusMeters] as number,
-                distanceOption:
-                    (q[FIELD_MAP.radiusOption] as string | undefined) ??
-                    "other",
-                distanceUnit: "m",
-                type: "radar",
-                updatedAt: createdAt,
-            };
-        });
+                fallbackCenter,
+                index,
+            }),
+        );
     }
 
     full.payload = payload;

@@ -23,15 +23,8 @@ import {
     type PerfScenario,
 } from "../lib.mts";
 import { MemoryCacheStorage, ReplayCache } from "../models/replay-cache.mts";
-import {
-    cellIndex,
-    cellsForSearch,
-} from "../../src/features/questions/matching/osmMatchingGrid.ts";
-import {
-    clearOsmMatchingCellMemoryCache,
-    deduplicateFeatures,
-    findMatchingFeaturesWithCellCache,
-} from "../../src/features/questions/matching/osmMatchingCache.ts";
+import { defaultPlayArea } from "../../src/features/map/playArea.ts";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 type OverpassPayload = { elements?: unknown[] };
 
@@ -41,6 +34,9 @@ const outsideTokyoCenter: Position = [139.95, 35.681236];
 const tokyoBbox: [number, number, number, number] = [
     139.55, 35.5, 140.0, 35.85,
 ];
+const tokyoBoundary = defaultPlayArea.boundary as FeatureCollection<
+    Polygon | MultiPolygon
+>;
 
 const stationCapture = capture("matching/tokyo-stations-5km.json");
 const hospitalCapture = capture("matching/tokyo-hospitals-5km.json");
@@ -371,7 +367,11 @@ export const matchingScenarios: PerfScenario[] = [
         setup: clearVoronoiCache,
         run: () => ({
             metrics: { questions: matchingQuestions.length },
-            output: buildOsmMatchingRenderState(matchingQuestions, tokyoBbox),
+            output: buildOsmMatchingRenderState(
+                matchingQuestions,
+                tokyoBbox,
+                tokyoBoundary,
+            ),
         }),
         warmups: 1,
     },
@@ -382,7 +382,11 @@ export const matchingScenarios: PerfScenario[] = [
         name: "matching-geometry/10-questions-one-answer-edit",
         setup: () => {
             clearVoronoiCache();
-            buildOsmMatchingRenderState(matchingQuestions, tokyoBbox);
+            buildOsmMatchingRenderState(
+                matchingQuestions,
+                tokyoBbox,
+                tokyoBoundary,
+            );
         },
         run: () => ({
             metrics: {
@@ -396,129 +400,10 @@ export const matchingScenarios: PerfScenario[] = [
                         : question,
                 ),
                 tokyoBbox,
+                tokyoBoundary,
             ),
         }),
         warmups: 1,
-    },
-    // ─── matching-bbox-cell scenarios ───────────────────────────────────────
-    {
-        fixtureHash: fixtureHashFor(hospitalCapture),
-        group: "matching-bbox-cell",
-        iterations: 30,
-        name: "matching-bbox-cell/cells-for-search",
-        setup: clearOsmMatchingCellMemoryCache,
-        run: () => {
-            const cells = cellsForSearch(35.68, 139.76, 50_000);
-            return {
-                metrics: { cells: cells.length },
-                output: cells,
-            };
-        },
-        warmups: 5,
-    },
-    {
-        fixtureHash: fixtureHashFor(hospitalCapture),
-        group: "matching-bbox-cell",
-        iterations: 30,
-        name: "matching-bbox-cell/cell-index",
-        run: () => ({
-            metrics: { index: 1 },
-            output: cellIndex(35.681236, 139.767125),
-        }),
-        warmups: 5,
-    },
-    {
-        fixtureHash: fixtureHashFor(hospitalCapture),
-        group: "matching-bbox-cell",
-        iterations: 15,
-        name: "matching-bbox-cell/cache-hit-merge",
-        setup: clearOsmMatchingCellMemoryCache,
-        run: async () => {
-            const realFetch = globalThis.fetch;
-            const transport = installFixtureFetch(hospitalCapture);
-            try {
-                // Prime the cell cache.
-                await findMatchingFeaturesWithCellCache(
-                    "hospital",
-                    tokyoCenter,
-                    { requestedRadiusMeters: 5000 },
-                );
-                // Replace fetch with a noop so any unexpected network call
-                // throws and fails the scenario loudly.
-                globalThis.fetch = (() => {
-                    throw new Error("unexpected network call");
-                }) as unknown as typeof globalThis.fetch;
-                // Cache-hit: all cells cached, measure merge+filter time.
-                const result = await findMatchingFeaturesWithCellCache(
-                    "hospital",
-                    movedTokyoCenter,
-                    { requestedRadiusMeters: 5000 },
-                );
-                return {
-                    metrics: {
-                        candidates: result.candidates.length,
-                        networkIntents: transport.calls(),
-                    },
-                    output: result,
-                };
-            } finally {
-                globalThis.fetch = realFetch;
-            }
-        },
-        warmups: 3,
-    },
-    {
-        fixtureHash: fixtureHashFor(hospitalCapture),
-        group: "matching-bbox-cell",
-        iterations: 15,
-        name: "matching-bbox-cell/cache-partial-fetch",
-        setup: async () => {
-            clearOsmMatchingCellMemoryCache();
-            installFixtureFetch(hospitalCapture);
-            // Prime the cell cache with a small-radius search so that
-            // each measured run starts from a partially-warm state.
-            await findMatchingFeaturesWithCellCache("hospital", tokyoCenter, {
-                requestedRadiusMeters: 1000,
-            });
-        },
-        run: async () => {
-            const transport = installFixtureFetch(hospitalCapture);
-            // Perform a larger-radius search that needs extra cells.
-            const result = await findMatchingFeaturesWithCellCache(
-                "hospital",
-                tokyoCenter,
-                { requestedRadiusMeters: 50_000 },
-            );
-            return {
-                metrics: {
-                    candidates: result.candidates.length,
-                    networkIntents: transport.calls(),
-                    cachedCells: cellsForSearch(35.68, 139.76, 1000).length,
-                    neededCells: cellsForSearch(35.68, 139.76, 50_000).length,
-                },
-                output: result,
-            };
-        },
-        warmups: 3,
-    },
-    {
-        fixtureHash: fixtureHashFor(hospitalCapture),
-        group: "matching-bbox-cell",
-        iterations: 15,
-        name: "matching-bbox-cell/dedup-merge",
-        run: () => {
-            // Benchmark deduplication of overlapping cell results.
-            const features = hospitals.concat(hospitals.slice(0, 5));
-            const deduped = deduplicateFeatures(features);
-            return {
-                metrics: {
-                    input: features.length,
-                    output: deduped.length,
-                },
-                output: deduped,
-            };
-        },
-        warmups: 3,
     },
 ];
 

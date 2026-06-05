@@ -68,6 +68,7 @@ export const AppBottomSheet = forwardRef<
             index={SHEET_SNAP_INDEX.medium}
             snapPoints={snapPoints}
             enableDynamicSizing={false}
+            enableOverDrag={false}
             enablePanDownToClose
             handleIndicatorStyle={styles.handleIndicator}
             backgroundStyle={styles.sheetBackground}
@@ -93,7 +94,9 @@ export const AppBottomSheet = forwardRef<
 });
 
 function getRouteSnapIndex(route: SheetRouteName): number {
-    return route === "play-area" || route === "hiding-zone"
+    return route === "play-area" ||
+        route === "hiding-zone" ||
+        route === "matching"
         ? SHEET_SNAP_INDEX.large
         : SHEET_SNAP_INDEX.medium;
 }

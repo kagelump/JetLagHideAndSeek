@@ -1,7 +1,14 @@
+import simplify from "@turf/simplify";
+
 import tokyoBoundaryJson from "../../../assets/default-zones/tokyo.json";
 import tokyoMetadataJson from "../../../assets/default-zones/tokyo-metadata.json";
 
-import type { Bbox, GeoJsonFeatureCollection, Position } from "./geojsonTypes";
+import type {
+    Bbox,
+    GeoJsonFeature,
+    GeoJsonFeatureCollection,
+    Position,
+} from "./geojsonTypes";
 import type { PlayAreaMaskHole } from "./maskBuilder";
 
 export type DefaultPlayArea = {
@@ -22,11 +29,25 @@ export type PlayAreaCacheSource =
     | "memory"
     | "persisted";
 
+/** Tolerance for boundary simplification (~30 metres in degrees). */
+const BOUNDARY_SIMPLIFY_TOLERANCE = 0.0003;
+
 const tokyoBoundary = tokyoBoundaryJson as unknown as GeoJsonFeatureCollection;
 const tokyoMetadata = tokyoMetadataJson as unknown as {
     bbox: Bbox;
     center: Position;
     maskHoles: PlayAreaMaskHole[];
+};
+
+const simplifiedTokyoBoundary: GeoJsonFeatureCollection = {
+    ...tokyoBoundary,
+    features: tokyoBoundary.features.map(
+        (feature) =>
+            simplify(feature as unknown as Parameters<typeof simplify>[0], {
+                tolerance: BOUNDARY_SIMPLIFY_TOLERANCE,
+                highQuality: false,
+            }) as unknown as GeoJsonFeature,
+    ),
 };
 
 export function calculateBbox(boundary: GeoJsonFeatureCollection): Bbox {
@@ -63,10 +84,12 @@ export function calculateCenter([west, south, east, north]: Bbox): Position {
     return [(west + east) / 2, (south + north) / 2];
 }
 
+const simplifiedTokyoBbox = calculateBbox(simplifiedTokyoBoundary);
+
 export const defaultPlayArea: DefaultPlayArea = {
-    bbox: tokyoMetadata.bbox,
-    boundary: tokyoBoundary,
-    center: tokyoMetadata.center,
+    bbox: simplifiedTokyoBbox,
+    boundary: simplifiedTokyoBoundary,
+    center: calculateCenter(simplifiedTokyoBbox),
     label: "Tokyo 23 Wards",
     maskHoles: tokyoMetadata.maskHoles,
     osmId: 19631009,

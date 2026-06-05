@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        <meta
+            name="description"
+            content="Privacy Policy for Hide & Seek Mapper — a local-first Expo app for Jet Lag-style hide and seek."
+        />
+        <title>Privacy Policy — Hide &amp; Seek Mapper</title>
+        <style>
+            :root {
+                color-scheme: light;
+                --bg: #f5f7f4;
+                --ink: #17211b;
+                --muted: #657268;
+                --line: #d9dfd8;
+                --panel: #ffffff;
+                --soft: #ecf1eb;
+                --green: #176b4d;
+                --green-deep: #0f4f39;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                background:
+                    linear-gradient(
+                        180deg,
+                        rgba(255, 255, 255, 0.72),
+                        var(--bg)
+                    ),
+                    var(--bg);
+                color: var(--ink);
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                line-height: 1.6;
+                margin: 0;
+                min-height: 100vh;
+            }
+
+            a {
+                color: var(--green);
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+            .page {
+                margin: 0 auto;
+                max-width: 780px;
+                min-height: 100vh;
+                padding: 28px 22px 80px;
+            }
+
+            header {
+                align-items: center;
+                display: flex;
+                justify-content: space-between;
+                gap: 18px;
+                margin-bottom: 54px;
+            }
+
+            .brand {
+                align-items: center;
+                display: flex;
+                gap: 12px;
+                min-width: 0;
+            }
+
+            .brand img {
+                border-radius: 8px;
+                height: 42px;
+                width: 42px;
+            }
+
+            .brand span {
+                font-size: 16px;
+                font-weight: 800;
+                white-space: nowrap;
+            }
+
+            .github-link {
+                align-items: center;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                display: inline-flex;
+                font-size: 14px;
+                font-weight: 800;
+                gap: 8px;
+                min-height: 42px;
+                padding: 10px 14px;
+                color: var(--ink);
+            }
+
+            .github-link:hover {
+                text-decoration: none;
+            }
+
+            h1 {
+                font-size: clamp(32px, 6vw, 52px);
+                letter-spacing: 0;
+                line-height: 1.1;
+                margin: 0 0 12px;
+            }
+
+            .effective {
+                color: var(--muted);
+                font-size: 15px;
+                margin: 0 0 40px;
+            }
+
+            h2 {
+                font-size: 22px;
+                margin: 44px 0 14px;
+                padding-top: 4px;
+            }
+
+            p {
+                margin: 0 0 16px;
+            }
+
+            ul {
+                margin: 0 0 16px;
+                padding-left: 22px;
+            }
+
+            li {
+                margin-bottom: 8px;
+            }
+
+            hr {
+                border: none;
+                border-top: 1px solid var(--line);
+                margin: 48px 0 0;
+            }
+
+            .footer-note {
+                color: var(--muted);
+                font-size: 14px;
+                margin-top: 32px;
+            }
+
+            @media (max-width: 520px) {
+                header {
+                    align-items: flex-start;
+                    flex-direction: column;
+                }
+
+                .github-link {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page">
+            <header>
+                <a class="brand" href="/" aria-label="Hide & Seek Mapper home">
+                    <img src="/assets/icon.png" alt="" />
+                    <span>Hide &amp; Seek Mapper</span>
+                </a>
+                <a
+                    class="github-link"
+                    href="https://github.com/kagelump/JetLagHideAndSeek"
+                    >GitHub</a
+                >
+            </header>
+
+            <main>
+                <h1>Privacy Policy</h1>
+                <p class="effective">Effective: June 5, 2026</p>
+
+                <p>
+                    Hide &amp; Seek Mapper (&ldquo;the App&rdquo;) is a
+                    <strong>local-first</strong> mobile tool for planning and
+                    sharing setup for hide-and-seek games. This policy explains
+                    what data the App handles and how.
+                </p>
+
+                <h2>1. No Accounts or Sign-Up</h2>
+                <p>
+                    The App does not require an account, does not ask you to
+                    sign in, and does not collect or transmit any personal
+                    identifiers. There is no user registration of any kind.
+                </p>
+
+                <h2>2. No Analytics, No Crash Reporting, No Telemetry</h2>
+                <p>
+                    The App does not include any analytics SDKs, crash-reporting
+                    services, or telemetry frameworks. It does not track how you
+                    use the App, how often you use it, or what features you
+                    interact with. No usage data of any kind is collected or
+                    transmitted.
+                </p>
+
+                <h2>3. Data Stored on Your Device</h2>
+                <p>
+                    All game data lives <strong>entirely on your device</strong>
+                    in local storage (AsyncStorage and an on-device file cache).
+                    This includes:
+                </p>
+                <ul>
+                    <li>
+                        Your play-area choice (an OpenStreetMap relation ID and
+                        its label and boundary).
+                    </li>
+                    <li>
+                        Hiding-zone settings (radius in meters and selected
+                        transit presets).
+                    </li>
+                    <li>
+                        Questions and their answers (radar distances, matching
+                        candidates, answer states).
+                    </li>
+                    <li>
+                        Cached OpenStreetMap map data for faster offline
+                        searches.
+                    </li>
+                </ul>
+                <p>
+                    None of this data is uploaded to any server. You can clear
+                    it at any time by deleting the App from your device.
+                </p>
+
+                <h2>4. Location Data</h2>
+                <p>
+                    The App requests <strong>foreground-only</strong> location
+                    permission for two purposes:
+                </p>
+                <ul>
+                    <li>
+                        To show your current position on the map so you can see
+                        where you are relative to the play area.
+                    </li>
+                    <li>
+                        To set the center point when you create a radar or
+                        matching question.
+                    </li>
+                </ul>
+                <p>
+                    Your location is <strong>never stored</strong> in local
+                    storage, <strong>never transmitted</strong> to any external
+                    service (except as coordinates in the anonymized network
+                    requests described below), and
+                    <strong>never shared</strong> with third parties. The App
+                    does not collect or record your location history.
+                </p>
+
+                <h2>5. Network Requests</h2>
+                <p>
+                    The App makes network requests to the following services.
+                    None of these requests include a persistent device
+                    identifier, account ID, or personal information:
+                </p>
+
+                <h3>5.1. Photon Geocoding (photon.komoot.io)</h3>
+                <p>
+                    When you search for a play area by name, the App sends your
+                    search query text to the Photon geocoding API. No other data
+                    is included in the request.
+                </p>
+
+                <h3>5.2. Overpass API (overpass-api.de)</h3>
+                <p>
+                    When you select a play area or create a matching question,
+                    the App queries the Overpass API for OpenStreetMap data
+                    (boundary geometry and nearby points of interest). The
+                    request includes the OSM relation ID, or a latitude/
+                    longitude pair and a search radius — only enough to
+                    describe the area of the map you want to query. No
+                    persistent identifier or personal data is attached.
+                </p>
+
+                <h3>5.3. Offline Pack Manifest</h3>
+                <p>
+                    The App may fetch a manifest of available offline map-data
+                    packs from a content-delivery network. This request contains
+                    no user data.
+                </p>
+
+                <h2>6. Game-State Sharing</h2>
+                <p>
+                    The App includes a feature that lets you
+                    <strong>share</strong> your game setup (play area, hiding
+                    zones, and questions) with another player by generating a
+                    link or QR code. Sharing is always
+                    <strong>user-initiated</strong> — the App never transmits
+                    game state automatically.
+                </p>
+                <p>
+                    The shared data is encoded directly in the link itself. No
+                    copy of the link or its contents is stored on any server. A
+                    randomly generated game ID is included in the link only to
+                    help the recipient&rsquo;s device recognize a new game
+                    setup; it is not tied to any identity.
+                </p>
+
+                <h2>7. Third-Party Map Data</h2>
+                <p>
+                    The App ships with bundled map data from
+                    <strong>OpenStreetMap</strong> (&copy; OpenStreetMap
+                    contributors, licensed under the
+                    <a
+                        href="https://opendatacommons.org/licenses/odbl/"
+                        rel="noopener"
+                        >Open Database License</a
+                    >) and <strong>ODPT</strong> public transit data. This data
+                    is embedded in the app bundle; loading it does not involve
+                    any network request and does not transmit any information
+                    about you. Attribution for these data sources is available
+                    in the App&rsquo;s Settings screen.
+                </p>
+
+                <h2>8. Children&rsquo;s Privacy</h2>
+                <p>
+                    The App does not knowingly collect, store, or share personal
+                    information from anyone, including children under the age of
+                    13. Because the App collects no personal data at all, there
+                    is nothing to age-gate.
+                </p>
+
+                <h2>9. Changes to This Policy</h2>
+                <p>
+                    If this privacy policy changes, the updated version will be
+                    posted at this same URL with a new effective date. Because
+                    the App does not collect contact information, we cannot
+                    notify you individually of changes.
+                </p>
+
+                <h2>10. Contact</h2>
+                <p>
+                    If you have questions about this privacy policy, you can
+                    open an issue on the
+                    <a
+                        href="https://github.com/kagelump/JetLagHideAndSeek"
+                        rel="noopener"
+                        >project&rsquo;s GitHub repository</a
+                    >.
+                </p>
+
+                <hr />
+
+                <p class="footer-note">
+                    This policy covers Hide &amp; Seek Mapper, a mobile app
+                    distributed under the MIT License. The source code is
+                    available at
+                    <a
+                        href="https://github.com/kagelump/JetLagHideAndSeek"
+                        rel="noopener"
+                        >github.com/kagelump/JetLagHideAndSeek</a
+                    >.
+                </p>
+            </main>
+        </div>
+    </body>
+</html>

@@ -151,6 +151,7 @@ export const appStateQuestionsSchema = z.array(
 
 export const appStateQuestionSettingsSchema = z.object({
     activeQuestionId: z.string().nullable().default(null),
+    gameMode: z.enum(["hider", "seeker"]).default("seeker"),
     isPinLocked: z.boolean(),
     labelLanguage: z.enum(["native", "english"]).default("native"),
 });
@@ -213,6 +214,7 @@ export function createAppStateV1({
         },
         questionSettings: {
             activeQuestionId: questionSettings?.activeQuestionId ?? null,
+            gameMode: questionSettings?.gameMode ?? "seeker",
             isPinLocked: questionSettings?.isPinLocked ?? false,
             labelLanguage: questionSettings?.labelLanguage ?? "native",
         },
@@ -242,6 +244,7 @@ function addMissingV1Slices(value: unknown): unknown {
                 ? value.questionSettings
                 : {
                       activeQuestionId: null,
+                      gameMode: "seeker",
                       isPinLocked: false,
                       labelLanguage: "native",
                   },
@@ -316,6 +319,7 @@ export function appStateQuestionSettingsToImportState(
 ): QuestionSettingsImportState {
     return {
         activeQuestionId: questionSettings.activeQuestionId,
+        gameMode: questionSettings.gameMode,
         isPinLocked: questionSettings.isPinLocked,
         labelLanguage: questionSettings.labelLanguage,
     };

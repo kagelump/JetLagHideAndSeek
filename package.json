@@ -1,6 +1,6 @@
 {
     "name": "mobile_v2",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "main": "expo-router/entry",
     "scripts": {
         "start": "expo start",
@@ -51,6 +51,7 @@
         "@tanstack/react-query-persist-client": "^5.100.14",
         "@turf/circle": "^7.2.0",
         "@turf/helpers": "^7.2.0",
+        "@turf/simplify": "^7.3.5",
         "@turf/voronoi": "^7.3.5",
         "expo": "~54.0.34",
         "expo-crypto": "~15.0.9",

@@ -1,6 +1,26 @@
 import { buildAppStateEnvelope } from "@/sharing/export/buildEnvelope";
 import { buildImportLink } from "@/sharing/links/buildLink";
-import { parseImportLink } from "@/sharing/links/parseLink";
+import {
+    parseImportLink as parseImportLinkRaw,
+    type ParsedImportLink,
+} from "@/sharing/links/parseLink";
+import type { AppStateEnvelopeV1 } from "@/sharing/wire/schema";
+
+// These tests cover app-state links; narrow the widened WireEnvelope union
+// success branch back to AppStateEnvelopeV1 so existing assertions stay valid.
+type AppStateParsedLink =
+    | { envelope: AppStateEnvelopeV1; ok: true; source: "payload" }
+    | Extract<ParsedImportLink, { ok: false }>;
+
+function parseImportLink(url: string): AppStateParsedLink {
+    const parsed = parseImportLinkRaw(url);
+    if (parsed.ok && parsed.envelope.kind !== "app-state") {
+        throw new Error(
+            `Expected app-state envelope, got ${parsed.envelope.kind}`,
+        );
+    }
+    return parsed as AppStateParsedLink;
+}
 
 const envelope = buildAppStateEnvelope({
     gameId: "game-1",

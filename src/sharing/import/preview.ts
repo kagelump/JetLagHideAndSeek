@@ -1,4 +1,4 @@
-import type { AppStateEnvelopeV1, WireEnvelope } from "@/sharing/wire/schema";
+import type { AppStateEnvelopeV1 } from "@/sharing/wire/schema";
 
 export type ImportPreview = {
     detail: string;
@@ -7,7 +7,9 @@ export type ImportPreview = {
     title: string;
 };
 
-export function buildImportPreview(envelope: WireEnvelope): ImportPreview {
+export function buildImportPreview(
+    envelope: AppStateEnvelopeV1,
+): ImportPreview {
     return {
         detail: summarizeAppState(envelope),
         envelope,
