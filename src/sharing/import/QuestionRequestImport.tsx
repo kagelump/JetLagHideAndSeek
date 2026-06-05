@@ -18,12 +18,14 @@ type LocateStatus = "idle" | "locating" | "answered" | "denied" | "unavailable";
 
 type QuestionRequestImportProps = {
     envelope: QuestionRequestEnvelopeV1;
+    error?: string | null;
     onAddQuestion: () => void;
     onCancel: () => void;
 };
 
 export function QuestionRequestImport({
     envelope,
+    error,
     onAddQuestion,
     onCancel,
 }: QuestionRequestImportProps) {
@@ -40,6 +42,18 @@ export function QuestionRequestImport({
         shouldAnswer ? "locating" : "idle",
     );
 
+    // Guard against stale GPS responses overwriting a newer result after the
+    // envelope prop changes or Strict Mode double-fires the effect.
+    const generationRef = useRef(0);
+    const questionRef = useRef(question);
+    questionRef.current = question;
+
+    // Track the pending timeout so the effect cleanup can cancel it on unmount
+    // or envelope change — avoids a 15s timer leak.
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+        undefined,
+    );
+
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -49,23 +63,56 @@ export function QuestionRequestImport({
     }, []);
 
     const runLocate = useCallback(async () => {
-        if (question.type !== "radar") return;
+        const q = questionRef.current;
+        if (q.type !== "radar") return;
+        const gen = ++generationRef.current;
         setStatus("locating");
-        const result = await requestUserCoordinate();
-        if (!mountedRef.current) return;
+
+        const TIMEOUT_MS = 15_000;
+        const result = await Promise.race([
+            requestUserCoordinate(),
+            new Promise<Awaited<ReturnType<typeof requestUserCoordinate>>>(
+                (resolve) => {
+                    timeoutRef.current = setTimeout(
+                        () =>
+                            resolve({
+                                coordinate: null,
+                                status: "unavailable",
+                            }),
+                        TIMEOUT_MS,
+                    );
+                },
+            ),
+        ]);
+        if (timeoutRef.current !== undefined) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = undefined;
+        }
+
+        // Discard stale results: component unmounted, envelope changed, or
+        // a newer locate started (Strict Mode double-mount / prop change).
+        if (!mountedRef.current || generationRef.current !== gen) return;
+
         if (result.status === "granted") {
-            setAnswer(evaluateRadarAnswer(question, result.coordinate));
+            setAnswer(evaluateRadarAnswer(q, result.coordinate));
             setStatus("answered");
         } else if (result.status === "unavailable") {
             setStatus("unavailable");
         } else {
             setStatus("denied");
         }
-    }, [question]);
+    }, []);
 
     useEffect(() => {
         if (shouldAnswer) void runLocate();
-    }, [shouldAnswer, runLocate]);
+        return () => {
+            generationRef.current++; // invalidate in-flight request
+            if (timeoutRef.current !== undefined) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = undefined;
+            }
+        };
+    }, [shouldAnswer, runLocate, envelope]);
 
     return (
         <View style={styles.screen}>
@@ -117,6 +164,7 @@ export function QuestionRequestImport({
                         </Text>
                     </Pressable>
                 </View>
+                {error ? <Text style={styles.error}>{error}</Text> : null}
             </View>
         </View>
     );
@@ -155,8 +203,8 @@ function AnswerBlock({
     }
 
     return (
-        <View style={styles.answerCard}>
-            <Text style={styles.detail} testID="question-request-answer">
+        <View style={styles.answerCard} testID="question-request-answer">
+            <Text style={styles.detail}>
                 {status === "denied"
                     ? "Location permission is needed to answer this question."
                     : "Couldn't read your current location."}
@@ -209,6 +257,12 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         letterSpacing: 0,
         textTransform: "uppercase",
+    },
+    error: {
+        color: "#b42318",
+        fontSize: 14,
+        lineHeight: 20,
+        marginTop: 12,
     },
     panel: {
         backgroundColor: colors.panel,

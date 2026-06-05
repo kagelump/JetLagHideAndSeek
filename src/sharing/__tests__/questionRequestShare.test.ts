@@ -1,5 +1,6 @@
 import { buildQuestionRequestEnvelope } from "@/sharing/export/buildEnvelope";
 import { decodeEnvelopePayload, encodeEnvelope } from "@/sharing/wire/codec";
+import { questionWireSchema } from "@/sharing/wire/schema";
 import type { QuestionState } from "@/features/questions/questionTypes";
 
 function makeRadarQuestion(): QuestionState {
@@ -215,6 +216,87 @@ describe("question-request round-trip (encode ↔ decode)", () => {
         expect(question.type).toBe("matching");
         if (question.type === "matching") {
             expect(question.category).toBe("transit-line");
+        }
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Legacy "radius" type normalization
+// ---------------------------------------------------------------------------
+
+describe("legacy type:radius normalization", () => {
+    const legacyRadiusQuestion = {
+        center: [139.69171, 35.6895],
+        createdAt: "2026-06-05T00:00:00.000Z",
+        id: "q-legacy-1",
+        radiusMeters: 2000,
+        radiusOption: "2km" as const,
+        radiusUnit: "m" as const,
+        type: "radius" as const,
+        updatedAt: "2026-06-05T00:00:00.000Z",
+    };
+
+    it("normalizes legacy type:radius to type:radar through questionWireSchema", () => {
+        const parsed = questionWireSchema.parse(legacyRadiusQuestion);
+
+        expect(parsed.type).toBe("radar");
+        if (parsed.type === "radar") {
+            expect(parsed.distanceMeters).toBe(2000);
+            expect(parsed.distanceOption).toBe("2km");
+            expect(parsed.distanceUnit).toBe("m");
+            expect(parsed.center).toEqual([139.69171, 35.6895]);
+            expect(parsed.answer).toBe("unanswered");
+        }
+    });
+
+    it("round-trips a legacy type:radius through the encoded envelope path", () => {
+        // Simulate a legacy question arriving via an older share link. We
+        // construct the raw payload as it would appear in an older version's
+        // wire format, with the legacy question schema inside.
+        const envelope = {
+            kind: "question-request",
+            payload: {
+                createdAt: "2026-06-05T00:00:00.000Z",
+                question: legacyRadiusQuestion,
+                requestId: "r-legacy-test",
+            },
+            version: 1,
+        };
+
+        // Encode as if the older app version had built this envelope.
+        // Cast through unknown — the raw legacy object does not match the
+        // current TypeScript union, but Zod handles the normalization at runtime.
+        const encoded = encodeEnvelope(
+            envelope as unknown as Parameters<typeof encodeEnvelope>[0],
+        );
+
+        // Decode on "current" app — should normalize via Zod transform.
+        const result = decodeEnvelopePayload(encoded);
+        expect(result.ok).toBe(true);
+        if (!result.ok) throw new Error("expected ok");
+
+        expect(result.envelope.kind).toBe("question-request");
+        if (result.envelope.kind !== "question-request") {
+            throw new Error("expected question-request");
+        }
+
+        const { question } = result.envelope.payload;
+        expect(question.type).toBe("radar");
+        if (question.type === "radar") {
+            expect(question.distanceMeters).toBe(2000);
+            expect(question.distanceOption).toBe("2km");
+            expect(question.distanceUnit).toBe("m");
+            expect(question.answer).toBe("unanswered");
+        }
+    });
+
+    it("detects legacy type:radius in the question wire union", () => {
+        // The union places legacyRadiusQuestionSchema second. Verify it
+        // still catches type: "radius" rather than failing.
+        const result = questionWireSchema.safeParse(legacyRadiusQuestion);
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.type).toBe("radar");
         }
     });
 });

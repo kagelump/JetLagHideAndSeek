@@ -55,6 +55,7 @@ export function ImportScreen() {
         return (
             <QuestionRequestImport
                 envelope={parsed.envelope}
+                error={applyError}
                 onAddQuestion={applyEnvelope}
                 onCancel={cancel}
             />

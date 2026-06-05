@@ -360,9 +360,68 @@ describe("ImportScreen — question-request", () => {
             ).toBeTruthy();
         });
 
-        expect(screen.getByTestId("question-request-answer")).toHaveTextContent(
-            "Location permission is needed to answer this question.",
+        expect(
+            screen.getByText(
+                "Location permission is needed to answer this question.",
+            ),
+        ).toBeTruthy();
+    });
+
+    it('shows "unavailable" message when GPS is unavailable', async () => {
+        await persistAppState(
+            createAppStateV1({
+                hidingZones: {
+                    radiusMeters: 600,
+                    radiusUnit: "m",
+                    selectedPresetIds: [],
+                },
+                playArea: defaultPlayArea,
+                questionSettings: {
+                    activeQuestionId: null,
+                    gameMode: "hider",
+                    isPinLocked: false,
+                    labelLanguage: "native",
+                },
+            }),
         );
+
+        mockRequestUserCoordinate.mockImplementation(() =>
+            Promise.resolve({
+                coordinate: null as null,
+                status: "unavailable" as const,
+            }),
+        );
+
+        const envelope = buildQuestionRequestEnvelope({
+            now: new Date("2026-06-05T00:00:00.000Z"),
+            question: makeRadarQuestion(),
+        });
+        setImportPayload(envelope);
+
+        const screen = render(
+            <AppStateProviders>
+                <ImportScreen />
+                <StoreProbe />
+            </AppStateProviders>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId("question-request-import")).toBeTruthy();
+        });
+
+        await waitFor(() => {
+            expect(mockRequestUserCoordinate).toHaveBeenCalled();
+        });
+
+        await waitFor(() => {
+            expect(
+                screen.getByTestId("question-request-retry-button"),
+            ).toBeTruthy();
+        });
+
+        expect(
+            screen.getByText("Couldn't read your current location."),
+        ).toBeTruthy();
     });
 
     // -- Hider mode + matching → add-only (no GPS) -------------------------
@@ -405,6 +464,85 @@ describe("ImportScreen — question-request", () => {
         // Matching questions are never auto-answered — add button always shown.
         expect(screen.getByTestId("question-request-add-button")).toBeTruthy();
         expect(mockRequestUserCoordinate).not.toHaveBeenCalled();
+    });
+
+    it("does not update state if component unmounts during GPS", async () => {
+        await persistAppState(
+            createAppStateV1({
+                hidingZones: {
+                    radiusMeters: 600,
+                    radiusUnit: "m",
+                    selectedPresetIds: [],
+                },
+                playArea: defaultPlayArea,
+                questionSettings: {
+                    activeQuestionId: null,
+                    gameMode: "hider",
+                    isPinLocked: false,
+                    labelLanguage: "native",
+                },
+            }),
+        );
+
+        // Deferred promise — GPS never resolves until we say so.
+        let resolveGps!: (
+            value: Awaited<ReturnType<typeof mockRequestUserCoordinate>>,
+        ) => void;
+        const gpsPromise = new Promise<
+            Awaited<ReturnType<typeof mockRequestUserCoordinate>>
+        >((resolve) => {
+            resolveGps = resolve;
+        });
+        mockRequestUserCoordinate.mockImplementation(() => gpsPromise);
+
+        const envelope = buildQuestionRequestEnvelope({
+            now: new Date("2026-06-05T00:00:00.000Z"),
+            question: makeRadarQuestion(),
+        });
+        setImportPayload(envelope);
+
+        const screen = render(
+            <AppStateProviders>
+                <ImportScreen />
+                <StoreProbe />
+            </AppStateProviders>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId("question-request-import")).toBeTruthy();
+        });
+
+        // GPS should have been requested, but not yet resolved.
+        await waitFor(() => {
+            expect(mockRequestUserCoordinate).toHaveBeenCalled();
+        });
+
+        // Unmount the component while GPS is in-flight.
+        screen.unmount();
+
+        // Spy on console.error to verify no "unmounted component" warning.
+        const consoleErrorSpy = jest
+            .spyOn(console, "error")
+            .mockImplementation(() => {});
+
+        await act(async () => {
+            resolveGps({
+                coordinate: [139.692, 35.69] as [number, number],
+                status: "granted" as const,
+            });
+            // Let microtasks flush.
+            await new Promise((r) => setTimeout(r, 0));
+        });
+
+        // No "unmounted component" React warning should have been logged.
+        const unmountWarning = consoleErrorSpy.mock.calls.find((call) =>
+            call.some(
+                (arg) => typeof arg === "string" && arg.includes("unmounted"),
+            ),
+        );
+        expect(unmountWarning).toBeUndefined();
+
+        consoleErrorSpy.mockRestore();
     });
 
     // -- Return to Map -----------------------------------------------------
