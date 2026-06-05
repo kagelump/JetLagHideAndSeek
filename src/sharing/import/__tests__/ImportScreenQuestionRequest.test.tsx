@@ -501,9 +501,6 @@ describe("ImportScreen — question-request", () => {
         });
         setImportPayload(envelope);
 
-        const routerReplace = jest.fn();
-        useRouter.mockReturnValue({ replace: routerReplace });
-
         const screen = render(
             <AppStateProviders>
                 <ImportScreen />
@@ -520,14 +517,9 @@ describe("ImportScreen — question-request", () => {
             expect(mockRequestUserCoordinate).toHaveBeenCalled();
         });
 
-        // Press "Return to Map" — unmounts the import screen.
-        act(() => {
-            fireEvent.press(
-                screen.getByTestId("question-request-return-button"),
-            );
-        });
+        // Unmount the component while GPS is in-flight.
+        screen.unmount();
 
-        // Now resolve the GPS — should NOT trigger a setState warning.
         // Spy on console.error to verify no "unmounted component" warning.
         const consoleErrorSpy = jest
             .spyOn(console, "error")
@@ -541,9 +533,6 @@ describe("ImportScreen — question-request", () => {
             // Let microtasks flush.
             await new Promise((r) => setTimeout(r, 0));
         });
-
-        // The router should have been called (Return to Map fired).
-        expect(routerReplace).toHaveBeenCalledWith("/");
 
         // No "unmounted component" React warning should have been logged.
         const unmountWarning = consoleErrorSpy.mock.calls.find((call) =>

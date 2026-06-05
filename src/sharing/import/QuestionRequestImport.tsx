@@ -48,6 +48,12 @@ export function QuestionRequestImport({
     const questionRef = useRef(question);
     questionRef.current = question;
 
+    // Track the pending timeout so the effect cleanup can cancel it on unmount
+    // or envelope change — avoids a 15s timer leak.
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+        undefined,
+    );
+
     const mountedRef = useRef(true);
     useEffect(() => {
         mountedRef.current = true;
@@ -63,12 +69,11 @@ export function QuestionRequestImport({
         setStatus("locating");
 
         const TIMEOUT_MS = 15_000;
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const result = await Promise.race([
             requestUserCoordinate(),
             new Promise<Awaited<ReturnType<typeof requestUserCoordinate>>>(
                 (resolve) => {
-                    timeoutId = setTimeout(
+                    timeoutRef.current = setTimeout(
                         () =>
                             resolve({
                                 coordinate: null,
@@ -79,7 +84,10 @@ export function QuestionRequestImport({
                 },
             ),
         ]);
-        if (timeoutId !== undefined) clearTimeout(timeoutId);
+        if (timeoutRef.current !== undefined) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = undefined;
+        }
 
         // Discard stale results: component unmounted, envelope changed, or
         // a newer locate started (Strict Mode double-mount / prop change).
@@ -99,8 +107,12 @@ export function QuestionRequestImport({
         if (shouldAnswer) void runLocate();
         return () => {
             generationRef.current++; // invalidate in-flight request
+            if (timeoutRef.current !== undefined) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = undefined;
+            }
         };
-    }, [shouldAnswer, runLocate]);
+    }, [shouldAnswer, runLocate, envelope]);
 
     return (
         <View style={styles.screen}>

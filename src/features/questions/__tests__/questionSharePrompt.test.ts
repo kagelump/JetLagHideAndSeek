@@ -68,8 +68,11 @@ describe("buildQuestionSharePrompt", () => {
             }),
         );
         // 1609 meters ≈ 1 mile. fromMeters formats based on unit.
-        expect(prompt).toContain("mi");
-        expect(prompt).not.toContain("1609m");
+        // The exact value depends on fromMeters formatting, but must be a
+        // numeric value followed by "mi" — never the raw meter value.
+        expect(prompt).toMatch(
+            /Are you within \d+(\.\d+)?mi of \(35\.68950, 139\.69171\)\?/,
+        );
     });
 
     it("formats radar coordinates to 5 decimal places", () => {

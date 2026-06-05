@@ -25,7 +25,11 @@ export function ShareQuestionButton({ question }: { question: QuestionState }) {
         } catch (err) {
             // Android throws { dismissedAction: true } on dismissal. iOS rejects
             // with an error when no share target is available. Both are expected.
-            if (err && typeof err === "object" && "dismissedAction" in err) {
+            if (
+                err &&
+                typeof err === "object" &&
+                Object.prototype.hasOwnProperty.call(err, "dismissedAction")
+            ) {
                 return; // user dismissed — no-op
             }
             // Unexpected error — log it so we can debug.
