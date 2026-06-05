@@ -88,10 +88,10 @@ The Tentacles `hitMaskFeatures` / `missMaskFeatures` feed the existing
 - Replace the Task 01 stub `TentaclesQuestionDetailScreen.tsx`.
 - `useTentaclesSearch.ts` (new).
 - `NativeMap.tsx` (add `TentaclesRadiusLayer`).
-- Selection helper in `questionStore.tsx`:
-  `selectTentaclesPoi(question, { osmId, osmType, name })` →
-  sets the three selected fields + `answer: "positive"`, bumps `updatedAt`; and
-  `resetTentaclesAnswer(question)` → clears them + `answer: "unanswered"`.
+- Selection helpers `selectTentaclesPoi` / `resetTentaclesAnswer` are **already
+  defined in Task 02** (they own the single-writer / anti-drift contract). This
+  task only *calls* them from the candidate list and Reset button — do not write
+  the Tentacles `answer` field directly anywhere in the UI.
 
 ## Test plan (write first)
 
@@ -105,9 +105,9 @@ The Tentacles `hitMaskFeatures` / `missMaskFeatures` feed the existing
   `getQuestionAnswerStatus` reports `"answered"`.
 - Reset clears selection and `answer` returns to `"unanswered"`.
 
-### `src/state/__tests__/questionStore.test.tsx` (extend)
-
-- `selectTentaclesPoi` / `resetTentaclesAnswer` behave as specified.
+> `selectTentaclesPoi` / `resetTentaclesAnswer` and their anti-drift invariant
+> are unit-tested in Task 02 (where they're defined). This screen test only needs
+> to verify the screen calls them on tap / Reset.
 
 ### Maestro (optional)
 
