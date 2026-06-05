@@ -58,7 +58,6 @@ export type RadarQuestion = BaseQuestion & {
 };
 
 export type RadarQuestionFeatureProperties = {
-    answer: QuestionAnswer;
     distanceMeters: number;
     id: string;
 };

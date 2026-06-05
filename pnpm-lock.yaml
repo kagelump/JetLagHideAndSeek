@@ -31,6 +31,9 @@ importers:
             "@turf/helpers":
                 specifier: ^7.2.0
                 version: 7.3.5
+            "@turf/simplify":
+                specifier: ^7.3.5
+                version: 7.3.5
             "@turf/voronoi":
                 specifier: ^7.3.5
                 version: 7.3.5
@@ -2516,10 +2519,22 @@ packages:
             }
         engines: { node: ">= 10" }
 
+    "@turf/boolean-point-on-line@7.3.5":
+        resolution:
+            {
+                integrity: sha512-TuWfrAT63W43BDzgYc94UzQ5/PjF1aTnh4AIzmQwez1YnimShYcOTwo8OIHzDaB6gbbvFsfxYMuOA5JOp942Kg==,
+            }
+
     "@turf/circle@7.2.0":
         resolution:
             {
                 integrity: sha512-1AbqBYtXhstrHmnW6jhLwsv7TtmT0mW58Hvl1uZXEDM1NCVXIR50yDipIeQPjrCuJ/Zdg/91gU8+4GuDCAxBGA==,
+            }
+
+    "@turf/clean-coords@7.3.5":
+        resolution:
+            {
+                integrity: sha512-e0ZTqVWiQaCI/b8EFb+HAS8lCDomWafAKxQuIv0IYks0GwOlVTDWTwsY2RX2685j2Y+QssqOsyHsPZCtAjc3YQ==,
             }
 
     "@turf/clone@7.3.5":
@@ -2570,10 +2585,22 @@ packages:
                 integrity: sha512-igzTdHsQc8TV1RhPuOLVo74Px/hyPrVgVOTgjWQZzt3J9BVseCdpfY/0cJBdlSRI4S/yTmmHl7gAqjhpYH5Yaw==,
             }
 
+    "@turf/meta@7.3.5":
+        resolution:
+            {
+                integrity: sha512-r+ohqxoyqeigFB0oFrQx/YEHIkOKqcKpCjvZkvZs7Tkv+IFco5MezAd2zd4rzK+0DfFgDP3KpJc7HqrYjvEjhg==,
+            }
+
     "@turf/nearest-point-on-line@7.2.0":
         resolution:
             {
                 integrity: sha512-UOhAeoDPVewBQV+PWg1YTMQcYpJsIqfW5+EuZ5vJl60XwUa0+kqB/eVfSLNXmHENjKKIlEt9Oy9HIDF4VeWmXA==,
+            }
+
+    "@turf/simplify@7.3.5":
+        resolution:
+            {
+                integrity: sha512-9wzxlRA+0yNALeqyXNHFgj+8ebsg2aKdMrWRiSMS+ZqbiknZ/mCARiDYqM2Qz8TgTqdrNt53ze4o1vS6WeJrJw==,
             }
 
     "@turf/voronoi@7.3.5":
@@ -11044,10 +11071,25 @@ snapshots:
 
     "@tootallnate/once@2.0.1": {}
 
+    "@turf/boolean-point-on-line@7.3.5":
+        dependencies:
+            "@turf/helpers": 7.3.5
+            "@turf/invariant": 7.3.5
+            "@types/geojson": 7946.0.16
+            tslib: 2.8.1
+
     "@turf/circle@7.2.0":
         dependencies:
             "@turf/destination": 7.2.0
             "@turf/helpers": 7.3.5
+            "@types/geojson": 7946.0.16
+            tslib: 2.8.1
+
+    "@turf/clean-coords@7.3.5":
+        dependencies:
+            "@turf/boolean-point-on-line": 7.3.5
+            "@turf/helpers": 7.3.5
+            "@turf/invariant": 7.3.5
             "@types/geojson": 7946.0.16
             tslib: 2.8.1
 
@@ -11101,12 +11143,27 @@ snapshots:
             "@turf/helpers": 7.3.5
             "@types/geojson": 7946.0.16
 
+    "@turf/meta@7.3.5":
+        dependencies:
+            "@turf/helpers": 7.3.5
+            "@types/geojson": 7946.0.16
+            tslib: 2.8.1
+
     "@turf/nearest-point-on-line@7.2.0":
         dependencies:
             "@turf/distance": 7.2.0
             "@turf/helpers": 7.3.5
             "@turf/invariant": 7.2.0
             "@turf/meta": 7.2.0
+            "@types/geojson": 7946.0.16
+            tslib: 2.8.1
+
+    "@turf/simplify@7.3.5":
+        dependencies:
+            "@turf/clean-coords": 7.3.5
+            "@turf/clone": 7.3.5
+            "@turf/helpers": 7.3.5
+            "@turf/meta": 7.3.5
             "@types/geojson": 7946.0.16
             tslib: 2.8.1
 
