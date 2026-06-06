@@ -77,7 +77,10 @@ export function QuestionDetailScreen({
                         updateQuestion={updateQuestion}
                     />
                 ) : activeQuestion.type === "tentacles" ? (
-                    <TentaclesQuestionDetailScreen />
+                    <TentaclesQuestionDetailScreen
+                        question={activeQuestion}
+                        updateQuestion={updateQuestion}
+                    />
                 ) : (
                     <>
                         <Text style={styles.emptyDetail}>

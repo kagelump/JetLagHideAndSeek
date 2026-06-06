@@ -45,6 +45,7 @@ import {
 } from "./PlayAreaMaskLayers";
 import { MeasuringLayers } from "./MeasuringLayers";
 import { RadarQuestionLayers } from "./RadarQuestionLayers";
+import { TentaclesRadiusLayer } from "./TentaclesRadiusLayer";
 import { ThermometerPreviewLayer } from "./ThermometerPreviewLayer";
 import { usePinDrag } from "./usePinDrag";
 import { useUserLocation } from "./useUserLocation";
@@ -121,11 +122,17 @@ export function NativeMap({
                 ...asSeparateMaskConstraints(
                     questionMapRenderState.thermometer.hitMaskFeatures,
                 ),
+                ...asSeparateMaskConstraints(
+                    questionMapRenderState.tentacles.hitMaskFeatures,
+                ),
             ],
             [
                 questionMapRenderState.radar.missMaskFeatures,
                 questionMapRenderState.transitLine.missMaskFeatures,
                 questionMapRenderState.osmMatching.missMaskFeatures,
+                ...asSeparateMaskConstraints(
+                    questionMapRenderState.tentacles.missMaskFeatures,
+                ),
             ],
         );
     }, [
@@ -138,6 +145,8 @@ export function NativeMap({
         questionMapRenderState.osmMatching.hitMaskFeatures,
         questionMapRenderState.osmMatching.missMaskFeatures,
         questionMapRenderState.thermometer.hitMaskFeatures,
+        questionMapRenderState.tentacles.hitMaskFeatures,
+        questionMapRenderState.tentacles.missMaskFeatures,
     ]);
     const mapStyle = useMemo(() => buildOsmRasterStyleJson(), []);
     const fitPadding = useMemo(
@@ -224,6 +233,10 @@ export function NativeMap({
                     />
                     <ThermometerPreviewLayer
                         thermometer={questionMapRenderState.thermometer}
+                        visible={isQuestionDetailRoute}
+                    />
+                    <TentaclesRadiusLayer
+                        tentacles={questionMapRenderState.tentacles}
                         visible={isQuestionDetailRoute}
                     />
 

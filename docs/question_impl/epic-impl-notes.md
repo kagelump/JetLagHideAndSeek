@@ -883,3 +883,157 @@ position)`.
   half of the detail screen (category picker, map layers, search integration)
   using `useQuestionActions` for write-back, with stable testIDs for both Jest
   and Maestro.
+
+---
+
+## Task 10 — Tentacles Geometry
+
+**Completed:** 2026-06-07
+
+### What was done
+
+Implemented Tentacles Voronoi geometry: radius-circle clipping of Voronoi cells
+plus play-area-clipped outlines. The key reuse insight from the task spec —
+clipping to the radius circle via the existing `clipCellsToPlayArea` — saved
+writing any new polyclip code.
+
+### Files created (3)
+
+| File                                                                   | Purpose                                                                                                          |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `src/features/questions/tentacles/tentaclesCategories.ts`              | 8 category configs (4× 2km, 4× 25km) with OSM query tags reused from matching selectors                          |
+| `src/features/questions/tentacles/tentaclesGeometry.ts`                | `buildTentaclesRenderState` — radius-clipped Voronoi for hit/miss masks, play-area-clipped outlines, LRU caching |
+| `src/features/questions/tentacles/__tests__/tentaclesGeometry.test.ts` | 11 tests: hit/miss masks, radius clipping, poi features, empty candidates, caching                               |
+
+### Files modified (1)
+
+| File                                         | Change                                                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `src/features/questions/questionGeometry.ts` | Replaced `EMPTY_TENTACLES_RENDER_STATE` with `buildTentaclesRenderState`, wired tentacles voronoi outlines into aggregate |
+
+### Deviations from the task spec
+
+**`@turf/helpers` not imported.** The task doc shows `import { point } from "@turf/helpers"` in the algorithm pseudocode, but `computeVoronoiCells` already handles point construction internally.
+
+**No `@turf/helpers` added to geometry.** Manual GeoJSON construction used for
+poiFeatures and radius circle wrapping, consistent with the measuring and
+thermometer geometry patterns.
+
+**`candidateIdentitySnapshot` mirrors `computeVoronoiCells` cache key layout.**
+The task spec didn't specify the cache key format; followed the existing
+`matchingVoronoi.ts` pattern with 7-decimal rounding.
+
+### Gotchas
+
+1. **`clipCellsToPlayArea` uses object-identity cache keys.** The radius boundary
+   `FeatureCollection` is created fresh per call (`{ features: [radiusCircle] }`),
+   so the internal `clipCellsToPlayArea` cache never hits for the radius clipping
+   step. This is intentional — `buildSingleTentaclesRenderState` caches the full
+   render state at the outer level, so the inner cache misses are absorbed.
+
+2. **`TentaclesQuestion.candidates` widened to include `distanceMeters`.** The
+   original type was `OsmFeature[]` (Task 01), but the detail screen (Task 11)
+   needs distance on each candidate for sorting/display. Changed to
+   `(OsmFeature & { distanceMeters?: number })[]` matching
+   `MatchingQuestion.candidates`.
+
+### Design decisions
+
+- **Hit/miss masks from radius-clipped cells, outlines from play-area-clipped
+  cells.** This mirrors Matching's pattern (masks from raw cells, outlines
+  clipped to play area) but with the radius constraint on masks — the essential
+  difference that makes Tentacles a radius-bounded Voronoi.
+
+- **`osmKey` filter instead of `buildOsmMatchingHitMask`.** The task spec
+  explicitly calls out that `buildOsmMatchingHitMask`'s
+  `FeatureCollection<Polygon>`-only signature doesn't accept the
+  `Polygon | MultiPolygon` clipped cells. Direct `.filter()` on `osmKey` is
+  simpler and avoids a type cast.
+
+---
+
+## Task 11 — Tentacles UI
+
+**Completed:** 2026-06-07
+
+### What was done
+
+Built the full Tentacles detail screen, search hook, radius map layer, and
+wired everything into NativeMap and the dispatch. Replaces the Task 01 stub.
+
+### Files created (4)
+
+| File                                                                                | Purpose                                                                                                   |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `src/features/questions/tentacles/useTentaclesSearch.ts`                            | Search hook: delegates to `useMatchingSearch` for 7 OSM categories, station-point lookup for transit-line |
+| `src/features/map/TentaclesRadiusLayer.tsx`                                         | Dashed orange radius outline (`#FF8C00`, width 2, dash [4,2])                                             |
+| `src/features/questions/tentacles/__tests__/TentaclesQuestionDetailScreen.test.tsx` | 9 tests: category picker, candidates, selection, reset, no QuestionAnswerSelector                         |
+
+### Files modified (4)
+
+| File                                                                 | Change                                                                                                                                   |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/features/questions/tentacles/TentaclesQuestionDetailScreen.tsx` | Full rewrite: category picker (sectioned by 2km/25km), position selector, auto-search, candidate list as answer affordance, Reset button |
+| `src/features/questions/QuestionDetailScreen.tsx`                    | Pass `question` and `updateQuestion` props to `TentaclesQuestionDetailScreen`                                                            |
+| `src/features/map/NativeMap.tsx`                                     | Added `TentaclesRadiusLayer`, wired tentacles hit/miss masks into `combinedInsideMask`                                                   |
+| `src/features/questions/tentacles/tentaclesTypes.ts`                 | Widened `candidates` type to `(OsmFeature & { distanceMeters?: number })[]`                                                              |
+
+### Deviations from the task spec
+
+**No `e2e/tentacles-question.yaml` created.** The task spec marks Maestro as
+optional when Thermometer (Task 09) is already the smoke type. Since the
+Thermometer smoke flow covers the new-map-layer interaction path, a separate
+Tentacles flow is deferred.
+
+**`transit-line` uses sequential numeric osmIds.** Transit stations come from
+GTFS data (string IDs), not OSM. The search hook assigns sequential `1, 2, 3...`
+osmIds after deduplication. This works for Voronoi cell identification but means
+the IDs are not meaningful outside the current search session.
+
+### Gotchas
+
+1. **Double-search race condition found and fixed.** The initial implementation
+   had the search effect depending on BOTH `searchGeneration` AND center/category
+   coordinates. When center changed, the trigger effect incremented generation
+   AND the search effect fired directly (from the coordinate dep), causing two
+   searches. Fixed by narrowing the search effect's deps to only
+   `[searchGeneration]` — one search per center/category change.
+
+2. **`addImportedQuestion` normalization re-derives answer for poi-model
+   questions.** Seeding a pre-selected question in tests (with `selectedOsmId`
+   set) worked for geometry tests but failed in UI tests because
+   `normalizeQuestionState` re-derives `answer` from `selectedOsmId`. The test
+   pattern of tapping a candidate first (rather than importing a pre-selected
+   question) avoids this edge case.
+
+3. **Dual-effect search pattern mirrors `useMeasuringSearch`.** The
+   counter-based trigger effect (`setSearchGeneration(g => g + 1)`) + search
+   effect (depends on generation) is the same two-phase pattern used in
+   measuring's search hook, adapted for the simpler tentacles search contract.
+
+### Design decisions
+
+- **`useTentaclesSearch` delegates to `useMatchingSearch`** for OSM-backed
+  categories rather than duplicating the progressive search logic. Only
+  transit-line has a custom station-point lookup path.
+
+- **Category picker is sectioned by distance group** (2km / 25km) matching the
+  task spec mockup. Distance labels are section headers; categories are grid
+  buttons within each section.
+
+- **No `QuestionAnswerSelector`.** This is a POI-answer-model question. The
+  candidate list IS the answer control — tapping a candidate calls
+  `selectTentaclesPoi`, which atomically sets all three selected fields and
+  derives `answer: "positive"`. Reset calls `resetTentaclesAnswer`, which
+  atomically clears all three and sets `answer: "unanswered"`. No UI code
+  writes `answer` directly.
+
+- **`TentaclesRadiusLayer` placed between `ThermometerPreviewLayer` and
+  `MLUserLocation`** in NativeMap's JSX tree, maintaining the shapes-before-markers
+  ordering rule from AGENTS.md.
+
+### For the next task
+
+- All five question types (radar, matching, measuring, thermometer, tentacles)
+  now have working detail screens and map layers. Future work should focus on
+  the question list experience, lock/edit workflows, and end-to-end game flow.

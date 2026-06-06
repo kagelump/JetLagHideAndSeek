@@ -55,7 +55,7 @@ export type TentaclesQuestion = BaseQuestion & {
      * meaningful "negative". See Task 02 (answer model).
      */
     answer: "unanswered" | "positive";
-    candidates: OsmFeature[];
+    candidates: (OsmFeature & { distanceMeters?: number })[];
     category: TentaclesCategory;
     /** Seeker's position – center of the radius search. */
     center: Position;
