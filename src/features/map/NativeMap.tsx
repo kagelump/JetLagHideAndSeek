@@ -17,7 +17,7 @@ import { colors } from "@/theme/colors";
 
 import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { useMarkAppMapReady } from "@/state/AppStateProviders";
-import { useIsPinLocked, useQuestionDerived } from "@/state/questionStore";
+import { useQuestionDerived } from "@/state/questionStore";
 import { usePlayArea } from "@/state/playAreaStore";
 import type { Position } from "@/shared/geojson";
 import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
@@ -77,7 +77,6 @@ export function NativeMap({
     const { routeFeatures, stationFeatures, zoneFeatures } =
         useHidingZoneDerived();
     const { activeQuestion } = useQuestionDerived();
-    const isPinLocked = useIsPinLocked();
     const markAppMapReady = useMarkAppMapReady();
     const questionMapRenderState = useQuestionMapRenderState();
     const { playArea } = usePlayArea();
@@ -156,7 +155,9 @@ export function NativeMap({
         isQuestionDetailRoute && activeQuestionCenter,
     );
     const canMoveActivePin = Boolean(
-        isQuestionDetailRoute && !isPinLocked && activeQuestionCenter,
+        isQuestionDetailRoute &&
+            !(activeQuestion?.isLocked ?? false) &&
+            activeQuestionCenter,
     );
     const movableActiveQuestion = activeQuestionCenter ? activeQuestion : null;
 

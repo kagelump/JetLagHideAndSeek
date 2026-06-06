@@ -15,6 +15,7 @@ function makeRadarQuestion(
         distanceOption: "500m",
         distanceUnit: "m",
         id: "radar-1",
+        isLocked: false,
         type: "radar",
         updatedAt: "2026-05-18T00:00:00.000Z",
     };
