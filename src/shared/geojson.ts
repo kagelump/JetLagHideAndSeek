@@ -90,3 +90,41 @@ export function haversineDistanceMeters(
 function toRadians(value: number): number {
     return (value * Math.PI) / 180;
 }
+
+// ---------------------------------------------------------------------------
+// Position offset
+// ---------------------------------------------------------------------------
+
+/**
+ * Offset a WGS-84 position by a distance and bearing using the haversine formula.
+ * @param position — [longitude, latitude]
+ * @param distanceMeters — distance to travel
+ * @param bearingDegrees — bearing in degrees clockwise from north
+ * @returns new [longitude, latitude]
+ */
+export function offsetPosition(
+    position: Position,
+    distanceMeters: number,
+    bearingDegrees: number,
+): Position {
+    const [lon, lat] = position;
+    const R = 6371000; // Earth's radius in meters
+    const d = distanceMeters / R;
+    const bearing = (bearingDegrees * Math.PI) / 180;
+
+    const lat1 = (lat * Math.PI) / 180;
+    const lon1 = (lon * Math.PI) / 180;
+
+    const lat2 = Math.asin(
+        Math.sin(lat1) * Math.cos(d) +
+            Math.cos(lat1) * Math.sin(d) * Math.cos(bearing),
+    );
+    const lon2 =
+        lon1 +
+        Math.atan2(
+            Math.sin(bearing) * Math.sin(d) * Math.cos(lat1),
+            Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
+        );
+
+    return [(lon2 * 180) / Math.PI, (lat2 * 180) / Math.PI];
+}

@@ -1,4 +1,8 @@
-import { bboxIntersects, haversineDistanceMeters } from "../geojson";
+import {
+    bboxIntersects,
+    haversineDistanceMeters,
+    offsetPosition,
+} from "../geojson";
 
 describe("bboxIntersects", () => {
     it("returns true when bboxes overlap", () => {
@@ -30,5 +34,14 @@ describe("haversineDistanceMeters", () => {
         const d1 = haversineDistanceMeters(35.0, 139.0, 36.0, 140.0);
         const d2 = haversineDistanceMeters(36.0, 140.0, 35.0, 139.0);
         expect(d1).toBeCloseTo(d2, 6);
+    });
+});
+
+describe("offsetPosition", () => {
+    it("offsets ~2km east from Tokyo", () => {
+        const tokyo: [number, number] = [139.6917, 35.6895];
+        const result = offsetPosition(tokyo, 2000, 90);
+        expect(result[0]).toBeGreaterThan(tokyo[0]);
+        expect(result[1]).toBeCloseTo(tokyo[1], 3);
     });
 });
