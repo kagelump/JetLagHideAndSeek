@@ -12,7 +12,10 @@ import type {
     BaseQuestion,
     QuestionAnswer,
 } from "@/features/questions/coreTypes";
+import type { MeasuringRenderState } from "@/features/questions/measuring/measuringTypes";
 import type { OsmMatchingRenderState } from "@/features/questions/matching/matchingTypes";
+import type { TentaclesRenderState } from "@/features/questions/tentacles/tentaclesTypes";
+import type { ThermometerRenderState } from "@/features/questions/thermometer/thermometerTypes";
 import type { TransitLineQuestionFeatureCollection } from "@/features/questions/transitLine/transitLineTypes";
 import type { DistanceUnit } from "@/shared/distanceUnits";
 
@@ -81,9 +84,12 @@ export type RadarQuestionRenderState = {
 };
 
 export type QuestionMapRenderState = {
+    measuring: MeasuringRenderState;
     osmMatching: OsmMatchingRenderState;
     radar: RadarQuestionRenderState;
     radarAreaFeatures: RadarQuestionFeatureCollection;
+    tentacles: TentaclesRenderState;
+    thermometer: ThermometerRenderState;
     transitLine: {
         hitMaskFeatures: TransitLineQuestionFeatureCollection;
         missMaskFeatures: TransitLineQuestionFeatureCollection;

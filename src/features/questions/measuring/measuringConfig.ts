@@ -1,21 +1,24 @@
 import type { QuestionDefinition } from "@/features/questions/questionRegistry";
+import type { QuestionState } from "@/features/questions/questionTypes";
 
 export const measuringQuestionConfig = {
+    answerLabels: {
+        negative: "Farther",
+        positive: "Closer",
+    },
     answerMapBehavior: {
         negative: "none",
         positive: "none",
     },
-    answerLabels: {
-        negative: "Miss",
-        positive: "Hit",
-    },
+    answerModel: "binary",
     cost: "Draw 3, pick 1",
     defaultAnswer: "unanswered",
     detail: "Compare distance to a selected place or boundary.",
-    implemented: false,
+    implemented: true,
     listTitle: "Measuring",
     mapBehavior: { usesMovableAnchor: false },
-    summary: () => "Not yet implemented",
+    summary: (question: QuestionState) =>
+        question.type === "measuring" ? `Measuring: ${question.category}` : "",
     time: "5 minutes",
     title: "Measuring",
     type: "measuring",

@@ -58,8 +58,8 @@ export function buildAppStateEnvelope({
 
 /**
  * Wraps a single question in a `question-request` envelope for seeker → hider
- * sharing. Matching candidates are stripped (the recipient re-searches locally)
- * to keep the shared link short.
+ * sharing. Candidates are stripped (the recipient re-searches locally) to
+ * keep the shared link short.
  */
 export function buildQuestionRequestEnvelope({
     now = new Date(),
@@ -73,7 +73,9 @@ export function buildQuestionRequestEnvelope({
         payload: {
             createdAt: now.toISOString(),
             question:
-                question.type === "matching"
+                question.type === "matching" ||
+                question.type === "measuring" ||
+                question.type === "tentacles"
                     ? { ...question, candidates: [] }
                     : question,
             requestId: createRequestId(),

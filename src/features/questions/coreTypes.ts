@@ -5,7 +5,12 @@ export type QuestionType =
     | "thermometer"
     | "tentacles";
 
-export type ImplementedQuestionType = "radar" | "matching";
+export type ImplementedQuestionType =
+    | "radar"
+    | "matching"
+    | "measuring"
+    | "thermometer"
+    | "tentacles";
 
 export type QuestionAnswer = "unanswered" | "positive" | "negative";
 

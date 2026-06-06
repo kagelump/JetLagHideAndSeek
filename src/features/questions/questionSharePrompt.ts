@@ -30,14 +30,25 @@ export function buildQuestionSharePrompt(question: QuestionState): string {
         )} of ${formatCoordinate(question.center)}?`;
     }
 
-    if (question.category === "transit-line") {
-        return question.lineName
-            ? `Are you on the ${question.lineName}?`
-            : "Which transit line are you on?";
+    if (question.type === "matching") {
+        if (question.category === "transit-line") {
+            return question.lineName
+                ? `Are you on the ${question.lineName}?`
+                : "Which transit line are you on?";
+        }
+
+        const categoryTitle = getCategoryTitle(question.category);
+        return question.targetName
+            ? `Do we match on ${categoryTitle} (${question.targetName})?`
+            : `Do we match on ${categoryTitle}?`;
     }
 
-    const categoryTitle = getCategoryTitle(question.category);
-    return question.targetName
-        ? `Do we match on ${categoryTitle} (${question.targetName})?`
-        : `Do we match on ${categoryTitle}?`;
+    // Stubs for new question types (Task 01).
+    if (question.type === "measuring") {
+        return `Measuring: ${question.category}`;
+    }
+    if (question.type === "tentacles") {
+        return `Tentacles: ${question.category}`;
+    }
+    return "Thermometer question";
 }

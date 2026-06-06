@@ -2,14 +2,15 @@ import type { QuestionDefinition } from "@/features/questions/questionRegistry";
 import { getCategoryTitle } from "./matchingCategories";
 
 export const matchingQuestionConfig = {
-    answerMapBehavior: {
-        negative: "none",
-        positive: "none",
-    },
     answerLabels: {
         negative: "Miss",
         positive: "Hit",
     },
+    answerMapBehavior: {
+        negative: "none",
+        positive: "none",
+    },
+    answerModel: "binary",
     cost: "Draw 2, pick 1",
     defaultAnswer: "unanswered",
     detail: "Compare nearest candidates from a movable map pin.",

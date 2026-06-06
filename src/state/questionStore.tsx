@@ -8,19 +8,32 @@ import {
 } from "react";
 
 import type { MatchingCategory } from "@/features/questions/matching/matchingTypes";
+import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
 import { radarQuestionConfig } from "@/features/questions/radar/radarConfig";
 import {
     type ImplementedQuestionType,
     type QuestionAnswer,
     type QuestionState,
     type QuestionsImportState,
+    type QuestionType,
 } from "@/features/questions/questionTypes";
 import {
     type RadarDistanceOption,
     type RadarQuestion,
     radarDistanceOptionMeters,
 } from "@/features/questions/radar/radarTypes";
+import {
+    type TentaclesCategory,
+    type TentaclesQuestion,
+    tentaclesCategoryDistance,
+    tentaclesDistanceMeters,
+} from "@/features/questions/tentacles/tentaclesTypes";
+import {
+    derivePoiAnswer,
+    isPoiAnswerModel,
+} from "@/features/questions/questionRegistry";
 import { normalizeTransitLineQuestion } from "@/features/questions/transitLine/transitLineNormalization";
+import { assertNever } from "@/shared/assertNever";
 import type { Position } from "@/shared/geojson";
 import {
     fromMeters,
@@ -114,7 +127,10 @@ type QuestionActionsValue = {
     addImportedQuestion: (question: QuestionState) => QuestionState;
     createQuestion: (
         type: ImplementedQuestionType,
-        options: { center: Position; category?: MatchingCategory },
+        options: {
+            center: Position;
+            category?: MatchingCategory | MeasuringCategory | TentaclesCategory;
+        },
     ) => QuestionState;
     deleteQuestion: (questionId: string) => void;
     importQuestionSettings: (settings: QuestionSettingsImportState) => void;
@@ -235,7 +251,13 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const createQuestion = useCallback(
         (
             type: ImplementedQuestionType,
-            options: { center: Position; category?: MatchingCategory },
+            options: {
+                center: Position;
+                category?:
+                    | MatchingCategory
+                    | MeasuringCategory
+                    | TentaclesCategory;
+            },
         ) => {
             const now = new Date().toISOString();
             const question = createDefaultQuestion(
@@ -260,9 +282,20 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
 
     const addImportedQuestion = useCallback((question: QuestionState) => {
         const now = new Date().toISOString();
+        // For poi-model questions, clear the entire selection (not just
+        // `answer`) so `normalizeQuestionState`'s re-derivation doesn't
+        // restore `answer: "positive"` from a still-present `selectedOsmId`.
+        const resetQuestion = isPoiAnswerModel(question.type)
+            ? {
+                  ...question,
+                  answer: "unanswered" as const,
+                  selectedOsmId: null as null,
+                  selectedOsmType: null as null,
+                  selectedName: null as null,
+              }
+            : { ...question, answer: "unanswered" as const };
         const imported = normalizeQuestionState({
-            ...question,
-            answer: "unanswered",
+            ...resetQuestion,
             createdAt: now,
             id: createQuestionId(),
             updatedAt: now,
@@ -454,7 +487,12 @@ export function updateQuestionCenter(
     question: QuestionState,
     center: Position,
 ): QuestionState {
-    if (question.type !== "radar" && question.type !== "matching") {
+    if (
+        question.type !== "radar" &&
+        question.type !== "matching" &&
+        question.type !== "measuring" &&
+        question.type !== "tentacles"
+    ) {
         return question;
     }
     return {
@@ -524,6 +562,54 @@ export function updateRadarDistanceUnit(
     };
 }
 
+// ---------------------------------------------------------------------------
+// Tentacles POI answer helpers (Task 02)
+// ---------------------------------------------------------------------------
+
+/**
+ * Select a POI as the Tentacles answer.
+ * This is the *only* function allowed to set a Tentacles question's answer
+ * status — it sets all three selected fields AND derives `answer: "positive"`
+ * in the same update, preventing the canonical fields from drifting from the
+ * derived status.
+ */
+export function selectTentaclesPoi(
+    question: TentaclesQuestion,
+    poi: { osmId: number; osmType: "node" | "way" | "relation"; name: string },
+): TentaclesQuestion {
+    if (poi.osmId <= 0) {
+        throw new Error(
+            `selectTentaclesPoi: osmId must be positive, got ${poi.osmId}`,
+        );
+    }
+    return {
+        ...question,
+        answer: derivePoiAnswer(poi.osmId),
+        selectedOsmId: poi.osmId,
+        selectedOsmType: poi.osmType,
+        selectedName: poi.name,
+        updatedAt: new Date().toISOString(),
+    };
+}
+
+/**
+ * Reset a Tentacles question's POI selection.
+ * Clears all three selected fields AND sets `answer: "unanswered"` atomically.
+ * No UI component or generic action may write a Tentacles `answer` directly.
+ */
+export function resetTentaclesAnswer(
+    question: TentaclesQuestion,
+): TentaclesQuestion {
+    return {
+        ...question,
+        answer: "unanswered",
+        selectedOsmId: null,
+        selectedOsmType: null,
+        selectedName: null,
+        updatedAt: new Date().toISOString(),
+    };
+}
+
 function createQuestionId(): string {
     return `q-${Date.now().toString(36)}-${Math.random()
         .toString(36)
@@ -534,7 +620,7 @@ function createDefaultQuestion(
     type: ImplementedQuestionType,
     center: Position,
     now: string,
-    category?: MatchingCategory,
+    category?: MatchingCategory | MeasuringCategory | TentaclesCategory,
 ): QuestionState {
     switch (type) {
         case "radar":
@@ -553,7 +639,7 @@ function createDefaultQuestion(
             return {
                 answer: "unanswered",
                 candidates: [],
-                category: category ?? "transit-line",
+                category: (category as MatchingCategory) ?? "transit-line",
                 center,
                 createdAt: now,
                 id: createQuestionId(),
@@ -567,6 +653,52 @@ function createDefaultQuestion(
                 type: "matching",
                 updatedAt: now,
             };
+        case "measuring":
+            return {
+                answer: "unanswered",
+                candidates: [],
+                category: (category as MeasuringCategory) ?? "rail-station",
+                center,
+                createdAt: now,
+                id: createQuestionId(),
+                seekerDistanceMeters: null,
+                seekerDistanceUnit: "m",
+                selectedOsmId: null,
+                selectedOsmType: null,
+                type: "measuring",
+                updatedAt: now,
+            };
+        case "thermometer":
+            return {
+                answer: "unanswered",
+                previousPosition: center,
+                currentPosition: center,
+                createdAt: now,
+                id: createQuestionId(),
+                type: "thermometer",
+                updatedAt: now,
+            };
+        case "tentacles": {
+            const tentCategory = (category as TentaclesCategory) ?? "museum";
+            const distOption = tentaclesCategoryDistance[tentCategory];
+            return {
+                answer: "unanswered",
+                candidates: [],
+                category: tentCategory,
+                center,
+                createdAt: now,
+                distanceMeters: tentaclesDistanceMeters[distOption],
+                distanceOption: distOption,
+                id: createQuestionId(),
+                selectedOsmId: null,
+                selectedOsmType: null,
+                selectedName: null,
+                type: "tentacles",
+                updatedAt: now,
+            };
+        }
+        default:
+            return assertNever(type);
     }
 }
 
@@ -592,6 +724,16 @@ function normalizeQuestionState(question: unknown): QuestionState {
     }
     if (isMatchingQuestion(question)) {
         return normalizeTransitLineQuestion(question);
+    }
+    // Re-derive `answer` for poi-model questions from canonical `selectedOsmId`
+    // so any historically-inconsistent persisted/shared payload is repaired on
+    // load. The derived status is "positive" iff a POI is selected.
+    if (isPoiAnswerQuestion(question)) {
+        const derivedAnswer = derivePoiAnswer(question.selectedOsmId);
+        if (question.answer !== derivedAnswer) {
+            return { ...question, answer: derivedAnswer };
+        }
+        return question;
     }
     return question as QuestionState;
 }
@@ -635,4 +777,13 @@ function isMatchingQuestion(
         "type" in value &&
         value.type === "matching"
     );
+}
+
+function isPoiAnswerQuestion(
+    value: unknown,
+): value is Extract<QuestionState, { type: "tentacles" }> {
+    if (typeof value !== "object" || value === null || !("type" in value)) {
+        return false;
+    }
+    return isPoiAnswerModel(value.type as QuestionType);
 }

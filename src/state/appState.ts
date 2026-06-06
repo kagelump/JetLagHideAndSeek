@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { GeoJsonFeatureCollection } from "@/features/map/geojsonTypes";
+import { derivePoiAnswer } from "@/features/questions/questionRegistry";
 import { normalizeTransitLineQuestion } from "@/features/questions/transitLine/transitLineNormalization";
 import type { QuestionsImportState } from "@/features/questions/questionTypes";
 import type { HidingZoneImportState } from "@/state/hidingZoneStore";
@@ -141,11 +142,127 @@ const appStateLegacyRadiusQuestionSchema = z
         updatedAt: question.updatedAt,
     }));
 
+const measuringCategorySchema = z.enum([
+    "commercial-airport",
+    "high-speed-rail",
+    "rail-station",
+    "admin-1st-border",
+    "admin-2nd-border",
+    "body-of-water",
+    "coastline",
+    "mountain",
+    "park",
+    "amusement-park",
+    "zoo",
+    "aquarium",
+    "golf-course",
+    "museum",
+    "movie-theater",
+    "hospital",
+    "library",
+    "foreign-consulate",
+]);
+
+const appStateMeasuringQuestionSchema = z.object({
+    answer: questionAnswerSchema,
+    candidates: z
+        .array(
+            z.object({
+                lat: z.number(),
+                lon: z.number(),
+                name: z.string(),
+                osmId: z.number(),
+                osmType: z.enum(["node", "way", "relation"]),
+                tags: z.record(z.string()),
+            }),
+        )
+        .default([]),
+    category: measuringCategorySchema,
+    center: positionSchema,
+    createdAt: z.string().min(1),
+    id: z.string().min(1),
+    seekerDistanceMeters: z.number().nullable().default(null),
+    seekerDistanceUnit: z.enum(["m", "km", "mi"]).default("m"),
+    selectedOsmId: z.number().int().positive().nullable().default(null),
+    selectedOsmType: z
+        .enum(["node", "way", "relation"])
+        .nullable()
+        .default(null),
+    type: z.literal("measuring"),
+    updatedAt: z.string().min(1),
+});
+
+const appStateThermometerQuestionSchema = z.object({
+    answer: questionAnswerSchema,
+    createdAt: z.string().min(1),
+    previousPosition: positionSchema.nullable().default(null),
+    currentPosition: positionSchema.nullable().default(null),
+    id: z.string().min(1),
+    type: z.literal("thermometer"),
+    updatedAt: z.string().min(1),
+});
+
+const tentaclesCategorySchema = z.enum([
+    "museum",
+    "library",
+    "movie-theater",
+    "hospital",
+    "transit-line",
+    "zoo",
+    "aquarium",
+    "amusement-park",
+]);
+
+const tentaclesDistanceOptionSchema = z.enum(["2km", "25km"]);
+
+const appStateTentaclesQuestionSchema = z
+    .object({
+        answer: z.enum(["unanswered", "positive"]).default("unanswered"),
+        candidates: z
+            .array(
+                z.object({
+                    lat: z.number(),
+                    lon: z.number(),
+                    name: z.string(),
+                    osmId: z.number(),
+                    osmType: z.enum(["node", "way", "relation"]),
+                    tags: z.record(z.string()),
+                }),
+            )
+            .default([]),
+        category: tentaclesCategorySchema,
+        center: positionSchema,
+        createdAt: z.string().min(1),
+        distanceMeters: z.number().positive(),
+        distanceOption: tentaclesDistanceOptionSchema,
+        id: z.string().min(1),
+        selectedOsmId: z.number().int().positive().nullable().default(null),
+        selectedOsmType: z
+            .enum(["node", "way", "relation"])
+            .nullable()
+            .default(null),
+        selectedName: z.string().nullable().default(null),
+        type: z.literal("tentacles"),
+        updatedAt: z.string().min(1),
+    })
+    .transform((q) => {
+        // Re-derive answer from canonical selectedOsmId so any historically
+        // inconsistent persisted payload is repaired on load.
+        const derivedAnswer = derivePoiAnswer(q.selectedOsmId);
+        if (q.answer !== derivedAnswer) {
+            return { ...q, answer: derivedAnswer };
+        }
+        return q;
+    });
+
 export const appStateQuestionsSchema = z.array(
     z.union([
         appStateRadarQuestionSchema,
         appStateLegacyRadiusQuestionSchema,
         appStateMatchingQuestionSchema,
+        appStateMeasuringQuestionSchema,
+        appStateThermometerQuestionSchema,
+        appStateTentaclesQuestionSchema,
     ]),
 );
 

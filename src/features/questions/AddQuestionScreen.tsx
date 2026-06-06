@@ -23,6 +23,32 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
         onNavigate("question-detail");
     };
 
+    const addThermometerQuestion = async () => {
+        const result = await requestUserCoordinate();
+        createQuestion("thermometer", {
+            center: result.coordinate ?? playArea.center,
+        });
+        onNavigate("question-detail");
+    };
+
+    const addMeasuringQuestion = async () => {
+        const result = await requestUserCoordinate();
+        createQuestion("measuring", {
+            center: result.coordinate ?? playArea.center,
+            category: "commercial-airport",
+        });
+        onNavigate("question-detail");
+    };
+
+    const addTentaclesQuestion = async () => {
+        const result = await requestUserCoordinate();
+        createQuestion("tentacles", {
+            center: result.coordinate ?? playArea.center,
+            category: "museum",
+        });
+        onNavigate("question-detail");
+    };
+
     return (
         <SheetScrollView contentContainerStyle={styles.scrollContent}>
             <Pressable
@@ -60,6 +86,69 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
                     <Text style={styles.optionTitle}>Matching</Text>
                     <Text style={styles.metadata}>
                         Choose a question that compares nearby candidates.
+                    </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
+            </Pressable>
+
+            <Pressable
+                accessibilityLabel="Add thermometer question"
+                accessibilityRole="button"
+                onPress={() => {
+                    void addThermometerQuestion();
+                }}
+                style={({ pressed }) => [
+                    styles.optionRow,
+                    pressed ? styles.actionPressed : null,
+                ]}
+                testID="add-thermometer-question-row"
+            >
+                <View style={styles.optionCopy}>
+                    <Text style={styles.optionTitle}>Thermometer</Text>
+                    <Text style={styles.metadata}>
+                        Compare whether movement is hotter or colder.
+                    </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
+            </Pressable>
+
+            <Pressable
+                accessibilityLabel="Add measuring question"
+                accessibilityRole="button"
+                onPress={() => {
+                    void addMeasuringQuestion();
+                }}
+                style={({ pressed }) => [
+                    styles.optionRow,
+                    pressed ? styles.actionPressed : null,
+                ]}
+                testID="add-measuring-question-row"
+            >
+                <View style={styles.optionCopy}>
+                    <Text style={styles.optionTitle}>Measuring</Text>
+                    <Text style={styles.metadata}>
+                        Compare distance to a selected place or boundary.
+                    </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
+            </Pressable>
+
+            <Pressable
+                accessibilityLabel="Add tentacles question"
+                accessibilityRole="button"
+                onPress={() => {
+                    void addTentaclesQuestion();
+                }}
+                style={({ pressed }) => [
+                    styles.optionRow,
+                    pressed ? styles.actionPressed : null,
+                ]}
+                testID="add-tentacles-question-row"
+            >
+                <View style={styles.optionCopy}>
+                    <Text style={styles.optionTitle}>Tentacles</Text>
+                    <Text style={styles.metadata}>
+                        Find the closest qualifying place within range.
                     </Text>
                 </View>
                 <Text style={styles.chevron}>›</Text>

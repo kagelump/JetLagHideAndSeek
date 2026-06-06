@@ -81,7 +81,91 @@ function Probe() {
             <Text testID="probe-first-answer">
                 {questions[0]?.type === "radar" ? questions[0].answer : "none"}
             </Text>
+            <Text testID="probe-first-type">
+                {questions[0]?.type ?? "none"}
+            </Text>
             <Text testID="probe-locked">{String(isPinLocked)}</Text>
+            <Text testID="probe-type">{activeQuestion?.type ?? "none"}</Text>
+            <Text testID="probe-measuring-category">
+                {activeQuestion?.type === "measuring"
+                    ? activeQuestion.category
+                    : "none"}
+            </Text>
+            <Text testID="probe-measuring-candidates">
+                {activeQuestion?.type === "measuring"
+                    ? JSON.stringify(activeQuestion.candidates)
+                    : "none"}
+            </Text>
+            <Text testID="probe-measuring-selected-osm-id">
+                {activeQuestion?.type === "measuring"
+                    ? JSON.stringify(activeQuestion.selectedOsmId)
+                    : "none"}
+            </Text>
+            <Text testID="probe-measuring-selected-osm-type">
+                {activeQuestion?.type === "measuring"
+                    ? JSON.stringify(activeQuestion.selectedOsmType)
+                    : "none"}
+            </Text>
+            <Text testID="probe-measuring-seeker-distance">
+                {activeQuestion?.type === "measuring"
+                    ? JSON.stringify(activeQuestion.seekerDistanceMeters)
+                    : "none"}
+            </Text>
+            <Text testID="probe-measuring-answer">
+                {activeQuestion?.type === "measuring"
+                    ? activeQuestion.answer
+                    : "none"}
+            </Text>
+            <Text testID="probe-thermometer-answer">
+                {activeQuestion?.type === "thermometer"
+                    ? activeQuestion.answer
+                    : "none"}
+            </Text>
+            <Text testID="probe-thermometer-previous-position">
+                {activeQuestion?.type === "thermometer"
+                    ? JSON.stringify(activeQuestion.previousPosition)
+                    : "none"}
+            </Text>
+            <Text testID="probe-thermometer-current-position">
+                {activeQuestion?.type === "thermometer"
+                    ? JSON.stringify(activeQuestion.currentPosition)
+                    : "none"}
+            </Text>
+            <Text testID="probe-tentacles-category">
+                {activeQuestion?.type === "tentacles"
+                    ? activeQuestion.category
+                    : "none"}
+            </Text>
+            <Text testID="probe-tentacles-answer">
+                {activeQuestion?.type === "tentacles"
+                    ? activeQuestion.answer
+                    : "none"}
+            </Text>
+            <Text testID="probe-tentacles-candidates">
+                {activeQuestion?.type === "tentacles"
+                    ? JSON.stringify(activeQuestion.candidates)
+                    : "none"}
+            </Text>
+            <Text testID="probe-tentacles-selected-osm-id">
+                {activeQuestion?.type === "tentacles"
+                    ? JSON.stringify(activeQuestion.selectedOsmId)
+                    : "none"}
+            </Text>
+            <Text testID="probe-tentacles-selected-name">
+                {activeQuestion?.type === "tentacles"
+                    ? JSON.stringify(activeQuestion.selectedName)
+                    : "none"}
+            </Text>
+            <Text testID="probe-tentacles-distance-meters">
+                {activeQuestion?.type === "tentacles"
+                    ? activeQuestion.distanceMeters
+                    : "none"}
+            </Text>
+            <Text testID="probe-tentacles-distance-option">
+                {activeQuestion?.type === "tentacles"
+                    ? activeQuestion.distanceOption
+                    : "none"}
+            </Text>
             <Pressable
                 accessibilityRole="button"
                 testID="action-create"
@@ -95,6 +179,35 @@ function Probe() {
                 onPress={() =>
                     createQuestion("matching", {
                         center: defaultPlayArea.center,
+                    })
+                }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-create-measuring"
+                onPress={() =>
+                    createQuestion("measuring", {
+                        center: defaultPlayArea.center,
+                        category: "rail-station",
+                    })
+                }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-create-thermometer"
+                onPress={() =>
+                    createQuestion("thermometer", {
+                        center: defaultPlayArea.center,
+                    })
+                }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-create-tentacles"
+                onPress={() =>
+                    createQuestion("tentacles", {
+                        center: defaultPlayArea.center,
+                        category: "museum",
                     })
                 }
             />
@@ -599,6 +712,189 @@ describe("QuestionProvider", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Task 01: measuring, thermometer, tentacles creation + updateQuestionCenter
+// ---------------------------------------------------------------------------
+
+describe("QuestionProvider – new question types", () => {
+    beforeEach(async () => {
+        await AsyncStorage.clear();
+    });
+
+    it("creates a well-formed measuring question", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-measuring"));
+        });
+
+        expect(screen.getByTestId("probe-count")).toHaveTextContent("1");
+        expect(screen.getByTestId("probe-type")).toHaveTextContent("measuring");
+        expect(screen.getByTestId("probe-measuring-answer")).toHaveTextContent(
+            "unanswered",
+        );
+        expect(
+            screen.getByTestId("probe-measuring-candidates"),
+        ).toHaveTextContent("[]");
+        expect(
+            screen.getByTestId("probe-measuring-selected-osm-id"),
+        ).toHaveTextContent("null");
+        expect(
+            screen.getByTestId("probe-measuring-selected-osm-type"),
+        ).toHaveTextContent("null");
+        expect(
+            screen.getByTestId("probe-measuring-seeker-distance"),
+        ).toHaveTextContent("null");
+        expect(
+            screen.getByTestId("probe-measuring-category"),
+        ).toHaveTextContent("rail-station");
+        expect(screen.getByTestId("probe-center")).toHaveTextContent(
+            defaultPlayArea.center.join(","),
+        );
+    });
+
+    it("creates a thermometer question with co-located positions", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-thermometer"));
+        });
+
+        expect(screen.getByTestId("probe-count")).toHaveTextContent("1");
+        expect(screen.getByTestId("probe-type")).toHaveTextContent(
+            "thermometer",
+        );
+        expect(
+            screen.getByTestId("probe-thermometer-answer"),
+        ).toHaveTextContent("unanswered");
+        expect(
+            screen.getByTestId("probe-thermometer-previous-position"),
+        ).toHaveTextContent(JSON.stringify(defaultPlayArea.center));
+        expect(
+            screen.getByTestId("probe-thermometer-current-position"),
+        ).toHaveTextContent(JSON.stringify(defaultPlayArea.center));
+    });
+
+    it("creates a tentacles question with distance derived from category", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-tentacles"));
+        });
+
+        expect(screen.getByTestId("probe-count")).toHaveTextContent("1");
+        expect(screen.getByTestId("probe-type")).toHaveTextContent("tentacles");
+        expect(screen.getByTestId("probe-tentacles-answer")).toHaveTextContent(
+            "unanswered",
+        );
+        expect(
+            screen.getByTestId("probe-tentacles-candidates"),
+        ).toHaveTextContent("[]");
+        expect(
+            screen.getByTestId("probe-tentacles-selected-osm-id"),
+        ).toHaveTextContent("null");
+        expect(
+            screen.getByTestId("probe-tentacles-selected-name"),
+        ).toHaveTextContent("null");
+        expect(
+            screen.getByTestId("probe-tentacles-category"),
+        ).toHaveTextContent("museum");
+        expect(
+            screen.getByTestId("probe-tentacles-distance-option"),
+        ).toHaveTextContent("2km");
+        expect(
+            screen.getByTestId("probe-tentacles-distance-meters"),
+        ).toHaveTextContent("2000");
+        expect(screen.getByTestId("probe-center")).toHaveTextContent(
+            defaultPlayArea.center.join(","),
+        );
+    });
+
+    it("updateQuestionCenter updates measuring center", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-measuring"));
+        });
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-center-shibuya"));
+        });
+
+        expect(screen.getByTestId("probe-center")).toHaveTextContent(
+            "139.7,35.66",
+        );
+    });
+
+    it("updateQuestionCenter updates tentacles center", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-tentacles"));
+        });
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-center-shibuya"));
+        });
+
+        expect(screen.getByTestId("probe-center")).toHaveTextContent(
+            "139.7,35.66",
+        );
+    });
+
+    it("updateQuestionCenter does not change thermometer", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-thermometer"));
+        });
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-center-shibuya"));
+        });
+
+        expect(
+            screen.getByTestId("probe-thermometer-previous-position"),
+        ).toHaveTextContent(JSON.stringify(defaultPlayArea.center));
+        expect(
+            screen.getByTestId("probe-thermometer-current-position"),
+        ).toHaveTextContent(JSON.stringify(defaultPlayArea.center));
+    });
+});
+
+// ---------------------------------------------------------------------------
 // addImportedQuestion, gameMode, and importQuestionSettings
 // ---------------------------------------------------------------------------
 
@@ -623,6 +919,16 @@ function GameModeProbe() {
             <Text testID="probe-first-type">
                 {questions[0]?.type ?? "none"}
             </Text>
+            <Text testID="probe-tentacles-selected-osm-id">
+                {questions[0]?.type === "tentacles"
+                    ? JSON.stringify(questions[0].selectedOsmId)
+                    : "none"}
+            </Text>
+            <Text testID="probe-tentacles-selected-name">
+                {questions[0]?.type === "tentacles"
+                    ? JSON.stringify(questions[0].selectedName)
+                    : "none"}
+            </Text>
             <Pressable
                 accessibilityRole="button"
                 testID="action-set-hider"
@@ -646,6 +952,27 @@ function GameModeProbe() {
                         distanceUnit: "m",
                         id: "q-shared-1",
                         type: "radar",
+                        updatedAt: "2026-05-01T00:00:00.000Z",
+                    })
+                }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-add-imported-tentacles-answered"
+                onPress={() =>
+                    addImportedQuestion({
+                        answer: "positive" as const,
+                        candidates: [],
+                        category: "museum" as const,
+                        center: [139.7, 35.66] as [number, number],
+                        createdAt: "2026-05-01T00:00:00.000Z",
+                        distanceMeters: 2000,
+                        distanceOption: "2km" as const,
+                        id: "q-shared-tentacles",
+                        selectedOsmId: 123,
+                        selectedOsmType: "node" as const,
+                        selectedName: "Test POI",
+                        type: "tentacles" as const,
                         updatedAt: "2026-05-01T00:00:00.000Z",
                     })
                 }
@@ -759,6 +1086,37 @@ describe("addImportedQuestion", () => {
         expect(ids).toHaveLength(2);
         expect(ids[0]).not.toBe(ids[1]);
     });
+
+    it("resets selection on imported poi-model question (T2-1 fix)", async () => {
+        const screen = renderGameModeProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-game-mode")).toBeTruthy();
+        });
+
+        act(() => {
+            fireEvent.press(
+                screen.getByTestId("action-add-imported-tentacles-answered"),
+            );
+        });
+
+        // The imported tentacles question carried selectedOsmId: 123,
+        // selectedName: "Test POI", and answer: "positive". The import should
+        // clear all three selection fields AND derive answer: "unanswered".
+        expect(screen.getByTestId("probe-count")).toHaveTextContent("1");
+        expect(screen.getByTestId("probe-first-type")).toHaveTextContent(
+            "tentacles",
+        );
+        expect(screen.getByTestId("probe-first-answer")).toHaveTextContent(
+            "unanswered",
+        );
+        expect(
+            screen.getByTestId("probe-tentacles-selected-osm-id"),
+        ).toHaveTextContent("null");
+        expect(
+            screen.getByTestId("probe-tentacles-selected-name"),
+        ).toHaveTextContent("null");
+    });
 });
 
 describe("gameMode", () => {
@@ -862,5 +1220,175 @@ describe("importQuestionSettings", () => {
         expect(screen.getByTestId("probe-game-mode")).toHaveTextContent(
             "seeker",
         );
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Task 02: Tentacles POI answer helpers — invariant & normalization tests
+// ---------------------------------------------------------------------------
+
+import { getQuestionAnswerStatus } from "@/features/questions/questionRegistry";
+import {
+    selectTentaclesPoi,
+    resetTentaclesAnswer,
+} from "@/state/questionStore";
+import type { TentaclesQuestion } from "@/features/questions/tentacles/tentaclesTypes";
+
+function makeTentaclesQuestion(
+    overrides?: Partial<TentaclesQuestion>,
+): TentaclesQuestion {
+    return {
+        answer: "unanswered",
+        candidates: [],
+        category: "museum",
+        center: [139.7, 35.66],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        distanceMeters: 2000,
+        distanceOption: "2km",
+        id: "q-tentacles-test",
+        selectedOsmId: null,
+        selectedOsmType: null,
+        selectedName: null,
+        type: "tentacles",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        ...overrides,
+    };
+}
+
+describe("selectTentaclesPoi", () => {
+    it("sets all selected fields and derives answer: positive", () => {
+        const q = makeTentaclesQuestion();
+        const result = selectTentaclesPoi(q, {
+            osmId: 456,
+            osmType: "node",
+            name: "Tokyo National Museum",
+        });
+
+        expect(result.answer).toBe("positive");
+        expect(result.selectedOsmId).toBe(456);
+        expect(result.selectedOsmType).toBe("node");
+        expect(result.selectedName).toBe("Tokyo National Museum");
+        expect(getQuestionAnswerStatus(result)).toBe("answered");
+    });
+
+    it("bumps updatedAt", () => {
+        const q = makeTentaclesQuestion();
+        const result = selectTentaclesPoi(q, {
+            osmId: 1,
+            osmType: "way",
+            name: "Test",
+        });
+        expect(result.updatedAt).not.toBe(q.updatedAt);
+    });
+});
+
+describe("resetTentaclesAnswer", () => {
+    it("clears all selected fields and sets answer: unanswered", () => {
+        const q = makeTentaclesQuestion({
+            answer: "positive",
+            selectedOsmId: 456,
+            selectedOsmType: "node",
+            selectedName: "Tokyo National Museum",
+        });
+        const result = resetTentaclesAnswer(q);
+
+        expect(result.answer).toBe("unanswered");
+        expect(result.selectedOsmId).toBeNull();
+        expect(result.selectedOsmType).toBeNull();
+        expect(result.selectedName).toBeNull();
+        expect(getQuestionAnswerStatus(result)).toBe("unanswered");
+    });
+
+    it("bumps updatedAt", () => {
+        const q = makeTentaclesQuestion({
+            answer: "positive",
+            selectedOsmId: 1,
+            selectedOsmType: "way",
+            selectedName: "Test",
+        });
+        const result = resetTentaclesAnswer(q);
+        expect(result.updatedAt).not.toBe(q.updatedAt);
+    });
+});
+
+describe("anti-drift invariant", () => {
+    it("(answer === positive) iff (selectedOsmId !== null) for all helper outputs", () => {
+        const q = makeTentaclesQuestion();
+
+        // Fresh — unanswered
+        expect(q.answer === "positive").toBe(q.selectedOsmId !== null);
+
+        // After select
+        const selected = selectTentaclesPoi(q, {
+            osmId: 789,
+            osmType: "relation",
+            name: "Test POI",
+        });
+        expect(selected.answer === "positive").toBe(
+            selected.selectedOsmId !== null,
+        );
+
+        // After reset
+        const reset = resetTentaclesAnswer(selected);
+        expect(reset.answer === "positive").toBe(reset.selectedOsmId !== null);
+
+        // Round-trip: reset → select again
+        const reselected = selectTentaclesPoi(reset, {
+            osmId: 999,
+            osmType: "node",
+            name: "Another POI",
+        });
+        expect(reselected.answer === "positive").toBe(
+            reselected.selectedOsmId !== null,
+        );
+    });
+});
+
+describe("normalizeQuestionState repairs inconsistent poi payloads", () => {
+    it("re-derives answer from selectedOsmId for tentacles", async () => {
+        // Simulate loading a persisted state where answer drifted from selection.
+        // The normalization code lives in questionStore.tsx.
+        // We test it indirectly by persisting an inconsistent state and verifying
+        // the loaded state is repaired.
+        await AsyncStorage.clear();
+
+        const inconsistentTentacles = {
+            answer: "positive",
+            candidates: [],
+            category: "museum",
+            center: [139.7, 35.66],
+            createdAt: "2026-01-01T00:00:00.000Z",
+            distanceMeters: 2000,
+            distanceOption: "2km",
+            id: "q-drifted",
+            selectedOsmId: null,
+            selectedOsmType: null,
+            selectedName: null,
+            type: "tentacles",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+        } as TentaclesQuestion;
+
+        await persistAppState(
+            createAppStateV1({
+                hidingZones: {
+                    radiusMeters: 600,
+                    radiusUnit: "m",
+                    selectedPresetIds: [],
+                },
+                playArea: defaultPlayArea,
+                questions: [inconsistentTentacles],
+            }),
+        );
+
+        const loaded = await loadPersistedAppState();
+        const repaired = loaded?.questions[0];
+
+        expect(repaired).toBeDefined();
+        if (repaired && repaired.type === "tentacles") {
+            // The drifted answer should be repaired to "unanswered"
+            expect(repaired.answer).toBe("unanswered");
+            expect(repaired.selectedOsmId).toBeNull();
+            expect(getQuestionAnswerStatus(repaired)).toBe("unanswered");
+        }
     });
 });

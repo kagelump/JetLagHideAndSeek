@@ -1,20 +1,40 @@
 import { measuringQuestionConfig } from "../measuringConfig";
+import type { QuestionState } from "@/features/questions/questionTypes";
+
+function makeMeasuringStub(): QuestionState {
+    return {
+        answer: "unanswered",
+        candidates: [],
+        category: "rail-station",
+        center: [139.7, 35.66],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        id: "q-test",
+        seekerDistanceMeters: null,
+        seekerDistanceUnit: "m",
+        selectedOsmId: null,
+        selectedOsmType: null,
+        type: "measuring",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+}
 
 describe("measuringQuestionConfig", () => {
     it("is a valid QuestionDefinition with the measuring type", () => {
         expect(measuringQuestionConfig.type).toBe("measuring");
-        expect(measuringQuestionConfig.implemented).toBe(false);
+        expect(measuringQuestionConfig.implemented).toBe(true);
         expect(measuringQuestionConfig.title).toBe("Measuring");
         expect(measuringQuestionConfig.time).toBe("5 minutes");
         expect(measuringQuestionConfig.cost).toBe("Draw 3, pick 1");
     });
 
     it("has expected answer labels", () => {
-        expect(measuringQuestionConfig.answerLabels.positive).toBe("Hit");
-        expect(measuringQuestionConfig.answerLabels.negative).toBe("Miss");
+        expect(measuringQuestionConfig.answerLabels.positive).toBe("Closer");
+        expect(measuringQuestionConfig.answerLabels.negative).toBe("Farther");
     });
 
-    it("has a summary function returning the placeholder", () => {
-        expect(measuringQuestionConfig.summary()).toBe("Not yet implemented");
+    it("has a summary function keyed off category", () => {
+        expect(measuringQuestionConfig.summary(makeMeasuringStub())).toBe(
+            "Measuring: rail-station",
+        );
     });
 });
