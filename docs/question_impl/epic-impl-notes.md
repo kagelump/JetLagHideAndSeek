@@ -744,3 +744,142 @@ No review findings — the implementation was written test-first against the spe
       lifting the mask assembly into `buildQuestionMapRenderState` to fix the
       existing anti-pattern)
     - Add Maestro smoke for create → drag/Set GPS → answer
+
+---
+
+## Task 09 — Thermometer UI
+
+**Completed:** 2026-06-07
+
+### What was done
+
+Built the full Thermometer detail screen and map interaction on top of the
+half-plane geometry (Task 08) and the two-pin primitive. Replaced the Task 01
+stub screen with a working detail screen, wired two-pin map drag with
+`activePinKey` state, added the preview/hit-mask layers to `NativeMap`, and
+added unit tests and a Maestro smoke flow.
+
+### Files created (3)
+
+| File                                                     | Purpose                                                                                            |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `src/features/map/ThermometerPreviewLayer.tsx`           | Renders travel line (solid, `#888888`, w2) + 3 range rings (dashed, w1) filtered by feature `role` |
+| `app/__tests__/ThermometerQuestionDetailScreen.test.tsx` | 6 unit tests: pin toggle, live distance, degenerate state, answer selection, Set GPS               |
+| `e2e/thermometer-question.yaml`                          | Maestro smoke: create → verify distance + no warning → select Hotter → screenshot                  |
+
+### Files modified (9)
+
+| File                                                                     | Change                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/state/questionStore.tsx`                                            | Added `updateThermometerPin()`, `activePinKey` context + provider + `setActivePinKey`, creation seeds offset end pin (300m east), defaults `activePin="end"`, `useEffect` clears pin key on non-thermometer questions |
+| `src/features/questions/thermometer/ThermometerQuestionDetailScreen.tsx` | Full rewrite: active-pin toggle, two `QuestionLocationSelector` rows with Set GPS, live haversine distance in km, `QuestionAnswerSelector`, degenerate warning (<100m), stable testIDs                                |
+| `src/features/map/NativeMap.tsx`                                         | Added `ThermometerPreviewLayer`, wired `thermometer.hitMaskFeatures` into `combinedInsideMask` via `asSeparateMaskConstraints`, threaded `activePinKey` through to `QuestionPinLayer` and `usePinDrag`                |
+| `src/features/map/QuestionPinLayer.tsx`                                  | Added `isActive` property on pin features, dimmed circle layer (`#888888`, opacity 0.5) for inactive pins                                                                                                             |
+| `src/features/map/usePinDrag.ts`                                         | Added `activePinKey` gate: refuses drag start if closest pin doesn't match the active pin key                                                                                                                         |
+| `src/features/map/useMapPinCommit.ts`                                    | Routes `pinKey` "start"/"end" → `updateThermometerPin`, "center" → `updateQuestionCenter` (no-op for thermometer)                                                                                                     |
+| `src/features/questions/QuestionDetailScreen.tsx`                        | Pass `question` and `updateQuestion` props to `ThermometerQuestionDetailScreen`                                                                                                                                       |
+| `src/screens/MapAppScreen.tsx`                                           | Reads `useActivePinKey()` and passes it to `NativeMap`                                                                                                                                                                |
+| `src/state/__tests__/questionStore.test.tsx`                             | 3 new tests: `updateThermometerPin` updates targeted pin + bumps `updatedAt`, create sets `activePinKey` to "end", clears `activePinKey` when switching to non-thermometer                                            |
+
+### Deviations from the task spec
+
+**Seed offset was 2000m, corrected to 300m post-review.** The initial
+implementation used `offsetPosition(center, 2000, 90)` — 2 km east. The task
+spec called for ~300 m east ("comfortably above the 100 m degenerate
+threshold"). Corrected in the first post-review commit.
+
+**Maestro tap target was "Hotter", corrected to "Hotter answer".** The
+`QuestionAnswerSelector` sets `accessibilityLabel` to `` `${label} answer` ``,
+so the native accessibility label is "Hotter answer", not "Hotter". The radar
+flow establishes this pattern (`tapOn: "Miss answer"`). Corrected in the second
+post-review commit.
+
+**Duplicated pin change handlers unified.** `handleStartChange` and
+`handleEndChange` were identical except for the pin literal. Code review
+consolidated them into `handlePinChange(pin, position)` with arrow callbacks at
+the two call sites.
+
+**Area-split read-out not implemented.** The task spec lists it as a stretch
+goal. Not implemented.
+
+**Mask wiring followed the existing `combinedInsideMask` pattern** rather than
+lifting assembly into `buildQuestionMapRenderState`. The task 08 notes suggested
+a broader refactor, but that would expand the diff scope significantly. Instead,
+thermometer hit mask features are spread via `asSeparateMaskConstraints` like
+OSM matching features — correct for the single-question path, and the
+multi-question path in `thermometerGeometry.ts` delegates to
+`buildSingleThermometerRenderState` so each half-plane becomes a separate
+required constraint (intersection = correct narrowing behavior).
+
+### Gotchas
+
+1. **React Native `<Text>` children are arrays, not strings.** The distance
+   display renders `<Text>{fromMeters(d, "km")} km</Text>`, which produces
+   `children` as `["1.81", " km"]`. The test initially used `.toMatch()` on the
+   raw children, which failed on type mismatch. Fixed by joining array children
+   before the regex assertion:
+
+    ```ts
+    const text = Array.isArray(children) ? children.join("") : String(children);
+    ```
+
+2. **`"center" in activeQuestion` is true for thermometer.** `ThermometerQuestion`
+   extends `BaseQuestion` which includes `center`. This means `handleMapPress` in
+   `MapAppScreen` fires for thermometer questions, calling `handlePinCommit` with
+   `pinKey="center"`. Since `updateQuestionCenter` is a no-op for thermometer,
+   the map tap is effectively dead — by design (only drag-to-move for two-pin
+   questions).
+
+3. **`activePinKey` is UI-only state** — not persisted, not in the wire format.
+   It's a transient editing affordance that lives in React context and is
+   cleared by a `useEffect` when the active question changes to a
+   non-thermometer type. No serialization changes needed.
+
+### Design decisions
+
+- **`activePinKey` in a dedicated context** (`ActivePinKeyContext`) rather than
+  folded into the existing `QuestionStateContext`. This isolates the transient UI
+  state from the persisted question state and avoids widening the
+  `QuestionStateValue` type for something that never survives across sessions.
+
+- **Pin drag restriction via early return, not gesture disable.** Rather than
+  disabling the pan gesture for inactive pins (which would prevent any drag),
+  `usePinDrag` checks `activePinKey` after identifying the closest pin and
+  silently returns if it doesn't match. This means the user can long-press
+  anywhere; the system just ignores the gesture if it hits the wrong pin.
+
+- **Dimmed pin uses a separate circle layer** with `filter={["==", "isActive", false]}`
+  rather than modifying the existing pin icon. The icon stays visible on top of
+  the gray circle; the active pin gets the orange glow, the inactive pin gets a
+  gray circle. This keeps layer complexity low — no conditional icon tinting or
+  symbol-layer duplication.
+
+- **`handlePinChange(pin, position)` factory pattern.** After code review, the
+  two near-identical handlers were merged into a single function accepting
+  `"start" | "end"` as a parameter, with arrow callbacks at the `onCenterChange`
+  call sites. Saves 6 lines and eliminates the risk of copy-paste drift.
+
+- **`useMapPinCommit` dispatches by pinKey**, not by question type. The dispatch
+  is: `"center"` → legacy `updateQuestionCenter` (no-op for thermometer),
+  `"start"` / `"end"` → `updateThermometerPin`. Unknown pinKeys fall through to
+  `updateQuestion` with a no-op updater that returns the question unchanged
+  (correctly bailed by React's `Object.is` state comparison).
+
+### Code review fixes (post-implementation)
+
+The `/code-review max --fix` pass caught two issues:
+
+- **Maestro `tapOn: "Hotter"` → `"Hotter answer"`.** The accessibility label
+  generated by `QuestionAnswerSelector` is `` `${label} answer` ``, so the
+  correct Maestro target is "Hotter answer", not the visible text "Hotter".
+
+- **Duplicated `handleStartChange`/`handleEndChange` unified.** Two handlers
+  differing only in `"start"` vs `"end"` were merged into `handlePinChange(pin,
+position)`.
+
+### For the next task
+
+- Task 10 (Tentacles UI) should follow the same pattern: build the non-POI-picker
+  half of the detail screen (category picker, map layers, search integration)
+  using `useQuestionActions` for write-back, with stable testIDs for both Jest
+  and Maestro.
