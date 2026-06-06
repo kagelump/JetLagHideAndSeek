@@ -26,6 +26,7 @@ export type PinDragState = {
 };
 
 type UsePinDragOptions = {
+    activePinKey?: string | null;
     pins: MapPin[];
     canMove: boolean;
     mapRef: RefObject<{
@@ -37,6 +38,7 @@ type UsePinDragOptions = {
 };
 
 export function usePinDrag({
+    activePinKey,
     pins,
     canMove,
     mapRef,
@@ -130,6 +132,10 @@ export function usePinDrag({
                 }
 
                 if (closestPin) {
+                    if (activePinKey && closestPin.key !== activePinKey) {
+                        isDraggingRef.current = false;
+                        return;
+                    }
                     draggedPinKeyRef.current = closestPin.key;
                     isDraggingRef.current = true;
                     setIsDragging(true);
@@ -140,7 +146,7 @@ export function usePinDrag({
                 isDraggingRef.current = false;
             }
         },
-        [pins, mapRef],
+        [activePinKey, pins, mapRef],
     );
 
     const handleDragUpdate = useCallback(

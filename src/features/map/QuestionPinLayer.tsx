@@ -13,6 +13,7 @@ import {
 } from "./mapLibrePrimitives";
 
 type QuestionPinLayerProps = {
+    activePinKey?: string | null;
     canMove: boolean;
     pins: MapPin[];
     pinDrag: PinDragState;
@@ -20,6 +21,7 @@ type QuestionPinLayerProps = {
 };
 
 export function QuestionPinLayer({
+    activePinKey,
     canMove,
     pins,
     onPress,
@@ -47,11 +49,14 @@ export function QuestionPinLayer({
                     properties: {
                         pinKey: pin.key,
                         isDragging: isPinDragging,
+                        isActive: activePinKey
+                            ? pin.key === activePinKey
+                            : true,
                     },
                 };
             }),
         }),
-        [pins, isDragging, draggedPinKey, draftCoordinate],
+        [pins, isDragging, draggedPinKey, draftCoordinate, activePinKey],
     );
 
     return (
@@ -76,6 +81,16 @@ export function QuestionPinLayer({
                         circleColor: "#ffffff",
                         circleOpacity: canMove ? 0.42 : 0.15,
                         circleRadius: 60,
+                        circleTranslate: [0, -31],
+                    }}
+                />
+                <MLCircleLayer
+                    filter={["==", "isActive", false]}
+                    id="question-pin-dimmed"
+                    style={{
+                        circleColor: "#888888",
+                        circleOpacity: 0.5,
+                        circleRadius: 8,
                         circleTranslate: [0, -31],
                     }}
                 />

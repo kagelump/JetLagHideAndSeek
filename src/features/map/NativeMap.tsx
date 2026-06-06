@@ -57,6 +57,7 @@ const MLCamera = Camera as ComponentType<any>;
 const MLUserLocation = UserLocation as ComponentType<any>;
 
 type NativeMapProps = {
+    activePinKey?: string | null;
     canMove: boolean;
     isQuestionDetailRoute: boolean;
     onPinCommit: (
@@ -70,6 +71,7 @@ type NativeMapProps = {
 };
 
 export function NativeMap({
+    activePinKey,
     canMove,
     isQuestionDetailRoute,
     onPinCommit,
@@ -158,6 +160,7 @@ export function NativeMap({
     }, [fitPlayArea, markAppMapReady]);
 
     const pinDrag = usePinDrag({
+        activePinKey,
         pins,
         canMove,
         mapRef,
@@ -233,6 +236,7 @@ export function NativeMap({
                     ) : null}
 
                     <QuestionPinLayer
+                        activePinKey={activePinKey}
                         canMove={canMove}
                         onPress={onPress}
                         pinDrag={pinDrag}

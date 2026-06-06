@@ -15,7 +15,7 @@ import {
     SHEET_SNAP_INDEX,
     type SheetRouteName,
 } from "@/features/sheet/sheetRoutes";
-import { useQuestionDerived } from "@/state/questionStore";
+import { useActivePinKey, useQuestionDerived } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
 export function MapAppScreen() {
@@ -27,6 +27,7 @@ export function MapAppScreen() {
     const [sheetRoute, setSheetRoute] = useState<SheetRouteName>("main");
     const isQuestionDetailRoute = sheetRoute === "question-detail";
     const handlePinCommit = useMapPinCommit();
+    const activePinKey = useActivePinKey();
     const { activeQuestion } = useQuestionDerived();
 
     const allPins = useMemo(
@@ -76,6 +77,7 @@ export function MapAppScreen() {
         <View style={styles.screen}>
             <StatusBar style="dark" />
             <NativeMap
+                activePinKey={activePinKey}
                 canMove={canMove}
                 isQuestionDetailRoute={isQuestionDetailRoute}
                 onPinCommit={handlePinCommit}
