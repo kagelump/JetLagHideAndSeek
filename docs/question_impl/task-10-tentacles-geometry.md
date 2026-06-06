@@ -30,7 +30,7 @@ passing the circle (wrapped in a one-feature FeatureCollection) as the
 In `osmMatchingGeometry.ts`, masks are built from the **raw** Voronoi `cells`
 (not the play-area-clipped ones); only the **outlines** are clipped to the play
 area. The downstream `combinedInsideMask` applies the play-area constraint to the
-masks. Tentacles differs in one way: the **radius** constraint is *essential* (the
+masks. Tentacles differs in one way: the **radius** constraint is _essential_ (the
 hider must be within the radius), so Tentacles masks must be built from cells
 **clipped to the radius circle**.
 
@@ -40,7 +40,10 @@ hider must be within the radius), so Tentacles masks must be built from cells
 import { circle } from "@turf/circle";
 import { point } from "@turf/helpers";
 import { haversineDistanceMeters } from "@/shared/geojson";
-import { computeVoronoiCells, makeOsmKey } from "@/features/questions/matching/matchingVoronoi";
+import {
+    computeVoronoiCells,
+    makeOsmKey,
+} from "@/features/questions/matching/matchingVoronoi";
 import { clipCellsToPlayArea } from "@/features/questions/clipVoronoiCells";
 ```
 
@@ -57,12 +60,12 @@ import { clipCellsToPlayArea } from "@/features/questions/clipVoronoiCells";
    intersect with the radius visually via the `radiusOutlineFeature`. Push the
    clipped cell features into `voronoiOutlineFeatures`.
 6. **Answered** (`answer === "positive"` and `selectedOsmId !== null`):
-   - `selectedKey = makeOsmKey(q.selectedOsmType, q.selectedOsmId)`
-   - `hitMaskFeatures` = `clippedToRadius.features.filter(f => f.properties.osmKey === selectedKey)`
-   - `missMaskFeatures` = `clippedToRadius.features.filter(f => f.properties.osmKey !== selectedKey)`
-   (A direct `osmKey` filter is correct and avoids needing
-   `buildOsmMatchingHitMask`, whose `FeatureCollection<Polygon>`-only signature
-   doesn't accept the `Polygon | MultiPolygon` clipped cells.)
+    - `selectedKey = makeOsmKey(q.selectedOsmType, q.selectedOsmId)`
+    - `hitMaskFeatures` = `clippedToRadius.features.filter(f => f.properties.osmKey === selectedKey)`
+    - `missMaskFeatures` = `clippedToRadius.features.filter(f => f.properties.osmKey !== selectedKey)`
+      (A direct `osmKey` filter is correct and avoids needing
+      `buildOsmMatchingHitMask`, whose `FeatureCollection<Polygon>`-only signature
+      doesn't accept the `Polygon | MultiPolygon` clipped cells.)
 7. `poiFeatures` from the **filtered** candidates (in-radius only), each with
    `{ isSelected, name, osmId }` like Matching.
 8. `radiusOutlineFeature = radiusCircle`.
@@ -86,14 +89,54 @@ export type TentaclesCategoryConfig = {
 };
 
 export const tentaclesCategoryConfigs: TentaclesCategoryConfig[] = [
-    { category: "museum",        distanceOption: "2km",  osmQueryTags: deriveOsmQueryTags("museum"),        title: "Museum" },
-    { category: "library",       distanceOption: "2km",  osmQueryTags: deriveOsmQueryTags("library"),       title: "Library" },
-    { category: "movie-theater", distanceOption: "2km",  osmQueryTags: deriveOsmQueryTags("movie-theater"), title: "Movie Theater" },
-    { category: "hospital",      distanceOption: "2km",  osmQueryTags: deriveOsmQueryTags("hospital"),      title: "Hospital" },
-    { category: "transit-line",  distanceOption: "25km", osmQueryTags: "",                                   title: "Metro Line" },
-    { category: "zoo",           distanceOption: "25km", osmQueryTags: deriveOsmQueryTags("zoo"),            title: "Zoo" },
-    { category: "aquarium",      distanceOption: "25km", osmQueryTags: deriveOsmQueryTags("aquarium"),       title: "Aquarium" },
-    { category: "amusement-park",distanceOption: "25km", osmQueryTags: deriveOsmQueryTags("amusement-park"), title: "Amusement Park" },
+    {
+        category: "museum",
+        distanceOption: "2km",
+        osmQueryTags: deriveOsmQueryTags("museum"),
+        title: "Museum",
+    },
+    {
+        category: "library",
+        distanceOption: "2km",
+        osmQueryTags: deriveOsmQueryTags("library"),
+        title: "Library",
+    },
+    {
+        category: "movie-theater",
+        distanceOption: "2km",
+        osmQueryTags: deriveOsmQueryTags("movie-theater"),
+        title: "Movie Theater",
+    },
+    {
+        category: "hospital",
+        distanceOption: "2km",
+        osmQueryTags: deriveOsmQueryTags("hospital"),
+        title: "Hospital",
+    },
+    {
+        category: "transit-line",
+        distanceOption: "25km",
+        osmQueryTags: "",
+        title: "Metro Line",
+    },
+    {
+        category: "zoo",
+        distanceOption: "25km",
+        osmQueryTags: deriveOsmQueryTags("zoo"),
+        title: "Zoo",
+    },
+    {
+        category: "aquarium",
+        distanceOption: "25km",
+        osmQueryTags: deriveOsmQueryTags("aquarium"),
+        title: "Aquarium",
+    },
+    {
+        category: "amusement-park",
+        distanceOption: "25km",
+        osmQueryTags: deriveOsmQueryTags("amusement-park"),
+        title: "Amusement Park",
+    },
 ];
 
 export function getTentaclesCategoryConfig(category: TentaclesCategory) {
@@ -112,7 +155,7 @@ export function buildTentaclesRenderState(
     questions: QuestionState[],
     playAreaBbox: Bbox,
     playAreaBoundary: FeatureCollection<Polygon | MultiPolygon>,
-): TentaclesRenderState
+): TentaclesRenderState;
 ```
 
 Implements the algorithm above.

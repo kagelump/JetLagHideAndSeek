@@ -10,17 +10,17 @@ it strictly test-first — the failing assertions are the spec.
 Given P1 (`previousPosition`) and P2 (`currentPosition`), the perpendicular
 bisector of segment P1→P2 splits the plane:
 
-- **H₂** = points closer to P2 (the seeker moved *toward* them)
-- **H₁** = points closer to P1 (the seeker moved *away from* them)
+- **H₂** = points closer to P2 (the seeker moved _toward_ them)
+- **H₁** = points closer to P1 (the seeker moved _away from_ them)
 
-| Answer | Meaning | Valid half-plane (where the hider is) → `hitMaskFeatures` |
-|---|---|---|
-| Hotter (`positive`) | moved closer to hider | **H₂** (P2 side) |
-| Colder (`negative`) | moved farther from hider | **H₁** (P1 side) |
-| `unanswered` | — | empty mask; preview only |
+| Answer              | Meaning                  | Valid half-plane (where the hider is) → `hitMaskFeatures` |
+| ------------------- | ------------------------ | --------------------------------------------------------- |
+| Hotter (`positive`) | moved closer to hider    | **H₂** (P2 side)                                          |
+| Colder (`negative`) | moved farther from hider | **H₁** (P1 side)                                          |
+| `unanswered`        | —                        | empty mask; preview only                                  |
 
 `missMaskFeatures` is always empty for Thermometer — the renderer darkens
-*outside* `hitMaskFeatures` automatically (it feeds `combinedInsideMask`).
+_outside_ `hitMaskFeatures` automatically (it feeds `combinedInsideMask`).
 
 ## Critical correctness rule (do not get this backwards)
 
@@ -68,7 +68,13 @@ Use a small square play-area boundary fixture and hand-placed P1/P2.
 ```typescript
 import { circle } from "@turf/circle";
 import { lineString, polygon } from "@turf/helpers";
-import type { Feature, FeatureCollection, LineString, MultiPolygon, Polygon } from "geojson";
+import type {
+    Feature,
+    FeatureCollection,
+    LineString,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
 import { clipCellsToPlayArea } from "@/features/questions/clipVoronoiCells";
 import type { Position } from "@/shared/geojson";
@@ -94,9 +100,9 @@ are not installed):
    diagonal (in meters) so the rectangle always overdraws the boundary. Let
    `n = perpendicular(d)`. The bisector segment endpoints are `±L·n`. From each,
    extend by `+L·d` for **Hotter** (P2 side) or `-L·d` for **Colder** (P1 side):
-   - `A = +L·n`, `B = -L·n`, `C = B + sign·L·d`, `D = A + sign·L·d`
-   - `sign = +1` for Hotter, `-1` for Colder.
-   - Rectangle (projected) = `[A, B, C, D, A]`.
+    - `A = +L·n`, `B = -L·n`, `C = B + sign·L·d`, `D = A + sign·L·d`
+    - `sign = +1` for Hotter, `-1` for Colder.
+    - Rectangle (projected) = `[A, B, C, D, A]`.
 5. Inverse-project the four corners back to lon/lat and build a `polygon`.
 6. **Verify the side** (assert in tests, and you may keep a dev assertion): the
    chosen rectangle must contain `P2` for Hotter / `P1` for Colder.
@@ -108,12 +114,27 @@ are not installed):
 ### Preview features (always when both positions set)
 
 ```typescript
-function buildThermometerPreviewFeatures(p1, p2): FeatureCollection<LineString | Polygon> {
+function buildThermometerPreviewFeatures(
+    p1,
+    p2,
+): FeatureCollection<LineString | Polygon> {
     const travelLine = lineString([p1, p2], { role: "travel-line" });
-    const ring1km  = circle(p1, 1,  { units: "kilometers", properties: { role: "ring-1km" } });
-    const ring5km  = circle(p1, 5,  { units: "kilometers", properties: { role: "ring-5km" } });
-    const ring15km = circle(p1, 15, { units: "kilometers", properties: { role: "ring-15km" } });
-    return { type: "FeatureCollection", features: [travelLine, ring1km, ring5km, ring15km] };
+    const ring1km = circle(p1, 1, {
+        units: "kilometers",
+        properties: { role: "ring-1km" },
+    });
+    const ring5km = circle(p1, 5, {
+        units: "kilometers",
+        properties: { role: "ring-5km" },
+    });
+    const ring15km = circle(p1, 15, {
+        units: "kilometers",
+        properties: { role: "ring-15km" },
+    });
+    return {
+        type: "FeatureCollection",
+        features: [travelLine, ring1km, ring5km, ring15km],
+    };
 }
 ```
 
@@ -123,7 +144,7 @@ function buildThermometerPreviewFeatures(p1, p2): FeatureCollection<LineString |
 export function buildThermometerRenderState(
     questions: QuestionState[],
     playAreaBoundary: FeatureCollection<Polygon | MultiPolygon>,
-): ThermometerRenderState
+): ThermometerRenderState;
 ```
 
 - Skip questions with a null position or travel < `MIN_TRAVEL_METERS`.

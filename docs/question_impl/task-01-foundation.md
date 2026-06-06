@@ -12,7 +12,7 @@ or search is implemented yet.
 > ⚠️ The original draft of this task claimed a green typecheck after only editing
 > the type unions. That is wrong: `createDefaultQuestion` is a non-exhaustive
 > `switch` and `updateQuestionCenter` is type-gated to radar/matching. Adding the
-> new types to `ImplementedQuestionType` *breaks the build* until the Store
+> new types to `ImplementedQuestionType` _breaks the build_ until the Store
 > integration section is also done. Treat that section as mandatory.
 
 ## Test plan (write first)
@@ -58,7 +58,10 @@ has no `assertNever`, add one in `src/shared/assertNever.ts` with a tiny test.
 
 ```typescript
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import type { BaseQuestion, QuestionAnswer } from "@/features/questions/coreTypes";
+import type {
+    BaseQuestion,
+    QuestionAnswer,
+} from "@/features/questions/coreTypes";
 import type { OsmFeature } from "@/features/questions/matching/matchingTypes";
 import type { DistanceUnit } from "@/shared/distanceUnits";
 import type { Position } from "@/shared/geojson";
@@ -66,14 +69,14 @@ import type { Position } from "@/shared/geojson";
 export type MeasuringCategory =
     // Transit
     | "commercial-airport"
-    | "high-speed-rail"    // line-distance – see task-06
+    | "high-speed-rail" // line-distance – see task-06
     | "rail-station"
     // Border
-    | "admin-1st-border"   // polygon-edge distance – see task-06
-    | "admin-2nd-border"   // polygon-edge distance – see task-06
+    | "admin-1st-border" // polygon-edge distance – see task-06
+    | "admin-2nd-border" // polygon-edge distance – see task-06
     // Natural
-    | "body-of-water"      // polygon-edge distance – see task-06
-    | "coastline"          // line-distance – see task-06
+    | "body-of-water" // polygon-edge distance – see task-06
+    | "coastline" // line-distance – see task-06
     | "mountain"
     | "park"
     // Places of Interest
@@ -106,8 +109,8 @@ export type MeasuringQuestion = BaseQuestion & {
 };
 
 export type MeasuringRenderState = {
-    hitMaskFeatures: FeatureCollection<Polygon | MultiPolygon>;   // closer
-    missMaskFeatures: FeatureCollection<Polygon | MultiPolygon>;  // farther
+    hitMaskFeatures: FeatureCollection<Polygon | MultiPolygon>; // closer
+    missMaskFeatures: FeatureCollection<Polygon | MultiPolygon>; // farther
 };
 
 export const EMPTY_MEASURING_RENDER_STATE: MeasuringRenderState = {
@@ -119,8 +122,17 @@ export const EMPTY_MEASURING_RENDER_STATE: MeasuringRenderState = {
 ### `src/features/questions/thermometer/thermometerTypes.ts`
 
 ```typescript
-import type { Feature, FeatureCollection, LineString, MultiPolygon, Polygon } from "geojson";
-import type { BaseQuestion, QuestionAnswer } from "@/features/questions/coreTypes";
+import type {
+    Feature,
+    FeatureCollection,
+    LineString,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
+import type {
+    BaseQuestion,
+    QuestionAnswer,
+} from "@/features/questions/coreTypes";
 import type { Position } from "@/shared/geojson";
 
 export type ThermometerQuestion = BaseQuestion & {
@@ -153,27 +165,50 @@ export const EMPTY_THERMOMETER_RENDER_STATE: ThermometerRenderState = {
 ### `src/features/questions/tentacles/tentaclesTypes.ts`
 
 ```typescript
-import type { Feature, FeatureCollection, MultiPolygon, Point, Polygon } from "geojson";
+import type {
+    Feature,
+    FeatureCollection,
+    MultiPolygon,
+    Point,
+    Polygon,
+} from "geojson";
 import type { BaseQuestion } from "@/features/questions/coreTypes";
 import type { OsmFeature } from "@/features/questions/matching/matchingTypes";
 import type { Position } from "@/shared/geojson";
 
 export type TentaclesCategory =
     // 2 km group
-    | "museum" | "library" | "movie-theater" | "hospital"
+    | "museum"
+    | "library"
+    | "movie-theater"
+    | "hospital"
     // 25 km group
-    | "transit-line" | "zoo" | "aquarium" | "amusement-park";
+    | "transit-line"
+    | "zoo"
+    | "aquarium"
+    | "amusement-park";
 
 export type TentaclesDistanceOption = "2km" | "25km";
 
-export const tentaclesCategoryDistance: Record<TentaclesCategory, TentaclesDistanceOption> = {
-    "museum": "2km", "library": "2km", "movie-theater": "2km", "hospital": "2km",
-    "transit-line": "25km", "zoo": "25km", "aquarium": "25km", "amusement-park": "25km",
+export const tentaclesCategoryDistance: Record<
+    TentaclesCategory,
+    TentaclesDistanceOption
+> = {
+    museum: "2km",
+    library: "2km",
+    "movie-theater": "2km",
+    hospital: "2km",
+    "transit-line": "25km",
+    zoo: "25km",
+    aquarium: "25km",
+    "amusement-park": "25km",
 };
 
-export const tentaclesDistanceMeters: Record<TentaclesDistanceOption, number> = {
-    "2km": 2000, "25km": 25000,
-};
+export const tentaclesDistanceMeters: Record<TentaclesDistanceOption, number> =
+    {
+        "2km": 2000,
+        "25km": 25000,
+    };
 
 export type TentaclesQuestion = BaseQuestion & {
     type: "tentacles";
@@ -201,7 +236,10 @@ export type TentaclesQuestion = BaseQuestion & {
 export type TentaclesRenderState = {
     hitMaskFeatures: FeatureCollection<Polygon | MultiPolygon>;
     missMaskFeatures: FeatureCollection<Polygon | MultiPolygon>;
-    poiFeatures: FeatureCollection<Point, { isSelected: boolean; name: string; osmId: number }>;
+    poiFeatures: FeatureCollection<
+        Point,
+        { isSelected: boolean; name: string; osmId: number }
+    >;
     /** The seeker's radius circle, shown as an outline layer. null when no center set. */
     radiusOutlineFeature: Feature<Polygon> | null;
     voronoiOutlineFeatures: FeatureCollection<Polygon | MultiPolygon>;
@@ -265,11 +303,11 @@ In `measuringConfig.ts`, `thermometerConfig.ts`, `tentaclesConfig.ts`:
 
 - `implemented: false → true`
 - Fix answer labels:
-  - Measuring: `positive: "Closer"`, `negative: "Farther"`
-  - Thermometer: `positive: "Hotter"`, `negative: "Colder"` (currently "Warmer")
-  - Tentacles: labels become irrelevant once Task 02 introduces the POI answer
-    model. For Task 01, set `positive: "Answered"`, `negative: "—"` as a
-    placeholder and leave a `// TODO(task-02): poi answer model` comment.
+    - Measuring: `positive: "Closer"`, `negative: "Farther"`
+    - Thermometer: `positive: "Hotter"`, `negative: "Colder"` (currently "Warmer")
+    - Tentacles: labels become irrelevant once Task 02 introduces the POI answer
+      model. For Task 01, set `positive: "Answered"`, `negative: "—"` as a
+      placeholder and leave a `// TODO(task-02): poi answer model` comment.
 - `summary`: return a real string. For Task 01 a minimal summary keyed off
   stored fields is fine (e.g. `"Measuring: ${category}"`); richer summaries land
   with each type's UI task.

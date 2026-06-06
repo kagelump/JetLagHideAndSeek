@@ -35,21 +35,21 @@ not the seeker's pin.
 
 ### Implemented here (13)
 
-| Category key | Section | OSM selector source |
-|---|---|---|
-| `commercial-airport` | Transit | `deriveOsmQueryTags("commercial-airport")` |
-| `rail-station` | Transit | **new selector** — needs Task 07 (or live Overpass) |
-| `mountain` | Natural | `deriveOsmQueryTags("mountain")` |
-| `park` | Natural | `deriveOsmQueryTags("park")` |
-| `amusement-park` | Places of Interest | reuse |
-| `zoo` | Places of Interest | reuse |
-| `aquarium` | Places of Interest | reuse |
-| `golf-course` | Places of Interest | reuse |
-| `museum` | Places of Interest | reuse |
-| `movie-theater` | Places of Interest | reuse |
-| `hospital` | Public Utilities | reuse |
-| `library` | Public Utilities | reuse |
-| `foreign-consulate` | Public Utilities | reuse |
+| Category key         | Section            | OSM selector source                                 |
+| -------------------- | ------------------ | --------------------------------------------------- |
+| `commercial-airport` | Transit            | `deriveOsmQueryTags("commercial-airport")`          |
+| `rail-station`       | Transit            | **new selector** — needs Task 07 (or live Overpass) |
+| `mountain`           | Natural            | `deriveOsmQueryTags("mountain")`                    |
+| `park`               | Natural            | `deriveOsmQueryTags("park")`                        |
+| `amusement-park`     | Places of Interest | reuse                                               |
+| `zoo`                | Places of Interest | reuse                                               |
+| `aquarium`           | Places of Interest | reuse                                               |
+| `golf-course`        | Places of Interest | reuse                                               |
+| `museum`             | Places of Interest | reuse                                               |
+| `movie-theater`      | Places of Interest | reuse                                               |
+| `hospital`           | Public Utilities   | reuse                                               |
+| `library`            | Public Utilities   | reuse                                               |
+| `foreign-consulate`  | Public Utilities   | reuse                                               |
 
 ### Hidden here (5) — Task 06
 
@@ -115,8 +115,11 @@ Mirror `OsmMatchingQuestionDetailScreen.test.tsx` (search is mocked in
 
 ```typescript
 export type MeasuringCategorySection =
-    | "Transit" | "Border" | "Natural"
-    | "Places of Interest" | "Public Utilities";
+    | "Transit"
+    | "Border"
+    | "Natural"
+    | "Places of Interest"
+    | "Public Utilities";
 
 export type MeasuringCategoryConfig = {
     category: MeasuringCategory;
@@ -126,7 +129,9 @@ export type MeasuringCategoryConfig = {
     title: string;
 };
 
-export const measuringCategories: MeasuringCategoryConfig[] = [ /* 18 entries */ ];
+export const measuringCategories: MeasuringCategoryConfig[] = [
+    /* 18 entries */
+];
 ```
 
 For the 12 categories shared with Matching, call `deriveOsmQueryTags(matchingKey)`.
@@ -139,7 +144,12 @@ detail screen filters with `.filter(c => c.implemented)`.
 
 ```typescript
 import { circle } from "@turf/circle";
-import type { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import type {
+    Feature,
+    FeatureCollection,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
 import type { QuestionState } from "@/features/questions/questionTypes";
 import type { MeasuringRenderState } from "./measuringTypes";
@@ -160,15 +170,19 @@ export function buildMeasuringRenderState(
 
     for (const q of measuringQuestions) {
         const target = q.candidates.find(
-            (c) => c.osmId === q.selectedOsmId && c.osmType === q.selectedOsmType,
+            (c) =>
+                c.osmId === q.selectedOsmId && c.osmType === q.selectedOsmType,
         );
         if (!target) continue;
 
         const radiusKm = q.seekerDistanceMeters / 1000;
         // circle CENTER is the target POI, not q.center.
-        const circ = circle([target.lon, target.lat], radiusKm, { units: "kilometers" });
+        const circ = circle([target.lon, target.lat], radiusKm, {
+            units: "kilometers",
+        });
 
-        if (q.answer === "positive") hitFeatures.push(circ);   // closer → inside
+        if (q.answer === "positive")
+            hitFeatures.push(circ); // closer → inside
         else if (q.answer === "negative") missFeatures.push(circ); // farther → outside
     }
 

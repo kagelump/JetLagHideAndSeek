@@ -9,7 +9,7 @@ change small and well-tested.
 Today every question's answer is a `QuestionAnswer = "unanswered" | "positive" |
 "negative"` with a `positive`/`negative` label pair. That fits Radar, Matching,
 Measuring, and Thermometer (all genuinely binary). It does **not** fit
-**Tentacles**, whose answer is *a named POI* — there is no "negative". Forcing it
+**Tentacles**, whose answer is _a named POI_ — there is no "negative". Forcing it
 into the binary model produced nonsense labels (`positive: "Answered"`,
 `negative: "—"`).
 
@@ -19,7 +19,7 @@ either binary or POI-answered, and removes the placeholder Tentacles labels.
 **Chosen model (Option A):** the POI fields (`selectedOsmId` / `selectedOsmType`
 / `selectedName`) are the **canonical** answer. The legacy `answer` string is kept
 only as a coarse status for generic store/list code, and is **derived** from the
-selection — never authored independently. We deliberately did *not* refactor the
+selection — never authored independently. We deliberately did _not_ refactor the
 shared `QuestionAnswer` union into a polymorphic per-family type; that's the right
 move only if a second place-answer question type appears. To stop the canonical
 fields and the derived status from drifting, see "Hardening" below — it is the
@@ -34,8 +34,8 @@ load-bearing part of this task, not optional polish.
 - `questionDefinitions.tentacles.answerModel === "poi"`.
 - A new helper `getQuestionAnswerStatus(question)` returns `"answered"` /
   `"unanswered"` for both models:
-  - binary: `answered` iff `answer === "positive" || answer === "negative"`.
-  - poi: `answered` iff `selectedOsmId !== null`.
+    - binary: `answered` iff `answer === "positive" || answer === "negative"`.
+    - poi: `answered` iff `selectedOsmId !== null`.
 - A new helper `isPoiAnswerModel(type)` returns `true` only for `tentacles`.
 
 ### `src/features/questions/components/__tests__/QuestionAnswerSelector.test.tsx` (extend)
@@ -117,22 +117,23 @@ Option A's one weakness is two fields that can disagree (`answer: "positive"` bu
 the canonical fields and the derived status cannot drift:
 
 1. **Single writer.** Define the selection helpers in `questionStore.tsx` **here,
-   in this task** (Task 11 only wires them to the UI). They are the *only* code
+   in this task** (Task 11 only wires them to the UI). They are the _only_ code
    allowed to set a Tentacles `answer`:
-   - `selectTentaclesPoi(question, { osmId, osmType, name })` sets all three
-     selected fields **and** derives `answer: "positive"` in the same update.
-   - `resetTentaclesAnswer(question)` clears all three selected fields **and**
-     sets `answer: "unanswered"` in the same update.
-   No UI component, detail screen, or generic action may write a Tentacles
-   `answer` directly. There is no `QuestionAnswerSelector` for Tentacles (Task 11),
-   so nothing in the UI should even have a reason to. Owning the helpers here lets
-   the anti-drift invariant be tested before any UI exists.
+
+    - `selectTentaclesPoi(question, { osmId, osmType, name })` sets all three
+      selected fields **and** derives `answer: "positive"` in the same update.
+    - `resetTentaclesAnswer(question)` clears all three selected fields **and**
+      sets `answer: "unanswered"` in the same update.
+      No UI component, detail screen, or generic action may write a Tentacles
+      `answer` directly. There is no `QuestionAnswerSelector` for Tentacles (Task 11),
+      so nothing in the UI should even have a reason to. Owning the helpers here lets
+      the anti-drift invariant be tested before any UI exists.
 
 2. **Derive, don't store a second truth.** Treat `selectedOsmId` as canonical.
    `answer` is a cache of "is a POI selected?". Implement the helpers so `answer`
    is computed from the selection (`selectedOsmId === null ? "unanswered" :
-   "positive"`) rather than passed in — that makes a mismatched write
-   *unrepresentable through the supported API*.
+"positive"`) rather than passed in — that makes a mismatched write
+   _unrepresentable through the supported API_.
 
 3. **Reads go through `getQuestionAnswerStatus`.** Nothing outside the helpers
    should branch on a Tentacles `answer` literal. `getQuestionAnswerStatus` keys

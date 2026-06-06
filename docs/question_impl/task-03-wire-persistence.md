@@ -87,7 +87,7 @@ Export the inferred types (`MeasuringQuestionWireV1`, etc.) alongside the
 existing ones.
 
 > Reuse the existing candidate sub-schema (the `z.object({ lat, lon, name,
-> osmId, osmType, tags })` array used by matching) — factor it into a shared
+osmId, osmType, tags })` array used by matching) — factor it into a shared
 > `candidateWireSchema` const if it isn't already, rather than copy-pasting.
 
 ### `src/sharing/wire/minified.ts`

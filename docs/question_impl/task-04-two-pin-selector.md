@@ -35,9 +35,9 @@ Introduce a small abstraction in `src/features/map/`:
 ```typescript
 // One draggable handle on the map.
 export type MapPin = {
-    key: string;            // "center" | "start" | "end"
+    key: string; // "center" | "start" | "end"
     position: Position;
-    isActive: boolean;      // only the active pin responds to drag
+    isActive: boolean; // only the active pin responds to drag
 };
 
 // Resolve the pins for a question, given which pin key is active.
@@ -68,10 +68,10 @@ export function getQuestionPins(
   fixed/dimmed (extend `ActivePinLayer` to take a feature collection of pins with
   an `isActive` property and style accordingly).
 - `handlePinCommit(questionId, pinKey, position)` routes to a per-pin commit:
-  - `center` → existing `updateQuestionCenter`.
-  - `start` / `end` → new thermometer pin updaters (defined in Task 09, e.g.
-    `updateThermometerPin(question, "start" | "end", position)`). For this task,
-    a thin commit callback prop is enough; Task 09 supplies the updater.
+    - `center` → existing `updateQuestionCenter`.
+    - `start` / `end` → new thermometer pin updaters (defined in Task 09, e.g.
+      `updateThermometerPin(question, "start" | "end", position)`). For this task,
+      a thin commit callback prop is enough; Task 09 supplies the updater.
 
 `activePinKey` state: add it to the question-derived/UI state that already tracks
 `activeQuestion`. A single nullable `activePinKey: string | null` is enough (the

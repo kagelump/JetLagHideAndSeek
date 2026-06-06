@@ -9,8 +9,8 @@ and the half-plane geometry (Task 08), plus the preview layer in `NativeMap`.
 ## Product intent (drives the layout)
 
 Thermometer is a **planning tool for halving the remaining hiding space**. The
-seeker plans *how far to travel, from where to where, and which question it
-spends* so the bisector cuts the area roughly in half. The travel distance is
+seeker plans _how far to travel, from where to where, and which question it
+spends_ so the bisector cuts the area roughly in half. The travel distance is
 usually chosen **after** the two endpoints are placed. Optimize the screen for
 that loop: prominent live distance, live half-plane preview, and (stretch) an
 approximate area-split read-out.
@@ -39,7 +39,7 @@ approximate area-split read-out.
   through the per-pin commit path (Task 04) into the new updaters below.
 - **Creation seeds an offset end pin.** Create with
   `previousPosition = currentGPS` and `currentPosition = currentGPS shifted a
-  small amount` (e.g. ~300 m east, comfortably above the 100 m degenerate
+small amount` (e.g. ~300 m east, comfortably above the 100 m degenerate
   threshold) so the screen does **not** open in the degenerate warning state.
   Default `activePin = "end"`. (Confirmed product decision.)
 - **Set GPS** buttons set the respective pin to current GPS.

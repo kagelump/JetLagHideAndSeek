@@ -27,33 +27,33 @@ keeps Task 05 unblocked.
    `src/features/questions/matching/matchingSelectors.ts`, matching the existing
    entry shape:
 
-   ```typescript
-   "rail-station": {
-       osmTags: `["railway"="station"]`,
-       // ...mirror the other entries' fields (section/title/bundleable/etc.)
-   },
-   ```
+    ```typescript
+    "rail-station": {
+        osmTags: `["railway"="station"]`,
+        // ...mirror the other entries' fields (section/title/bundleable/etc.)
+    },
+    ```
 
-   Never hand-edit `data/geofabrik/poi-selectors.json` — it's regenerated.
+    Never hand-edit `data/geofabrik/poi-selectors.json` — it's regenerated.
 
 2. Regenerate everything in one command (do **not** chain sub-steps):
 
-   ```bash
-   pnpm data:poi
-   ```
+    ```bash
+    pnpm data:poi
+    ```
 
 3. Commit the regenerated runtime artifacts:
 
-   ```bash
-   git add assets/poi data/geofabrik/poi-selectors.json
-   ```
+    ```bash
+    git add assets/poi data/geofabrik/poi-selectors.json
+    ```
 
 4. Verify guards:
 
-   ```bash
-   pnpm check   # registry drift guard must pass
-   pnpm test    # reducer tests
-   ```
+    ```bash
+    pnpm check   # registry drift guard must pass
+    pnpm test    # reducer tests
+    ```
 
 ## If you do NOT have the PBF
 

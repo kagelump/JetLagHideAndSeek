@@ -4,7 +4,7 @@
 **Audience**: senior-ish. New map layer + a POI-as-answer detail screen.
 
 Build the Tentacles detail screen, the radius circle map layer, and wire the
-POI-answer model (Task 02) so the answer *is* the chosen place.
+POI-answer model (Task 02) so the answer _is_ the chosen place.
 
 ## Detail Screen UX
 
@@ -90,7 +90,7 @@ The Tentacles `hitMaskFeatures` / `missMaskFeatures` feed the existing
 - `NativeMap.tsx` (add `TentaclesRadiusLayer`).
 - Selection helpers `selectTentaclesPoi` / `resetTentaclesAnswer` are **already
   defined in Task 02** (they own the single-writer / anti-drift contract). This
-  task only *calls* them from the candidate list and Reset button — do not write
+  task only _calls_ them from the candidate list and Reset button — do not write
   the Tentacles `answer` field directly anywhere in the UI.
 
 ## Test plan (write first)
