@@ -77,7 +77,7 @@ describe("NativeMap", () => {
 
     it("renders the map, Tokyo boundary, and controls", () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} />,
+            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
         );
 
         expect(screen.getByTestId("native-map")).toBeTruthy();
@@ -129,7 +129,10 @@ describe("NativeMap", () => {
         const screen = renderWithSafeArea(
             <>
                 <SelectTokyoMetroHidingZone />
-                <NativeMap isQuestionDetailRoute={false} />
+                <NativeMap
+                    isQuestionDetailRoute={false}
+                    onPinCommit={jest.fn()}
+                />
             </>,
         );
 
@@ -181,7 +184,7 @@ describe("NativeMap", () => {
 
     it("fits the camera when the map finishes loading", () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} />,
+            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
         );
 
         fireEvent(screen.getByTestId("native-map"), "onDidFinishLoadingMap");
@@ -202,7 +205,7 @@ describe("NativeMap", () => {
 
     it("locates the user and flies the camera to the mocked coordinate", async () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} />,
+            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
         );
 
         fireEvent.press(screen.getByText("📍"));
@@ -220,7 +223,7 @@ describe("NativeMap", () => {
 
     it("passes scrollEnabled to the map view", () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} />,
+            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
         );
 
         const mapView = screen.getByTestId("native-map");
@@ -229,7 +232,7 @@ describe("NativeMap", () => {
 
     it("renders the movable pin as ShapeSource layers with stable ids", () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} />,
+            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
         );
 
         const pinSource = screen
@@ -260,7 +263,10 @@ describe("NativeMap", () => {
         const screen = renderWithSafeArea(
             <>
                 <CreateTransitLineQuestion />
-                <NativeMap isQuestionDetailRoute={true} />
+                <NativeMap
+                    isQuestionDetailRoute={true}
+                    onPinCommit={jest.fn()}
+                />
             </>,
         );
 
