@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { SheetListRow } from "@/components/SheetListRow";
+import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { POI_DATA_ATTRIBUTION } from "@/features/questions/matching/poiAttribution";
 import { ShareSetupModal } from "@/sharing/export/ShareSetupModal";
@@ -81,7 +82,7 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
     };
 
     return (
-        <View style={styles.container}>
+        <SheetScrollView contentContainerStyle={styles.container}>
             <Pressable
                 accessibilityLabel="Share game setup"
                 accessibilityRole="button"
@@ -256,7 +257,7 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                 questions={questions}
                 visible={isShareVisible}
             />
-        </View>
+        </SheetScrollView>
     );
 }
 
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     container: {
-        flex: 1,
+        paddingBottom: 40,
         paddingHorizontal: 20,
         paddingTop: 0,
     },
