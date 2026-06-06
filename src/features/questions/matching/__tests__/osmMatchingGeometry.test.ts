@@ -50,6 +50,7 @@ function makeMatchingQuestion(
         targetOsmType: "node",
         type: "matching",
         updatedAt: "2026-05-30T00:00:00.000Z",
+        isLocked: false,
         ...overrides,
     };
 }
@@ -224,6 +225,7 @@ describe("buildOsmMatchingRenderState", () => {
             targetName: "Way 1",
             targetOsmId: 1,
             targetOsmType: "way",
+            isLocked: false,
             type: "matching",
             updatedAt: "2026-05-30T00:00:00.000Z",
         };

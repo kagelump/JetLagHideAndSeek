@@ -13,6 +13,7 @@ function makeRadarQuestion(
         distanceOption: "other",
         distanceUnit: "m",
         id: "q-test-1",
+        isLocked: false,
         type: "radar",
         updatedAt: "2026-06-05T00:00:00.000Z",
     };

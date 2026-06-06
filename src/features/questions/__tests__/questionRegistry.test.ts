@@ -104,6 +104,7 @@ describe("answer model", () => {
             distanceOption: "500m",
             distanceUnit: "m",
             id: "q-1",
+            isLocked: false,
             type: "radar",
             updatedAt: "2026-01-01T00:00:00.000Z",
         };
@@ -126,6 +127,7 @@ describe("answer model", () => {
             distanceMeters: 2000,
             distanceOption: "2km",
             id: "q-2",
+            isLocked: false,
             selectedOsmId: null,
             selectedOsmType: null,
             selectedName: null,
@@ -152,6 +154,7 @@ describe("answer model", () => {
             distanceMeters: 2000,
             distanceOption: "2km",
             id: "q-3",
+            isLocked: false,
             selectedOsmId: null,
             selectedOsmType: null,
             selectedName: null,

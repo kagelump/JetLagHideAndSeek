@@ -10,6 +10,7 @@ function makeThermometerStub(
         currentPosition: [139.71, 35.67],
         createdAt: "2026-01-01T00:00:00.000Z",
         id: "q-test",
+        isLocked: false,
         type: "thermometer",
         updatedAt: "2026-01-01T00:00:00.000Z",
     };

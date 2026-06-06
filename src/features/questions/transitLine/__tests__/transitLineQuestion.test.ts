@@ -269,6 +269,7 @@ describe("reconcileTransitLineQuestionSelection", () => {
         center: [139.72214, 35.65121],
         createdAt: "2026-05-30T00:00:00.000Z",
         id: "matching-1",
+        isLocked: false,
         lineId: null,
         lineName: null,
         selectedOsmId: null,

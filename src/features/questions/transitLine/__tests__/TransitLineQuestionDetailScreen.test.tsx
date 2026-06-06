@@ -24,6 +24,7 @@ function makeTransitLineQuestion(
         center,
         createdAt: new Date().toISOString(),
         id: "tl-1",
+        isLocked: false,
         lineId: null,
         lineName: null,
         selectedOsmId: null,

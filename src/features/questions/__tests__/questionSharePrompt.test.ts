@@ -14,6 +14,7 @@ function makeRadarQuestion(
         id: "q-radar-1",
         type: "radar",
         updatedAt: "2026-06-05T00:00:00.000Z",
+        isLocked: false,
         ...overrides,
     };
 }
@@ -37,6 +38,7 @@ function makeMatchingQuestion(
         targetOsmType: null,
         type: "matching",
         updatedAt: "2026-06-05T00:00:00.000Z",
+        isLocked: false,
         ...overrides,
     };
 }

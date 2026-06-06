@@ -11,6 +11,7 @@ function makeTentaclesStub(): QuestionState {
         distanceMeters: 2000,
         distanceOption: "2km",
         id: "q-test",
+        isLocked: false,
         selectedOsmId: null,
         selectedOsmType: null,
         selectedName: null,

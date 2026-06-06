@@ -9,6 +9,7 @@ function makeMeasuringStub(): QuestionState {
         center: [139.7, 35.66],
         createdAt: "2026-01-01T00:00:00.000Z",
         id: "q-test",
+        isLocked: false,
         seekerDistanceMeters: null,
         seekerDistanceUnit: "m",
         selectedOsmId: null,
