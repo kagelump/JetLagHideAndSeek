@@ -19,7 +19,6 @@ import {
     updateQuestionCenter,
     useQuestionActions,
     useQuestionDerived,
-    useIsPinLocked,
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
@@ -92,12 +91,10 @@ type QuestionActionsMenuProps = {
 
 export function QuestionActionsMenu({ onNavigate }: QuestionActionsMenuProps) {
     const { activeQuestion } = useQuestionDerived();
-    const isPinLocked = useIsPinLocked();
-    const { deleteQuestion, setPinLocked, updateQuestion } =
-        useQuestionActions();
+    const { deleteQuestion, updateQuestion } = useQuestionActions();
     const [isVisible, setVisible] = useState(false);
 
-    if (!activeQuestion || !("center" in activeQuestion)) {
+    if (!activeQuestion) {
         return null;
     }
 
@@ -115,7 +112,11 @@ export function QuestionActionsMenu({ onNavigate }: QuestionActionsMenuProps) {
     };
 
     const handleLockToggle = () => {
-        setPinLocked(!isPinLocked);
+        updateQuestion(activeQuestion.id, (current) => ({
+            ...current,
+            isLocked: !current.isLocked,
+            updatedAt: new Date().toISOString(),
+        }));
         closeMenu();
     };
 
@@ -161,24 +162,32 @@ export function QuestionActionsMenu({ onNavigate }: QuestionActionsMenuProps) {
                         style={styles.actionSheet}
                         testID="question-actions-menu"
                     >
-                        <ActionSheetButton
-                            accessibilityLabel="Set question pin to my location"
-                            onPress={() => {
-                                void handleSetToMyLocation();
-                            }}
-                            testID="question-actions-set-location"
-                            title="Set pin to my location"
-                        />
+                        {"center" in activeQuestion ? (
+                            <ActionSheetButton
+                                accessibilityLabel="Set question pin to my location"
+                                onPress={() => {
+                                    void handleSetToMyLocation();
+                                }}
+                                testID="question-actions-set-location"
+                                title="Set pin to my location"
+                            />
+                        ) : null}
                         <ActionSheetButton
                             accessibilityLabel={
-                                isPinLocked
+                                activeQuestion.isLocked
                                     ? "Unlock question pin"
                                     : "Lock question pin"
                             }
-                            accessibilityState={{ selected: isPinLocked }}
+                            accessibilityState={{
+                                selected: activeQuestion.isLocked,
+                            }}
                             onPress={handleLockToggle}
                             testID="question-actions-lock-toggle"
-                            title={isPinLocked ? "Unlock pin" : "Lock pin"}
+                            title={
+                                activeQuestion.isLocked
+                                    ? "Unlock pin"
+                                    : "Lock pin"
+                            }
                         />
                         <ActionSheetButton
                             destructive
