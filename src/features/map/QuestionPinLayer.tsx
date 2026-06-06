@@ -34,20 +34,22 @@ export function QuestionPinLayer({
     const feature = useMemo<FeatureCollection<Point>>(
         () => ({
             type: "FeatureCollection",
-            features: pins.map((pin) => ({
-                type: "Feature",
-                geometry: {
-                    type: "Point",
-                    coordinates:
-                        isDragging && draggedPinKey === pin.key
+            features: pins.map((pin) => {
+                const isPinDragging = isDragging && draggedPinKey === pin.key;
+                return {
+                    type: "Feature",
+                    geometry: {
+                        type: "Point",
+                        coordinates: isPinDragging
                             ? (draftCoordinate ?? pin.position)
                             : pin.position,
-                },
-                properties: {
-                    pinKey: pin.key,
-                    isDragging: isDragging && draggedPinKey === pin.key,
-                },
-            })),
+                    },
+                    properties: {
+                        pinKey: pin.key,
+                        isDragging: isPinDragging,
+                    },
+                };
+            }),
         }),
         [pins, isDragging, draggedPinKey, draftCoordinate],
     );
