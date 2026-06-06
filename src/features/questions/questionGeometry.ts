@@ -3,7 +3,7 @@ import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import { buildMeasuringRenderState } from "@/features/questions/measuring/measuringGeometry";
 import { EMPTY_TENTACLES_RENDER_STATE } from "@/features/questions/tentacles/tentaclesTypes";
-import { EMPTY_THERMOMETER_RENDER_STATE } from "@/features/questions/thermometer/thermometerTypes";
+import { buildThermometerRenderState } from "@/features/questions/thermometer/thermometerGeometry";
 import type { Bbox } from "@/shared/geojson";
 import type { QuestionMapRenderState } from "@/features/questions/radar/radarTypes";
 import { buildRadarQuestionRenderState } from "@/features/questions/radar/radarGeometry";
@@ -48,7 +48,7 @@ export function buildQuestionMapRenderState(
         radar,
         radarAreaFeatures: radar.previewFeatures,
         tentacles: EMPTY_TENTACLES_RENDER_STATE,
-        thermometer: EMPTY_THERMOMETER_RENDER_STATE,
+        thermometer: buildThermometerRenderState(questions, playAreaBoundary),
         transitLine: {
             hitMaskFeatures: buildTransitLineMaskFeatures(
                 stations,

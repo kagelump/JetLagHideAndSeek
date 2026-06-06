@@ -1,5 +1,8 @@
 # Task 07: Rail-Station POI Bundle (data prep)
 
+**Status:** ✅ Closed (2026-06-06) — no code changes; already satisfied by
+existing architecture. See `epic-impl-notes.md#task-07` for details.
+
 **Depends on**: nothing (prep). Land before Task 05's `rail-station` acceptance,
 or Task 05 ships `rail-station` via live Overpass until this lands.
 **Audience**: intern-friendly **only if** the Geofabrik PBF is available locally.

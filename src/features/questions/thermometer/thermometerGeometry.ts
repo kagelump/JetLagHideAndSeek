@@ -1,0 +1,478 @@
+import circle from "@turf/circle";
+import type {
+    Feature,
+    FeatureCollection,
+    LineString,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
+
+import { EARTH_RADIUS_METERS, haversineDistanceMeters } from "@/shared/geojson";
+import type { Bbox, Position } from "@/shared/geojson";
+
+import { clipCellsToPlayArea } from "@/features/questions/clipVoronoiCells";
+import type { QuestionState } from "@/features/questions/questionTypes";
+import type {
+    ThermometerQuestion,
+    ThermometerRenderState,
+} from "./thermometerTypes";
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const MIN_TRAVEL_METERS = 100;
+const MAX_CACHE_SIZE = 20;
+
+// ─── LRU cache ───────────────────────────────────────────────────────────────
+
+/** Increment to invalidate all cached state when the algorithm changes. */
+const GEOMETRY_CACHE_VERSION = 1;
+
+/**
+ * Full render-state cache for single-question calls (the common case).
+ * Keyed on (p1, p2, answer, boundary identity).
+ */
+const stateCache = new Map<string, ThermometerRenderState>();
+
+/**
+ * Per-component caches so the multi-question path can still reuse
+ * individual half-planes and preview collections computed for earlier
+ * single-question calls.
+ */
+const halfPlaneCache = new Map<
+    string,
+    FeatureCollection<Polygon | MultiPolygon>
+>();
+const previewCache = new Map<string, FeatureCollection<LineString | Polygon>>();
+
+const boundaryIds = new WeakMap<object, number>();
+let nextBoundaryId = 1;
+
+function getBoundaryId(boundary: object): number {
+    let id = boundaryIds.get(boundary);
+    if (id === undefined) {
+        id = nextBoundaryId++;
+        boundaryIds.set(boundary, id);
+    }
+    return id;
+}
+
+/** Round to 7 decimal places to prevent floating-point drift in cache keys. */
+function round7(n: number): number {
+    return Math.round(n * 1e7) / 1e7;
+}
+
+function questionStateCacheKey(
+    p1: Position,
+    p2: Position,
+    answer: "positive" | "negative" | "unanswered",
+    boundaryId: number,
+): string {
+    return [
+        GEOMETRY_CACHE_VERSION,
+        round7(p1[0]),
+        round7(p1[1]),
+        round7(p2[0]),
+        round7(p2[1]),
+        answer,
+        boundaryId,
+    ].join(":");
+}
+
+function halfPlaneCacheKey(
+    p1: Position,
+    p2: Position,
+    answer: "positive" | "negative",
+    boundaryId: number,
+): string {
+    return [
+        GEOMETRY_CACHE_VERSION,
+        round7(p1[0]),
+        round7(p1[1]),
+        round7(p2[0]),
+        round7(p2[1]),
+        answer,
+        boundaryId,
+    ].join(":");
+}
+
+function previewCacheKey(p1: Position, p2: Position): string {
+    return [
+        GEOMETRY_CACHE_VERSION,
+        round7(p1[0]),
+        round7(p1[1]),
+        round7(p2[0]),
+        round7(p2[1]),
+    ].join(":");
+}
+
+/** Clears the in-memory caches. Call in tests to reset state. */
+export function clearThermometerGeometryCache(): void {
+    stateCache.clear();
+    halfPlaneCache.clear();
+    previewCache.clear();
+}
+
+// ─── Bbox helpers ────────────────────────────────────────────────────────────
+
+function computeBoundaryBbox(
+    boundary: FeatureCollection<Polygon | MultiPolygon>,
+): Bbox {
+    let west = Infinity;
+    let south = Infinity;
+    let east = -Infinity;
+    let north = -Infinity;
+    for (const feature of boundary.features) {
+        const geom = feature.geometry;
+        const polys =
+            geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
+        for (const poly of polys) {
+            for (const ring of poly) {
+                for (const [lon, lat] of ring) {
+                    if (lon < west) west = lon;
+                    if (lat < south) south = lat;
+                    if (lon > east) east = lon;
+                    if (lat > north) north = lat;
+                }
+            }
+        }
+    }
+    return [west, south, east, north];
+}
+
+/** Approximate bbox diagonal length in meters. */
+function bboxDiagonalMeters([west, south, east, north]: Bbox): number {
+    const midLat = ((south + north) / 2) * (Math.PI / 180);
+    const mPerDegLat = EARTH_RADIUS_METERS * (Math.PI / 180);
+    const mPerDegLon = Math.cos(midLat) * mPerDegLat;
+    const widthM = (east - west) * mPerDegLon;
+    const heightM = (north - south) * mPerDegLat;
+    return Math.sqrt(widthM * widthM + heightM * heightM);
+}
+
+// ─── Half-plane construction ─────────────────────────────────────────────────
+
+/**
+ * Build a single-cell FeatureCollection wrapping the half-plane rectangle,
+ * then clip to the play area boundary.
+ *
+ * The half-plane is a large rectangle on the valid side of the perpendicular
+ * bisector of segment P1→P2, computed in a local equirectangular projection
+ * centered on the midpoint.
+ */
+function buildHalfPlane(
+    p1: Position,
+    p2: Position,
+    answer: "positive" | "negative",
+    boundary: FeatureCollection<Polygon | MultiPolygon>,
+    boundaryBbox: Bbox,
+): FeatureCollection<Polygon | MultiPolygon> {
+    // 1. Midpoint in lon/lat.
+    const M: Position = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
+
+    // 2. Projection constants (equirectangular centered on M).
+    const cosLat = Math.cos((M[1] * Math.PI) / 180);
+    const mPerDegLat = EARTH_RADIUS_METERS * (Math.PI / 180);
+    const mPerDegLon = cosLat * mPerDegLat;
+
+    function project(p: Position): [number, number] {
+        return [(p[0] - M[0]) * mPerDegLon, (p[1] - M[1]) * mPerDegLat];
+    }
+
+    function unproject([x, y]: [number, number]): Position {
+        return [M[0] + x / mPerDegLon, M[1] + y / mPerDegLat];
+    }
+
+    // 3. Travel direction in projected meters.
+    const [p1x, p1y] = project(p1);
+    const [p2x, p2y] = project(p2);
+    const dx = p2x - p1x;
+    const dy = p2y - p1y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+
+    // Degenerate — should not reach here (filtered upstream), but guard.
+    if (len === 0) {
+        return { type: "FeatureCollection", features: [] };
+    }
+
+    const ndx = dx / len;
+    const ndy = dy / len;
+
+    // 4. Perpendicular direction (90° CCW from d).
+    const nx = -ndy;
+    const ny = ndx;
+
+    // 5. Rectangle half-extent L = 2 × bbox diagonal (in meters).
+    const diagonalM = bboxDiagonalMeters(boundaryBbox);
+    const L = 2 * Math.max(diagonalM, 1000);
+
+    // 6. Build rectangle corners in projected space.
+    //    Rectangle extends ±L along the perpendicular (the bisector), and
+    //    from the bisector by +L along the travel direction for Hotter
+    //    or -L for Colder.
+    const sign = answer === "positive" ? 1 : -1;
+
+    // Corners along the bisector (perpendicular).
+    const A: [number, number] = [L * nx, L * ny];
+    const B: [number, number] = [-L * nx, -L * ny];
+
+    // Extend along travel direction.
+    const C: [number, number] = [B[0] + sign * L * ndx, B[1] + sign * L * ndy];
+    const D: [number, number] = [A[0] + sign * L * ndx, A[1] + sign * L * ndy];
+
+    // 7. Dev assertion: verify the rectangle contains the correct anchor point.
+    if (__DEV__) {
+        const anchor = answer === "positive" ? p2 : p1;
+        const [ax, ay] = project(anchor);
+        // Express anchor in the (n, d) basis.
+        const anchorD = ax * ndx + ay * ndy;
+        const dMin = sign === 1 ? -1 : -L; // allow slop on the bisector edge
+        const dMax = sign === 1 ? L : 1;
+        if (anchorD < dMin || anchorD > dMax) {
+            console.warn(
+                `[thermometerGeometry] half-plane side verification failed: ` +
+                    `anchorD=${anchorD.toFixed(1)} not in [${dMin.toFixed(1)}, ${dMax.toFixed(1)}] ` +
+                    `(answer=${answer})`,
+            );
+        }
+    }
+
+    // 8. Inverse-project corners back to lon/lat.
+    const cornerA = unproject(A);
+    const cornerB = unproject(B);
+    const cornerC = unproject(C);
+    const cornerD = unproject(D);
+
+    // 9. Build Polygon feature and clip.
+    const halfPlaneCell: Feature<Polygon> = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+            type: "Polygon",
+            coordinates: [[cornerA, cornerB, cornerC, cornerD, cornerA]],
+        },
+    };
+
+    const cells: FeatureCollection<Polygon> = {
+        type: "FeatureCollection",
+        features: [halfPlaneCell],
+    };
+
+    return clipCellsToPlayArea(cells, boundary);
+}
+
+// ─── Preview features ────────────────────────────────────────────────────────
+
+/**
+ * Build preview features: travel-segment line from P1 to P2, plus three
+ * range-ring circles centered on P1 at 1 km, 5 km, and 15 km.
+ *
+ * Each feature carries a `role` property that Task 09's ThermometerPreviewLayer
+ * uses for rendering:
+ *   - `"travel-line"` — the P1→P2 segment
+ *   - `"ring-1km"`, `"ring-5km"`, `"ring-15km"` — concentric rings from P1
+ */
+function buildThermometerPreviewFeatures(
+    p1: Position,
+    p2: Position,
+): FeatureCollection<LineString | Polygon> {
+    const travelLine: Feature<LineString> = {
+        type: "Feature",
+        properties: { role: "travel-line" },
+        geometry: {
+            type: "LineString",
+            coordinates: [p1, p2],
+        },
+    };
+
+    const ring1km = circle(p1, 1, {
+        units: "kilometers",
+        properties: { role: "ring-1km" },
+    }) as Feature<Polygon>;
+
+    const ring5km = circle(p1, 5, {
+        units: "kilometers",
+        properties: { role: "ring-5km" },
+    }) as Feature<Polygon>;
+
+    const ring15km = circle(p1, 15, {
+        units: "kilometers",
+        properties: { role: "ring-15km" },
+    }) as Feature<Polygon>;
+
+    return {
+        type: "FeatureCollection",
+        features: [travelLine, ring1km, ring5km, ring15km],
+    };
+}
+
+// ─── Entry point ─────────────────────────────────────────────────────────────
+
+export function buildThermometerRenderState(
+    questions: QuestionState[],
+    playAreaBoundary: FeatureCollection<Polygon | MultiPolygon>,
+): ThermometerRenderState {
+    const thermometerQuestions = questions.filter(
+        (q): q is ThermometerQuestion => q.type === "thermometer",
+    );
+
+    // Fast path: single question — cache the full render state.
+    if (thermometerQuestions.length === 1) {
+        return buildSingleThermometerRenderState(
+            thermometerQuestions[0],
+            playAreaBoundary,
+        );
+    }
+
+    // Multi-question path: aggregate from per-component caches.
+    const hitFeatures: Feature<Polygon | MultiPolygon>[] = [];
+    const previewFeatures: Feature<LineString | Polygon>[] = [];
+
+    for (const q of thermometerQuestions) {
+        if (!q.previousPosition || !q.currentPosition) continue;
+
+        const dist = haversineDistanceMeters(
+            q.previousPosition[1],
+            q.previousPosition[0],
+            q.currentPosition[1],
+            q.currentPosition[0],
+        );
+        if (dist < MIN_TRAVEL_METERS) continue;
+
+        // Reuse the single-question path for each — it populates the
+        // component caches so we can pull the pieces without recomputing.
+        const single = buildSingleThermometerRenderState(q, playAreaBoundary);
+        previewFeatures.push(...single.previewFeatures.features);
+        hitFeatures.push(...single.hitMaskFeatures.features);
+    }
+
+    return {
+        hitMaskFeatures: {
+            type: "FeatureCollection",
+            features: hitFeatures,
+        },
+        previewFeatures: {
+            type: "FeatureCollection",
+            features: previewFeatures,
+        },
+    };
+}
+
+/**
+ * Build render state for a single thermometer question, with full-state LRU
+ * caching. Populates the per-component caches as a side effect so multi-question
+ * callers can compose without re-computation.
+ */
+function buildSingleThermometerRenderState(
+    q: ThermometerQuestion,
+    playAreaBoundary: FeatureCollection<Polygon | MultiPolygon>,
+): ThermometerRenderState {
+    // Skip questions with a null position.
+    if (!q.previousPosition || !q.currentPosition) {
+        return {
+            hitMaskFeatures: { type: "FeatureCollection", features: [] },
+            previewFeatures: { type: "FeatureCollection", features: [] },
+        };
+    }
+
+    // Skip degenerate travel (< MIN_TRAVEL_METERS).
+    const dist = haversineDistanceMeters(
+        q.previousPosition[1],
+        q.previousPosition[0],
+        q.currentPosition[1],
+        q.currentPosition[0],
+    );
+    if (dist < MIN_TRAVEL_METERS) {
+        return {
+            hitMaskFeatures: { type: "FeatureCollection", features: [] },
+            previewFeatures: { type: "FeatureCollection", features: [] },
+        };
+    }
+
+    const boundaryId = getBoundaryId(playAreaBoundary);
+    const answer =
+        q.answer === "positive" || q.answer === "negative"
+            ? q.answer
+            : "unanswered";
+
+    // ── Check full-state cache ─────────────────────────────────────
+    const stateKey = questionStateCacheKey(
+        q.previousPosition,
+        q.currentPosition,
+        answer,
+        boundaryId,
+    );
+    const cached = stateCache.get(stateKey);
+    if (cached) {
+        // Promote to most-recently-used.
+        stateCache.delete(stateKey);
+        stateCache.set(stateKey, cached);
+        return cached;
+    }
+
+    // ── Preview: always when both positions set ────────────────────
+    let pv: FeatureCollection<LineString | Polygon>;
+    const pvKey = previewCacheKey(q.previousPosition, q.currentPosition);
+    const cachedPv = previewCache.get(pvKey);
+    if (cachedPv) {
+        previewCache.delete(pvKey);
+        previewCache.set(pvKey, cachedPv);
+        pv = cachedPv;
+    } else {
+        pv = buildThermometerPreviewFeatures(
+            q.previousPosition,
+            q.currentPosition,
+        );
+        if (previewCache.size >= MAX_CACHE_SIZE) {
+            const oldest = previewCache.keys().next().value;
+            if (oldest !== undefined) previewCache.delete(oldest);
+        }
+        previewCache.set(pvKey, pv);
+    }
+
+    // ── Mask: only for answered questions ─────────────────────────
+    let hitMask: FeatureCollection<Polygon | MultiPolygon>;
+    if (answer === "positive" || answer === "negative") {
+        const boundaryBbox = computeBoundaryBbox(playAreaBoundary);
+        const hpKey = halfPlaneCacheKey(
+            q.previousPosition,
+            q.currentPosition,
+            answer,
+            boundaryId,
+        );
+        const cachedHp = halfPlaneCache.get(hpKey);
+        if (cachedHp) {
+            halfPlaneCache.delete(hpKey);
+            halfPlaneCache.set(hpKey, cachedHp);
+            hitMask = cachedHp;
+        } else {
+            hitMask = buildHalfPlane(
+                q.previousPosition,
+                q.currentPosition,
+                answer,
+                playAreaBoundary,
+                boundaryBbox,
+            );
+            if (halfPlaneCache.size >= MAX_CACHE_SIZE) {
+                const oldest = halfPlaneCache.keys().next().value;
+                if (oldest !== undefined) halfPlaneCache.delete(oldest);
+            }
+            halfPlaneCache.set(hpKey, hitMask);
+        }
+    } else {
+        hitMask = { type: "FeatureCollection", features: [] };
+    }
+
+    // ── Store in full-state cache ──────────────────────────────────
+    const result: ThermometerRenderState = {
+        hitMaskFeatures: hitMask,
+        previewFeatures: pv,
+    };
+
+    if (stateCache.size >= MAX_CACHE_SIZE) {
+        const oldest = stateCache.keys().next().value;
+        if (oldest !== undefined) stateCache.delete(oldest);
+    }
+    stateCache.set(stateKey, result);
+
+    return result;
+}

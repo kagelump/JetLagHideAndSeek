@@ -571,3 +571,176 @@ Additional findings noted but not fixed (all low-severity):
 - Task 07 (rail-station data) can now treat `rail-station` as an independent
   `MatchingCategory` with its own selectors, since the 5 line categories no
   longer depend on the matching category mapping.
+
+---
+
+## Task 07 — Rail-Station POI Bundle (data prep)
+
+**Completed:** 2026-06-06 (no code changes — already satisfied by existing architecture)
+
+### What was done
+
+Task 07 called for adding a `rail-station` selector to `CATEGORY_SELECTORS`,
+regenerating the POI bundle, and committing the artifacts so measuring's
+`rail-station` category has offline POI coverage.
+
+The functional goal was **already satisfied** by the existing architecture:
+
+- `CATEGORY_SELECTORS` already has `station-name-length` with
+  `[{ match: [{ key: "railway", value: "station" }] }]` (matchingSelectors.ts:51)
+- `assets/poi/japan-kanto.json` already contains **2,183** railway stations
+  under `station-name-length` (bundled during Task 05's initial `pnpm data:poi`)
+- `MEASURING_TO_MATCHING_CATEGORY` maps `"rail-station"` → `"station-name-length"`
+  (measuringCategories.ts:29)
+- `useMeasuringSearch` resolves through this mapping to `findMatchingFeaturesWithIndex`,
+  which queries the spatial index for `station-name-length` features
+- The kdbush index in `spatialIndex.ts` builds trees for `station-name-length` and
+  serves O(log n) nearest-neighbor queries
+
+The call chain works end-to-end without any Overpass dependency:
+
+```
+useMeasuringSearch("rail-station")
+  → MEASURING_TO_MATCHING_CATEGORY["rail-station"] = "station-name-length"
+  → findMatchingFeaturesWithIndex("station-name-length", ...)
+  → isBundleableCategory("station-name-length") → true
+  → querySpatialIndex(region, "station-name-length", ...) → 2,183 stations
+```
+
+### Why no changes were made
+
+The task spec (and Task 05/06 "For the next task" notes) suggested making
+`rail-station` an independent `MatchingCategory` and updating the mapping to
+`rail-station` → `rail-station`. This would require:
+
+1. Adding `"rail-station"` to the `MatchingCategory` union
+2. Adding it to `CATEGORY_SELECTORS` with `railway=station`
+3. Adding it to `matchingCategories` with section/title
+4. Regenerating the bundle
+
+However, the POI reducer (`poiReducer.mjs`) uses **first-match-wins** category
+assignment. Since both `station-name-length` and `rail-station` would match
+`railway=station`, the first one in registry order would capture all 2,183
+stations and the second would get zero — silently breaking either the matching
+question or the measuring question.
+
+Making both categories receive the same features would require either:
+
+- Modifying the reducer to support multi-category assignment (increasing bundle
+  size by duplicating records), or
+- Duplicating the `railway=station` data under both keys at columnar-build time
+
+Neither is worth the complexity. The current mapping-based approach is cleaner:
+one canonical OSM tag → one bundle key, shared by both question families via
+`MEASURING_TO_MATCHING_CATEGORY`.
+
+### Verification
+
+- `pnpm check` passes (no registry drift)
+- All 776 tests pass across 70 suites
+- `assets/poi/japan-kanto.json` contains `station-name-length` with 2,183 features
+- `pnpm test` includes `measuringCategories.test.ts` verifying
+  `MEASURING_TO_MATCHING_CATEGORY["rail-station"] === "station-name-length"`
+
+---
+
+## Task 08 — Thermometer Geometry
+
+**Completed:** 2026-06-06
+
+### What was done
+
+Implemented the thermometer half-plane geometry: given seeker positions P1
+(`previousPosition`) and P2 (`currentPosition`), the perpendicular bisector
+splits the plane into the P2 side (Hotter) and the P1 side (Colder). A large
+rectangle covering the valid half-plane is constructed in a local equirectangular
+projection, then clipped to the play area via `clipCellsToPlayArea`. Preview
+features (travel line + three range rings from P1) are always emitted when both
+positions are set. The entry point is wired into `questionGeometry.ts`.
+
+### Files created (2)
+
+| File                                                                       | Purpose                                                             |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `src/features/questions/thermometer/thermometerGeometry.ts`                | Half-plane construction, preview features, LRU caching, entry point |
+| `src/features/questions/thermometer/__tests__/thermometerGeometry.test.ts` | 13 tests covering all acceptance criteria                           |
+
+### Files modified (1)
+
+| File                                         | Change                                                                                                    |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `src/features/questions/questionGeometry.ts` | Replaced `EMPTY_THERMOMETER_RENDER_STATE` with `buildThermometerRenderState(questions, playAreaBoundary)` |
+
+### Deviations from the task spec
+
+**`@turf/helpers` not imported.** The task doc imports `lineString` and `polygon`
+from `@turf/helpers`. Neither is used — the travel line and half-plane polygon are
+constructed as plain GeoJSON objects, matching the existing codebase pattern in
+`measuringGeometry.ts`.
+
+**`@turf/circle` uses default import.** The task doc shows `{ circle }` (named),
+but every occurrence in the repo uses `import circle from "@turf/circle"`
+(default). Matched the repo convention.
+
+**`combinedInsideMask` not touched.** Per design decision confirmed before
+implementation: Task 08 is geometry only — `NativeMap.tsx` and
+`combinedInsideMask` are intentionally deferred to Task 09.
+
+### Gotchas
+
+1. **Full-state caching needed for reference-identity tests.** The initial
+   implementation cached the half-plane `FeatureCollection` but created new
+   wrapper objects (`hitMaskFeatures`, `previewFeatures`) on every call.
+   `expect(a).toBe(b)` (reference equality) failed. Restructured to cache the
+   full `ThermometerRenderState` for the single-question path — the common case.
+
+2. **Boundary identity via WeakMap.** The cache key includes boundary identity
+   (not value) so that two `buildThermometerRenderState` calls with the same
+   play-area reference share cache entries, but a boundary change triggers
+   recomputation. This matches the pattern in `clipVoronoiCells.ts`.
+
+3. **Dev assertion uses (n, d) projection, not point-in-polygon.** The task doc
+   calls for verifying "P2 must be inside the produced polygon." Instead of
+   importing `@turf/boolean-point-in-polygon` (not installed), the dev assertion
+   expresses the anchor point in the (n, d) basis and checks d-component bounds
+   — equivalent and zero-cost.
+
+### Design decisions
+
+- **Three-tier LRU cache.** Full render state (20 entries), plus per-component
+  half-plane and preview caches. The full-state cache serves the common
+  single-question path with reference-stable output; the per-component caches
+  let the multi-question path reuse previously computed half-planes.
+
+- **Cache keys use 7-decimal rounding.** Matching `measuringGeometry.ts`'s
+  pattern to prevent floating-point drift from creating duplicate entries.
+
+- **Preview role strings locked in Task 08.** `"travel-line"`, `"ring-1km"`,
+  `"ring-5km"`, `"ring-15km"` are defined here. Task 09's
+  `ThermometerPreviewLayer` filters on these roles — the render-state→view
+  interface is stable.
+
+- **Multi-question path delegates to single-question.** Rather than duplicating
+  the per-question logic, `buildThermometerRenderState` with multiple questions
+  calls `buildSingleThermometerRenderState` for each, which populates all three
+  cache tiers and returns full render states that get composed into the final
+  aggregate.
+
+- **Rectangle half-extent L = 2 × bbox diagonal, minimum 1 km.** The 2× factor
+  guarantees the rectangle overdraws the play area even when the travel segment
+  is near a corner. The 1 km floor handles tiny play areas.
+
+### Code review findings (pre-commit)
+
+No review findings — the implementation was written test-first against the spec.
+
+### For the next task
+
+- Task 09 (Thermometer UI) should:
+    - Build `ThermometerQuestionDetailScreen` replacing the Task 01 stub
+    - Add `updateThermometerPin` to `questionStore`
+    - Add `ThermometerPreviewLayer` to `NativeMap.tsx` filtering on preview roles
+    - Wire `thermometer.hitMaskFeatures` into `combinedInsideMask` (consider
+      lifting the mask assembly into `buildQuestionMapRenderState` to fix the
+      existing anti-pattern)
+    - Add Maestro smoke for create → drag/Set GPS → answer
