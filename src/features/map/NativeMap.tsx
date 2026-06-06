@@ -43,6 +43,7 @@ import {
     CombinedInsideMaskLayer,
     PlayAreaOutsideMaskLayer,
 } from "./PlayAreaMaskLayers";
+import { MeasuringLayers } from "./MeasuringLayers";
 import { RadarQuestionLayers } from "./RadarQuestionLayers";
 import { usePinDrag } from "./usePinDrag";
 import { useUserLocation } from "./useUserLocation";
@@ -210,6 +211,9 @@ export function NativeMap({
                         visible={isQuestionDetailRoute}
                     />
                     <PlayAreaBoundaryLayer playArea={playArea} />
+                    <MeasuringLayers
+                        measuring={questionMapRenderState.measuring}
+                    />
 
                     {hasLocationPermission ? (
                         <MLUserLocation

@@ -30,6 +30,15 @@ poiNodeKeys:
     - natural
     - barrier
 
+# Measuring line/polygon bundles (task-06).
+# Whole-Japan source clipped to a Kantō+margin window so prefecture/ward borders
+# and coastline are complete anywhere a seeker near the play area could query.
+measuring:
+    sourcePbfUrl: "https://download.geofabrik.de/asia/japan-latest.osm.pbf"
+    # Kantō extent expanded by ~1° (~110 km) per side. [W, S, E, N].
+    extractBbox: [137.9, 33.9, 141.9, 37.9]
+    outputDir: ../../assets/measuring
+
 regions:
     - id: japan-kanto
       label: Kantō, Japan

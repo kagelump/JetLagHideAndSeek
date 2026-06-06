@@ -1,4 +1,10 @@
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import type {
+    FeatureCollection,
+    LineString,
+    MultiPolygon,
+    Point,
+    Polygon,
+} from "geojson";
 
 import type {
     BaseQuestion,
@@ -53,9 +59,15 @@ export type MeasuringQuestion = BaseQuestion & {
 export type MeasuringRenderState = {
     hitMaskFeatures: FeatureCollection<Polygon | MultiPolygon>; // closer
     missMaskFeatures: FeatureCollection<Polygon | MultiPolygon>; // farther
+    /** Hairline from each line-category question's `center` to its nearest point. */
+    nearestPointConnectors: FeatureCollection<LineString>;
+    /** A marker at each line-category question's nearest point. */
+    nearestPointMarkers: FeatureCollection<Point>;
 };
 
 export const EMPTY_MEASURING_RENDER_STATE: MeasuringRenderState = {
     hitMaskFeatures: { features: [], type: "FeatureCollection" },
     missMaskFeatures: { features: [], type: "FeatureCollection" },
+    nearestPointConnectors: { features: [], type: "FeatureCollection" },
+    nearestPointMarkers: { features: [], type: "FeatureCollection" },
 };

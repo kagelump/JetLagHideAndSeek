@@ -1,8 +1,17 @@
 import circle from "@turf/circle";
-import type { Feature, MultiPolygon, Polygon } from "geojson";
+import type {
+    Feature,
+    LineString,
+    MultiPolygon,
+    Point as GeoPoint,
+    Polygon,
+} from "geojson";
 
 import type { QuestionState } from "@/features/questions/questionTypes";
-import type { MeasuringQuestion, MeasuringRenderState } from "./measuringTypes";
+import type { Position } from "@/shared/geojson";
+import { isLineMeasuringCategory } from "./measuringCategories";
+import { computeLineDistance } from "./lineMeasuringGeometry";
+import type { MeasuringRenderState } from "./measuringTypes";
 
 // ─── Circle fragment cache ──────────────────────────────────────────────────
 
@@ -82,39 +91,86 @@ export function clearMeasuringCircleCache(): void {
 export function buildMeasuringRenderState(
     questions: QuestionState[],
 ): MeasuringRenderState {
-    const measuringQuestions = questions.filter(
-        (q): q is MeasuringQuestion =>
-            q.type === "measuring" &&
-            q.selectedOsmId !== null &&
-            q.seekerDistanceMeters !== null &&
-            q.seekerDistanceMeters > 0,
+    const measuring = questions.filter(
+        (q): q is Extract<QuestionState, { type: "measuring" }> =>
+            q.type === "measuring",
     );
 
     const hitFeatures: Feature<Polygon | MultiPolygon>[] = [];
     const missFeatures: Feature<Polygon | MultiPolygon>[] = [];
+    const connectors: Feature<LineString>[] = [];
+    const markers: Feature<GeoPoint>[] = [];
 
-    for (const q of measuringQuestions) {
-        const target = q.candidates.find(
-            (c) =>
-                c.osmId === q.selectedOsmId && c.osmType === q.selectedOsmType,
-        );
-        if (!target) continue;
+    for (const q of measuring) {
+        let circleCenter: Position | null = null;
+        let radiusMeters: number | null = null;
 
-        // Circle CENTER is the target POI, not q.center.
-        const circ = getMeasuringCircle(
-            target.osmId,
-            target.osmType,
-            target.lon,
-            target.lat,
-            q.seekerDistanceMeters!,
-        );
+        if (isLineMeasuringCategory(q.category)) {
+            // Derive on render — nothing is read from the question except center.
+            const result = computeLineDistance(q.center, q.category);
+            if (!result || result.distanceMeters <= 0) continue;
+            circleCenter = result.nearestPoint;
+            radiusMeters = result.distanceMeters;
 
-        if (q.answer === "positive") {
-            // Closer → hider is inside the circle
-            hitFeatures.push(circ);
-        } else if (q.answer === "negative") {
-            // Farther → hider is outside the circle
-            missFeatures.push(circ);
+            // Always show the auto-picked target, answered or not.
+            connectors.push({
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "LineString",
+                    coordinates: [q.center, result.nearestPoint],
+                },
+            });
+            markers.push({
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "Point",
+                    coordinates: result.nearestPoint,
+                },
+            });
+        } else {
+            // Point category: selected POI + stored distance.
+            if (
+                q.selectedOsmId === null ||
+                !q.seekerDistanceMeters ||
+                q.seekerDistanceMeters <= 0
+            )
+                continue;
+            const target = q.candidates.find(
+                (c) =>
+                    c.osmId === q.selectedOsmId &&
+                    c.osmType === q.selectedOsmType,
+            );
+            if (!target) continue;
+
+            // Use LRU-cached circle for point-category questions.
+            const circ = getMeasuringCircle(
+                target.osmId,
+                target.osmType,
+                target.lon,
+                target.lat,
+                q.seekerDistanceMeters,
+            );
+            if (q.answer === "positive") {
+                hitFeatures.push(circ);
+            } else if (q.answer === "negative") {
+                missFeatures.push(circ);
+            }
+            continue;
+        }
+
+        // Line-category circle fragment (point path already handled above).
+        if (
+            (q.answer === "positive" || q.answer === "negative") &&
+            circleCenter !== null &&
+            radiusMeters !== null
+        ) {
+            const circ = circle(circleCenter, radiusMeters / 1000, {
+                steps: MEASURING_CIRCLE_STEPS,
+                units: "kilometers",
+            });
+            (q.answer === "positive" ? hitFeatures : missFeatures).push(circ);
         }
     }
 
@@ -124,5 +180,10 @@ export function buildMeasuringRenderState(
             features: missFeatures,
             type: "FeatureCollection",
         },
+        nearestPointConnectors: {
+            features: connectors,
+            type: "FeatureCollection",
+        },
+        nearestPointMarkers: { features: markers, type: "FeatureCollection" },
     };
 }

@@ -415,61 +415,159 @@ Gotcha #1) and the duplicated `centersEqual` function. Both fixed before commit.
 
 ---
 
-## Review fixes (2026-06-06)
+## Task 06 — Measuring Line/Polygon-Distance Categories
 
-Applied fixes from `docs/question_impl/review-task-02-03.md`.
+**Completed:** 2026-06-06
 
-### T2-1 — `addImportedQuestion` now clears selection for poi-model questions
+### What was done
 
-`addImportedQuestion` in `questionStore.tsx` previously forced `answer: "unanswered"`
-on imported questions but left `selectedOsmId`/`selectedOsmType`/`selectedName`
-intact. For poi-model (Tentacles) questions, `normalizeQuestionState` then
-re-derived `answer: "positive"` from the still-present `selectedOsmId`, defeating
-the reset-on-import contract.
+Implemented all 5 line/polygon-distance Measuring categories: `high-speed-rail`,
+`coastline`, `body-of-water`, `admin-1st-border`, `admin-2nd-border`. Unlike
+point categories (Task 05), these compute the nearest point on bundled line
+geometry automatically — no candidate list, no POI selection. The target is
+derived on render from `(center, category)` and never stored.
 
-**Fix:** `addImportedQuestion` now checks `isPoiAnswerModel(question.type)` and
-clears all three selection fields (`selectedOsmId`, `selectedOsmType`,
-`selectedName` to `null`) for poi-model questions before passing through
-`normalizeQuestionState`. Added a dedicated test: importing an answered
-Tentacles question with `selectedOsmId: 123` / `selectedName: "Test POI"` now
-asserts the imported question has all fields nulled and `answer: "unanswered"`.
+Key behavioral differences from point categories:
 
-### T3-1 — `pnpm check` gate fixed
+- **No search, no candidate list.** `isLineMeasuringCategory` gates the detail
+  screen to `LineMeasuringResult`, which skips `useMeasuringSearch` entirely.
+- **Answer enabled immediately.** No POI selection step.
+- **Connector + marker drawn on map.** `MeasuringLayers.tsx` renders a dashed
+  hairline from center to nearest point plus a circle marker.
+- **Circle centers on nearest point** (not seeker center), matching the
+  point-category behavior of "circle centers on target."
+- **`nearestPoint` is derived, never stored.** No new question fields, no wire
+  format changes.
 
-`docs/question_impl/epic-impl-notes.md` had prettier formatting issues.
-Ran `pnpm exec prettier --write`; `pnpm check` now passes.
+### Files created (8)
 
-### T3-2 — Decode path now re-derives Tentacles answer
+| File                                                                       | Purpose                                                                                                         |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `src/features/questions/measuring/lineBundleLoader.ts`                     | Lazy `require()`-based bundle loader with test seams                                                            |
+| `src/features/questions/measuring/lineMeasuringGeometry.ts`                | `computeLineDistance()` with LRU cache, bbox pre-filter, `@turf/nearest-point-on-line`                          |
+| `src/features/map/MeasuringLayers.tsx`                                     | Renders connector lines + nearest-point markers on the map                                                      |
+| `src/features/questions/measuring/__tests__/lineMeasuringGeometry.test.ts` | 13 tests for nearest-point geometry                                                                             |
+| `data/geofabrik/scripts/extract-measuring-bundles.mjs`                     | Build pipeline: download japan-latest PBF → osmium extract → post-filter → bundle                               |
+| `data/geofabrik/scripts/extract-measuring-bundles.test.mjs`                | Structural validator (65 tests, CI-safe)                                                                        |
+| `assets/measuring/*.json` (5 files)                                        | Committed bundles: coastline (7k), high-speed-rail (4k), body-of-water (75k), admin-1st (666), admin-2nd (3.4k) |
 
-`unminifyQuestion` for tentacles previously used `resolvedAnswer` (from the
-minified `answer` field) directly, with only a guard against `"negative"`. A
-hand-crafted minified payload with `e:"p"` but no `selectedOsmId` would decode
-to a drifted `{ answer: "positive", selectedOsmId: null }`.
+### Files modified (13)
 
-**Fix:** `unminifyQuestion` now reads `selectedOsmId` from the minified
-payload first, then derives `answer` via `derivePoiAnswer(selectedOsmId)` —
-symmetric with the Zod transforms on the full-key schemas and
-`normalizeQuestionState` in the store. The decode → import path now has
-redundant repair (unminify + normalize), which is correct defense-in-depth.
+| File                                    | Change                                                                                                                                       |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `measuringTypes.ts`                     | Added `nearestPointConnectors` + `nearestPointMarkers` to `MeasuringRenderState`                                                             |
+| `measuringCategories.ts`                | Renamed `"Border"` → `"Borders & Lines"`, moved 3 categories, flipped all 18 to `implemented: true`, added `isLineMeasuringCategory()` guard |
+| `measuringGeometry.ts`                  | Restructured `buildMeasuringRenderState` — removed `selectedOsmId` pre-filter, branches on `isLineMeasuringCategory()`                       |
+| `MeasuringQuestionDetailScreen.tsx`     | Added `LineMeasuringResult` component with early return for line categories                                                                  |
+| `NativeMap.tsx`                         | Added `<MeasuringLayers>` component before `QuestionPinLayer`                                                                                |
+| `colors.ts`                             | Added `measuringLine: "#e46f4d"` token                                                                                                       |
+| `config.yaml`                           | Added `measuring` block with whole-Japan source + Kantō+margin window                                                                        |
+| `jest.config.js`                        | Added `@turf` to `transformIgnorePatterns` (needed for `@turf/nearest-point-on-line`)                                                        |
+| `package.json`                          | Pinned `@turf/nearest-point-on-line`, added `data:measuring` script, wired validator into `pretest`                                          |
+| `SIZES.md`                              | Added measuring bundle sizes section (total: 22.89 MB raw, 4.02 MB gzip)                                                                     |
+| `__tests__/measuringCategories.test.ts` | Updated for section rename, all 18 implemented, `isLineMeasuringCategory`                                                                    |
+| `__tests__/measuringGeometry.test.ts`   | Added line-category tests (regression guard, circle centering, connector/marker, mixed)                                                      |
+| `pnpm-lock.yaml`                        | Bumped `@turf/invariant` and `@turf/meta` from 7.2.0 → 7.3.5 (transitive via new dep)                                                        |
 
-### T2-4 — `selectTentaclesPoi` uses `derivePoiAnswer`
+### Bundle sizes
 
-`selectTentaclesPoi` previously hardcoded `answer: "positive"` rather than
-calling `derivePoiAnswer(poi.osmId)`. The `osmId > 0` guard already ensured
-`derivePoiAnswer` would return `"positive"`, but using the helper keeps the
-derivation rule literally true at the single most important write site.
+| Category         | Features   | Raw          | Gzip        |
+| ---------------- | ---------- | ------------ | ----------- |
+| coastline        | 7,045      | 1.41 MB      | 0.21 MB     |
+| high-speed-rail  | 4,228      | 0.79 MB      | 0.10 MB     |
+| body-of-water    | 74,539     | 16.14 MB     | 2.44 MB     |
+| admin-1st-border | 666        | 0.50 MB      | 0.15 MB     |
+| admin-2nd-border | 3,438      | 4.04 MB      | 1.13 MB     |
+| **TOTAL**        | **89,916** | **22.89 MB** | **4.02 MB** |
 
-### Not yet addressed
+### Deviations from the task spec
 
-- **T3-3**: `persistence.test.ts` not extended with measuring/thermometer/tentacles
-  persistence round-trips. The `appState.ts` schemas are exercised indirectly
-  through the store test (one tentacles persist→load test), but dedicated
-  persistence tests per the written test plan are still missing.
-- **T3-4**: Round-trip tests use `toMatchObject` (partial) rather than strict
-  `encode(decode(encode(q))) === encode(q)` byte-stable assertions. Candidate
-  `tags` are silently dropped on minified round-trip (documented lossy behavior
-  inherited from matching), but no test pins this for measuring/tentacles.
-- **T2-3**: `QuestionAnswerSelector.test.tsx` does not exist; the test plan
-  called for binary/poi assertions there.
-- **T3-5**: Candidate sub-schema still copy-pasted across matching/measuring/
-  tentacles in both `schema.ts` and `appState.ts`.
+**`@turf/helpers` import avoided in `measuringGeometry.ts`.** The task doc
+imports `lineString` and `point` from `@turf/helpers` to construct the connector
+and marker GeoJSON features. Instead, manual `{ type: "Feature", geometry: {…},
+properties: {} }` construction was used. This avoids adding `@turf/helpers` to
+the `transformIgnorePatterns` dependency chain in `measuringGeometry.ts` (keeping
+the Jest config change minimal — only `@turf` needed for `nearest-point-on-line`).
+
+**`computeBboxFromCoords` walker uses `unknown` cast.** The recursive
+coordinate walker in `lineMeasuringGeometry.ts` uses `(c as number[])?.[0]` to
+detect coordinate pairs vs nested arrays. This is equivalent to the bbox
+computation in `extract-measuring-bundles.mjs` but adapted for TypeScript's
+`Geometry` union type (which doesn't have `.coordinates`).
+
+### Gotchas
+
+1. **`selectedOsmId` pre-filter was silently dropping line categories.** The
+   original `buildMeasuringRenderState` filter required `selectedOsmId !== null`
+   (from Task 05). Since line categories have `selectedOsmId: null`, every line
+   question would be filtered out before reaching the loop body. The fix
+   restructures to filter only on `type === "measuring"` and branch inside.
+
+2. **Bbox pre-filter margin is uniform degree conversion.** The 50 km query
+   margin uses `1° ≈ 111,320 m` for both latitude and longitude. At Tokyo's
+   latitude (~35°N), the longitude margin is ~41 km instead of 50 km. In
+   practice, nearest features are well within 50 km, and 41 km remains generous
+   for the pre-filter. No user-visible impact expected.
+   _(Noted in code review; not fixed — acceptable per the design doc's "slightly-too-large window" guidance.)_
+
+3. **`require()` crash if bundle JSON is missing.** `lineBundleLoader.ts` uses
+   hard `require()` calls in a switch statement. If a category's bundle JSON is
+   missing from `assets/measuring/`, the app crashes at the `require()` site.
+   Mitigated by: (a) bundles are committed, (b) the structural validator in
+   `pretest` catches missing bundles, (c) `default: bundle = null` handles
+   unrecognized categories.
+
+4. **Non-admin temp dirs not cleaned up in extraction script.** The per-category
+   temp directories (`measuring-coastline-<timestamp>/`, etc.) in the OS temp
+   dir are never removed after the pipeline runs. Only the admin shared temp
+   dir is cleaned. The OS will eventually clean them; minor untidiness.
+   _(Noted in code review; not fixed.)_
+
+### Design decisions
+
+- **`nearestPoint` derived on render, never stored.** This removes an entire
+  class of staleness bugs: moving the pin automatically updates the nearest
+  point, the connector, the marker, and the circle — no write-back hook needed.
+
+- **LRU cache keyed on `(version, category, center)`** — not question id. Two
+  questions with the same center and category share a cache hit. 7-decimal-place
+  rounding (~1.1 cm) prevents floating-point drift from creating duplicate
+  entries.
+
+- **Bbox pre-filter before `nearestPointOnLine`.** The 50 km query window
+  filters out the vast majority of features, so `nearestPointOnLine` only
+  iterates the survivors' segments. For `body-of-water` (75k features), only
+  the few hundred within 50 km survive the filter.
+
+- **Line-category circles NOT cached** (unlike point-category circles, which
+  use an LRU cache keyed by osmId/osmType/distance). The circle parameters for
+  line categories change with the nearest point, which is already cached by
+  `computeLineDistance`. Recomputing a 32-step circle is negligible.
+
+- **Structural validator is CI-safe** (no PBF required). It validates committed
+  bundle structure: schemaVersion, geometry types, bbox intersection. The
+  regeneration `--check` (which needs the PBF) is a local-only guard.
+
+### Code review fixes (post-implementation)
+
+The `/code-review max --fix` pass caught one issue:
+
+- **Dead assignments in point-category path.** `circleCenter` and `radiusMeters`
+  were set in the point-category branch of `buildMeasuringRenderState` but never
+  consumed — the `continue` immediately followed, skipping past the line-category
+  circle block. Fixed by removing the dead assignments and passing
+  `q.seekerDistanceMeters` directly to `getMeasuringCircle`.
+
+Additional findings noted but not fixed (all low-severity):
+
+- **Measuring hit/miss masks not in `combinedInsideMask`.** Pre-existing gap
+  from Task 05: `NativeMap.tsx`'s `buildCombinedEligibilityMask` doesn't
+  include `questionMapRenderState.measuring.hitMaskFeatures` or
+  `.missMaskFeatures`. Line categories make this more noticeable since circles
+  are auto-derived, but fixing it would expand the diff scope beyond Task 06.
+
+### For the next task
+
+- Task 07 (rail-station data) can now treat `rail-station` as an independent
+  `MatchingCategory` with its own selectors, since the 5 line categories no
+  longer depend on the matching category mapping.

@@ -4,7 +4,7 @@ import type { MeasuringCategory } from "./measuringTypes";
 
 export type MeasuringCategorySection =
     | "Transit"
-    | "Border"
+    | "Borders & Lines"
     | "Natural"
     | "Places of Interest"
     | "Public Utilities";
@@ -48,6 +48,18 @@ function osmTags(category: MeasuringCategory): string {
     return "";
 }
 
+export const LINE_MEASURING_CATEGORIES: MeasuringCategory[] = [
+    "high-speed-rail",
+    "coastline",
+    "body-of-water",
+    "admin-1st-border",
+    "admin-2nd-border",
+];
+
+export function isLineMeasuringCategory(category: MeasuringCategory): boolean {
+    return (LINE_MEASURING_CATEGORIES as string[]).includes(category);
+}
+
 export const measuringCategories: MeasuringCategoryConfig[] = [
     // ── Transit ──────────────────────────────────────────────────────────
     {
@@ -58,13 +70,6 @@ export const measuringCategories: MeasuringCategoryConfig[] = [
         title: "Airport",
     },
     {
-        category: "high-speed-rail",
-        implemented: false,
-        osmQueryTags: osmTags("high-speed-rail"),
-        section: "Transit",
-        title: "High-Speed Rail",
-    },
-    {
         category: "rail-station",
         implemented: true,
         osmQueryTags: osmTags("rail-station"),
@@ -72,36 +77,45 @@ export const measuringCategories: MeasuringCategoryConfig[] = [
         title: "Rail Station",
     },
 
-    // ── Border ───────────────────────────────────────────────────────────
+    // ── Borders & Lines ───────────────────────────────────────────────────
     {
-        category: "admin-1st-border",
-        implemented: false,
-        osmQueryTags: osmTags("admin-1st-border"),
-        section: "Border",
-        title: "Admin 1st-Level Border",
-    },
-    {
-        category: "admin-2nd-border",
-        implemented: false,
-        osmQueryTags: osmTags("admin-2nd-border"),
-        section: "Border",
-        title: "Admin 2nd-Level Border",
-    },
-
-    // ── Natural ──────────────────────────────────────────────────────────
-    {
-        category: "body-of-water",
-        implemented: false,
-        osmQueryTags: osmTags("body-of-water"),
-        section: "Natural",
-        title: "Body of Water",
+        category: "high-speed-rail",
+        implemented: true,
+        osmQueryTags:
+            '(way["railway"="rail"]["highspeed"="yes"]; way["railway"="rail"]["maxspeed"~"^2[0-9]{2}"];)',
+        section: "Borders & Lines",
+        title: "High-Speed Rail",
     },
     {
         category: "coastline",
-        implemented: false,
-        osmQueryTags: osmTags("coastline"),
-        section: "Natural",
+        implemented: true,
+        osmQueryTags: '(way["natural"="coastline"];)',
+        section: "Borders & Lines",
         title: "Coastline",
+    },
+    {
+        category: "body-of-water",
+        implemented: true,
+        osmQueryTags:
+            '(way["natural"="water"]; relation["natural"="water"]; way["landuse"="basin"]; way["waterway"="riverbank"];)',
+        section: "Borders & Lines",
+        title: "Body of Water",
+    },
+    {
+        category: "admin-1st-border",
+        implemented: true,
+        osmQueryTags:
+            '(relation["boundary"="administrative"]["admin_level"="4"];)',
+        section: "Borders & Lines",
+        title: "Prefecture Border",
+    },
+    {
+        category: "admin-2nd-border",
+        implemented: true,
+        osmQueryTags:
+            '(relation["boundary"="administrative"]["admin_level"="7"];)',
+        section: "Borders & Lines",
+        title: "Ward / Municipality Border",
     },
     {
         category: "mountain",

@@ -1,10 +1,12 @@
 import {
     getMeasuringCategoryTitle,
+    isLineMeasuringCategory,
+    LINE_MEASURING_CATEGORIES,
     measuringCategories,
     measuringCategoriesBySection,
 } from "@/features/questions/measuring/measuringCategories";
 
-const DEFERRED_CATEGORIES = [
+const LINE_KEYS = [
     "high-speed-rail",
     "coastline",
     "body-of-water",
@@ -17,23 +19,18 @@ describe("measuringCategories", () => {
         expect(measuringCategories).toHaveLength(18);
     });
 
-    it("has exactly 13 implemented categories", () => {
+    it("has all 18 categories implemented", () => {
         const implemented = measuringCategories.filter((c) => c.implemented);
-        expect(implemented).toHaveLength(13);
+        expect(implemented).toHaveLength(18);
     });
 
-    it("has exactly 5 deferred (implemented: false) categories", () => {
-        const deferred = measuringCategories.filter((c) => !c.implemented);
-        expect(deferred).toHaveLength(5);
-    });
-
-    it("marks the expected 5 line/polygon categories as not implemented", () => {
-        for (const category of DEFERRED_CATEGORIES) {
+    it("marks the 5 line/polygon categories as implemented", () => {
+        for (const category of LINE_KEYS) {
             const config = measuringCategories.find(
                 (c) => c.category === category,
             );
             expect(config).toBeDefined();
-            expect(config!.implemented).toBe(false);
+            expect(config!.implemented).toBe(true);
         }
     });
 
@@ -54,7 +51,7 @@ describe("measuringCategories", () => {
     it("every entry has a valid section", () => {
         const validSections = [
             "Transit",
-            "Border",
+            "Borders & Lines",
             "Natural",
             "Places of Interest",
             "Public Utilities",
@@ -67,6 +64,35 @@ describe("measuringCategories", () => {
     it("has no duplicate categories", () => {
         const keys = measuringCategories.map((c) => c.category);
         expect(new Set(keys).size).toBe(keys.length);
+    });
+
+    describe("Borders & Lines section", () => {
+        it("contains exactly the 5 line-category entries", () => {
+            const borderConfigs =
+                measuringCategoriesBySection["Borders & Lines"];
+            expect(borderConfigs).toBeDefined();
+            const keys = borderConfigs.map((c) => c.category);
+            expect(new Set(keys)).toEqual(new Set(LINE_KEYS));
+        });
+
+        it("has no Border section (renamed)", () => {
+            expect(
+                (measuringCategoriesBySection as Record<string, unknown>)[
+                    "Border"
+                ],
+            ).toBeUndefined();
+        });
+    });
+
+    describe("titles", () => {
+        it("uses updated admin border titles", () => {
+            expect(getMeasuringCategoryTitle("admin-1st-border")).toBe(
+                "Prefecture Border",
+            );
+            expect(getMeasuringCategoryTitle("admin-2nd-border")).toBe(
+                "Ward / Municipality Border",
+            );
+        });
     });
 });
 
@@ -82,10 +108,32 @@ describe("measuringCategoriesBySection", () => {
     it("has the correct sections", () => {
         const sections = Object.keys(measuringCategoriesBySection);
         expect(sections).toContain("Transit");
-        expect(sections).toContain("Border");
+        expect(sections).toContain("Borders & Lines");
         expect(sections).toContain("Natural");
         expect(sections).toContain("Places of Interest");
         expect(sections).toContain("Public Utilities");
+    });
+});
+
+describe("isLineMeasuringCategory", () => {
+    it("has exactly 5 entries in LINE_MEASURING_CATEGORIES", () => {
+        expect(LINE_MEASURING_CATEGORIES).toHaveLength(5);
+    });
+
+    it("returns true for each of the 5 line categories", () => {
+        for (const cat of LINE_KEYS) {
+            expect(isLineMeasuringCategory(cat)).toBe(true);
+        }
+    });
+
+    it("returns false for the 13 point categories", () => {
+        const pointCategories = measuringCategories
+            .map((c) => c.category)
+            .filter((cat) => !(LINE_KEYS as readonly string[]).includes(cat));
+        expect(pointCategories).toHaveLength(13);
+        for (const cat of pointCategories) {
+            expect(isLineMeasuringCategory(cat)).toBe(false);
+        }
     });
 });
 

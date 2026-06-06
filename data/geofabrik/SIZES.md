@@ -169,3 +169,37 @@ Estimated from feature counts and average object size per category.
   468 MB — a non-dense encoding would be significantly larger.
 - The POI PBF retains all parent metadata (generator, replication URL/timestamp)
   from the source extract, so it can be updated incrementally if needed.
+
+---
+
+# Measuring Line/Polygon Bundle Sizes
+
+Generated 2026-06-06 from `japan-latest.osm.pbf` (whole-Japan Geofabrik extract),
+clipped to Kantō+margin window [137.9, 33.9, 141.9, 37.9].
+
+## Bottom Line
+
+**All 5 measuring bundles**: 22.89 MB raw, 4.02 MB gzipped.
+Lazy-loaded per category on first use; only the selected category's JSON is
+parsed at runtime.
+
+## Per-Category Sizes
+
+| Category           | Features   | Raw          | Gzip        |
+| ------------------ | ---------- | ------------ | ----------- |
+| `coastline`        | 7,045      | 1.41 MB      | 0.21 MB     |
+| `high-speed-rail`  | 4,228      | 0.79 MB      | 0.10 MB     |
+| `body-of-water`    | 74,539     | 16.14 MB     | 2.44 MB     |
+| `admin-1st-border` | 666        | 0.50 MB      | 0.15 MB     |
+| `admin-2nd-border` | 3,438      | 4.04 MB      | 1.13 MB     |
+| **TOTAL**          | **89,916** | **22.89 MB** | **4.02 MB** |
+
+## Notes
+
+- Source: whole-Japan PBF (2.3 GB) clipped to Kantō + ~1° margin with `osmium extract`.
+- Geometry types: `LineString` and `MultiLineString` only; polygon features are
+  converted to outer-ring LineStrings at build time.
+- Simplification: `@turf/simplify` (Ramer-Douglas-Peucker) at per-category
+  tolerances (10–50 m).
+- Lazy loading: each category's JSON is `require()`-d only on first use via
+  `lineBundleLoader.ts`, matching the `bundledPois.ts` pattern.

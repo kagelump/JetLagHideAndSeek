@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
@@ -19,9 +19,11 @@ import { colors } from "@/theme/colors";
 import type { DistanceUnit } from "@/shared/distanceUnits";
 import {
     getMeasuringCategoryTitle,
+    isLineMeasuringCategory,
     measuringCategoriesBySection,
     type MeasuringCategorySection,
 } from "./measuringCategories";
+import { computeLineDistance } from "./lineMeasuringGeometry";
 import type { MeasuringCategory, MeasuringQuestion } from "./measuringTypes";
 import { useMeasuringSearch } from "./useMeasuringSearch";
 
@@ -31,6 +33,167 @@ type MeasuringQuestionDetailScreenProps = {
 };
 
 const DISTANCE_UNITS: DistanceUnit[] = ["m", "km", "mi"];
+
+// ─── Line-category result ────────────────────────────────────────────────────
+
+type LineMeasuringResultProps = {
+    question: MeasuringQuestion;
+    updateQuestion: ReturnType<typeof useQuestionActions>["updateQuestion"];
+};
+
+function LineMeasuringResult({
+    question,
+    updateQuestion,
+}: LineMeasuringResultProps) {
+    const categoryTitle = getMeasuringCategoryTitle(question.category);
+
+    const result = useMemo(
+        () => computeLineDistance(question.center, question.category),
+        [question.center, question.category],
+    );
+
+    const displayDistance =
+        result?.distanceMeters !== undefined && result.distanceMeters !== null
+            ? fromMeters(result.distanceMeters, question.seekerDistanceUnit)
+            : null;
+
+    const handleUnitChange = useCallback(
+        (unit: DistanceUnit) => {
+            updateQuestion(question.id, (current) => {
+                if (current.type !== "measuring") return current;
+                return {
+                    ...current,
+                    seekerDistanceUnit: unit,
+                    updatedAt: new Date().toISOString(),
+                };
+            });
+        },
+        [question.id, updateQuestion],
+    );
+
+    const answerEnabled = true; // line categories: answer is always enabled
+
+    return (
+        <>
+            {/* ── Category readout ────────────────────────────────── */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Category</Text>
+                <View style={styles.categoryPicker}>
+                    <View style={styles.lineCategoryResult}>
+                        <Text style={styles.categoryTitle}>
+                            {categoryTitle}
+                        </Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* ── Position pin ──────────────────────────────────────── */}
+            <QuestionLocationSelector
+                center={question.center}
+                onCenterChange={(center) =>
+                    updateQuestion(question.id, (current) =>
+                        updateQuestionCenter(current, center),
+                    )
+                }
+                setToLocationAccessibilityLabel={`Set measuring pin to my location`}
+                testIDPrefix="measuring"
+            />
+
+            {/* ── Result block ──────────────────────────────────────── */}
+            <View style={styles.section}>
+                <View
+                    style={styles.lineResultBlock}
+                    testID="measuring-line-result"
+                >
+                    <Text style={styles.sectionTitle}>
+                        Nearest {categoryTitle.toLowerCase()}
+                    </Text>
+                    <Text
+                        style={styles.lineDistanceValue}
+                        testID="measuring-line-distance"
+                    >
+                        {displayDistance !== null
+                            ? `${displayDistance} ${question.seekerDistanceUnit}`
+                            : "Computing..."}
+                    </Text>
+                </View>
+
+                {/* ── Planning phrase ──────────────────────────────── */}
+                {displayDistance !== null ? (
+                    <Text
+                        style={styles.planningPhrase}
+                        testID="measuring-line-phrase"
+                    >
+                        {"I'm"} {displayDistance} {question.seekerDistanceUnit}{" "}
+                        from the nearest {categoryTitle.toLowerCase()}. Are you
+                        closer or farther from yours?
+                    </Text>
+                ) : null}
+
+                {/* ── Unit toggle ──────────────────────────────────── */}
+                <View style={styles.unitToggle}>
+                    {DISTANCE_UNITS.map((unit) => {
+                        const isActive = question.seekerDistanceUnit === unit;
+                        return (
+                            <Pressable
+                                accessibilityLabel={`${unit} distance unit`}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: isActive }}
+                                key={unit}
+                                onPress={() => handleUnitChange(unit)}
+                                style={[
+                                    styles.unitButton,
+                                    isActive ? styles.unitButtonActive : null,
+                                ]}
+                                testID={`measuring-unit-${unit}`}
+                            >
+                                <Text
+                                    style={[
+                                        styles.unitButtonText,
+                                        isActive
+                                            ? styles.unitButtonTextActive
+                                            : null,
+                                    ]}
+                                >
+                                    {unit}
+                                </Text>
+                            </Pressable>
+                        );
+                    })}
+                </View>
+            </View>
+
+            {/* ── Answer selector ───────────────────────────────────── */}
+            <View style={styles.section}>
+                <Text
+                    accessibilityLabel="Measuring answer section"
+                    style={styles.sectionTitle}
+                >
+                    Answer
+                </Text>
+                <QuestionAnswerSelector
+                    answer={question.answer}
+                    disabledAnswers={
+                        !answerEnabled ? ["positive", "negative"] : undefined
+                    }
+                    onChange={(answer) =>
+                        updateQuestion(question.id, (current) =>
+                            current.type === "measuring"
+                                ? {
+                                      ...current,
+                                      answer,
+                                      updatedAt: new Date().toISOString(),
+                                  }
+                                : current,
+                        )
+                    }
+                    questionType={question.type}
+                    testIDPrefix="measuring-answer-option"
+                />
+            </View>
+        </>
+    );
+}
 
 export function MeasuringQuestionDetailScreen({
     question,
@@ -226,6 +389,16 @@ export function MeasuringQuestionDetailScreen({
                   question.seekerDistanceUnit,
               )
             : null;
+
+    // Line/polygon categories: no candidate list, distance is derived on render.
+    if (isLineMeasuringCategory(question.category)) {
+        return (
+            <LineMeasuringResult
+                question={question}
+                updateQuestion={updateQuestion}
+            />
+        );
+    }
 
     return (
         <>
@@ -622,6 +795,25 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         lineHeight: 18,
         marginTop: 8,
+    },
+    lineCategoryResult: {
+        minHeight: 44,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+    },
+    lineDistanceValue: {
+        color: colors.tint,
+        fontSize: 24,
+        fontWeight: "800",
+        marginTop: 4,
+    },
+    lineResultBlock: {
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        marginTop: 10,
+        padding: 16,
     },
     metadata: {
         color: colors.muted,
