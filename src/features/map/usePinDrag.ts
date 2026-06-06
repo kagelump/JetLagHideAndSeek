@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 
-import type { QuestionState } from "@/features/questions/questionTypes";
+import type { MapPin } from "./getQuestionPins";
 
 import type { Position } from "./geojsonTypes";
 
@@ -18,6 +18,7 @@ export type PinDragHandlers = {
 
 export type PinDragState = {
     draftCoordinate: Position | null;
+    draggedPinKey: string | null;
     dragHandlers: PinDragHandlers;
     gesture: ReturnType<typeof Gesture.Pan>;
     isDragging: boolean;
@@ -25,24 +26,27 @@ export type PinDragState = {
 };
 
 type UsePinDragOptions = {
-    activeQuestion: QuestionState | null;
+    pins: MapPin[];
     canMove: boolean;
     mapRef: RefObject<{
         getCoordinateFromView: (point: [number, number]) => Promise<Position>;
         getPointInView: (coordinate: Position) => Promise<[number, number]>;
     } | null>;
-    onCommit: (questionId: string, center: Position) => void;
+    onCommit: (questionId: string, pinKey: string, position: Position) => void;
+    questionId: string | null;
 };
 
 export function usePinDrag({
-    activeQuestion,
+    pins,
     canMove,
     mapRef,
     onCommit,
+    questionId,
 }: UsePinDragOptions): PinDragState {
     const [isDragging, setIsDragging] = useState(false);
     const isDraggingRef = useRef(false);
     const draftPinCoordinateRef = useRef<Position | null>(null);
+    const draggedPinKeyRef = useRef<string | null>(null);
     const rafRef = useRef<number | null>(null);
     const [tick, setTick] = useState(0);
     const draftCoordinate = isDragging ? draftPinCoordinateRef.current : null;
@@ -51,6 +55,7 @@ export function usePinDrag({
         isDraggingRef.current = false;
         setIsDragging(false);
         draftPinCoordinateRef.current = null;
+        draggedPinKeyRef.current = null;
         if (rafRef.current !== null) {
             cancelAnimationFrame(rafRef.current);
             rafRef.current = null;
@@ -94,20 +99,41 @@ export function usePinDrag({
 
     const handleDragStart = useCallback(
         async (absoluteX: number, absoluteY: number) => {
-            const pinCoord = activeQuestion
-                ? getQuestionCenter(activeQuestion)
-                : null;
-            if (!pinCoord || !mapRef.current) {
+            if (!mapRef.current || pins.length === 0) {
                 isDraggingRef.current = false;
                 return;
             }
             try {
-                const screenPoint =
-                    await mapRef.current.getPointInView(pinCoord);
-                const dx = absoluteX - screenPoint[0];
-                const dy = absoluteY - screenPoint[1];
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist <= PIN_HIT_RADIUS_PX) {
+                const pinScreenPositions = await Promise.all(
+                    pins.map(async (pin) => ({
+                        pin,
+                        screenPoint: await mapRef.current!.getPointInView(
+                            pin.position,
+                        ),
+                    })),
+                );
+
+                let closestPin: MapPin | null = null;
+                let closestDist = Infinity;
+
+                for (const { pin, screenPoint } of pinScreenPositions) {
+                    const dx = absoluteX - screenPoint[0];
+                    const dy = absoluteY - screenPoint[1];
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist <= PIN_HIT_RADIUS_PX) {
+                        if (
+                            dist < closestDist ||
+                            (dist === closestDist && pin.key === "end")
+                        ) {
+                            closestDist = dist;
+                            closestPin = pin;
+                        }
+                    }
+                }
+
+                if (closestPin) {
+                    draggedPinKeyRef.current = closestPin.key;
                     isDraggingRef.current = true;
                     setIsDragging(true);
                 } else {
@@ -117,7 +143,7 @@ export function usePinDrag({
                 isDraggingRef.current = false;
             }
         },
-        [activeQuestion, mapRef],
+        [pins, mapRef],
     );
 
     const handleDragUpdate = useCallback(
@@ -132,13 +158,17 @@ export function usePinDrag({
         if (
             isDraggingRef.current &&
             draftPinCoordinateRef.current &&
-            activeQuestion &&
-            getQuestionCenter(activeQuestion)
+            draggedPinKeyRef.current &&
+            questionId
         ) {
-            onCommit(activeQuestion.id, draftPinCoordinateRef.current);
+            onCommit(
+                questionId,
+                draggedPinKeyRef.current,
+                draftPinCoordinateRef.current,
+            );
         }
         cleanupDrag();
-    }, [activeQuestion, cleanupDrag, onCommit]);
+    }, [questionId, cleanupDrag, onCommit]);
 
     const handleDragFinalize = useCallback(() => {
         cleanupDrag();
@@ -170,6 +200,7 @@ export function usePinDrag({
 
     return {
         draftCoordinate,
+        draggedPinKey: draggedPinKeyRef.current,
         dragHandlers: {
             handleDragEnd,
             handleDragFinalize,
@@ -180,8 +211,4 @@ export function usePinDrag({
         isDragging,
         revision: tick,
     };
-}
-
-function getQuestionCenter(question: QuestionState): Position | null {
-    return "center" in question ? question.center : null;
 }

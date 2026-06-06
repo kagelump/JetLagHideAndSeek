@@ -29,6 +29,7 @@ import {
     getTopViewportFitPadding,
 } from "./camera";
 import { getEventCoordinate } from "./eventCoordinate";
+import { getQuestionPins } from "./getQuestionPins";
 import { HidingZoneLayers } from "./HidingZoneLayers";
 import { MapControls } from "./MapControls";
 import { buildOsmRasterStyleJson } from "./mapStyle";
@@ -147,44 +148,35 @@ export function NativeMap({
         markAppMapReady();
     }, [fitPlayArea, markAppMapReady]);
 
-    const activeQuestionCenter =
-        activeQuestion && "center" in activeQuestion
-            ? activeQuestion.center
-            : null;
-    const shouldShowActivePin = Boolean(
-        isQuestionDetailRoute && activeQuestionCenter,
+    const pins = useMemo(
+        () => getQuestionPins(activeQuestion),
+        [activeQuestion],
     );
+    const questionId = activeQuestion?.id ?? null;
     const canMoveActivePin = Boolean(
         isQuestionDetailRoute &&
             !(activeQuestion?.isLocked ?? false) &&
-            activeQuestionCenter,
-    );
-    const movableActiveQuestion = activeQuestionCenter ? activeQuestion : null;
-
-    const adaptedOnCommit = useCallback(
-        (questionId: string, center: Position) => {
-            onPinCommit(questionId, "center", center);
-        },
-        [onPinCommit],
+            pins.length > 0,
     );
 
     const pinDrag = usePinDrag({
-        activeQuestion: movableActiveQuestion,
+        pins,
         canMove: canMoveActivePin,
         mapRef,
-        onCommit: adaptedOnCommit,
+        onCommit: onPinCommit,
+        questionId,
     });
 
     const activePinFeature = useMemo(
         () =>
-            shouldShowActivePin && activeQuestion && activeQuestionCenter
+            pins.length > 0 && activeQuestion
                 ? {
                       features: [
                           {
                               geometry: {
                                   coordinates:
                                       pinDrag.draftCoordinate ??
-                                      activeQuestionCenter,
+                                      pins[0].position,
                                   type: "Point" as const,
                               },
                               properties: {
@@ -200,12 +192,11 @@ export function NativeMap({
                 : { features: [], type: "FeatureCollection" as const },
         [
             activeQuestion,
-            activeQuestionCenter,
             canMoveActivePin,
+            pins,
             pinDrag.draftCoordinate,
             pinDrag.isDragging,
             pinDrag.revision,
-            shouldShowActivePin,
         ],
     );
 
