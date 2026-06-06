@@ -116,6 +116,7 @@ function buildQuestions(count: number): RadarQuestion[] {
         distanceOption: "other" as const,
         distanceUnit: "km" as const,
         id: `radar-${index}`,
+        isLocked: false,
         type: "radar" as const,
         updatedAt: "2026-06-01T00:00:00.000Z",
     }));

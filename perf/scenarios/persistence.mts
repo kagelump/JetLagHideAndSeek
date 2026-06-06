@@ -81,6 +81,7 @@ function matchingQuestion(index: number): MatchingQuestion {
         center: [139.767125, 35.681236],
         createdAt: "2026-06-01T00:00:00.000Z",
         id: `matching-${index}`,
+        isLocked: false,
         lineId: null,
         lineName: null,
         selectedOsmId: candidates[0]?.osmId ?? null,
@@ -102,6 +103,7 @@ function radarQuestion(index: number): RadarQuestion {
         distanceOption: "5km",
         distanceUnit: "km",
         id: `radar-${index}`,
+        isLocked: false,
         type: "radar",
         updatedAt: "2026-06-01T00:00:00.000Z",
     };

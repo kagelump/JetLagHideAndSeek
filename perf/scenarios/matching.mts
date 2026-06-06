@@ -58,6 +58,7 @@ const matchingQuestions = Array.from({ length: 10 }, (_, index) => ({
     center: tokyoCenter,
     createdAt: "2026-06-01T00:00:00.000Z",
     id: `hospital-${index}`,
+    isLocked: false,
     lineId: null,
     lineName: null,
     selectedOsmId: hospitalCandidates[0]?.osmId ?? null,

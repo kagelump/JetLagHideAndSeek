@@ -19,7 +19,7 @@ approximate area-split read-out.
 
 ```
 ┌──────────────────────────────────────┐
-│  Editing pin:  ( Start )  [ End ]     │  ← activePin toggle
+│                                      │
 │  Start (P1)  35.67620, 139.65030  [Set GPS] │
 │  End   (P2)  35.68900, 139.70160  [Set GPS] │
 │                                      │
