@@ -25,9 +25,7 @@ export type QuestionDefinition = {
     detail: string;
     implemented: boolean;
     listTitle: string;
-    mapBehavior: {
-        usesMovableAnchor: boolean;
-    };
+    mapBehavior: Record<string, never>;
     summary: (question: QuestionState, index: number) => string;
     time: string;
     title: string | ((question: QuestionState) => string);

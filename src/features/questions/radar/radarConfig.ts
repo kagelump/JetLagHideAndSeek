@@ -17,7 +17,7 @@ export const radarQuestionConfig = {
     detail: "Ask whether the hider is within a distance of you.",
     implemented: true,
     listTitle: "Radar",
-    mapBehavior: { usesMovableAnchor: true },
+    mapBehavior: {},
     summary: (question) =>
         question.type === "radar"
             ? question.answer !== "unanswered"

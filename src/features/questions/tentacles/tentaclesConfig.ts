@@ -13,7 +13,7 @@ export const tentaclesQuestionConfig = {
     detail: "Find the closest qualifying place within range.",
     implemented: true,
     listTitle: "Tentacles",
-    mapBehavior: { usesMovableAnchor: true },
+    mapBehavior: {},
     summary: (question: QuestionState) =>
         question.type === "tentacles"
             ? `Tentacles: ${getCategoryTitle(question.category)} (${question.distanceOption}) — ${question.selectedName ?? "Unanswered"}`

@@ -16,7 +16,7 @@ export const thermometerQuestionConfig = {
     detail: "Compare whether movement is hotter or colder.",
     implemented: true,
     listTitle: "Thermometer",
-    mapBehavior: { usesMovableAnchor: true },
+    mapBehavior: {},
     summary: (question: QuestionState) =>
         question.type === "thermometer"
             ? question.answer !== "unanswered"

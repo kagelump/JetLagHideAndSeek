@@ -16,7 +16,7 @@ export const measuringQuestionConfig = {
     detail: "Compare distance to a selected place or boundary.",
     implemented: true,
     listTitle: "Measuring",
-    mapBehavior: { usesMovableAnchor: false },
+    mapBehavior: {},
     summary: (question: QuestionState) =>
         question.type === "measuring" ? `Measuring: ${question.category}` : "",
     time: "5 minutes",

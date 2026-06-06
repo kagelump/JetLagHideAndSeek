@@ -16,7 +16,7 @@ export const matchingQuestionConfig = {
     detail: "Compare nearest candidates from a movable map pin.",
     implemented: true,
     listTitle: "Matching",
-    mapBehavior: { usesMovableAnchor: true },
+    mapBehavior: {},
     summary: (question) => {
         if (question.type !== "matching") return "";
         const categoryTitle = getCategoryTitle(question.category);

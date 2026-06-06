@@ -122,10 +122,7 @@ export function usePinDrag({
                     const dist = Math.sqrt(dx * dx + dy * dy);
 
                     if (dist <= PIN_HIT_RADIUS_PX) {
-                        if (
-                            dist < closestDist ||
-                            (dist === closestDist && pin.key === "end")
-                        ) {
+                        if (dist <= closestDist) {
                             closestDist = dist;
                             closestPin = pin;
                         }
