@@ -22,6 +22,7 @@ export type QuestionAnswerLabels = Record<
 export type BaseQuestion = {
     createdAt: string;
     id: string;
+    isLocked: boolean;
     type: QuestionType;
     updatedAt: string;
 };

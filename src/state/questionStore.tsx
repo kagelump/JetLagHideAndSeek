@@ -41,7 +41,7 @@ import {
 } from "@/features/questions/questionRegistry";
 import { normalizeTransitLineQuestion } from "@/features/questions/transitLine/transitLineNormalization";
 import { assertNever } from "@/shared/assertNever";
-import type { Position } from "@/shared/geojson";
+import { offsetPosition, type Position } from "@/shared/geojson";
 import {
     fromMeters,
     toMeters,
@@ -59,7 +59,6 @@ type QuestionStateValue = {
     adminDivisionPack: AdminDivisionNamePack;
     adminDivisionPresetName: AdminDivisionPresetName;
     gameMode: GameMode;
-    isPinLocked: boolean;
     isRestored: boolean;
     labelLanguage: "native" | "english";
 };
@@ -81,7 +80,6 @@ export function useQuestionState(): QuestionStateValue {
 // scalar value or stable question ordering.
 // ---------------------------------------------------------------------------
 
-const IsPinLockedContext = createContext<boolean>(false);
 const LabelLanguageContext = createContext<"native" | "english">("native");
 const GameModeContext = createContext<GameMode>("seeker");
 const AdminDivisionPackContext = createContext<AdminDivisionNamePack>(
@@ -95,15 +93,6 @@ const QuestionsByIdContext = createContext<Record<
     string,
     QuestionState
 > | null>(null);
-
-/**
- * Subscribe to `isPinLocked` without receiving the full `questions` array.
- * Use this in components that only need to know whether the active pin is
- * locked, so they don't re-render on every question edit.
- */
-export function useIsPinLocked(): boolean {
-    return useContext(IsPinLockedContext);
-}
 
 export function useLabelLanguage(): "native" | "english" {
     return useContext(LabelLanguageContext);
@@ -168,7 +157,6 @@ type QuestionActionsValue = {
     setAdminDivisionPresetName: (name: AdminDivisionPresetName) => void;
     setGameMode: (mode: GameMode) => void;
     setLabelLanguage: (language: "native" | "english") => void;
-    setPinLocked: (isLocked: boolean) => void;
     updateQuestion: (
         questionId: string,
         updater: (question: QuestionState) => QuestionState,
@@ -216,7 +204,6 @@ export type QuestionSettingsImportState = {
     adminDivisionPack: AdminDivisionNamePack;
     adminDivisionPresetName: AdminDivisionPresetName;
     gameMode: GameMode;
-    isPinLocked: boolean;
     labelLanguage: "native" | "english";
 };
 
@@ -236,7 +223,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const [activeQuestionId, setActiveQuestionIdState] = useState<
         string | null
     >(null);
-    const [isPinLocked, setPinLockedState] = useState(false);
     const [labelLanguage, setLabelLanguageState] = useState<
         "native" | "english"
     >("native");
@@ -377,10 +363,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setActiveQuestionIdState(questionId);
     }, []);
 
-    const setPinLocked = useCallback((isLocked: boolean) => {
-        setPinLockedState(isLocked);
-    }, []);
-
     const setLabelLanguage = useCallback(
         (language: "native" | "english") => {
             setLabelLanguageState(language);
@@ -424,7 +406,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
 
     const importQuestionSettings = useCallback(
         (settings: QuestionSettingsImportState) => {
-            setPinLockedState(settings.isPinLocked);
             setActiveQuestionIdState(settings.activeQuestionId);
             setLabelLanguageState(settings.labelLanguage ?? "native");
             setGameModeState(settings.gameMode ?? "seeker");
@@ -453,7 +434,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             adminDivisionPack,
             adminDivisionPresetName,
             gameMode,
-            isPinLocked,
             isRestored,
             labelLanguage,
         }),
@@ -462,7 +442,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             adminDivisionPack,
             adminDivisionPresetName,
             gameMode,
-            isPinLocked,
             isRestored,
             labelLanguage,
         ],
@@ -481,7 +460,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setAdminDivisionPresetName,
             setGameMode,
             setLabelLanguage,
-            setPinLocked,
             updateQuestion,
         }),
         [
@@ -496,7 +474,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setAdminDivisionPresetName,
             setGameMode,
             setLabelLanguage,
-            setPinLocked,
             updateQuestion,
         ],
     );
@@ -514,23 +491,21 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                 <QuestionDerivedContext.Provider value={derivedValue}>
                     <QuestionIdsContext.Provider value={questions.allIds}>
                         <QuestionsByIdContext.Provider value={questions.byId}>
-                            <IsPinLockedContext.Provider value={isPinLocked}>
-                                <LabelLanguageContext.Provider
-                                    value={labelLanguage}
-                                >
-                                    <GameModeContext.Provider value={gameMode}>
-                                        <AdminDivisionPackContext.Provider
-                                            value={adminDivisionPack}
+                            <LabelLanguageContext.Provider
+                                value={labelLanguage}
+                            >
+                                <GameModeContext.Provider value={gameMode}>
+                                    <AdminDivisionPackContext.Provider
+                                        value={adminDivisionPack}
+                                    >
+                                        <AdminDivisionPresetNameContext.Provider
+                                            value={adminDivisionPresetName}
                                         >
-                                            <AdminDivisionPresetNameContext.Provider
-                                                value={adminDivisionPresetName}
-                                            >
-                                                {children}
-                                            </AdminDivisionPresetNameContext.Provider>
-                                        </AdminDivisionPackContext.Provider>
-                                    </GameModeContext.Provider>
-                                </LabelLanguageContext.Provider>
-                            </IsPinLockedContext.Provider>
+                                            {children}
+                                        </AdminDivisionPresetNameContext.Provider>
+                                    </AdminDivisionPackContext.Provider>
+                                </GameModeContext.Provider>
+                            </LabelLanguageContext.Provider>
                         </QuestionsByIdContext.Provider>
                     </QuestionIdsContext.Provider>
                 </QuestionDerivedContext.Provider>
@@ -733,6 +708,7 @@ function createDefaultQuestion(
                 distanceOption: "500m",
                 distanceUnit: "m",
                 id: createQuestionId(),
+                isLocked: false,
                 type: "radar",
                 updatedAt: now,
             };
@@ -744,6 +720,7 @@ function createDefaultQuestion(
                 center,
                 createdAt: now,
                 id: createQuestionId(),
+                isLocked: false,
                 lineId: null,
                 lineName: null,
                 selectedOsmId: null,
@@ -762,6 +739,7 @@ function createDefaultQuestion(
                 center,
                 createdAt: now,
                 id: createQuestionId(),
+                isLocked: false,
                 seekerDistanceMeters: null,
                 seekerDistanceUnit: "m",
                 selectedOsmId: null,
@@ -773,9 +751,10 @@ function createDefaultQuestion(
             return {
                 answer: "unanswered",
                 previousPosition: center,
-                currentPosition: center,
+                currentPosition: offsetPosition(center, 2000, 90),
                 createdAt: now,
                 id: createQuestionId(),
+                isLocked: false,
                 type: "thermometer",
                 updatedAt: now,
             };
@@ -791,6 +770,7 @@ function createDefaultQuestion(
                 distanceMeters: tentaclesDistanceMeters[distOption],
                 distanceOption: distOption,
                 id: createQuestionId(),
+                isLocked: false,
                 selectedOsmId: null,
                 selectedOsmType: null,
                 selectedName: null,
@@ -813,6 +793,7 @@ function normalizeQuestionState(question: unknown): QuestionState {
             distanceOption: question.radiusOption,
             distanceUnit: question.radiusUnit,
             id: question.id,
+            isLocked: false,
             type: "radar",
             updatedAt: question.updatedAt,
         };

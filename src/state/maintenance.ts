@@ -30,7 +30,6 @@ const defaultQuestionSettings = {
     adminDivisionPack: DEFAULT_ADMIN_DIVISION_PACK,
     adminDivisionPresetName: DEFAULT_ADMIN_DIVISION_PRESET_NAME,
     gameMode: "seeker" as const,
-    isPinLocked: false,
     labelLanguage: "native" as const,
 };
 

@@ -61,6 +61,7 @@ export const appStateRadarQuestionSchema = z.object({
     distanceOption: radarDistanceOptionSchema,
     distanceUnit: z.enum(["m", "km", "mi"]),
     id: z.string().min(1),
+    isLocked: z.boolean().default(false),
     type: z.literal("radar"),
     updatedAt: z.string().min(1),
 });
@@ -105,6 +106,7 @@ const appStateMatchingQuestionSchema = z
         center: positionSchema,
         createdAt: z.string().min(1),
         id: z.string().min(1),
+        isLocked: z.boolean().default(false),
         lineId: z.string().min(1).nullable(),
         lineName: z.string().min(1).nullable(),
         selectedOsmId: z.number().int().positive().nullable().default(null),
@@ -142,6 +144,7 @@ const appStateLegacyRadiusQuestionSchema = z
         distanceOption: question.radiusOption,
         distanceUnit: question.radiusUnit,
         id: question.id,
+        isLocked: false,
         type: "radar" as const,
         updatedAt: question.updatedAt,
     }));
@@ -185,6 +188,7 @@ const appStateMeasuringQuestionSchema = z.object({
     center: positionSchema,
     createdAt: z.string().min(1),
     id: z.string().min(1),
+    isLocked: z.boolean().default(false),
     seekerDistanceMeters: z.number().nullable().default(null),
     seekerDistanceUnit: z.enum(["m", "km", "mi"]).default("m"),
     selectedOsmId: z.number().int().positive().nullable().default(null),
@@ -202,6 +206,7 @@ const appStateThermometerQuestionSchema = z.object({
     previousPosition: positionSchema.nullable().default(null),
     currentPosition: positionSchema.nullable().default(null),
     id: z.string().min(1),
+    isLocked: z.boolean().default(false),
     type: z.literal("thermometer"),
     updatedAt: z.string().min(1),
 });
@@ -240,6 +245,7 @@ const appStateTentaclesQuestionSchema = z
         distanceMeters: z.number().positive(),
         distanceOption: tentaclesDistanceOptionSchema,
         id: z.string().min(1),
+        isLocked: z.boolean().default(false),
         selectedOsmId: z.number().int().positive().nullable().default(null),
         selectedOsmType: z
             .enum(["node", "way", "relation"])
@@ -292,7 +298,6 @@ export const appStateQuestionSettingsSchema = z.object({
     ),
     adminDivisionPresetName: adminDivisionPresetNameSchema.default("generic"),
     gameMode: z.enum(["hider", "seeker"]).default("seeker"),
-    isPinLocked: z.boolean(),
     labelLanguage: z.enum(["native", "english"]).default("native"),
 });
 
@@ -360,7 +365,6 @@ export function createAppStateV1({
             adminDivisionPresetName:
                 questionSettings?.adminDivisionPresetName ?? "generic",
             gameMode: questionSettings?.gameMode ?? "seeker",
-            isPinLocked: questionSettings?.isPinLocked ?? false,
             labelLanguage: questionSettings?.labelLanguage ?? "native",
         },
         questions: questions ? [...questions] : [],
@@ -392,7 +396,6 @@ function addMissingV1Slices(value: unknown): unknown {
                       adminDivisionPack: DEFAULT_ADMIN_DIVISION_PACK,
                       adminDivisionPresetName: "generic",
                       gameMode: "seeker",
-                      isPinLocked: false,
                       labelLanguage: "native",
                   },
         questions,
@@ -469,7 +472,6 @@ export function appStateQuestionSettingsToImportState(
         adminDivisionPack: questionSettings.adminDivisionPack,
         adminDivisionPresetName: questionSettings.adminDivisionPresetName,
         gameMode: questionSettings.gameMode,
-        isPinLocked: questionSettings.isPinLocked,
         labelLanguage: questionSettings.labelLanguage,
     };
 }

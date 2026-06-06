@@ -227,7 +227,6 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
                     adminDivisionPresetName:
                         questionState.adminDivisionPresetName,
                     gameMode: questionState.gameMode,
-                    isPinLocked: questionState.isPinLocked,
                     labelLanguage: questionState.labelLanguage,
                 },
                 questions,
@@ -243,7 +242,6 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
         questionState.adminDivisionPack,
         questionState.adminDivisionPresetName,
         questionState.gameMode,
-        questionState.isPinLocked,
         questionState.labelLanguage,
         questions,
     ]);
