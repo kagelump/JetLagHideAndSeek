@@ -39,18 +39,13 @@ export function ThermometerQuestionDetailScreen({
 
     const isDegenerate = distanceMeters < 100;
 
-    const handleStartChange = (center: [number, number]) => {
+    const handlePinChange = (
+        pin: "start" | "end",
+        position: [number, number],
+    ) => {
         updateQuestion(question.id, (current) =>
             current.type === "thermometer"
-                ? updateThermometerPin(current, "start", center)
-                : current,
-        );
-    };
-
-    const handleEndChange = (center: [number, number]) => {
-        updateQuestion(question.id, (current) =>
-            current.type === "thermometer"
-                ? updateThermometerPin(current, "end", center)
+                ? updateThermometerPin(current, pin, position)
                 : current,
         );
     };
@@ -132,7 +127,7 @@ export function ThermometerQuestionDetailScreen({
                 {startPosition ? (
                     <QuestionLocationSelector
                         center={startPosition}
-                        onCenterChange={handleStartChange}
+                        onCenterChange={(pos) => handlePinChange("start", pos)}
                         setToLocationAccessibilityLabel="Set thermometer start pin to my location"
                         testIDPrefix="thermometer-start"
                     />
@@ -146,7 +141,7 @@ export function ThermometerQuestionDetailScreen({
                 {endPosition ? (
                     <QuestionLocationSelector
                         center={endPosition}
-                        onCenterChange={handleEndChange}
+                        onCenterChange={(pos) => handlePinChange("end", pos)}
                         setToLocationAccessibilityLabel="Set thermometer end pin to my location"
                         testIDPrefix="thermometer-end"
                     />

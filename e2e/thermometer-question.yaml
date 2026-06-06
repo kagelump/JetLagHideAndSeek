@@ -21,7 +21,7 @@ appId: com.raycatdev.hideandseek.v2
 - assertVisible: ".*Colder.*"
 - assertVisible: ".*Start.*"
 - assertVisible: ".*End.*"
-- tapOn: "Hotter"
+- tapOn: "Hotter answer"
 - waitForAnimationToEnd:
       timeout: 1000
 - swipe:
