@@ -17,13 +17,9 @@ import { colors } from "@/theme/colors";
 
 import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { useMarkAppMapReady } from "@/state/AppStateProviders";
-import {
-    useIsPinLocked,
-    useQuestionActions,
-    useQuestionDerived,
-    updateQuestionCenter,
-} from "@/state/questionStore";
+import { useIsPinLocked, useQuestionDerived } from "@/state/questionStore";
 import { usePlayArea } from "@/state/playAreaStore";
+import type { Position } from "@/shared/geojson";
 import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
 
 import { ActivePinLayer } from "./ActivePinLayer";
@@ -61,10 +57,19 @@ const MLUserLocation = UserLocation as ComponentType<any>;
 
 type NativeMapProps = {
     isQuestionDetailRoute: boolean;
+    onPinCommit: (
+        questionId: string,
+        pinKey: string,
+        position: Position,
+    ) => void;
     onPress?: (event?: unknown) => void;
 };
 
-export function NativeMap({ isQuestionDetailRoute, onPress }: NativeMapProps) {
+export function NativeMap({
+    isQuestionDetailRoute,
+    onPinCommit,
+    onPress,
+}: NativeMapProps) {
     const cameraRef = useRef<CameraHandle | null>(null);
     const mapRef = useRef<any>(null);
     const insets = useSafeAreaInsets();
@@ -73,7 +78,6 @@ export function NativeMap({ isQuestionDetailRoute, onPress }: NativeMapProps) {
         useHidingZoneDerived();
     const { activeQuestion } = useQuestionDerived();
     const isPinLocked = useIsPinLocked();
-    const { updateQuestion } = useQuestionActions();
     const markAppMapReady = useMarkAppMapReady();
     const questionMapRenderState = useQuestionMapRenderState();
     const { playArea } = usePlayArea();
@@ -156,20 +160,18 @@ export function NativeMap({ isQuestionDetailRoute, onPress }: NativeMapProps) {
     );
     const movableActiveQuestion = activeQuestionCenter ? activeQuestion : null;
 
-    const handlePinCommit = useCallback(
-        (questionId: string, center: [number, number]) => {
-            updateQuestion(questionId, (question) =>
-                updateQuestionCenter(question, center),
-            );
+    const adaptedOnCommit = useCallback(
+        (questionId: string, center: Position) => {
+            onPinCommit(questionId, "center", center);
         },
-        [updateQuestion],
+        [onPinCommit],
     );
 
     const pinDrag = usePinDrag({
         activeQuestion: movableActiveQuestion,
         canMove: canMoveActivePin,
         mapRef,
-        onCommit: handlePinCommit,
+        onCommit: adaptedOnCommit,
     });
 
     const activePinFeature = useMemo(
@@ -212,14 +214,12 @@ export function NativeMap({ isQuestionDetailRoute, onPress }: NativeMapProps) {
             if (canMoveActivePin && coordinate && activeQuestion) {
                 const questionId = activeQuestion.id;
                 setTimeout(() => {
-                    updateQuestion(questionId, (question) =>
-                        updateQuestionCenter(question, coordinate),
-                    );
+                    onPinCommit(questionId, "center", coordinate);
                 }, 0);
             }
             onPress?.(event);
         },
-        [activeQuestion, canMoveActivePin, onPress, updateQuestion],
+        [activeQuestion, canMoveActivePin, onPress, onPinCommit],
     );
 
     return (
