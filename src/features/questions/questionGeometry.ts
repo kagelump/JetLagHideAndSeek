@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import { buildMeasuringRenderState } from "@/features/questions/measuring/measuringGeometry";
-import { EMPTY_TENTACLES_RENDER_STATE } from "@/features/questions/tentacles/tentaclesTypes";
+import { buildTentaclesRenderState } from "@/features/questions/tentacles/tentaclesGeometry";
 import { buildThermometerRenderState } from "@/features/questions/thermometer/thermometerGeometry";
 import type { Bbox } from "@/shared/geojson";
 import type { QuestionMapRenderState } from "@/features/questions/radar/radarTypes";
@@ -42,12 +42,18 @@ export function buildQuestionMapRenderState(
         matchingQuestions.find((question) => question.answer === "negative") ??
         null;
 
+    const tentacles = buildTentaclesRenderState(
+        questions,
+        playAreaBbox,
+        playAreaBoundary,
+    );
+
     return {
         measuring: buildMeasuringRenderState(questions),
         osmMatching,
         radar,
         radarAreaFeatures: radar.previewFeatures,
-        tentacles: EMPTY_TENTACLES_RENDER_STATE,
+        tentacles,
         thermometer: buildThermometerRenderState(questions, playAreaBoundary),
         transitLine: {
             hitMaskFeatures: buildTransitLineMaskFeatures(
@@ -65,7 +71,7 @@ export function buildQuestionMapRenderState(
             type: "FeatureCollection",
             features: [
                 ...osmMatching.voronoiOutlineFeatures.features,
-                // ...tentacles.voronoiOutlineFeatures.features  (future)
+                ...tentacles.voronoiOutlineFeatures.features,
             ],
         },
     };
