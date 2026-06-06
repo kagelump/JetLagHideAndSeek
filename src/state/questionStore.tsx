@@ -799,7 +799,7 @@ function createDefaultQuestion(
             return {
                 answer: "unanswered",
                 previousPosition: center,
-                currentPosition: offsetPosition(center, 2000, 90),
+                currentPosition: offsetPosition(center, 300, 90),
                 createdAt: now,
                 id: createQuestionId(),
                 isLocked: false,
