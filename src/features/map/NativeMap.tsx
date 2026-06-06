@@ -45,6 +45,7 @@ import {
 } from "./PlayAreaMaskLayers";
 import { MeasuringLayers } from "./MeasuringLayers";
 import { RadarQuestionLayers } from "./RadarQuestionLayers";
+import { ThermometerPreviewLayer } from "./ThermometerPreviewLayer";
 import { usePinDrag } from "./usePinDrag";
 import { useUserLocation } from "./useUserLocation";
 import { VoronoiOutlineLayers } from "./VoronoiOutlineLayers";
@@ -115,6 +116,9 @@ export function NativeMap({
                 ...asSeparateMaskConstraints(
                     questionMapRenderState.osmMatching.hitMaskFeatures,
                 ),
+                ...asSeparateMaskConstraints(
+                    questionMapRenderState.thermometer.hitMaskFeatures,
+                ),
             ],
             [
                 questionMapRenderState.radar.missMaskFeatures,
@@ -131,6 +135,7 @@ export function NativeMap({
         questionMapRenderState.transitLine.missMaskFeatures,
         questionMapRenderState.osmMatching.hitMaskFeatures,
         questionMapRenderState.osmMatching.missMaskFeatures,
+        questionMapRenderState.thermometer.hitMaskFeatures,
     ]);
     const mapStyle = useMemo(() => buildOsmRasterStyleJson(), []);
     const fitPadding = useMemo(
@@ -213,6 +218,10 @@ export function NativeMap({
                     <PlayAreaBoundaryLayer playArea={playArea} />
                     <MeasuringLayers
                         measuring={questionMapRenderState.measuring}
+                    />
+                    <ThermometerPreviewLayer
+                        thermometer={questionMapRenderState.thermometer}
+                        visible={isQuestionDetailRoute}
                     />
 
                     {hasLocationPermission ? (
