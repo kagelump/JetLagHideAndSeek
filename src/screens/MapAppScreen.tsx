@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { NativeMap } from "@/features/map/NativeMap";
+import { useMapPinCommit } from "@/features/map/useMapPinCommit";
 import {
     AppBottomSheet,
     type BottomSheetHandle,
@@ -22,6 +23,7 @@ export function MapAppScreen() {
     );
     const [sheetRoute, setSheetRoute] = useState<SheetRouteName>("main");
     const isQuestionDetailRoute = sheetRoute === "question-detail";
+    const handlePinCommit = useMapPinCommit();
 
     const handleMapPress = useCallback(() => {
         if (sheetIndexRef.current === SHEET_SNAP_INDEX.large) {
@@ -47,6 +49,7 @@ export function MapAppScreen() {
             <StatusBar style="dark" />
             <NativeMap
                 isQuestionDetailRoute={isQuestionDetailRoute}
+                onPinCommit={handlePinCommit}
                 onPress={handleMapPress}
             />
             <FabButton
