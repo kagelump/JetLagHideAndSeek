@@ -43,6 +43,7 @@ function makeRadarQuestion(): QuestionState {
         distanceOption: "5km",
         distanceUnit: "m",
         id: "q-radar-shared",
+        isLocked: false,
         type: "radar",
         updatedAt: "2026-06-05T00:00:00.000Z",
     };
@@ -56,6 +57,7 @@ function makeMatchingQuestion(): QuestionState {
         center: [139.7, 35.7],
         createdAt: "2026-06-05T00:00:00.000Z",
         id: "q-matching-shared",
+        isLocked: false,
         lineId: null,
         lineName: null,
         selectedOsmId: null,
@@ -206,7 +208,6 @@ describe("ImportScreen — question-request", () => {
                 questionSettings: {
                     activeQuestionId: null,
                     gameMode: "hider",
-                    isPinLocked: false,
                     labelLanguage: "native",
                     adminDivisionPack: [
                         {
@@ -289,7 +290,6 @@ describe("ImportScreen — question-request", () => {
                 questionSettings: {
                     activeQuestionId: null,
                     gameMode: "hider",
-                    isPinLocked: false,
                     labelLanguage: "native",
                     adminDivisionPack: [
                         {
@@ -362,7 +362,6 @@ describe("ImportScreen — question-request", () => {
                 questionSettings: {
                     activeQuestionId: null,
                     gameMode: "hider",
-                    isPinLocked: false,
                     labelLanguage: "native",
                     adminDivisionPack: [
                         {
@@ -448,7 +447,6 @@ describe("ImportScreen — question-request", () => {
                 questionSettings: {
                     activeQuestionId: null,
                     gameMode: "hider",
-                    isPinLocked: false,
                     labelLanguage: "native",
                     adminDivisionPack: [
                         {
@@ -530,7 +528,6 @@ describe("ImportScreen — question-request", () => {
                 questionSettings: {
                     activeQuestionId: null,
                     gameMode: "hider",
-                    isPinLocked: false,
                     labelLanguage: "native",
                     adminDivisionPack: [
                         {
@@ -593,7 +590,6 @@ describe("ImportScreen — question-request", () => {
                 questionSettings: {
                     activeQuestionId: null,
                     gameMode: "hider",
-                    isPinLocked: false,
                     labelLanguage: "native",
                     adminDivisionPack: [
                         {

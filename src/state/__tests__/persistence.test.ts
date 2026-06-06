@@ -44,6 +44,7 @@ function makeRadarQuestion() {
         distanceOption: "500m" as const,
         distanceUnit: "m" as const,
         id: "q-1",
+        isLocked: false,
         type: "radar" as const,
         updatedAt: "2026-05-18T00:00:00.000Z",
     };
@@ -57,6 +58,7 @@ function makeMatchingQuestion() {
         center: defaultPlayArea.center,
         createdAt: "2026-05-18T00:00:00.000Z",
         id: "matching-1",
+        isLocked: false,
         lineId: "gtfs:test:route:line-1",
         lineName: "Line 1",
         selectedOsmId: null,
@@ -121,7 +123,6 @@ describe("AppStateV1 schema", () => {
             ],
             adminDivisionPresetName: "generic",
             gameMode: "seeker",
-            isPinLocked: false,
             labelLanguage: "native",
         });
         expect(state.questions).toEqual([]);
@@ -249,7 +250,6 @@ describe("AppStateV1 schema", () => {
                 ],
                 adminDivisionPresetName: "generic" as const,
                 gameMode: "seeker" as const,
-                isPinLocked: true,
                 labelLanguage: "native" as const,
             },
         };

@@ -19,14 +19,13 @@ import {
 } from "@/state/questionStore";
 
 function Probe() {
-    const { activeQuestionId, isPinLocked, isRestored } = useQuestionState();
+    const { activeQuestionId, isRestored } = useQuestionState();
     const questions = useQuestions();
     const { activeQuestion } = useQuestionDerived();
     const {
         createQuestion,
         deleteQuestion,
         setActiveQuestionId,
-        setPinLocked,
         updateQuestion,
     } = useQuestionActions();
 
@@ -84,7 +83,6 @@ function Probe() {
             <Text testID="probe-first-type">
                 {questions[0]?.type ?? "none"}
             </Text>
-            <Text testID="probe-locked">{String(isPinLocked)}</Text>
             <Text testID="probe-type">{activeQuestion?.type ?? "none"}</Text>
             <Text testID="probe-measuring-category">
                 {activeQuestion?.type === "measuring"
@@ -171,6 +169,19 @@ function Probe() {
                 testID="action-create"
                 onPress={() =>
                     createQuestion("radar", { center: defaultPlayArea.center })
+                }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-lock-question"
+                onPress={() =>
+                    activeQuestion
+                        ? updateQuestion(activeQuestion.id, (q) => ({
+                              ...q,
+                              isLocked: true,
+                              updatedAt: new Date().toISOString(),
+                          }))
+                        : null
                 }
             />
             <Pressable
@@ -271,11 +282,6 @@ function Probe() {
                           )
                         : null
                 }
-            />
-            <Pressable
-                accessibilityRole="button"
-                testID="action-moving"
-                onPress={() => setPinLocked(true)}
             />
         </View>
     );
@@ -477,6 +483,7 @@ describe("QuestionProvider", () => {
                         distanceOption: "2km",
                         distanceUnit: "m",
                         id: "q-1",
+                        isLocked: false,
                         type: "radar",
                         updatedAt: "2026-05-18T00:00:00.000Z",
                     },
@@ -516,6 +523,7 @@ describe("QuestionProvider", () => {
                         distanceOption: "2km",
                         distanceUnit: "m",
                         id: "__proto__",
+                        isLocked: false,
                         type: "radar",
                         updatedAt: "2026-05-18T00:00:00.000Z",
                     },
@@ -643,7 +651,7 @@ describe("QuestionProvider", () => {
         });
     });
 
-    it("persists the pin lock preference", async () => {
+    it("persists per-question pin lock", async () => {
         const screen = renderProvider();
 
         await waitFor(() => {
@@ -653,12 +661,19 @@ describe("QuestionProvider", () => {
         });
 
         act(() => {
-            fireEvent.press(screen.getByTestId("action-moving"));
+            fireEvent.press(screen.getByTestId("action-create"));
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-lock-question"));
         });
 
         await waitFor(async () => {
             const persisted = await loadPersistedAppState();
-            expect(persisted?.questionSettings.isPinLocked).toBe(true);
+            const first = persisted?.questions[0];
+            expect(first && "isLocked" in first ? first.isLocked : null).toBe(
+                true,
+            );
         });
     });
 
@@ -778,12 +793,17 @@ describe("QuestionProvider – new question types", () => {
         expect(
             screen.getByTestId("probe-thermometer-answer"),
         ).toHaveTextContent("unanswered");
-        expect(
-            screen.getByTestId("probe-thermometer-previous-position"),
-        ).toHaveTextContent(JSON.stringify(defaultPlayArea.center));
-        expect(
-            screen.getByTestId("probe-thermometer-current-position"),
-        ).toHaveTextContent(JSON.stringify(defaultPlayArea.center));
+        const prevPos = JSON.parse(
+            screen.getByTestId("probe-thermometer-previous-position").props
+                .children,
+        );
+        const currPos = JSON.parse(
+            screen.getByTestId("probe-thermometer-current-position").props
+                .children,
+        );
+        expect(prevPos).toEqual(defaultPlayArea.center);
+        expect(currPos[0]).toBeGreaterThan(defaultPlayArea.center[0]);
+        expect(currPos[1]).toBeCloseTo(defaultPlayArea.center[1], 3);
     });
 
     it("creates a tentacles question with distance derived from category", async () => {
@@ -885,12 +905,17 @@ describe("QuestionProvider – new question types", () => {
             fireEvent.press(screen.getByTestId("action-center-shibuya"));
         });
 
-        expect(
-            screen.getByTestId("probe-thermometer-previous-position"),
-        ).toHaveTextContent(JSON.stringify(defaultPlayArea.center));
-        expect(
-            screen.getByTestId("probe-thermometer-current-position"),
-        ).toHaveTextContent(JSON.stringify(defaultPlayArea.center));
+        const prevPos = JSON.parse(
+            screen.getByTestId("probe-thermometer-previous-position").props
+                .children,
+        );
+        const currPos = JSON.parse(
+            screen.getByTestId("probe-thermometer-current-position").props
+                .children,
+        );
+        expect(prevPos).toEqual(defaultPlayArea.center);
+        expect(currPos[0]).toBeGreaterThan(defaultPlayArea.center[0]);
+        expect(currPos[1]).toBeCloseTo(defaultPlayArea.center[1], 3);
     });
 });
 
@@ -951,6 +976,7 @@ function GameModeProbe() {
                         distanceOption: "2km",
                         distanceUnit: "m",
                         id: "q-shared-1",
+                        isLocked: false,
                         type: "radar",
                         updatedAt: "2026-05-01T00:00:00.000Z",
                     })
@@ -969,6 +995,7 @@ function GameModeProbe() {
                         distanceMeters: 2000,
                         distanceOption: "2km" as const,
                         id: "q-shared-tentacles",
+                        isLocked: false,
                         selectedOsmId: 123,
                         selectedOsmType: "node" as const,
                         selectedName: "Test POI",
@@ -1007,7 +1034,6 @@ function GameModeProbe() {
                         ],
                         adminDivisionPresetName: "generic",
                         gameMode: "hider",
-                        isPinLocked: true,
                         labelLanguage: "english",
                     })
                 }
@@ -1269,6 +1295,7 @@ function makeTentaclesQuestion(
         distanceMeters: 2000,
         distanceOption: "2km",
         id: "q-tentacles-test",
+        isLocked: false,
         selectedOsmId: null,
         selectedOsmType: null,
         selectedName: null,
@@ -1384,6 +1411,7 @@ describe("normalizeQuestionState repairs inconsistent poi payloads", () => {
             distanceMeters: 2000,
             distanceOption: "2km",
             id: "q-drifted",
+            isLocked: false,
             selectedOsmId: null,
             selectedOsmType: null,
             selectedName: null,

@@ -15,6 +15,7 @@ function makeRadarQuestion(): QuestionState {
         distanceOption: "5km",
         distanceUnit: "m",
         id: "q-radar-1",
+        isLocked: false,
         type: "radar",
         updatedAt: "2026-06-05T00:00:00.000Z",
     };
@@ -37,6 +38,7 @@ function makeMatchingQuestion(): QuestionState {
         targetOsmType: "way",
         type: "matching",
         updatedAt: "2026-06-05T00:00:00.000Z",
+        isLocked: false,
     };
 }
 
