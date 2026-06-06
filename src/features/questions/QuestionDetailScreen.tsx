@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { requestUserCoordinate } from "@/shared/location";
+import { MeasuringQuestionDetailScreen } from "@/features/questions/measuring/MeasuringQuestionDetailScreen";
 import { OsmMatchingQuestionDetailScreen } from "@/features/questions/matching/OsmMatchingQuestionDetailScreen";
 import {
     FetchDebugScope,
@@ -9,6 +10,8 @@ import {
 } from "@/features/questions/matching/fetchDebug";
 import { RadarQuestionDetailScreen } from "@/features/questions/radar/RadarQuestionDetailScreen";
 import { ShareQuestionButton } from "@/features/questions/ShareQuestionButton";
+import { TentaclesQuestionDetailScreen } from "@/features/questions/tentacles/TentaclesQuestionDetailScreen";
+import { ThermometerQuestionDetailScreen } from "@/features/questions/thermometer/ThermometerQuestionDetailScreen";
 import { TransitLineQuestionDetailScreen } from "@/features/questions/transitLine/TransitLineQuestionDetailScreen";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
@@ -64,6 +67,12 @@ export function QuestionDetailScreen({
                         question={activeQuestion}
                         updateQuestion={updateQuestion}
                     />
+                ) : activeQuestion.type === "measuring" ? (
+                    <MeasuringQuestionDetailScreen />
+                ) : activeQuestion.type === "thermometer" ? (
+                    <ThermometerQuestionDetailScreen />
+                ) : activeQuestion.type === "tentacles" ? (
+                    <TentaclesQuestionDetailScreen />
                 ) : (
                     <>
                         <Text style={styles.emptyDetail}>

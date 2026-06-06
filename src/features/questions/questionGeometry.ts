@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
+import { EMPTY_MEASURING_RENDER_STATE } from "@/features/questions/measuring/measuringTypes";
+import { EMPTY_TENTACLES_RENDER_STATE } from "@/features/questions/tentacles/tentaclesTypes";
+import { EMPTY_THERMOMETER_RENDER_STATE } from "@/features/questions/thermometer/thermometerTypes";
 import type { Bbox } from "@/shared/geojson";
 import type { QuestionMapRenderState } from "@/features/questions/radar/radarTypes";
 import { buildRadarQuestionRenderState } from "@/features/questions/radar/radarGeometry";
@@ -40,9 +43,12 @@ export function buildQuestionMapRenderState(
         null;
 
     return {
+        measuring: EMPTY_MEASURING_RENDER_STATE,
         osmMatching,
         radar,
         radarAreaFeatures: radar.previewFeatures,
+        tentacles: EMPTY_TENTACLES_RENDER_STATE,
+        thermometer: EMPTY_THERMOMETER_RENDER_STATE,
         transitLine: {
             hitMaskFeatures: buildTransitLineMaskFeatures(
                 stations,

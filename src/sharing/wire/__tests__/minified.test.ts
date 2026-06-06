@@ -478,7 +478,10 @@ describe("unminifyEnvelope", () => {
             ],
         });
         const mini = minifyEnvelope(envelope);
-        delete mini.p.q?.[0].n;
+        const questions = mini.p.q as
+            | Array<Record<string, unknown>>
+            | undefined;
+        delete questions?.[0]?.n;
 
         const restored = unminifyEnvelope(mini);
 
@@ -741,5 +744,305 @@ describe("minify → unminify round-trip", () => {
 
         expect(restored.payload.playArea?.center[0]).toBeCloseTo(-73, 4);
         expect(restored.payload.playArea?.center[1]).toBeCloseTo(-33, 4);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Task 03: measuring, thermometer, tentacles round-trips
+// ---------------------------------------------------------------------------
+
+describe("minify → unminify round-trip for new question types", () => {
+    it("round-trips measuring question with all fields", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "positive" as const,
+                    candidates: [
+                        {
+                            lat: 35.68,
+                            lon: 139.76,
+                            name: "Tokyo Station",
+                            osmId: 1,
+                            osmType: "node" as const,
+                            tags: {},
+                        },
+                    ],
+                    category: "rail-station" as const,
+                    center: [139.7, 35.68] as [number, number],
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    id: "measuring-1",
+                    seekerDistanceMeters: 500,
+                    seekerDistanceUnit: "m" as const,
+                    selectedOsmId: 1,
+                    selectedOsmType: "node" as const,
+                    type: "measuring" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+            ],
+        });
+        const restored = unminifyEnvelope(minifyEnvelope(envelope));
+        const question = restored.payload.questions?.[0];
+        expect(question).toMatchObject({
+            answer: "positive",
+            category: "rail-station",
+            seekerDistanceMeters: 500,
+            seekerDistanceUnit: "m",
+            selectedOsmId: 1,
+            selectedOsmType: "node",
+            type: "measuring",
+        });
+        if (question && question.type === "measuring") {
+            expect(question.candidates).toHaveLength(1);
+            expect(question.center[0]).toBeCloseTo(139.7, 4);
+            expect(question.center[1]).toBeCloseTo(35.68, 4);
+        }
+    });
+
+    it("round-trips measuring question with default/null fields", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "unanswered" as const,
+                    candidates: [],
+                    category: "park" as const,
+                    center: [139.7, 35.7] as [number, number],
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    id: "measuring-2",
+                    seekerDistanceMeters: null,
+                    seekerDistanceUnit: "m" as const,
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    type: "measuring" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+            ],
+        });
+        const restored = unminifyEnvelope(minifyEnvelope(envelope));
+        const question = restored.payload.questions?.[0];
+        expect(question).toMatchObject({
+            answer: "unanswered",
+            category: "park",
+            seekerDistanceMeters: null,
+            seekerDistanceUnit: "m",
+            type: "measuring",
+        });
+    });
+
+    it("round-trips thermometer question with positions", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "positive" as const,
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    previousPosition: [139.7, 35.66] as [number, number],
+                    currentPosition: [139.71, 35.67] as [number, number],
+                    id: "thermo-1",
+                    type: "thermometer" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+            ],
+        });
+        const restored = unminifyEnvelope(minifyEnvelope(envelope));
+        const question = restored.payload.questions?.[0];
+        expect(question).toMatchObject({
+            answer: "positive",
+            type: "thermometer",
+        });
+        if (question && question.type === "thermometer") {
+            expect(question.previousPosition?.[0]).toBeCloseTo(139.7, 4);
+            expect(question.previousPosition?.[1]).toBeCloseTo(35.66, 4);
+            expect(question.currentPosition?.[0]).toBeCloseTo(139.71, 4);
+            expect(question.currentPosition?.[1]).toBeCloseTo(35.67, 4);
+        }
+    });
+
+    it("round-trips thermometer question with null positions", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "unanswered" as const,
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    previousPosition: null,
+                    currentPosition: null,
+                    id: "thermo-2",
+                    type: "thermometer" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+            ],
+        });
+        const restored = unminifyEnvelope(minifyEnvelope(envelope));
+        const question = restored.payload.questions?.[0];
+        expect(question).toMatchObject({
+            answer: "unanswered",
+            type: "thermometer",
+        });
+        if (question && question.type === "thermometer") {
+            expect(question.previousPosition).toBeNull();
+            expect(question.currentPosition).toBeNull();
+        }
+    });
+
+    it("round-trips tentacles question answered with POI", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "positive" as const,
+                    candidates: [
+                        {
+                            lat: 35.68,
+                            lon: 139.76,
+                            name: "Tokyo National Museum",
+                            osmId: 1,
+                            osmType: "node" as const,
+                            tags: {},
+                        },
+                    ],
+                    category: "museum" as const,
+                    center: [139.7, 35.68] as [number, number],
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    distanceMeters: 2000,
+                    distanceOption: "2km" as const,
+                    id: "tentacles-1",
+                    selectedOsmId: 1,
+                    selectedOsmType: "node" as const,
+                    selectedName: "Tokyo National Museum",
+                    type: "tentacles" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+            ],
+        });
+        const restored = unminifyEnvelope(minifyEnvelope(envelope));
+        const question = restored.payload.questions?.[0];
+        expect(question).toMatchObject({
+            answer: "positive",
+            category: "museum",
+            distanceMeters: 2000,
+            distanceOption: "2km",
+            selectedOsmId: 1,
+            selectedOsmType: "node",
+            selectedName: "Tokyo National Museum",
+            type: "tentacles",
+        });
+        if (question && question.type === "tentacles") {
+            expect(question.candidates).toHaveLength(1);
+            expect(question.center[0]).toBeCloseTo(139.7, 4);
+            expect(question.center[1]).toBeCloseTo(35.68, 4);
+        }
+    });
+
+    it("round-trips tentacles question unanswered", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "unanswered" as const,
+                    candidates: [],
+                    category: "zoo" as const,
+                    center: [139.7, 35.7] as [number, number],
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    distanceMeters: 25000,
+                    distanceOption: "25km" as const,
+                    id: "tentacles-2",
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    selectedName: null,
+                    type: "tentacles" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+            ],
+        });
+        const restored = unminifyEnvelope(minifyEnvelope(envelope));
+        const question = restored.payload.questions?.[0];
+        expect(question).toMatchObject({
+            answer: "unanswered",
+            category: "zoo",
+            distanceMeters: 25000,
+            distanceOption: "25km",
+            type: "tentacles",
+        });
+    });
+
+    it("round-trips mixed payload with all five question types", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "positive" as const,
+                    center: [139.7, 35.7] as [number, number],
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    distanceMeters: 1000,
+                    distanceOption: "1km" as const,
+                    distanceUnit: "m" as const,
+                    id: "radar-1",
+                    type: "radar" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+                {
+                    answer: "unanswered" as const,
+                    candidates: [],
+                    category: "park" as const,
+                    center: [139.7, 35.7] as [number, number],
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    id: "matching-1",
+                    lineId: null,
+                    lineName: null,
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    targetName: null,
+                    targetOsmId: null,
+                    targetOsmType: null,
+                    type: "matching" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+                {
+                    answer: "positive" as const,
+                    candidates: [],
+                    category: "rail-station" as const,
+                    center: [139.7, 35.7] as [number, number],
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    id: "measuring-1",
+                    seekerDistanceMeters: 300,
+                    seekerDistanceUnit: "m" as const,
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    type: "measuring" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+                {
+                    answer: "negative" as const,
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    previousPosition: [139.7, 35.66] as [number, number],
+                    currentPosition: [139.71, 35.67] as [number, number],
+                    id: "thermo-1",
+                    type: "thermometer" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+                {
+                    answer: "unanswered" as const,
+                    candidates: [],
+                    category: "museum" as const,
+                    center: [139.7, 35.7] as [number, number],
+                    createdAt: "2026-06-01T00:00:00.000Z",
+                    distanceMeters: 25000,
+                    distanceOption: "25km" as const,
+                    id: "tentacles-1",
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    selectedName: null,
+                    type: "tentacles" as const,
+                    updatedAt: "2026-06-01T00:00:00.000Z",
+                },
+            ],
+        });
+        const restored = unminifyEnvelope(minifyEnvelope(envelope));
+        expect(restored.payload.questions).toHaveLength(5);
+        const types = restored.payload.questions?.map((q) => q.type).sort();
+        expect(types).toEqual(
+            [
+                "matching",
+                "measuring",
+                "radar",
+                "tentacles",
+                "thermometer",
+            ].sort(),
+        );
     });
 });

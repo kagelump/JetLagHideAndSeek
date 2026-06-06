@@ -251,4 +251,243 @@ describe("sharing wire codec", () => {
             expect(result.error.code).toBe("schema-invalid");
         }
     });
+
+    // -------------------------------------------------------------------
+    // Task 03: measuring, thermometer, tentacles round-trips
+    // -------------------------------------------------------------------
+
+    it("round-trips measuring question through encode/decode", () => {
+        const withMeasuring = {
+            ...envelope,
+            payload: {
+                ...envelope.payload,
+                questions: [
+                    {
+                        answer: "positive" as const,
+                        candidates: [
+                            {
+                                lat: 35.68,
+                                lon: 139.76,
+                                name: "Tokyo Station",
+                                osmId: 1,
+                                osmType: "node" as const,
+                                tags: {},
+                            },
+                        ],
+                        category: "rail-station" as const,
+                        center: [139.7, 35.68] as [number, number],
+                        createdAt: "2026-06-01T00:00:00.000Z",
+                        id: "measuring-1",
+                        seekerDistanceMeters: 500,
+                        seekerDistanceUnit: "m" as const,
+                        selectedOsmId: 1,
+                        selectedOsmType: "node" as const,
+                        type: "measuring" as const,
+                        updatedAt: "2026-06-01T00:00:00.000Z",
+                    },
+                ],
+            },
+        };
+
+        const payload = encodeEnvelope(withMeasuring);
+        const decoded = decodeEnvelopePayload(payload);
+        expect(decoded.ok).toBe(true);
+        if (decoded.ok) {
+            const q = decoded.envelope.payload.questions?.[0];
+            expect(q).toMatchObject({
+                answer: "positive",
+                category: "rail-station",
+                seekerDistanceMeters: 500,
+                seekerDistanceUnit: "m",
+                selectedOsmId: 1,
+                selectedOsmType: "node",
+                type: "measuring",
+            });
+        }
+    });
+
+    it("round-trips thermometer question through encode/decode", () => {
+        const withThermometer = {
+            ...envelope,
+            payload: {
+                ...envelope.payload,
+                questions: [
+                    {
+                        answer: "positive" as const,
+                        createdAt: "2026-06-01T00:00:00.000Z",
+                        previousPosition: [139.7, 35.66] as [number, number],
+                        currentPosition: [139.71, 35.67] as [number, number],
+                        id: "thermo-1",
+                        type: "thermometer" as const,
+                        updatedAt: "2026-06-01T00:00:00.000Z",
+                    },
+                ],
+            },
+        };
+
+        const payload = encodeEnvelope(withThermometer);
+        const decoded = decodeEnvelopePayload(payload);
+        expect(decoded.ok).toBe(true);
+        if (decoded.ok) {
+            const q = decoded.envelope.payload.questions?.[0];
+            expect(q).toMatchObject({
+                answer: "positive",
+                type: "thermometer",
+            });
+            if (q && q.type === "thermometer") {
+                expect(q.previousPosition?.[0]).toBeCloseTo(139.7, 4);
+                expect(q.previousPosition?.[1]).toBeCloseTo(35.66, 4);
+                expect(q.currentPosition?.[0]).toBeCloseTo(139.71, 4);
+                expect(q.currentPosition?.[1]).toBeCloseTo(35.67, 4);
+            }
+        }
+    });
+
+    it("round-trips tentacles question through encode/decode", () => {
+        const withTentacles = {
+            ...envelope,
+            payload: {
+                ...envelope.payload,
+                questions: [
+                    {
+                        answer: "positive" as const,
+                        candidates: [
+                            {
+                                lat: 35.68,
+                                lon: 139.76,
+                                name: "Tokyo National Museum",
+                                osmId: 1,
+                                osmType: "node" as const,
+                                tags: {},
+                            },
+                        ],
+                        category: "museum" as const,
+                        center: [139.7, 35.68] as [number, number],
+                        createdAt: "2026-06-01T00:00:00.000Z",
+                        distanceMeters: 2000,
+                        distanceOption: "2km" as const,
+                        id: "tentacles-1",
+                        selectedOsmId: 1,
+                        selectedOsmType: "node" as const,
+                        selectedName: "Tokyo National Museum",
+                        type: "tentacles" as const,
+                        updatedAt: "2026-06-01T00:00:00.000Z",
+                    },
+                ],
+            },
+        };
+
+        const payload = encodeEnvelope(withTentacles);
+        const decoded = decodeEnvelopePayload(payload);
+        expect(decoded.ok).toBe(true);
+        if (decoded.ok) {
+            const q = decoded.envelope.payload.questions?.[0];
+            expect(q).toMatchObject({
+                answer: "positive",
+                category: "museum",
+                distanceMeters: 2000,
+                distanceOption: "2km",
+                selectedOsmId: 1,
+                selectedOsmType: "node",
+                selectedName: "Tokyo National Museum",
+                type: "tentacles",
+            });
+        }
+    });
+
+    it("round-trips mixed payload with all five question types", () => {
+        const withMixed = {
+            ...envelope,
+            payload: {
+                ...envelope.payload,
+                questions: [
+                    {
+                        answer: "positive" as const,
+                        center: [139.7, 35.7] as [number, number],
+                        createdAt: "2026-06-01T00:00:00.000Z",
+                        distanceMeters: 1000,
+                        distanceOption: "1km" as const,
+                        distanceUnit: "m" as const,
+                        id: "radar-1",
+                        type: "radar" as const,
+                        updatedAt: "2026-06-01T00:00:00.000Z",
+                    },
+                    {
+                        answer: "unanswered" as const,
+                        candidates: [],
+                        category: "park" as const,
+                        center: [139.7, 35.7] as [number, number],
+                        createdAt: "2026-06-01T00:00:00.000Z",
+                        id: "matching-1",
+                        lineId: null,
+                        lineName: null,
+                        selectedOsmId: null,
+                        selectedOsmType: null,
+                        targetName: null,
+                        targetOsmId: null,
+                        targetOsmType: null,
+                        type: "matching" as const,
+                        updatedAt: "2026-06-01T00:00:00.000Z",
+                    },
+                    {
+                        answer: "positive" as const,
+                        candidates: [],
+                        category: "rail-station" as const,
+                        center: [139.7, 35.7] as [number, number],
+                        createdAt: "2026-06-01T00:00:00.000Z",
+                        id: "measuring-1",
+                        seekerDistanceMeters: null,
+                        seekerDistanceUnit: "m" as const,
+                        selectedOsmId: null,
+                        selectedOsmType: null,
+                        type: "measuring" as const,
+                        updatedAt: "2026-06-01T00:00:00.000Z",
+                    },
+                    {
+                        answer: "negative" as const,
+                        createdAt: "2026-06-01T00:00:00.000Z",
+                        previousPosition: null,
+                        currentPosition: null,
+                        id: "thermo-1",
+                        type: "thermometer" as const,
+                        updatedAt: "2026-06-01T00:00:00.000Z",
+                    },
+                    {
+                        answer: "unanswered" as const,
+                        candidates: [],
+                        category: "museum" as const,
+                        center: [139.7, 35.7] as [number, number],
+                        createdAt: "2026-06-01T00:00:00.000Z",
+                        distanceMeters: 25000,
+                        distanceOption: "25km" as const,
+                        id: "tentacles-1",
+                        selectedOsmId: null,
+                        selectedOsmType: null,
+                        selectedName: null,
+                        type: "tentacles" as const,
+                        updatedAt: "2026-06-01T00:00:00.000Z",
+                    },
+                ],
+            },
+        };
+
+        const payload = encodeEnvelope(withMixed);
+        const decoded = decodeEnvelopePayload(payload);
+        expect(decoded.ok).toBe(true);
+        if (decoded.ok) {
+            expect(decoded.envelope.payload.questions).toHaveLength(5);
+            const types = decoded.envelope.payload.questions
+                ?.map((q) => q.type)
+                .sort();
+            expect(types).toEqual(
+                [
+                    "matching",
+                    "measuring",
+                    "radar",
+                    "tentacles",
+                    "thermometer",
+                ].sort(),
+            );
+        }
+    });
 });

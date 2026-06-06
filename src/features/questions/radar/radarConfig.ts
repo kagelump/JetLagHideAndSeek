@@ -6,11 +6,12 @@ const answerLabels = {
 } as const;
 
 export const radarQuestionConfig = {
+    answerLabels,
     answerMapBehavior: {
         negative: "darken-inside",
         positive: "darken-outside",
     },
-    answerLabels,
+    answerModel: "binary",
     cost: "Draw 2, pick 1",
     defaultAnswer: "unanswered",
     detail: "Ask whether the hider is within a distance of you.",
