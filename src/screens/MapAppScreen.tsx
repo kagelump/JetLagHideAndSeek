@@ -1,7 +1,9 @@
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { getEventCoordinate } from "@/features/map/eventCoordinate";
+import { getQuestionPins } from "@/features/map/getQuestionPins";
 import { NativeMap } from "@/features/map/NativeMap";
 import { useMapPinCommit } from "@/features/map/useMapPinCommit";
 import {
@@ -13,6 +15,7 @@ import {
     SHEET_SNAP_INDEX,
     type SheetRouteName,
 } from "@/features/sheet/sheetRoutes";
+import { useQuestionDerived } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
 export function MapAppScreen() {
@@ -24,12 +27,37 @@ export function MapAppScreen() {
     const [sheetRoute, setSheetRoute] = useState<SheetRouteName>("main");
     const isQuestionDetailRoute = sheetRoute === "question-detail";
     const handlePinCommit = useMapPinCommit();
+    const { activeQuestion } = useQuestionDerived();
 
-    const handleMapPress = useCallback(() => {
-        if (sheetIndexRef.current === SHEET_SNAP_INDEX.large) {
-            bottomSheetRef.current?.snapToIndex(SHEET_SNAP_INDEX.compact);
-        }
-    }, []);
+    const allPins = useMemo(
+        () => getQuestionPins(activeQuestion),
+        [activeQuestion],
+    );
+    const pins = isQuestionDetailRoute ? allPins : [];
+    const questionId = isQuestionDetailRoute
+        ? (activeQuestion?.id ?? null)
+        : null;
+    const isLocked = activeQuestion?.isLocked ?? false;
+    const canMove = isQuestionDetailRoute && !isLocked && pins.length > 0;
+
+    const handleMapPress = useCallback(
+        (event?: unknown) => {
+            const coordinate = getEventCoordinate(event);
+            if (
+                coordinate &&
+                activeQuestion &&
+                "center" in activeQuestion &&
+                !isLocked &&
+                isQuestionDetailRoute
+            ) {
+                handlePinCommit(activeQuestion.id, "center", coordinate);
+            }
+            if (sheetIndexRef.current === SHEET_SNAP_INDEX.large) {
+                bottomSheetRef.current?.snapToIndex(SHEET_SNAP_INDEX.compact);
+            }
+        },
+        [activeQuestion, handlePinCommit, isLocked, isQuestionDetailRoute],
+    );
 
     const handleSheetIndexChange = useCallback((index: number) => {
         sheetIndexRef.current = index;
@@ -48,9 +76,12 @@ export function MapAppScreen() {
         <View style={styles.screen}>
             <StatusBar style="dark" />
             <NativeMap
+                canMove={canMove}
                 isQuestionDetailRoute={isQuestionDetailRoute}
                 onPinCommit={handlePinCommit}
                 onPress={handleMapPress}
+                pins={pins}
+                questionId={questionId}
             />
             <FabButton
                 accessibilityHidden={sheetIndex !== -1}

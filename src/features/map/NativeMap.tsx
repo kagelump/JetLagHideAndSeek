@@ -17,19 +17,17 @@ import { colors } from "@/theme/colors";
 
 import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { useMarkAppMapReady } from "@/state/AppStateProviders";
-import { useQuestionDerived } from "@/state/questionStore";
 import { usePlayArea } from "@/state/playAreaStore";
 import type { Position } from "@/shared/geojson";
 import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
 
-import { ActivePinLayer } from "./ActivePinLayer";
+import { QuestionPinLayer } from "./QuestionPinLayer";
 import {
     type CameraHandle,
     fitCameraToBbox,
     getTopViewportFitPadding,
 } from "./camera";
-import { getEventCoordinate } from "./eventCoordinate";
-import { getQuestionPins } from "./getQuestionPins";
+import type { MapPin } from "./getQuestionPins";
 import { HidingZoneLayers } from "./HidingZoneLayers";
 import { MapControls } from "./MapControls";
 import { buildOsmRasterStyleJson } from "./mapStyle";
@@ -57,6 +55,7 @@ const MLCamera = Camera as ComponentType<any>;
 const MLUserLocation = UserLocation as ComponentType<any>;
 
 type NativeMapProps = {
+    canMove: boolean;
     isQuestionDetailRoute: boolean;
     onPinCommit: (
         questionId: string,
@@ -64,12 +63,17 @@ type NativeMapProps = {
         position: Position,
     ) => void;
     onPress?: (event?: unknown) => void;
+    pins: MapPin[];
+    questionId: string | null;
 };
 
 export function NativeMap({
+    canMove,
     isQuestionDetailRoute,
     onPinCommit,
     onPress,
+    pins,
+    questionId,
 }: NativeMapProps) {
     const cameraRef = useRef<CameraHandle | null>(null);
     const mapRef = useRef<any>(null);
@@ -77,7 +81,6 @@ export function NativeMap({
     const { height } = useSafeAreaFrame();
     const { routeFeatures, stationFeatures, zoneFeatures } =
         useHidingZoneDerived();
-    const { activeQuestion } = useQuestionDerived();
     const markAppMapReady = useMarkAppMapReady();
     const questionMapRenderState = useQuestionMapRenderState();
     const { playArea } = usePlayArea();
@@ -148,71 +151,13 @@ export function NativeMap({
         markAppMapReady();
     }, [fitPlayArea, markAppMapReady]);
 
-    const pins = useMemo(
-        () => getQuestionPins(activeQuestion),
-        [activeQuestion],
-    );
-    const questionId = activeQuestion?.id ?? null;
-    const canMoveActivePin = Boolean(
-        isQuestionDetailRoute &&
-            !(activeQuestion?.isLocked ?? false) &&
-            pins.length > 0,
-    );
-
     const pinDrag = usePinDrag({
         pins,
-        canMove: canMoveActivePin,
+        canMove,
         mapRef,
         onCommit: onPinCommit,
         questionId,
     });
-
-    const activePinFeature = useMemo(
-        () =>
-            pins.length > 0 && activeQuestion
-                ? {
-                      features: [
-                          {
-                              geometry: {
-                                  coordinates:
-                                      pinDrag.draftCoordinate ??
-                                      pins[0].position,
-                                  type: "Point" as const,
-                              },
-                              properties: {
-                                  id: activeQuestion.id,
-                                  isDragging: pinDrag.isDragging,
-                                  isUnlocked: canMoveActivePin,
-                              },
-                              type: "Feature" as const,
-                          },
-                      ],
-                      type: "FeatureCollection" as const,
-                  }
-                : { features: [], type: "FeatureCollection" as const },
-        [
-            activeQuestion,
-            canMoveActivePin,
-            pins,
-            pinDrag.draftCoordinate,
-            pinDrag.isDragging,
-            pinDrag.revision,
-        ],
-    );
-
-    const handleMapPress = useCallback(
-        (event?: unknown) => {
-            const coordinate = getEventCoordinate(event);
-            if (canMoveActivePin && coordinate && activeQuestion) {
-                const questionId = activeQuestion.id;
-                setTimeout(() => {
-                    onPinCommit(questionId, "center", coordinate);
-                }, 0);
-            }
-            onPress?.(event);
-        },
-        [activeQuestion, canMoveActivePin, onPress, onPinCommit],
-    );
 
     return (
         <GestureDetector gesture={pinDrag.gesture}>
@@ -223,7 +168,7 @@ export function NativeMap({
                     logoEnabled={false}
                     mapStyle={mapStyle}
                     onDidFinishLoadingMap={handleMapReady}
-                    onPress={handleMapPress}
+                    onPress={onPress}
                     ref={mapRef}
                     scrollEnabled={!pinDrag.isDragging}
                     style={styles.map}
@@ -251,7 +196,7 @@ export function NativeMap({
                         osmId={playArea.osmId}
                     />
                     <RadarQuestionLayers
-                        onPress={handleMapPress}
+                        onPress={onPress}
                         radar={questionMapRenderState.radar}
                     />
                     <OsmMatchingLayers
@@ -274,11 +219,11 @@ export function NativeMap({
                         />
                     ) : null}
 
-                    <ActivePinLayer
-                        canMove={canMoveActivePin}
-                        feature={activePinFeature}
-                        onPress={handleMapPress}
+                    <QuestionPinLayer
+                        canMove={canMove}
+                        onPress={onPress}
                         pinDrag={pinDrag}
+                        pins={pins}
                     />
                 </MLMapView>
 

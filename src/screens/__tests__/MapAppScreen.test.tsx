@@ -452,8 +452,8 @@ describe("MapAppScreen", () => {
             screen.getByTestId("radar-center-summary").props.children,
         ).toEqual(["35.67620", ",", " ", "139.65030"]);
         expect(
-            getMapShapeSource(screen, "question-active-pin").props.shape
-                .features[0].geometry.coordinates,
+            getMapShapeSource(screen, "question-pins").props.shape.features[0]
+                .geometry.coordinates,
         ).toEqual([139.6503, 35.6762]);
 
         const radarShape = getMapShapeSource(screen, "radar-question-areas")
@@ -583,8 +583,8 @@ describe("MapAppScreen", () => {
             screen.queryByTestId("transit-line-set-to-location-button"),
         ).toBeNull();
         expect(
-            getMapShapeSource(screen, "question-active-pin").props.shape
-                .features[0].geometry.coordinates,
+            getMapShapeSource(screen, "question-pins").props.shape.features[0]
+                .geometry.coordinates,
         ).toEqual(defaultPlayArea.center);
 
         openQuestionActions(screen);
@@ -595,7 +595,7 @@ describe("MapAppScreen", () => {
         });
         await waitFor(() => {
             expect(
-                getMapShapeSource(screen, "question-active-pin").props.shape
+                getMapShapeSource(screen, "question-pins").props.shape
                     .features[0].geometry.coordinates,
             ).toEqual([139.6503, 35.6762]);
         });
@@ -669,8 +669,8 @@ describe("MapAppScreen", () => {
         await pressAddRadarQuestion(screen);
 
         expect(
-            getMapShapeSource(screen, "question-active-pin").props.shape
-                .features[0].geometry.coordinates,
+            getMapShapeSource(screen, "question-pins").props.shape.features[0]
+                .geometry.coordinates,
         ).toEqual(defaultPlayArea.center);
         expect(
             screen.getByTestId("radar-center-summary").props.children,
@@ -768,7 +768,7 @@ describe("MapAppScreen", () => {
         });
         await waitFor(() => {
             expect(
-                getMapShapeSource(screen, "question-active-pin").props.shape
+                getMapShapeSource(screen, "question-pins").props.shape
                     .features[0].geometry.coordinates,
             ).toEqual([139.75, 35.7]);
         });
@@ -781,7 +781,7 @@ describe("MapAppScreen", () => {
         });
         await waitFor(() => {
             expect(
-                getMapShapeSource(screen, "question-active-pin").props.shape
+                getMapShapeSource(screen, "question-pins").props.shape
                     .features[0].geometry.coordinates,
             ).toEqual([139.6503, 35.6762]);
         });
@@ -794,7 +794,7 @@ describe("MapAppScreen", () => {
         });
         await waitFor(() => {
             expect(
-                getMapShapeSource(screen, "question-active-pin").props.shape
+                getMapShapeSource(screen, "question-pins").props.shape
                     .features[0].geometry.coordinates,
             ).toEqual([139.8, 35.71]);
         });
@@ -806,8 +806,8 @@ describe("MapAppScreen", () => {
             );
         });
         expect(
-            getMapShapeSource(screen, "question-active-pin").props.shape
-                .features[0].geometry.coordinates,
+            getMapShapeSource(screen, "question-pins").props.shape.features[0]
+                .geometry.coordinates,
         ).toEqual([139.8, 35.71]);
 
         fireEvent.press(screen.getByText("Back"));
@@ -815,8 +815,7 @@ describe("MapAppScreen", () => {
             jest.advanceTimersByTime(300);
         });
         expect(
-            getMapShapeSource(screen, "question-active-pin").props.shape
-                .features,
+            getMapShapeSource(screen, "question-pins").props.shape.features,
         ).toHaveLength(0);
     });
 
@@ -834,10 +833,8 @@ describe("MapAppScreen", () => {
         });
         await pressAddRadarQuestion(screen);
 
-        const initialCoordinate = getMapShapeSource(
-            screen,
-            "question-active-pin",
-        ).props.shape.features[0].geometry.coordinates;
+        const initialCoordinate = getMapShapeSource(screen, "question-pins")
+            .props.shape.features[0].geometry.coordinates;
 
         openQuestionActions(screen);
         fireEvent.press(screen.getByTestId("question-actions-lock-toggle"));
@@ -859,8 +856,8 @@ describe("MapAppScreen", () => {
         });
 
         expect(
-            getMapShapeSource(screen, "question-active-pin").props.shape
-                .features[0].geometry.coordinates,
+            getMapShapeSource(screen, "question-pins").props.shape.features[0]
+                .geometry.coordinates,
         ).toEqual(initialCoordinate);
     });
 
@@ -1308,7 +1305,7 @@ describe("MapAppScreen", () => {
             });
             await waitFor(() => {
                 expect(
-                    getMapShapeSource(screen, "question-active-pin").props.shape
+                    getMapShapeSource(screen, "question-pins").props.shape
                         .features[0].geometry.coordinates,
                 ).toEqual([139.75, 35.7]);
             });
@@ -1426,10 +1423,8 @@ describe("MapAppScreen", () => {
 
             // With real timers, requestAnimationFrame will fire
             await waitFor(() => {
-                const pinShape = getMapShapeSource(
-                    screen,
-                    "question-active-pin",
-                ).props.shape;
+                const pinShape = getMapShapeSource(screen, "question-pins")
+                    .props.shape;
                 expect(pinShape.features[0].geometry.coordinates).toEqual([
                     139.8, 35.68,
                 ]);
@@ -1475,10 +1470,8 @@ describe("MapAppScreen", () => {
 
             // Wait for rAF to flush the draft coordinate update
             await waitFor(() => {
-                const pinShape = getMapShapeSource(
-                    screen,
-                    "question-active-pin",
-                ).props.shape;
+                const pinShape = getMapShapeSource(screen, "question-pins")
+                    .props.shape;
                 expect(pinShape.features[0].geometry.coordinates).toEqual([
                     140.0, 36.0,
                 ]);
@@ -1493,10 +1486,8 @@ describe("MapAppScreen", () => {
             });
 
             await waitFor(() => {
-                const pinShape = getMapShapeSource(
-                    screen,
-                    "question-active-pin",
-                ).props.shape;
+                const pinShape = getMapShapeSource(screen, "question-pins")
+                    .props.shape;
                 expect(pinShape.features[0].geometry.coordinates).toEqual([
                     140.0, 36.0,
                 ]);
@@ -1559,8 +1550,7 @@ describe("MapAppScreen", () => {
             });
 
             expect(
-                getMapShapeSource(screen, "question-active-pin").props.shape
-                    .features,
+                getMapShapeSource(screen, "question-pins").props.shape.features,
             ).toHaveLength(0);
 
             cleanupMovePinTest();

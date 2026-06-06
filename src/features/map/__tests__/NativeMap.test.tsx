@@ -77,7 +77,13 @@ describe("NativeMap", () => {
 
     it("renders the map, Tokyo boundary, and controls", () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
+            <NativeMap
+                canMove={false}
+                isQuestionDetailRoute={false}
+                onPinCommit={jest.fn()}
+                pins={[]}
+                questionId={null}
+            />,
         );
 
         expect(screen.getByTestId("native-map")).toBeTruthy();
@@ -130,8 +136,11 @@ describe("NativeMap", () => {
             <>
                 <SelectTokyoMetroHidingZone />
                 <NativeMap
+                    canMove={false}
                     isQuestionDetailRoute={false}
                     onPinCommit={jest.fn()}
+                    pins={[]}
+                    questionId={null}
                 />
             </>,
         );
@@ -184,7 +193,13 @@ describe("NativeMap", () => {
 
     it("fits the camera when the map finishes loading", () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
+            <NativeMap
+                canMove={false}
+                isQuestionDetailRoute={false}
+                onPinCommit={jest.fn()}
+                pins={[]}
+                questionId={null}
+            />,
         );
 
         fireEvent(screen.getByTestId("native-map"), "onDidFinishLoadingMap");
@@ -205,7 +220,13 @@ describe("NativeMap", () => {
 
     it("locates the user and flies the camera to the mocked coordinate", async () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
+            <NativeMap
+                canMove={false}
+                isQuestionDetailRoute={false}
+                onPinCommit={jest.fn()}
+                pins={[]}
+                questionId={null}
+            />,
         );
 
         fireEvent.press(screen.getByText("📍"));
@@ -223,7 +244,13 @@ describe("NativeMap", () => {
 
     it("passes scrollEnabled to the map view", () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
+            <NativeMap
+                canMove={false}
+                isQuestionDetailRoute={false}
+                onPinCommit={jest.fn()}
+                pins={[]}
+                questionId={null}
+            />,
         );
 
         const mapView = screen.getByTestId("native-map");
@@ -232,20 +259,26 @@ describe("NativeMap", () => {
 
     it("renders the movable pin as ShapeSource layers with stable ids", () => {
         const screen = renderWithSafeArea(
-            <NativeMap isQuestionDetailRoute={false} onPinCommit={jest.fn()} />,
+            <NativeMap
+                canMove={false}
+                isQuestionDetailRoute={false}
+                onPinCommit={jest.fn()}
+                pins={[]}
+                questionId={null}
+            />,
         );
 
         const pinSource = screen
             .getAllByTestId("map-shape-source")
-            .find((s) => s.props.id === "question-active-pin");
+            .find((s) => s.props.id === "question-pins");
         expect(pinSource).toBeTruthy();
 
-        const dragLayer = screen
+        const baseGlow = screen
             .getAllByTestId("map-circle-layer")
-            .find((l) => l.props.id === "question-active-pin-drag-glow");
-        expect(dragLayer).toBeTruthy();
-        expect(dragLayer?.props.style.circleBlur).toBeGreaterThan(0);
-        expect(dragLayer?.props.style.circleStrokeWidth).toBeUndefined();
+            .find((l) => l.props.id === "question-pin-glow-base");
+        expect(baseGlow).toBeTruthy();
+        expect(baseGlow?.props.style.circleBlur).toBeGreaterThan(0);
+        expect(baseGlow?.props.style.circleStrokeWidth).toBeUndefined();
 
         const images = screen
             .getAllByTestId("map-images")
@@ -254,7 +287,7 @@ describe("NativeMap", () => {
 
         const iconLayer = screen
             .getAllByTestId("map-symbol-layer")
-            .find((l) => l.props.id === "question-active-pin-icon");
+            .find((l) => l.props.id === "question-pin-icon");
         expect(iconLayer).toBeTruthy();
         expect(iconLayer?.props.style.iconImage).toBe("question-pin");
     });
@@ -264,8 +297,11 @@ describe("NativeMap", () => {
             <>
                 <CreateTransitLineQuestion />
                 <NativeMap
+                    canMove={true}
                     isQuestionDetailRoute={true}
                     onPinCommit={jest.fn()}
+                    pins={[{ key: "center", position: defaultPlayArea.center }]}
+                    questionId="matching-1"
                 />
             </>,
         );
@@ -277,8 +313,8 @@ describe("NativeMap", () => {
             expect(
                 screen
                     .getAllByTestId("map-shape-source")
-                    .find((s) => s.props.id === "question-active-pin")?.props
-                    .shape.features[0].geometry.coordinates,
+                    .find((s) => s.props.id === "question-pins")?.props.shape
+                    .features[0].geometry.coordinates,
             ).toEqual(defaultPlayArea.center);
         });
     });
