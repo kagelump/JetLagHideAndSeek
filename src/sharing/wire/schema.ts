@@ -56,6 +56,7 @@ export const radarQuestionWireSchema = z.object({
     distanceOption: radarDistanceOptionSchema,
     distanceUnit: z.enum(["m", "km", "mi"]),
     id: z.string().min(1),
+    isLocked: z.boolean().default(false),
     type: z.literal("radar"),
     updatedAt: z.string().min(1),
 });
@@ -100,6 +101,7 @@ export const matchingQuestionWireSchema = z
         center: positionSchema,
         createdAt: z.string().min(1),
         id: z.string().min(1),
+        isLocked: z.boolean().default(false),
         lineId: z.string().min(1).nullable(),
         lineName: z.string().min(1).nullable(),
         selectedOsmId: z.number().int().positive().nullable().default(null),
@@ -137,6 +139,7 @@ const legacyRadiusQuestionWireSchema = z
         distanceOption: question.radiusOption,
         distanceUnit: question.radiusUnit,
         id: question.id,
+        isLocked: false,
         type: "radar" as const,
         updatedAt: question.updatedAt,
     }));
@@ -180,6 +183,7 @@ const measuringQuestionWireSchema = z.object({
     center: positionSchema,
     createdAt: z.string().min(1),
     id: z.string().min(1),
+    isLocked: z.boolean().default(false),
     seekerDistanceMeters: z.number().nullable().default(null),
     seekerDistanceUnit: z.enum(["m", "km", "mi"]).default("m"),
     selectedOsmId: z.number().int().positive().nullable().default(null),
@@ -197,6 +201,7 @@ const thermometerQuestionWireSchema = z.object({
     previousPosition: positionSchema.nullable().default(null),
     currentPosition: positionSchema.nullable().default(null),
     id: z.string().min(1),
+    isLocked: z.boolean().default(false),
     type: z.literal("thermometer"),
     updatedAt: z.string().min(1),
 });
@@ -235,6 +240,7 @@ const tentaclesQuestionWireSchema = z
         distanceMeters: z.number().positive(),
         distanceOption: tentaclesDistanceOptionSchema,
         id: z.string().min(1),
+        isLocked: z.boolean().default(false),
         selectedOsmId: z.number().int().positive().nullable().default(null),
         selectedOsmType: z
             .enum(["node", "way", "relation"])

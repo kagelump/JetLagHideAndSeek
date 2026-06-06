@@ -672,6 +672,7 @@ function unminifyQuestion(
                     | "relation"
                     | null
                     | undefined) ?? null,
+            isLocked: false,
             type: "matching",
             updatedAt: createdAt,
         });
@@ -713,6 +714,7 @@ function unminifyQuestion(
                     | "relation"
                     | null
                     | undefined) ?? null,
+            isLocked: false,
             type: "measuring",
             updatedAt: createdAt,
         };
@@ -742,6 +744,7 @@ function unminifyQuestion(
             id:
                 (q[FIELD_MAP.id] as string | undefined) ??
                 `q-imported-${index + 1}`,
+            isLocked: false,
             type: "thermometer",
             updatedAt: createdAt,
         };
@@ -790,6 +793,7 @@ function unminifyQuestion(
             selectedName:
                 (q[FIELD_MAP.selectedName] as string | null | undefined) ??
                 null,
+            isLocked: false,
             type: "tentacles",
             updatedAt: createdAt,
         };
@@ -810,6 +814,7 @@ function unminifyQuestion(
         id:
             (q[FIELD_MAP.id] as string | undefined) ??
             `q-imported-${index + 1}`,
+        isLocked: false,
         type: "radar",
         updatedAt: createdAt,
     };
