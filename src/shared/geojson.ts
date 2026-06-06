@@ -91,6 +91,14 @@ function toRadians(value: number): number {
     return (value * Math.PI) / 180;
 }
 
+/**
+ * Exact equality of two positions. Use for detecting pin-drag movement
+ * (not for proximity — see {@link haversineDistanceMeters}).
+ */
+export function positionsEqual(a: Position, b: Position): boolean {
+    return a[0] === b[0] && a[1] === b[1];
+}
+
 // ---------------------------------------------------------------------------
 // Position offset
 // ---------------------------------------------------------------------------

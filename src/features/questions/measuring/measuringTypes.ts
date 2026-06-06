@@ -39,7 +39,7 @@ export type MeasuringQuestion = BaseQuestion & {
     category: MeasuringCategory;
     /** Seeker's position – used as the search anchor to find nearby POIs. */
     center: Position;
-    candidates: OsmFeature[];
+    candidates: (OsmFeature & { distanceMeters?: number })[];
     selectedOsmId: number | null;
     selectedOsmType: "node" | "way" | "relation" | null;
     /**

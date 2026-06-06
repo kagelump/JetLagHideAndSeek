@@ -67,7 +67,10 @@ export function QuestionDetailScreen({
                         updateQuestion={updateQuestion}
                     />
                 ) : activeQuestion.type === "measuring" ? (
-                    <MeasuringQuestionDetailScreen />
+                    <MeasuringQuestionDetailScreen
+                        question={activeQuestion}
+                        updateQuestion={updateQuestion}
+                    />
                 ) : activeQuestion.type === "thermometer" ? (
                     <ThermometerQuestionDetailScreen />
                 ) : activeQuestion.type === "tentacles" ? (
