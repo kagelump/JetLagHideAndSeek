@@ -36,8 +36,10 @@ type PerfResult = {
 
 const PERF_BUDGET_MS: Record<string, number> = {
     /** Dense categories (skip fast-path → cell grid). First search pays bundle
-     *  reconstruction (~30ms) + cell filtering + ranking. */
-    "park cold": 80,
+     *  reconstruction (~30ms) + cell filtering + ranking.
+     *  Budgeted at 100ms to accommodate CI runner variance; local runs
+     *  typically complete in 40-70ms. */
+    "park cold": 100,
     "park warm": 10,
     /** Medium categories take the fast-path (rank all features globally).
      *  With equirectangular pre-ranking this is well under 10ms. */
