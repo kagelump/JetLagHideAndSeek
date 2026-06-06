@@ -291,6 +291,130 @@ fall-through is correct because:
 
 ---
 
+---
+
+## Task 05 — Measuring Question (point categories)
+
+**Completed:** 2026-06-06
+
+### What was done
+
+Implemented the Measuring question end-to-end for 13 point-based POI categories.
+The seeker pins their position, the app finds nearby POIs of the chosen category,
+the seeker selects their nearest POI, and the app auto-computes
+`seekerDistanceMeters` and draws a circle **centered on the target POI** (not
+the seeker pin). "Closer" → hider inside circle; "Farther" → hider outside.
+
+The 5 line/polygon categories (`high-speed-rail`, `coastline`, `body-of-water`,
+`admin-1st-border`, `admin-2nd-border`) remain in the type and category list
+with `implemented: false`, filtered out of the picker — Task 06 will implement
+them.
+
+### Files created (6)
+
+| File                                                                                | Purpose                                                                          |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `src/features/questions/measuring/measuringCategories.ts`                           | 18 categories (13 implemented, 5 deferred) with section/implemented/osmQueryTags |
+| `src/features/questions/measuring/measuringGeometry.ts`                             | `buildMeasuringRenderState` with LRU circle cache (200 entries)                  |
+| `src/features/questions/measuring/useMeasuringSearch.ts`                            | Maps `MeasuringCategory` → `MatchingCategory`, delegates to `useMatchingSearch`  |
+| `src/features/questions/measuring/__tests__/measuringCategories.test.ts`            | 11 tests for category config                                                     |
+| `src/features/questions/measuring/__tests__/measuringGeometry.test.ts`              | 14 tests for render state correctness, circle centering, and LRU caching         |
+| `src/features/questions/measuring/__tests__/MeasuringQuestionDetailScreen.test.tsx` | 12 tests for detail screen UX                                                    |
+
+### Files modified (5)
+
+| File                                                                 | Change                                                                                          |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `src/features/questions/measuring/MeasuringQuestionDetailScreen.tsx` | Full rewrite from placeholder to working detail screen                                          |
+| `src/features/questions/measuring/measuringTypes.ts`                 | Changed `candidates` type from `OsmFeature[]` to `(OsmFeature & { distanceMeters?: number })[]` |
+| `src/features/questions/QuestionDetailScreen.tsx`                    | Pass `question` and `updateQuestion` props to `MeasuringQuestionDetailScreen`                   |
+| `src/features/questions/questionGeometry.ts`                         | Wire `buildMeasuringRenderState(questions)` replacing `EMPTY_MEASURING_RENDER_STATE`            |
+| `src/shared/geojson.ts`                                              | Added `positionsEqual(a, b)` helper                                                             |
+
+### Deviations from the task spec
+
+**Category picker is inline, not a separate screen.** The task doc UX mockup
+shows the category picker integrated into the detail screen. This differs from
+matching (which has a separate `MatchingQuestionScreen.tsx`). The inline picker
+is a sectioned list of `measuringCategoriesBySection` with radio-button style
+selection — tapping a category immediately clears candidates and triggers a new
+search.
+
+**`rail-station` maps to `station-name-length` for search.** The task doc
+suggested Option B: "ship `rail-station` for v1 via the live Overpass fallback
+path." Instead, `MEASURING_TO_MATCHING_CATEGORY` maps `rail-station` →
+`station-name-length`, which shares the exact same OSM tag
+(`["railway"="station"]`) and is already bundleable. This means `rail-station`
+works immediately with the spatial index — no Overpass dependency, no blocking
+on Task 07.
+
+**Reused `OsmMatchingCandidatesModal` and `OsmFeatureDetailModal`.** The "Show
+more..." candidate modal and the POI detail modal accept generic `OsmFeature[]`
+lists, so they work for measuring candidates without modification.
+
+### Gotchas
+
+1. **Search generation guard against stale results.** When the user changes
+   category (e.g., "Museum" → "Park"), the old category's search may still be
+   in-flight. If it completes during the 400ms debounce window before the new
+   search starts, the old results would overwrite candidates — and the effect's
+   center-equality check wouldn't catch it (the center didn't change, just the
+   category). Fixed by adding a `searchGenerationRef` counter: incremented on
+   every `searchAndUpdate` call and on `handleCategoryChange`. After `await
+performSearch()`, if the generation has changed, results are discarded.
+
+2. **Circle center is the target POI, not the seeker pin.** This is the
+   fundamental geometric difference from Radar. The task doc calls it out
+   explicitly; tests assert it by computing the polygon centroid and comparing
+   it to both the target POI position (should match) and the seeker pin position
+   (should differ).
+
+3. **`measuringCategoriesBySection` Object.entries typing.** Needed an explicit
+   type assertion `as [MeasuringCategorySection, (typeof measuringCategoriesBySection)[MeasuringCategorySection]][]`
+   to satisfy TypeScript's `Record` index signature. The matching categories file
+   uses a simpler pattern because its records are simpler.
+
+### Design decisions
+
+- **Answer model is `"binary"`** (not `"poi"`). The answer is Closer/Farther,
+  not the POI selection. The POI is the _target_ for the circle, not the
+  answer. This means `getQuestionAnswerLabel` returns "Closer"/"Farther" from
+  the config's `answerLabels`, and `getQuestionAnswerStatus` keys off
+  `question.answer === "unanswered"`.
+
+- **LRU cache keyed by `(osmId, osmType, seekerDistanceMeters)`** — not by
+  question ID. The same target POI at the same distance produces the same
+  circle, so the cache can serve multiple questions with identical geometry
+  parameters. This mirrors `radarGeometry.ts`'s pattern but with a different
+  key space.
+
+- **`centersEqual` extracted to `positionsEqual` in `src/shared/geojson.ts`.**
+  The matching screen has its own copy; that was left in place (outside Task 05
+  scope).
+
+- **Unit toggle updates `seekerDistanceUnit` only** — never mutates
+  `seekerDistanceMeters`. The stored meters are the canonical value; the unit
+  only affects display via `fromMeters()`.
+
+### Code review fixes (post-implementation)
+
+The `/code-review high --fix` pass caught a stale-results race condition (see
+Gotcha #1) and the duplicated `centersEqual` function. Both fixed before commit.
+
+### For the next task
+
+- Task 06 (Measuring line/polygon categories) should add the 5 deferred
+  categories and implement line-distance / polygon-edge-distance measurement.
+  The `measuringCategories` list already has all 18 entries; Task 06 just needs
+  to flip `implemented: true` and add the geometry logic.
+
+- Task 07 (rail-station selector) should add `rail-station` to
+  `CATEGORY_SELECTORS` in `matchingSelectors.ts`, regenerate the bundle via
+  `pnpm data:poi`, then update `MEASURING_TO_MATCHING_CATEGORY` to point
+  `rail-station` → `rail-station` instead of → `station-name-length`.
+
+---
+
 ## Review fixes (2026-06-06)
 
 Applied fixes from `docs/question_impl/review-task-02-03.md`.
