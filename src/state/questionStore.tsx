@@ -3,6 +3,7 @@ import {
     type ReactNode,
     useCallback,
     useContext,
+    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -35,6 +36,7 @@ import {
     tentaclesCategoryDistance,
     tentaclesDistanceMeters,
 } from "@/features/questions/tentacles/tentaclesTypes";
+import { type ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
 import {
     derivePoiAnswer,
     isPoiAnswerModel,
@@ -56,6 +58,7 @@ export type GameMode = "hider" | "seeker";
 
 type QuestionStateValue = {
     activeQuestionId: string | null;
+    activePinKey: string | null;
     adminDivisionPack: AdminDivisionNamePack;
     adminDivisionPresetName: AdminDivisionPresetName;
     gameMode: GameMode;
@@ -157,6 +160,7 @@ type QuestionActionsValue = {
     setAdminDivisionPresetName: (name: AdminDivisionPresetName) => void;
     setGameMode: (mode: GameMode) => void;
     setLabelLanguage: (language: "native" | "english") => void;
+    setActivePinKey: (key: string | null) => void;
     updateQuestion: (
         questionId: string,
         updater: (question: QuestionState) => QuestionState,
@@ -196,6 +200,16 @@ export function useQuestionDerived(): QuestionDerivedValue {
 }
 
 // ---------------------------------------------------------------------------
+// Active pin key context — UI state for thermometer pin editing
+// ---------------------------------------------------------------------------
+
+const ActivePinKeyContext = createContext<string | null>(null);
+
+export function useActivePinKey(): string | null {
+    return useContext(ActivePinKeyContext);
+}
+
+// ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
 
@@ -232,6 +246,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const [adminDivisionPresetName, setAdminDivisionPresetNameState] =
         useState<AdminDivisionPresetName>(DEFAULT_ADMIN_DIVISION_PRESET_NAME);
     const [isRestored, setIsRestored] = useState(false);
+    const [activePinKey, setActivePinKeyState] = useState<string | null>(null);
 
     const activeQuestion = useMemo(
         () =>
@@ -240,6 +255,12 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                 : null,
         [activeQuestionId, questions.byId],
     );
+
+    useEffect(() => {
+        if (activeQuestion?.type !== "thermometer") {
+            setActivePinKeyState(null);
+        }
+    }, [activeQuestion]);
 
     const updateQuestion = useCallback(
         (
@@ -296,6 +317,9 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                 };
             });
             setActiveQuestionIdState(question.id);
+            if (question.type === "thermometer") {
+                setActivePinKeyState("end");
+            }
             return question;
         },
         [],
@@ -428,9 +452,14 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setIsRestored(true);
     }, []);
 
+    const setActivePinKey = useCallback((key: string | null) => {
+        setActivePinKeyState(key);
+    }, []);
+
     const stateValue = useMemo<QuestionStateValue>(
         () => ({
             activeQuestionId,
+            activePinKey,
             adminDivisionPack,
             adminDivisionPresetName,
             gameMode,
@@ -439,6 +468,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         }),
         [
             activeQuestionId,
+            activePinKey,
             adminDivisionPack,
             adminDivisionPresetName,
             gameMode,
@@ -456,6 +486,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             importQuestions,
             markRestored,
             setActiveQuestionId,
+            setActivePinKey,
             setAdminDivisionPack,
             setAdminDivisionPresetName,
             setGameMode,
@@ -470,6 +501,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             importQuestions,
             markRestored,
             setActiveQuestionId,
+            setActivePinKey,
             setAdminDivisionPack,
             setAdminDivisionPresetName,
             setGameMode,
@@ -501,7 +533,11 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                                         <AdminDivisionPresetNameContext.Provider
                                             value={adminDivisionPresetName}
                                         >
-                                            {children}
+                                            <ActivePinKeyContext.Provider
+                                                value={activePinKey}
+                                            >
+                                                {children}
+                                            </ActivePinKeyContext.Provider>
                                         </AdminDivisionPresetNameContext.Provider>
                                     </AdminDivisionPackContext.Provider>
                                 </GameModeContext.Provider>
@@ -634,6 +670,18 @@ export function updateRadarDistanceUnit(
         ...question,
         distanceOption: "other",
         distanceUnit: unit,
+        updatedAt: new Date().toISOString(),
+    };
+}
+
+export function updateThermometerPin(
+    question: ThermometerQuestion,
+    pin: "start" | "end",
+    position: Position,
+): ThermometerQuestion {
+    return {
+        ...question,
+        [pin === "start" ? "previousPosition" : "currentPosition"]: position,
         updatedAt: new Date().toISOString(),
     };
 }

@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Pressable, Text, View } from "react-native";
 
 import { defaultPlayArea } from "@/features/map/playArea";
+import type { ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
 import { createAppStateV1 } from "@/state/appState";
 import { AppStateProviders } from "@/state/AppStateProviders";
 import { loadPersistedAppState, persistAppState } from "@/state/persistence";
@@ -10,6 +11,7 @@ import {
     updateRadarAnswer,
     updateRadarDistanceOption,
     updateQuestionCenter,
+    updateThermometerPin,
     useGameMode,
     useQuestionActions,
     useQuestionDerived,
@@ -19,13 +21,14 @@ import {
 } from "@/state/questionStore";
 
 function Probe() {
-    const { activeQuestionId, isRestored } = useQuestionState();
+    const { activeQuestionId, activePinKey, isRestored } = useQuestionState();
     const questions = useQuestions();
     const { activeQuestion } = useQuestionDerived();
     const {
         createQuestion,
         deleteQuestion,
         setActiveQuestionId,
+        setActivePinKey,
         updateQuestion,
     } = useQuestionActions();
 
@@ -34,6 +37,7 @@ function Probe() {
             <Text testID="probe-restored">{String(isRestored)}</Text>
             <Text testID="probe-count">{questions.length}</Text>
             <Text testID="probe-active-id">{activeQuestionId ?? "none"}</Text>
+            <Text testID="probe-active-pin-key">{activePinKey ?? "none"}</Text>
             <Text testID="probe-question-ids">
                 {questions.map((question) => question.id).join(",")}
             </Text>
@@ -127,6 +131,11 @@ function Probe() {
             <Text testID="probe-thermometer-current-position">
                 {activeQuestion?.type === "thermometer"
                     ? JSON.stringify(activeQuestion.currentPosition)
+                    : "none"}
+            </Text>
+            <Text testID="probe-thermometer-updated-at">
+                {activeQuestion?.type === "thermometer"
+                    ? activeQuestion.updatedAt
                     : "none"}
             </Text>
             <Text testID="probe-tentacles-category">
@@ -282,6 +291,41 @@ function Probe() {
                           )
                         : null
                 }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-update-thermometer-start"
+                onPress={() =>
+                    activeQuestion?.type === "thermometer"
+                        ? updateQuestion(activeQuestion.id, (question) =>
+                              updateThermometerPin(
+                                  question as ThermometerQuestion,
+                                  "start",
+                                  [139.7, 35.66],
+                              ),
+                          )
+                        : null
+                }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-update-thermometer-end"
+                onPress={() =>
+                    activeQuestion?.type === "thermometer"
+                        ? updateQuestion(activeQuestion.id, (question) =>
+                              updateThermometerPin(
+                                  question as ThermometerQuestion,
+                                  "end",
+                                  [139.701, 35.661],
+                              ),
+                          )
+                        : null
+                }
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-set-active-pin-key"
+                onPress={() => setActivePinKey("start")}
             />
         </View>
     );
@@ -916,6 +960,80 @@ describe("QuestionProvider – new question types", () => {
         expect(prevPos).toEqual(defaultPlayArea.center);
         expect(currPos[0]).toBeGreaterThan(defaultPlayArea.center[0]);
         expect(currPos[1]).toBeCloseTo(defaultPlayArea.center[1], 3);
+    });
+
+    it("creating a thermometer question sets activePinKey to end", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-thermometer"));
+        });
+
+        expect(screen.getByTestId("probe-active-pin-key")).toHaveTextContent(
+            "end",
+        );
+    });
+
+    it("updateThermometerPin updates only the targeted pin and bumps updatedAt", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-thermometer"));
+        });
+
+        act(() => {
+            fireEvent.press(
+                screen.getByTestId("action-update-thermometer-end"),
+            );
+        });
+
+        expect(
+            screen.getByTestId("probe-thermometer-current-position"),
+        ).toHaveTextContent("[139.701,35.661]");
+        const prevPos = JSON.parse(
+            screen.getByTestId("probe-thermometer-previous-position").props
+                .children,
+        );
+        expect(prevPos).toEqual(defaultPlayArea.center);
+        expect(
+            screen.getByTestId("probe-thermometer-updated-at").props.children,
+        ).not.toBe("none");
+    });
+
+    it("clears activePinKey when active question changes to non-thermometer", async () => {
+        const screen = renderProvider();
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create-thermometer"));
+        });
+        expect(screen.getByTestId("probe-active-pin-key")).toHaveTextContent(
+            "end",
+        );
+
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-create"));
+        });
+        expect(screen.getByTestId("probe-active-pin-key")).toHaveTextContent(
+            "none",
+        );
     });
 });
 
