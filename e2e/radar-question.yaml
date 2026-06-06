@@ -2,10 +2,7 @@ appId: com.raycatdev.hideandseek.v2
 ---
 - clearState
 - runFlow: bootstrap.yaml
-- swipe:
-      start: "50%,85%"
-      end: "50%,45%"
-      duration: 500
+- runFlow: expand-sheet.yaml
 - tapOn: "Questions"
 - waitForAnimationToEnd:
       timeout: 1000
@@ -16,7 +13,9 @@ appId: com.raycatdev.hideandseek.v2
 - extendedWaitUntil:
       visible: ".*Current distance 500 m"
       timeout: 30000
-- assertVisible: ".*N/A answer.*"
+- extendedWaitUntil:
+      visible: ".*N/A answer.*"
+      timeout: 10000
 - tapOn: "Radar distance 1km"
 - extendedWaitUntil:
       visible: ".*Current distance 1000 m"

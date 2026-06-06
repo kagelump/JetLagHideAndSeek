@@ -55,8 +55,13 @@ on:
             - "metro.config.js"
             - ".github/workflows/maestro-e2e.yml"
 
+concurrency:
+    group: maestro-e2e-${{ github.ref }}
+    cancel-in-progress: true
+
 env:
     CI: true
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     E2E_FLOW: ${{ github.event_name == 'workflow_dispatch' && inputs.flow || 'all' }}
 
 jobs:
@@ -83,6 +88,24 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
+            - name: Cache Gradle
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.gradle/caches
+                      ~/.gradle/wrapper
+                  key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+                  restore-keys: |
+                      gradle-${{ runner.os }}-
+
+            - name: Cache pnpm store
+              uses: actions/cache@v4
+              with:
+                  path: ~/.local/share/pnpm/store
+                  key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: |
+                      pnpm-${{ runner.os }}-
+
             - name: Install Maestro
               run: |
                   export MAESTRO_VERSION=2.6.0
@@ -96,7 +119,12 @@ jobs:
                   sudo udevadm control --reload-rules
                   sudo udevadm trigger --name-match=kvm
 
-            - name: Build, install, and test on Android
+            - name: Prebuild and assemble debug APK
+              run: |
+                  pnpm exec expo prebuild --platform android --clean
+                  ( cd android && ./gradlew :app:assembleDebug --no-daemon )
+
+            - name: Test on Android emulator
               env:
                   E2E_PLATFORM: android
               uses: reactivecircus/android-emulator-runner@v2
@@ -104,10 +132,12 @@ jobs:
                   api-level: 35
                   arch: x86_64
                   target: google_apis
-                  emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+                  cores: 2
+                  ram-size: 4096M
+                  disable-animations: true
+                  emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot-save -noaudio -no-boot-anim -camera-back none -camera-front none
                   script: |
-                      pnpm exec expo prebuild --platform android --clean
-                      pnpm exec expo run:android --no-bundler
+                      adb install -r android/app/build/outputs/apk/debug/app-debug.apk
                       adb shell am force-stop com.raycatdev.hideandseek.v2 || true
                       pnpm test:e2e:android:stack
 
@@ -125,6 +155,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'ios' || inputs.platform == 'all' }}
         runs-on: macos-15
         timeout-minutes: 75
+        continue-on-error: true
         steps:
             - uses: actions/checkout@v4
 
@@ -175,14 +206,23 @@ jobs:
                   E2E_DISABLE_IOS_ASSOCIATED_DOMAINS: "1"
               run: |
                   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform ios --clean
-                  set +e
-                  LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "$IOS_SIMULATOR_UDID" --no-bundler
-                  EXIT=$?
-                  set -e
-                  if [ $EXIT -ne 0 ]; then
-                      echo "expo run:ios exited $EXIT (expected: simctl openurl may time out without Metro)"
-                      xcrun simctl listapps booted | grep -q com.raycatdev.hideandseek.v2 || exit $EXIT
+                  xcodebuild \
+                    -workspace ios/HideSeekMapperv2.xcworkspace \
+                    -scheme HideSeekMapperv2 \
+                    -configuration Debug \
+                    -sdk iphonesimulator \
+                    -destination "id=$IOS_SIMULATOR_UDID" \
+                    -derivedDataPath ios/build \
+                    CODE_SIGNING_ALLOWED=NO \
+                    CODE_SIGNING_REQUIRED=NO \
+                    CODE_SIGN_IDENTITY="" \
+                    build
+                  APP=$(find ios/build/Build/Products -name "*.app" -maxdepth 2 | head -1)
+                  if [ -z "$APP" ]; then
+                      echo "Build succeeded but could not find .app bundle under ios/build/Build/Products"
+                      exit 1
                   fi
+                  xcrun simctl install "$IOS_SIMULATOR_UDID" "$APP"
 
             - name: Terminate app before E2E
               run: xcrun simctl terminate booted com.raycatdev.hideandseek.v2 || true

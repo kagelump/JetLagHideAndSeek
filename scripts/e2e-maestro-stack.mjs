@@ -139,7 +139,10 @@ async function waitForMetro() {
 async function runMaestro() {
     const flowsToRun = selectFlows(flows, selectedFlow);
 
+    /** @type {{ name: string; error: Error; classification: string }[]} */
     const failures = [];
+    /** @type {{ name: string }[]} */
+    const passed = [];
 
     for (const flow of flowsToRun) {
         mkdirSync(join(artifactsDir, flow.artifactSubdir), {
@@ -185,9 +188,18 @@ async function runMaestro() {
         }
 
         if (lastError) {
-            failures.push({ name: flow.name, error: lastError });
+            failures.push({
+                name: flow.name,
+                error: lastError,
+                classification: classifyFailure(lastError),
+            });
+        } else {
+            passed.push({ name: flow.name });
         }
     }
+
+    // Write step summary to GITHUB_STEP_SUMMARY if available.
+    writeStepSummary(flowsToRun, passed, failures);
 
     if (failures.length > 0) {
         const names = failures.map((f) => f.name).join(", ");
@@ -202,9 +214,69 @@ async function runMaestro() {
     }
 }
 
+/**
+ * @param {Error} error
+ * @returns {"infra" | "assertion"}
+ */
+function classifyFailure(error) {
+    const msg = error.message ?? "";
+    if (
+        msg.includes("device offline") ||
+        msg.includes("Unable to connect to adb") ||
+        msg.includes(":5037") ||
+        msg.includes("No code signing certificates") ||
+        msg.includes("emulator did not become ready")
+    ) {
+        return "infra";
+    }
+    return "assertion";
+}
+
+/**
+ * @param {{ name: string }[]} allFlows
+ * @param {{ name: string }[]} passed
+ * @param {{ name: string; error: Error; classification: string }[]} failures
+ */
+function writeStepSummary(allFlows, passed, failures) {
+    const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+    if (!summaryFile) return;
+
+    const passedSet = new Set(passed.map((f) => f.name));
+    const failureMap = new Map(failures.map((f) => [f.name, f]));
+
+    let summary = "## Maestro E2E Results\n\n";
+    summary += `| Flow | Result | Classification |\n`;
+    summary += `| --- | --- | --- |\n`;
+
+    for (const flow of allFlows) {
+        if (passedSet.has(flow.name)) {
+            summary += `| ${flow.name} | ✅ Passed | — |\n`;
+        } else if (failureMap.has(flow.name)) {
+            const f = failureMap.get(flow.name);
+            const emoji = f.classification === "infra" ? "🔧" : "❌";
+            summary += `| ${flow.name} | ${emoji} Failed | ${f.classification} |\n`;
+        }
+    }
+
+    if (failures.length > 0) {
+        summary += `\n### Failure Details\n\n`;
+        for (const f of failures) {
+            summary += `**${f.name}** (${f.classification})\n`;
+            summary += `\`\`\`\n${f.error.message}\n\`\`\`\n\n`;
+        }
+    }
+
+    try {
+        writeFileSync(summaryFile, summary, "utf8");
+    } catch {
+        console.warn("Failed to write to GITHUB_STEP_SUMMARY");
+    }
+}
+
 async function waitForAndroidDevice() {
     const startedAt = Date.now();
-    const timeoutMs = 30_000;
+    const timeoutMs = 60_000;
+    let consecutiveFailures = 0;
 
     while (Date.now() - startedAt < timeoutMs) {
         try {
@@ -218,15 +290,57 @@ async function waitForAndroidDevice() {
                 )
             ).trim();
 
-            if (state === "device" && bootCompleted === "1") return;
+            if (state === "device" && bootCompleted === "1") {
+                consecutiveFailures = 0;
+                return;
+            }
+
+            // Device is present but not fully booted — reset failure counter
+            // since adb is reachable.
+            consecutiveFailures = 0;
         } catch {
-            // The emulator may be reconnecting between Maestro attempts.
+            consecutiveFailures++;
+
+            if (consecutiveFailures === 1) {
+                // First failure: try reconnecting offline devices.
+                console.warn(
+                    "waitForAndroidDevice: adb poll failed; attempting adb reconnect offline",
+                );
+                try {
+                    await runCommandCapture(
+                        "adb",
+                        adbArgs(["reconnect", "offline"]),
+                    );
+                } catch {
+                    // reconnect may fail if no offline devices; ignore.
+                }
+            } else if (consecutiveFailures >= 3) {
+                // Repeated failures: restart the adb server.
+                console.warn(
+                    "waitForAndroidDevice: adb still failing after 3 attempts; restarting adb server",
+                );
+                try {
+                    await runCommandCapture("adb", ["kill-server"]);
+                } catch {
+                    // kill-server may fail if daemon already dead.
+                }
+                try {
+                    await runCommandCapture("adb", ["start-server"]);
+                    await runCommandCapture(
+                        "adb",
+                        adbArgs(["wait-for-device"]),
+                    );
+                } catch {
+                    // start-server may fail; continue polling.
+                }
+                consecutiveFailures = 0;
+            }
         }
 
         await delay(1000);
     }
 
-    throw new Error("Android emulator did not become ready within 30 seconds.");
+    throw new Error("Android emulator did not become ready within 60 seconds.");
 }
 
 async function captureAndroidDiagnostics(attemptArtifactsDir) {
