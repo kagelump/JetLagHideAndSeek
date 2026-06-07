@@ -6,6 +6,7 @@ import {
     waitFor,
 } from "@testing-library/react-native";
 
+import { FetchDebugScope } from "@/features/questions/matching/fetchDebug";
 import { MeasuringQuestionDetailScreen } from "@/features/questions/measuring/MeasuringQuestionDetailScreen";
 import type { MeasuringQuestion } from "@/features/questions/measuring/measuringTypes";
 import type { QuestionState } from "@/features/questions/questionTypes";
@@ -96,10 +97,12 @@ function TestScreen({
     );
 
     return (
-        <MeasuringQuestionDetailScreen
-            question={question}
-            updateQuestion={wrappedUpdate}
-        />
+        <FetchDebugScope>
+            <MeasuringQuestionDetailScreen
+                question={question}
+                updateQuestion={wrappedUpdate}
+            />
+        </FetchDebugScope>
     );
 }
 

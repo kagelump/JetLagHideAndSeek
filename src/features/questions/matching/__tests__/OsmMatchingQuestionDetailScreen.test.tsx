@@ -1,6 +1,7 @@
 import React from "react";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
+import { FetchDebugScope } from "@/features/questions/matching/fetchDebug";
 import { OsmMatchingQuestionDetailScreen } from "@/features/questions/matching/OsmMatchingQuestionDetailScreen";
 import type { MatchingQuestion } from "@/features/questions/matching/matchingTypes";
 import type { QuestionState } from "@/features/questions/questionTypes";
@@ -112,10 +113,12 @@ function TestScreen({
     );
 
     return (
-        <OsmMatchingQuestionDetailScreen
-            question={question}
-            updateQuestion={wrappedUpdate}
-        />
+        <FetchDebugScope>
+            <OsmMatchingQuestionDetailScreen
+                question={question}
+                updateQuestion={wrappedUpdate}
+            />
+        </FetchDebugScope>
     );
 }
 
