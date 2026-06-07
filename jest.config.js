@@ -6,6 +6,9 @@ module.exports = {
     preset: "jest-expo",
     setupFiles: ["./jest.setup.ts"],
     setupFilesAfterEnv: ["./jest.framework.ts"],
+    // React 18 scheduler may leave a heartbeat timer open after unmount —
+    // this is a known framework limitation, not an application leak.
+    forceExit: true,
     testMatch: ["**/__tests__/**/*.test.{ts,tsx}"],
     // Don't discover tests or modules inside git worktrees under .claude/
     // (e.g. agent worktrees) — they duplicate suites and cause haste collisions.

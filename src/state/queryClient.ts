@@ -23,6 +23,7 @@ const asyncStoragePersister = createAsyncStoragePersister({
 });
 
 let persisterRestorePromise: Promise<void> | null = null;
+let persisterUnsubscribe: (() => void) | null = null;
 
 /** Set up persister once. Returns the restore promise so consumers can await
  *  rehydration before reading from the query cache (e.g. during app-state
@@ -30,8 +31,7 @@ let persisterRestorePromise: Promise<void> | null = null;
 export function setupPersister(): Promise<void> {
     if (persisterRestorePromise) return persisterRestorePromise;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [_, promise] = persistQueryClient({
+    const [unsubscribe, promise] = persistQueryClient({
         queryClient,
         persister: asyncStoragePersister,
         maxAge: BOUNDARY_CACHE_TTL_MS,
@@ -45,6 +45,19 @@ export function setupPersister(): Promise<void> {
         },
     });
 
+    persisterUnsubscribe = unsubscribe;
     persisterRestorePromise = promise;
     return promise;
+}
+
+/**
+ * Unsubscribes the persister from the query cache and cancels its throttle
+ * timer. Safe to call when no persister is active. Primarily used in test
+ * teardown to prevent the persister's 1s throttle timer from keeping the
+ * Jest worker alive.
+ */
+export function teardownPersister(): void {
+    persisterUnsubscribe?.();
+    persisterUnsubscribe = null;
+    persisterRestorePromise = null;
 }
