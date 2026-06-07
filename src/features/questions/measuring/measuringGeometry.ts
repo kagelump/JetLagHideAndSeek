@@ -2,18 +2,21 @@ import circle from "@turf/circle";
 import type {
     Feature,
     LineString,
+    MultiLineString,
     MultiPolygon,
     Point as GeoPoint,
     Polygon,
 } from "geojson";
 
-import type { QuestionState } from "@/features/questions/questionTypes";
+import { bboxIntersects } from "@/shared/geojson";
 import type { Bbox } from "@/shared/geojson";
+import type { QuestionState } from "@/features/questions/questionTypes";
 import { isLineMeasuringCategory } from "./measuringCategories";
 import {
     computeLineBuffer,
     computeLineDistance,
 } from "./lineMeasuringGeometry";
+import { getLineBundle } from "./lineBundleLoader";
 import type { MeasuringRenderState } from "./measuringTypes";
 
 // ─── Circle fragment cache ──────────────────────────────────────────────────
@@ -188,6 +191,30 @@ export function buildMeasuringRenderState(
         }
     }
 
+    // Collect line geometry for line-category questions so the map can
+    // render the full line (e.g. Shinkansen track) in orange.
+    const lineFeatures: Feature<LineString | MultiLineString>[] = [];
+    const seenCategories = new Set<string>();
+    for (const q of measuring) {
+        if (!isLineMeasuringCategory(q.category)) continue;
+        if (seenCategories.has(q.category)) continue;
+        seenCategories.add(q.category);
+
+        const bundle = getLineBundle(q.category);
+        if (!bundle) continue;
+
+        for (const f of bundle.features) {
+            // Filter to the play area window so we don't render lines
+            // hundreds of km away.
+            if (playAreaBbox) {
+                const fb = (f.bbox?.slice(0, 4) ??
+                    computeBbox(f.geometry.coordinates)) as Bbox;
+                if (!bboxIntersects(fb, playAreaBbox)) continue;
+            }
+            lineFeatures.push(f);
+        }
+    }
+
     return {
         hitMaskFeatures: { features: hitFeatures, type: "FeatureCollection" },
         missMaskFeatures: {
@@ -199,5 +226,31 @@ export function buildMeasuringRenderState(
             type: "FeatureCollection",
         },
         nearestPointMarkers: { features: markers, type: "FeatureCollection" },
+        lineFeatures: {
+            features: lineFeatures,
+            type: "FeatureCollection",
+        },
     };
+}
+
+function computeBbox(
+    coords: number[][][] | number[][],
+): [number, number, number, number] {
+    let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+    const walk = (c: unknown) => {
+        if (typeof (c as number[])?.[0] === "number") {
+            const [x, y] = c as number[];
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+        } else if (Array.isArray(c)) {
+            for (const item of c) walk(item);
+        }
+    };
+    walk(coords);
+    return [minX, minY, maxX, maxY];
 }

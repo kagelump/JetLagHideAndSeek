@@ -238,6 +238,7 @@ export function NativeMap({
                     <PlayAreaBoundaryLayer playArea={playArea} />
                     <MeasuringLayers
                         measuring={questionMapRenderState.measuring}
+                        visible={isQuestionDetailRoute}
                     />
                     <ThermometerPreviewLayer
                         thermometer={questionMapRenderState.thermometer}

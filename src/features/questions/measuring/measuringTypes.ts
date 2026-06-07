@@ -1,6 +1,7 @@
 import type {
     FeatureCollection,
     LineString,
+    MultiLineString,
     MultiPolygon,
     Point,
     Polygon,
@@ -63,6 +64,9 @@ export type MeasuringRenderState = {
     nearestPointConnectors: FeatureCollection<LineString>;
     /** A marker at each line-category question's nearest point. */
     nearestPointMarkers: FeatureCollection<Point>;
+    /** The line geometry for line-category questions, filtered to the
+     *  play area. Rendered as an orange reference line on the map. */
+    lineFeatures: FeatureCollection<LineString | MultiLineString>;
 };
 
 export const EMPTY_MEASURING_RENDER_STATE: MeasuringRenderState = {
@@ -70,4 +74,5 @@ export const EMPTY_MEASURING_RENDER_STATE: MeasuringRenderState = {
     missMaskFeatures: { features: [], type: "FeatureCollection" },
     nearestPointConnectors: { features: [], type: "FeatureCollection" },
     nearestPointMarkers: { features: [], type: "FeatureCollection" },
+    lineFeatures: { features: [], type: "FeatureCollection" },
 };

@@ -301,6 +301,7 @@ describe("buildQuestionMapRenderState measuring", () => {
             missMaskFeatures: { features: [], type: "FeatureCollection" },
             nearestPointConnectors: { features: [], type: "FeatureCollection" },
             nearestPointMarkers: { features: [], type: "FeatureCollection" },
+            lineFeatures: { features: [], type: "FeatureCollection" },
         });
     });
 });
