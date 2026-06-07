@@ -26,7 +26,7 @@ const CATEGORIES = [
     },
     {
         key: "high-speed-rail",
-        osmiumFilter: "w/railway=rail",
+        osmiumFilter: "r/route=railway w/railway=rail",
         postFilter: "high-speed",
         geometry: "pass",
     },
@@ -64,7 +64,10 @@ const SIMPLIFY_TOLERANCES = {
 // ─── Post-filter predicates ───────────────────────────────────────────────────
 
 function highSpeedPostFilter(tags) {
+    // Exclude linear motor (maglev) lines — e.g. Chūō Shinkansen.
+    if (tags.propulsion === "linear_motor") return false;
     if (tags.highspeed === "yes") return true;
+    if (tags.service === "high_speed") return true;
     const ms = parseInt(tags.maxspeed, 10);
     return Number.isFinite(ms) && ms >= 200;
 }
@@ -222,26 +225,6 @@ function haversineMeters(a, b) {
 }
 
 /**
- * Direction vector of a LineString at an endpoint, pointing into/out of
- * the line. Returns [dx, dy] in degrees.
- */
-function endpointDirection(coords, atStart) {
-    let i, j;
-    if (atStart) {
-        i = 0;
-        j = 1;
-    } else {
-        i = coords.length - 1;
-        j = coords.length - 2;
-    }
-    const dx = coords[i][0] - coords[j][0];
-    const dy = coords[i][1] - coords[j][1];
-    const mag = Math.sqrt(dx * dx + dy * dy);
-    if (mag === 0) return [0, 0];
-    return [dx / mag, dy / mag];
-}
-
-/**
  * Cosine similarity between two 2D vectors.
  */
 function cosineSimilarity(v1, v2) {
@@ -249,312 +232,155 @@ function cosineSimilarity(v1, v2) {
 }
 
 /**
- * Cross-track distance in meters: how far is `point` from the line
- * passing through `linePt` with direction vector `dir`?
+ * Point-to-segment distance in meters between `p` and segment `a`–`b`
+ * (small-angle planar approximation, accurate enough at track scale).
  */
-function crossTrackDistanceMeters(point, linePt, dir) {
-    // Perpendicular vector: rotate dir by 90°.
-    const perpX = -dir[1];
-    const perpY = dir[0];
-    const dx =
-        (point[0] - linePt[0]) *
-        111320 *
-        Math.cos((((point[1] + linePt[1]) / 2) * Math.PI) / 180);
-    const dy = (point[1] - linePt[1]) * 111320;
-    return Math.abs(dx * perpX + dy * perpY);
-}
-
-/**
- * Average perpendicular distance (meters) from line B's points to line A.
- * Uses cross-track distance to the great-circle segment for each point.
- */
-function averagePerpendicularDistanceMeters(lineA, lineB) {
-    let total = 0;
-    let count = 0;
-    for (const pt of lineB) {
-        let minDist = Infinity;
-        // Find the closest segment on lineA.
-        for (let i = 0; i < lineA.length - 1; i++) {
-            const a = lineA[i];
-            const b = lineA[i + 1];
-            // Simple point-to-segment distance in degrees (good enough
-            // for short segments at this scale).
-            const dx = b[0] - a[0];
-            const dy = b[1] - a[1];
-            const lenSq = dx * dx + dy * dy;
-            let t = 0;
-            if (lenSq > 0) {
-                t = ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / lenSq;
-                if (t < 0) t = 0;
-                if (t > 1) t = 1;
-            }
-            const px = a[0] + t * dx;
-            const py = a[1] + t * dy;
-            const distDeg = Math.sqrt((pt[0] - px) ** 2 + (pt[1] - py) ** 2);
-            // Approximate: 1° ≈ 111,320 m.
-            const distM = distDeg * 111320;
-            if (distM < minDist) minDist = distM;
-        }
-        total += minDist;
-        count++;
+function pointSegDistMeters(p, a, b) {
+    const kx = 111320 * Math.cos((p[1] * Math.PI) / 180);
+    const ky = 111320;
+    const ax = a[0] * kx;
+    const ay = a[1] * ky;
+    const bx = b[0] * kx;
+    const by = b[1] * ky;
+    const px = p[0] * kx;
+    const py = p[1] * ky;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    let t = 0;
+    if (lenSq > 0) {
+        t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+        if (t < 0) t = 0;
+        if (t > 1) t = 1;
     }
-    return count > 0 ? total / count : Infinity;
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
+// ─── Segment stitching (exact shared-node assembly) ──────────────────────────
+//
+// OSM ways that form one continuous track share *exact* node coordinates at
+// their join points. We assemble maximal polylines by walking that shared-node
+// graph, so connectivity never depends on fuzzy endpoint-distance heuristics
+// (an earlier distance/cross-track matcher silently shattered the network).
+// A node where exactly two way-ends meet is an unambiguous pass-through and is
+// always joined; at a junction (>2 way-ends) we continue along the straightest
+// available track and let genuinely diverging branches start their own line.
+
+/** Decimal places at which two OSM node coordinates are treated as identical. */
+const NODE_PRECISION = 7;
+
 /**
- * Build a centerline between two roughly parallel LineStrings.
- * Walks both lines from start to end, computing midpoints at corresponding
- * positions.
+ * Maximum turn allowed when choosing a continuation at a junction, as the
+ * cosine between the two ways' departure tangents. A straight pass-through is
+ * ≈ -1 (the tangents leave the shared node in opposite directions); a 90° turn
+ * is ≈ 0. We continue only when the straightest option turns by < ~60°.
  */
-function buildCenterline(lineA, lineB) {
-    // Ensure both lines run in the same direction.
-    const aDir = endpointDirection(lineA, false);
-    const bDir = endpointDirection(lineB, false);
-    const bCoords =
-        cosineSimilarity(aDir, bDir) < 0 ? [...lineB].reverse() : lineB;
+const STITCH_MAX_TURN_COS = -0.5;
 
-    // Walk both lines, sampling midpoints.
-    const pts = [];
-    const maxLen = Math.max(lineA.length, bCoords.length);
-    for (let i = 0; i < maxLen; i++) {
-        const frac = maxLen === 1 ? 0 : i / (maxLen - 1);
-        const idxA = Math.round(frac * (lineA.length - 1));
-        const idxB = Math.round(frac * (bCoords.length - 1));
-        pts.push([
-            (lineA[idxA][0] + bCoords[idxB][0]) / 2,
-            (lineA[idxA][1] + bCoords[idxB][1]) / 2,
-        ]);
-    }
-
-    return pts;
+/** Stable key for a coordinate so shared OSM nodes hash to the same bucket. */
+function nodeKey(pt) {
+    return `${pt[0].toFixed(NODE_PRECISION)},${pt[1].toFixed(NODE_PRECISION)}`;
 }
 
-// ─── Segment stitching ──────────────────────────────────────────────────────
-
-const STITCH_MAX_DIST_M = 25; // tight endpoint distance
-const STITCH_MAX_CROSS_TRACK_M = 15; // perpendicular offset at connection
-// Gap-bridging pass: when endpoints are 25-200 m apart but the features are
-// truly collinear (cross-track < 5 m), connect them. This bridges small
-// gaps in OSM coverage without creating false connections between parallel
-// tracks (which have cross-track > 15 m).
-const STITCH_GAP_MAX_DIST_M = 200;
-const STITCH_GAP_MAX_CROSS_TRACK_M = 5;
-const STITCH_MIN_COSINE = 0.866; // cos(30°)
+/**
+ * Unit tangent of `coords` at the given end, pointing *out of* the endpoint
+ * toward the interior of the line. Two ways that continue straight through a
+ * shared node have antiparallel departure tangents (cos ≈ -1).
+ */
+function departureTangent(coords, atStart) {
+    const a = atStart ? coords[0] : coords[coords.length - 1];
+    const b = atStart ? coords[1] : coords[coords.length - 2];
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const mag = Math.sqrt(dx * dx + dy * dy);
+    return mag === 0 ? [0, 0] : [dx / mag, dy / mag];
+}
 
 /**
- * Phase 1: Stitch fragmented LineString features into continuous lines.
+ * Stitch fragmented LineString features into maximal continuous lines by
+ * walking the exact shared-node graph.
  *
- * Builds an endpoint adjacency graph, walks connected components, and
- * returns merged features. Branches (junctions) produce separate lines.
+ * The connected-component count never *increases*: every degree-2 node is
+ * joined unconditionally, so any two ways that share a node in OSM stay
+ * connected in the output. Junctions split into separate features that still
+ * meet at the exact junction coordinate, so the rendered line has no gaps.
  */
 function stitchSegments(features) {
     const n = features.length;
     if (n <= 1) return features;
 
-    // Build adjacency: adjacency[i] = array of [neighborIdx, connectPts]
-    // where connectPts describes how they connect.
-    const adjacency = Array.from({ length: n }, () => []);
-
-    // Index endpoints for fast lookup.
-    const endpoints = [];
-    for (let i = 0; i < n; i++) {
-        const coords = features[i].geometry.coordinates;
-        endpoints.push({
-            start: coords[0],
-            end: coords[coords.length - 1],
-        });
-    }
-
-    // O(n²) endpoint matching. At 4228 features this is ~18M comparisons
-    // which is fine for a build-time script.
-    for (let i = 0; i < n; i++) {
-        const ei = endpoints[i];
-        const coordsI = features[i].geometry.coordinates;
-        const dirIStart = endpointDirection(coordsI, true);
-        const dirIEnd = endpointDirection(coordsI, false);
-
-        for (let j = i + 1; j < n; j++) {
-            const ej = endpoints[j];
-            const coordsJ = features[j].geometry.coordinates;
-            const dirJStart = endpointDirection(coordsJ, true);
-            const dirJEnd = endpointDirection(coordsJ, false);
-
-            // Check all 4 endpoint pairings.
-            const pairs = [
-                { ei: ei.start, ej: ej.start, di: dirIStart, dj: dirJStart },
-                { ei: ei.start, ej: ej.end, di: dirIStart, dj: dirJEnd },
-                { ei: ei.end, ej: ej.start, di: dirIEnd, dj: dirJStart },
-                { ei: ei.end, ej: ej.end, di: dirIEnd, dj: dirJEnd },
-            ];
-
-            let matched = false;
-            for (const pair of pairs) {
-                const dist = haversineMeters(pair.ei, pair.ej);
-                if (dist > STITCH_MAX_DIST_M) continue;
-                const cos = -cosineSimilarity(pair.di, pair.dj);
-                if (cos < STITCH_MIN_COSINE) continue;
-                const crossTrack = crossTrackDistanceMeters(
-                    pair.ei,
-                    pair.ej,
-                    pair.dj,
-                );
-                if (crossTrack > STITCH_MAX_CROSS_TRACK_M) continue;
-
-                adjacency[i].push(j);
-                adjacency[j].push(i);
-                matched = true;
-                break;
-            }
-
-            // Gap-bridging: only if the tight check didn't match.
-            if (!matched) {
-                for (const pair of pairs) {
-                    const dist = haversineMeters(pair.ei, pair.ej);
-                    if (dist > STITCH_GAP_MAX_DIST_M) continue;
-                    const cos = -cosineSimilarity(pair.di, pair.dj);
-                    if (cos < STITCH_MIN_COSINE) continue;
-                    const crossTrack = crossTrackDistanceMeters(
-                        pair.ei,
-                        pair.ej,
-                        pair.dj,
-                    );
-                    if (crossTrack > STITCH_GAP_MAX_CROSS_TRACK_M) continue;
-
-                    adjacency[i].push(j);
-                    adjacency[j].push(i);
-                    break;
-                }
-            }
+    // node key -> endpoint stubs { way, atStart } of every way meeting there.
+    const nodes = new Map();
+    for (let w = 0; w < n; w++) {
+        const c = features[w].geometry.coordinates;
+        for (const [pt, atStart] of [
+            [c[0], true],
+            [c[c.length - 1], false],
+        ]) {
+            const k = nodeKey(pt);
+            let stubs = nodes.get(k);
+            if (!stubs) nodes.set(k, (stubs = []));
+            stubs.push({ way: w, atStart });
         }
     }
 
-    // Walk graph.
-    const visited = new Array(n).fill(false);
+    const used = new Array(n).fill(false);
+
+    // From node `key`, having arrived with departure tangent `inbound` (the
+    // tangent leaving `key` along the line built so far), choose the straightest
+    // unused way to continue along. A degree-2 node (one unused continuation)
+    // joins unconditionally; a junction requires a near-straight continuation.
+    const pickNext = (key, inbound) => {
+        const candidates = (nodes.get(key) ?? []).filter((s) => !used[s.way]);
+        if (candidates.length === 0) return null;
+        if (candidates.length === 1) return candidates[0];
+        let best = null;
+        let bestCos = Infinity;
+        for (const s of candidates) {
+            const dep = departureTangent(
+                features[s.way].geometry.coordinates,
+                s.atStart,
+            );
+            const cos = cosineSimilarity(inbound, dep);
+            if (cos < bestCos) {
+                bestCos = cos;
+                best = s;
+            }
+        }
+        return bestCos <= STITCH_MAX_TURN_COS ? best : null;
+    };
+
     const result = [];
 
-    for (let i = 0; i < n; i++) {
-        if (visited[i]) continue;
+    for (let seed = 0; seed < n; seed++) {
+        if (used[seed]) continue;
+        used[seed] = true;
+        let coords = [...features[seed].geometry.coordinates];
 
-        // Find the longest path starting from this node.
-        const path = walkLongestPath(i, adjacency, visited);
-        if (!path.length) continue;
-
-        // Merge coordinates along the path.
-        const merged = mergePathCoordinates(path, features);
-        result.push(makeFeature(merged));
-    }
-
-    return result;
-}
-
-/**
- * Depth-first walk from `start`, preferring the neighbor that continues
- * in the same direction (fewest branches taken). Returns an ordered array
- * of feature indices.
- */
-function walkLongestPath(start, adjacency, visited) {
-    // Find the farthest unvisited endpoint reachable from start.
-    // Use BFS through ALL nodes (including visited ones) to find an
-    // unvisited endpoint — visited nodes act as pass-through.
-    const endpoint = findFarthestUnvisitedEndpoint(
-        start,
-        adjacency,
-        visited,
-    );
-
-    // Greedy walk from the endpoint, collecting unvisited nodes.
-    const path = [];
-    let cur = endpoint;
-    while (cur !== undefined && !visited[cur]) {
-        visited[cur] = true;
-        path.push(cur);
-        // Follow the first unvisited neighbor.
-        let next;
-        for (const neighbor of adjacency[cur]) {
-            if (!visited[neighbor]) {
-                next = neighbor;
-                break;
-            }
-        }
-        cur = next;
-    }
-
-    return path;
-}
-
-/**
- * BFS from `start` through the adjacency graph to find the farthest
- * unvisited endpoint. Traverses through visited nodes (they act as
- * pass-through) so branches can still find their way to an endpoint.
- */
-function findFarthestUnvisitedEndpoint(start, adjacency, visited) {
-    // If start is unvisited and has degree <= 1, it's already an endpoint.
-    if (!visited[start] && adjacency[start].length <= 1) return start;
-
-    // BFS from start, tracking distance.
-    const dist = new Map();
-    dist.set(start, 0);
-    const queue = [start];
-    let bestNode = start;
-
-    while (queue.length) {
-        const cur = queue.shift();
-        const d = dist.get(cur) + 1;
-
-        for (const neighbor of adjacency[cur]) {
-            if (dist.has(neighbor)) continue;
-            dist.set(neighbor, d);
-            // Prefer unvisited endpoints, but traverse through visited nodes.
-            if (!visited[neighbor]) {
-                if (d > (dist.get(bestNode) ?? 0)) bestNode = neighbor;
-                queue.push(neighbor);
-            } else if (adjacency[neighbor].length > 1) {
-                // Pass through visited junction nodes.
-                queue.push(neighbor);
-            }
-        }
-    }
-
-    return bestNode;
-}
-
-/**
- * Merge the coordinates of features along a path into a single array.
- * Handles coordinate reversal when features connect end-to-start, etc.
- */
-function mergePathCoordinates(path, features) {
-    if (path.length === 0) return [];
-    if (path.length === 1) return [...features[path[0]].geometry.coordinates];
-
-    const result = [...features[path[0]].geometry.coordinates];
-
-    for (let p = 1; p < path.length; p++) {
-        const prevCoords = features[path[p - 1]].geometry.coordinates;
-        const curCoords = features[path[p]].geometry.coordinates;
-
-        const prevEnd = prevCoords[prevCoords.length - 1];
-        const curStart = curCoords[0];
-        const curEnd = curCoords[curCoords.length - 1];
-
-        const dStart = haversineMeters(prevEnd, curStart);
-        const dEnd = haversineMeters(prevEnd, curEnd);
-
-        let segment;
-        if (dEnd < dStart) {
-            // Reverse current segment.
-            segment = [...curCoords].reverse();
-        } else {
-            segment = [...curCoords];
+        // Grow forward from the tail node.
+        for (;;) {
+            const tailKey = nodeKey(coords[coords.length - 1]);
+            const next = pickNext(tailKey, departureTangent(coords, false));
+            if (!next) break;
+            used[next.way] = true;
+            const nc = features[next.way].geometry.coordinates;
+            const seg = nodeKey(nc[0]) === tailKey ? nc : [...nc].reverse();
+            for (let i = 1; i < seg.length; i++) coords.push(seg[i]);
         }
 
-        // Skip the first point if it's essentially the same as the
-        // previous endpoint (avoid duplicate coordinate).
-        const segStart = segment[0];
-        if (haversineMeters(prevEnd, segStart) < 2) {
-            segment = segment.slice(1);
+        // Grow backward from the head node.
+        for (;;) {
+            const headKey = nodeKey(coords[0]);
+            const next = pickNext(headKey, departureTangent(coords, true));
+            if (!next) break;
+            used[next.way] = true;
+            const nc = features[next.way].geometry.coordinates;
+            const seg =
+                nodeKey(nc[nc.length - 1]) === headKey ? nc : [...nc].reverse();
+            coords = seg.slice(0, seg.length - 1).concat(coords);
         }
 
-        for (const pt of segment) result.push(pt);
+        result.push(makeFeature(coords));
     }
 
     return result;
@@ -570,75 +396,323 @@ function makeFeature(coords) {
     };
 }
 
-// ─── Parallel track merging ─────────────────────────────────────────────────
+// ─── Parallel track de-duplication ───────────────────────────────────────────
 
 const PARALLEL_MAX_LATERAL_M = 30; // max perpendicular distance for dual tracks
 const PARALLEL_MIN_COSINE = 0.966; // cos(15°)
+/** Sample at most this many points along a track for the hug test. */
+const PARALLEL_HUG_SAMPLES = 80;
+
+/** Bbox [w,s,e,n] of a coordinate array, expanded by `padDeg`. */
+function coordsBbox(coords, padDeg = 0) {
+    let w = Infinity,
+        s = Infinity,
+        e = -Infinity,
+        nth = -Infinity;
+    for (const p of coords) {
+        if (p[0] < w) w = p[0];
+        if (p[0] > e) e = p[0];
+        if (p[1] < s) s = p[1];
+        if (p[1] > nth) nth = p[1];
+    }
+    return [w - padDeg, s - padDeg, e + padDeg, nth + padDeg];
+}
+
+function bboxesOverlap(a, b) {
+    return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+}
 
 /**
- * Phase 2: Merge parallel line pairs into single centerlines.
- *
- * Greedy: for each unmerged line, find the closest parallel partner within
- * 30 m lateral distance, merge into a centerline, and mark both as merged.
+ * True when every sampled point of `shorter` lies within `maxLateral` of
+ * `longer` — i.e. `shorter` runs alongside `longer` for its whole length and is
+ * a duplicate track. A point that strays (a diverging branch) fails fast.
  */
-function mergeParallelTracks(features) {
+function shorterHugsLonger(longer, shorter, maxLateral) {
+    const step = Math.max(1, Math.floor(shorter.length / PARALLEL_HUG_SAMPLES));
+    for (let k = 0; k < shorter.length; k += step) {
+        const p = shorter[k];
+        let min = Infinity;
+        for (let i = 0; i < longer.length - 1; i++) {
+            const d = pointSegDistMeters(p, longer[i], longer[i + 1]);
+            if (d < min) min = d;
+            if (min <= maxLateral) break;
+        }
+        if (min > maxLateral) return false;
+    }
+    return true;
+}
+
+/**
+ * Collapse the two ~4 m-apart tracks of a double-track line by keeping the
+ * longer (most complete) track and dropping shorter near-duplicates that hug it
+ * along their whole length. Unlike centerline averaging this is raw-faithful —
+ * it never invents geometry, so it cannot zigzag or stagger — and preferring the
+ * longest track keeps the most continuous version of each corridor.
+ */
+function dedupeParallelTracks(features) {
     const n = features.length;
     if (n <= 1) return features;
 
-    const merged = new Array(n).fill(false);
-    const result = [];
+    // Longest first, so the most complete corridor becomes the keeper.
+    const order = [...features.keys()].sort(
+        (a, b) =>
+            lineLengthMeters(features[b].geometry.coordinates) -
+            lineLengthMeters(features[a].geometry.coordinates),
+    );
 
-    // Compute overall direction for each feature.
-    const directions = features.map((f) => {
-        const coords = f.geometry.coordinates;
-        const start = coords[0];
-        const end = coords[coords.length - 1];
-        const dx = end[0] - start[0];
-        const dy = end[1] - start[1];
-        const mag = Math.sqrt(dx * dx + dy * dy);
-        return mag > 0 ? [dx / mag, dy / mag] : [0, 0];
+    const dropped = new Array(n).fill(false);
+    const bbox = features.map((f) =>
+        coordsBbox(f.geometry.coordinates, PARALLEL_MAX_LATERAL_M / 111320),
+    );
+    const dir = features.map((f) => {
+        const c = f.geometry.coordinates;
+        const dx = c[c.length - 1][0] - c[0][0];
+        const dy = c[c.length - 1][1] - c[0][1];
+        const m = Math.sqrt(dx * dx + dy * dy);
+        return m > 0 ? [dx / m, dy / m] : [0, 0];
     });
 
-    for (let i = 0; i < n; i++) {
-        if (merged[i]) continue;
-
-        let bestJ = -1;
-        let bestDist = Infinity;
-
-        for (let j = i + 1; j < n; j++) {
-            if (merged[j]) continue;
-
-            // Direction check.
-            const cos = cosineSimilarity(directions[i], directions[j]);
-            if (cos < PARALLEL_MIN_COSINE) continue;
-
-            // Lateral distance check.
-            const avgDist = averagePerpendicularDistanceMeters(
-                features[i].geometry.coordinates,
-                features[j].geometry.coordinates,
-            );
-            if (avgDist < PARALLEL_MAX_LATERAL_M && avgDist < bestDist) {
-                bestDist = avgDist;
-                bestJ = j;
+    for (let oi = 0; oi < n; oi++) {
+        const i = order[oi];
+        if (dropped[i]) continue;
+        for (let oj = oi + 1; oj < n; oj++) {
+            const j = order[oj]; // length(j) <= length(i)
+            if (dropped[j]) continue;
+            if (!bboxesOverlap(bbox[i], bbox[j])) continue;
+            // Same axis (parallel tracks may be digitized either way).
+            if (Math.abs(cosineSimilarity(dir[i], dir[j])) < PARALLEL_MIN_COSINE) {
+                continue;
             }
-        }
-
-        if (bestJ >= 0) {
-            // Merge into centerline.
-            const center = buildCenterline(
-                features[i].geometry.coordinates,
-                features[bestJ].geometry.coordinates,
-            );
-            result.push(makeFeature(center));
-            merged[i] = true;
-            merged[bestJ] = true;
-        } else {
-            result.push(features[i]);
-            merged[i] = true;
+            if (
+                shorterHugsLonger(
+                    features[i].geometry.coordinates,
+                    features[j].geometry.coordinates,
+                    PARALLEL_MAX_LATERAL_M,
+                )
+            ) {
+                dropped[j] = true;
+            }
         }
     }
 
-    return result;
+    return features.filter((_, i) => !dropped[i]);
+}
+
+// ─── Collinear gap bridging ──────────────────────────────────────────────────
+//
+// A handful of real OSM coverage breaks remain where a connecting segment is
+// missing the high-speed tag, leaving a short gap between two otherwise-collinear
+// corridors. This pass joins such corridor ends. It runs only on the assembled
+// corridors and requires the two ends to face each other nearly head-on, so it
+// cannot reconnect unrelated tracks. Gaps larger than BRIDGE_MAX_GAP_M are left
+// for `validateLineContinuity` to flag rather than bridged blindly.
+
+const BRIDGE_MAX_GAP_M = 1500;
+const BRIDGE_MIN_FACING_COS = 0.95; // facing tangents must be near-antiparallel
+
+function bridgeCollinearGaps(features) {
+    let feats = features.map((f) => f.geometry.coordinates);
+
+    for (;;) {
+        const eps = [];
+        for (let i = 0; i < feats.length; i++) {
+            const c = feats[i];
+            eps.push({ i, start: true, p: c[0], t: departureTangent(c, true) });
+            eps.push({
+                i,
+                start: false,
+                p: c[c.length - 1],
+                t: departureTangent(c, false),
+            });
+        }
+
+        let best = null;
+        for (let a = 0; a < eps.length; a++) {
+            for (let b = a + 1; b < eps.length; b++) {
+                const ea = eps[a];
+                const eb = eps[b];
+                if (ea.i === eb.i) continue;
+                const gap = haversineMeters(ea.p, eb.p);
+                if (gap < 1 || gap > BRIDGE_MAX_GAP_M) continue;
+                // Ends must face each other (inward tangents antiparallel) …
+                if (cosineSimilarity(ea.t, eb.t) > -BRIDGE_MIN_FACING_COS) {
+                    continue;
+                }
+                // … and the gap must open straight ahead of each loose end.
+                const v = localUnit(ea.p, eb.p);
+                if (-(v[0] * ea.t[0] + v[1] * ea.t[1]) < 0.9) continue;
+                if (v[0] * eb.t[0] + v[1] * eb.t[1] < 0.9) continue;
+                if (!best || gap < best.gap) best = { ea, eb, gap };
+            }
+        }
+        if (!best) break;
+
+        // Orient both so A ends at its loose endpoint and B starts at hers,
+        // then concatenate (the join segment bridges the gap).
+        const a = best.ea;
+        const b = best.eb;
+        const A = a.start ? [...feats[a.i]].reverse() : feats[a.i];
+        const B = b.start ? feats[b.i] : [...feats[b.i]].reverse();
+        const merged = A.concat(B);
+        const hi = Math.max(a.i, b.i);
+        const lo = Math.min(a.i, b.i);
+        feats.splice(hi, 1);
+        feats.splice(lo, 1);
+        feats.push(merged);
+    }
+
+    return feats.map((c) => makeFeature(c));
+}
+
+// ─── Continuity validation ───────────────────────────────────────────────────
+
+/** Unit vector a→b in local meters (for short gaps). */
+function localUnit(a, b) {
+    const dx =
+        (b[0] - a[0]) * 111320 * Math.cos((((a[1] + b[1]) / 2) * Math.PI) / 180);
+    const dy = (b[1] - a[1]) * 111320;
+    const mag = Math.hypot(dx, dy);
+    return mag === 0 ? [0, 0] : [dx / mag, dy / mag];
+}
+
+/** Great-circle length of a coordinate ring/line in meters. */
+function lineLengthMeters(coords) {
+    let total = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+        total += haversineMeters(coords[i], coords[i + 1]);
+    }
+    return total;
+}
+
+/**
+ * Guard against the discontinuous-line regression. The substantial features
+ * of a line category (≥ `minFeatureLenM`, i.e. main corridors, not station
+ * sidings or platform stubs) must form a small number of connected components
+ * and must not contain interior "holes": pairs of endpoints that are collinear
+ * continuations of one another separated by a visible gap. Throws when the
+ * geometry is too fragmented, so a bad regeneration fails loudly instead of
+ * shipping a broken bundle. Returns the measured metrics.
+ */
+function validateLineContinuity(features, extractBbox, opts = {}) {
+    const {
+        maxComponents = 40,
+        maxHoles = 8,
+        minFeatureLenM = 1000,
+        holeMinM = 40,
+        holeMaxM = 2500,
+        joinTolM = 25,
+        edgeMarginDeg = 0.02,
+    } = opts;
+
+    // Restrict every check to substantial features; short sidings/stubs near
+    // stations have legitimate loose ends and are not rendering gaps.
+    const mainFeatures = features.filter(
+        (f) => lineLengthMeters(f.geometry.coordinates) >= minFeatureLenM,
+    );
+    const n = mainFeatures.length;
+    const ends = mainFeatures.map((f) => {
+        const c = f.geometry.coordinates;
+        return { s: c[0], e: c[c.length - 1] };
+    });
+
+    // Connected components by endpoint proximity. Post-merge centerlines no
+    // longer share exact nodes, so use a small metric tolerance rather than
+    // the exact key the stitcher uses internally.
+    const parent = [...Array(n).keys()];
+    const find = (x) => {
+        while (parent[x] !== x) {
+            parent[x] = parent[parent[x]];
+            x = parent[x];
+        }
+        return x;
+    };
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+            const pi = ends[i];
+            const pj = ends[j];
+            if (
+                haversineMeters(pi.s, pj.s) <= joinTolM ||
+                haversineMeters(pi.s, pj.e) <= joinTolM ||
+                haversineMeters(pi.e, pj.s) <= joinTolM ||
+                haversineMeters(pi.e, pj.e) <= joinTolM
+            ) {
+                parent[find(i)] = find(j);
+            }
+        }
+    }
+    const roots = new Set();
+    for (let i = 0; i < n; i++) roots.add(find(i));
+    const components = roots.size;
+
+    // Interior collinear holes.
+    const [west, south, east, north] = extractBbox;
+    const nearEdge = (p) =>
+        p[0] - west < edgeMarginDeg ||
+        east - p[0] < edgeMarginDeg ||
+        p[1] - south < edgeMarginDeg ||
+        north - p[1] < edgeMarginDeg;
+
+    const eps = [];
+    for (let i = 0; i < n; i++) {
+        const c = mainFeatures[i].geometry.coordinates;
+        eps.push({ i, p: c[0], t: departureTangent(c, true) });
+        eps.push({ i, p: c[c.length - 1], t: departureTangent(c, false) });
+    }
+
+    const holes = [];
+    for (let a = 0; a < eps.length; a++) {
+        const ea = eps[a];
+        if (nearEdge(ea.p)) continue;
+        for (let b = a + 1; b < eps.length; b++) {
+            const eb = eps[b];
+            if (ea.i === eb.i) continue;
+            const d = haversineMeters(ea.p, eb.p);
+            if (d < holeMinM || d > holeMaxM) continue;
+            if (nearEdge(eb.p)) continue;
+            // Each tangent faces into its own body, away from the gap, so two
+            // ends facing each other across a hole are antiparallel.
+            if (cosineSimilarity(ea.t, eb.t) > -0.9) continue;
+            // The gap must open in front of ea's loose end (opposite its tangent).
+            const v = localUnit(ea.p, eb.p);
+            if (-(v[0] * ea.t[0] + v[1] * ea.t[1]) < 0.9) continue;
+            holes.push({ a: ea.p, gap: Math.round(d) });
+        }
+    }
+
+    console.log(
+        `  [validate] main-corridors=${n} (≥${minFeatureLenM}m) ` +
+            `components=${components} interior-holes=${holes.length}`,
+    );
+    if (holes.length) {
+        console.log(
+            `  [validate] sample holes: ` +
+                holes
+                    .slice(0, 5)
+                    .map(
+                        (h) =>
+                            `${h.gap}m@[${h.a[0].toFixed(4)},${h.a[1].toFixed(4)}]`,
+                    )
+                    .join(", "),
+        );
+    }
+
+    const problems = [];
+    if (components > maxComponents) {
+        problems.push(`${components} connected components (max ${maxComponents})`);
+    }
+    if (holes.length > maxHoles) {
+        problems.push(
+            `${holes.length} interior collinear holes ${holeMinM}–${holeMaxM} m (max ${maxHoles})`,
+        );
+    }
+    if (problems.length) {
+        throw new Error(
+            `Discontinuous line geometry: ${problems.join("; ")}. ` +
+                `The shared-node stitcher likely regressed.`,
+        );
+    }
+
+    return { components, holes: holes.length };
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -658,6 +732,18 @@ async function main() {
 
     const cacheOnly = process.argv.includes("--cache-only");
     const checkMode = process.argv.includes("--check");
+    // --only=<category> regenerates a single bundle (e.g. high-speed-rail)
+    // without touching the others — handy when iterating on one category.
+    const onlyArg = process.argv.find((a) => a.startsWith("--only="));
+    const onlyCategory = onlyArg ? onlyArg.slice("--only=".length) : null;
+    if (onlyCategory && !CATEGORIES.some((c) => c.key === onlyCategory)) {
+        throw new Error(
+            `Unknown --only category "${onlyCategory}". Valid: ${CATEGORIES.map((c) => c.key).join(", ")}`,
+        );
+    }
+    const categories = onlyCategory
+        ? CATEGORIES.filter((c) => c.key === onlyCategory)
+        : CATEGORIES;
     const measConfig = config.measuring;
     const cacheDir = resolve(geofabrikDir, config.cacheDir ?? "cache");
     const extractBbox = measConfig.extractBbox;
@@ -697,23 +783,27 @@ async function main() {
         `Japan PBF size: ${(japanStat.size / 1024 / 1024).toFixed(1)} MB`,
     );
 
-    // 2. Extract Kantō+margin window.
+    // 2. Extract Kantō+margin window (reuse the cached extract if present).
     const widePbfPath = resolve(cacheDir, "measuring-kanto-wide.osm.pbf");
     const bboxStr = extractBbox.join(",");
-    console.log(`Extracting Kantō+margin window: ${bboxStr}`);
-    execFileSync(
-        "osmium",
-        [
-            "extract",
-            "-b",
-            bboxStr,
-            japanPbfPath,
-            "-o",
-            widePbfPath,
-            "--overwrite",
-        ],
-        { stdio: "inherit" },
-    );
+    if (existsSync(widePbfPath)) {
+        console.log(`Using cached Kantō+margin extract: ${widePbfPath}`);
+    } else {
+        console.log(`Extracting Kantō+margin window: ${bboxStr}`);
+        execFileSync(
+            "osmium",
+            [
+                "extract",
+                "-b",
+                bboxStr,
+                japanPbfPath,
+                "-o",
+                widePbfPath,
+                "--overwrite",
+            ],
+            { stdio: "inherit" },
+        );
+    }
     const wideStat = await stat(widePbfPath);
     console.log(
         `Kantō+margin extract: ${(wideStat.size / 1024 / 1024).toFixed(1)} MB`,
@@ -732,7 +822,7 @@ async function main() {
     const generatedAt = new Date().toISOString();
     const sizes = {};
 
-    for (const category of CATEGORIES) {
+    for (const category of categories) {
         console.log(`\n=== ${category.key} ===`);
 
         let pbfPath;
@@ -873,19 +963,43 @@ async function main() {
             }
 
             for (const lf of lineFeatures) {
-                // Simplify.
-                const tolerance = SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
-                const simplified = simplifyFeature(lf, tolerance);
+                // Split MultiLineStrings into individual LineStrings.
+                // Route relation exports may produce MultiLineStrings when
+                // member ways have gaps; splitting lets stitchSegments
+                // reconnect them properly.
+                const lineStrings =
+                    lf.geometry.type === "MultiLineString"
+                        ? lf.geometry.coordinates.map((coords) => ({
+                              type: "Feature",
+                              geometry: {
+                                  type: "LineString",
+                                  coordinates: coords,
+                              },
+                              properties: lf.properties ?? {},
+                          }))
+                        : [lf];
 
-                // Compute bbox on simplified geometry.
-                const bbox = computeBbox(simplified.geometry.coordinates);
+                for (const ls of lineStrings) {
+                    // High-speed-rail is simplified *after* stitching (below) so
+                    // the shared-node assembler sees full-resolution endpoints;
+                    // every other category simplifies here.
+                    const tolerance =
+                        SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
+                    const simplified =
+                        category.key === "high-speed-rail"
+                            ? ls
+                            : simplifyFeature(ls, tolerance);
 
-                features.push({
-                    type: "Feature",
-                    bbox,
-                    geometry: simplified.geometry,
-                    properties: {},
-                });
+                    // Compute bbox on the (possibly simplified) geometry.
+                    const bbox = computeBbox(simplified.geometry.coordinates);
+
+                    features.push({
+                        type: "Feature",
+                        bbox,
+                        geometry: simplified.geometry,
+                        properties: {},
+                    });
+                }
             }
         }
 
@@ -902,22 +1016,25 @@ async function main() {
             );
 
             const t1 = Date.now();
-            console.log(`  Merging parallel tracks...`);
-            const merged = mergeParallelTracks(stitched);
+            console.log(`  De-duplicating parallel tracks...`);
+            const deduped = dedupeParallelTracks(stitched);
             console.log(
-                `  Merged: ${merged.length.toLocaleString()} features ` +
+                `  De-duplicated: ${stitched.length} → ${deduped.length} features ` +
                     `(${((Date.now() - t1) / 1000).toFixed(1)}s)`,
+            );
+
+            // Bridge any short collinear gaps left by real OSM coverage breaks.
+            const bridged = bridgeCollinearGaps(deduped);
+            console.log(
+                `  Bridged collinear gaps: ${deduped.length} → ${bridged.length} features`,
             );
 
             // Re-simplify with coarser tolerance.
             const t2 = Date.now();
-            // Re-simplify with a coarser tolerance than the initial pass
-            // (0.0002° vs 0.0001°). The initial pass keeps endpoints
-            // accurate enough for stitching; this pass removes extra
-            // vertices introduced by centerline computation.
-            const resimplified = merged.map((f) =>
-                simplifyFeature(f, 0.0002),
-            );
+            // Re-simplify with a coarser tolerance than the initial pass.
+            // The stitcher works on full-resolution shared nodes; this pass
+            // removes extra vertices introduced by centerline computation.
+            const resimplified = bridged.map((f) => simplifyFeature(f, 0.0002));
             // Recompute bboxes.
             for (const f of resimplified) {
                 f.bbox = computeBbox(f.geometry.coordinates);
@@ -926,6 +1043,9 @@ async function main() {
                 `  Re-simplified ${resimplified.length} features ` +
                     `(${((Date.now() - t2) / 1000).toFixed(1)}s)`,
             );
+
+            // Fail loudly if the assembled line is discontinuous.
+            validateLineContinuity(resimplified, extractBbox);
 
             features.length = 0;
             features.push(...resimplified);
@@ -1050,6 +1170,10 @@ async function checkAgainstCommitted(tempDir, root) {
     // Clean up temp dir.
     await rm(tempDir, { recursive: true, force: true });
 }
+
+// Exported for unit/structural tests (the module runs `main` only when invoked
+// directly via the guard below, so importing it has no side effects).
+export { stitchSegments, validateLineContinuity };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
     main().catch((err) => {

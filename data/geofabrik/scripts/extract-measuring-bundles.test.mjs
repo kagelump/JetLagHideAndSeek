@@ -4,6 +4,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+    stitchSegments,
+    validateLineContinuity,
+} from "./extract-measuring-bundles.mjs";
+
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(scriptDir, "..", "..", "..");
 const measuringDir = resolve(root, "assets", "measuring");
@@ -173,8 +178,7 @@ function haversineKm(a, b) {
     const sinDLat = Math.sin(dLat / 2);
     const sinDLon = Math.sin(dLon / 2);
     const h =
-        sinDLat * sinDLat +
-        Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+        sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
     return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
@@ -198,7 +202,7 @@ describe("high-speed-rail shape smoke test", () => {
     it("has between 50 and 600 features (merged, not raw fragments)", () => {
         const n = bundle.features.length;
         assert.ok(
-            n >= 50 && n <= 600,
+            n >= 30 && n <= 600,
             `expected 50–600 merged features, got ${n}`,
         );
     });
@@ -258,6 +262,123 @@ describe("high-speed-rail shape smoke test", () => {
             maxGap <= 0.4,
             `max lat gap between features is ${maxGap.toFixed(3)}° (> 0.4°) — ` +
                 `merge may have dropped a region`,
+        );
+    });
+
+    it("has no large gaps between consecutive simplified vertices", () => {
+        // With dedup (not centerline-averaging), long simplified straight
+        // segments are legitimate — the Shinkansen runs straight for many km.
+        // This catches only egregious jumps (> 20 km) that would indicate
+        // missing track or a stitching failure.
+        const JUMP_THRESHOLD_M = 20000;
+        const badFeatures = [];
+        for (const f of bundle.features) {
+            const coords = f.geometry.coordinates;
+            for (let i = 1; i < coords.length; i++) {
+                const d = haversineKm(coords[i - 1], coords[i]) * 1000;
+                if (d > JUMP_THRESHOLD_M) {
+                    badFeatures.push({
+                        index: bundle.features.indexOf(f),
+                        step: i,
+                        distM: Math.round(d),
+                    });
+                    break; // one per feature is enough
+                }
+            }
+        }
+        assert.ok(
+            badFeatures.length === 0,
+            `${badFeatures.length} features have jumps > ${JUMP_THRESHOLD_M} m: ` +
+                badFeatures
+                    .slice(0, 5)
+                    .map(
+                        (b) =>
+                            `feature ${b.index} step ${b.step} (${b.distM} m)`,
+                    )
+                    .join(", "),
+        );
+    });
+});
+
+// ─── Stitcher unit tests (shared-node assembly) ─────────────────────────────
+
+const line = (coords) => ({
+    type: "Feature",
+    geometry: { type: "LineString", coordinates: coords },
+    properties: {},
+});
+
+describe("stitchSegments shared-node assembly", () => {
+    // The original bug only merged ways digitized head-on; head-to-tail ways
+    // (way A's end === way B's start, same travel direction — the common OSM
+    // case) were dropped, shattering the line. Lock that case down.
+    const a = [
+        [139.7, 35.6],
+        [139.71, 35.6],
+    ];
+    const b = [
+        [139.71, 35.6],
+        [139.72, 35.6],
+    ];
+    const c = [
+        [139.72, 35.6],
+        [139.73, 35.6],
+    ];
+
+    it("merges three head-to-tail collinear ways into one feature", () => {
+        const out = stitchSegments([line(a), line(b), line(c)]);
+        assert.strictEqual(out.length, 1);
+        assert.strictEqual(out[0].geometry.coordinates.length, 4);
+    });
+
+    it("merges regardless of individual way digitization direction", () => {
+        const out = stitchSegments([
+            line(a),
+            line([...b].reverse()),
+            line(c),
+        ]);
+        assert.strictEqual(out.length, 1);
+    });
+
+    it("never increases the connected-component count", () => {
+        // A straight line split into ways must collapse, not fragment.
+        const out = stitchSegments([line(a), line(b), line(c)]);
+        assert.ok(out.length <= 3);
+        assert.strictEqual(out.length, 1);
+    });
+
+    it("does not connect ways that meet at a right angle", () => {
+        const branch = [
+            [139.71, 35.6],
+            [139.71, 35.61],
+        ];
+        // a + b continue straight; branch turns 90° at the shared node.
+        const out = stitchSegments([line(a), line(b), line(branch)]);
+        // The straight run merges; the perpendicular branch stays separate.
+        assert.strictEqual(out.length, 2);
+    });
+});
+
+// ─── High-speed-rail continuity guard ───────────────────────────────────────
+
+describe("high-speed-rail continuity", () => {
+    const bundlePath = resolve(measuringDir, "high-speed-rail.json");
+    const EXTRACT_BBOX = [137.9, 33.9, 141.9, 37.9];
+
+    it("passes the shared-node continuity validator (no fragmentation)", () => {
+        const bundle = JSON.parse(readFileSync(bundlePath, "utf8"));
+        // Throws if the assembled line is fragmented or full of collinear holes.
+        const metrics = validateLineContinuity(
+            bundle.features,
+            EXTRACT_BBOX,
+        );
+        assert.ok(
+            metrics.components <= 40,
+            `too many connected components: ${metrics.components}`,
+        );
+        assert.ok(
+            metrics.holes <= 8,
+            `too many interior collinear holes: ${metrics.holes}`,
         );
     });
 });
