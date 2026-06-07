@@ -49,7 +49,7 @@ export function buildQuestionMapRenderState(
     );
 
     return {
-        measuring: buildMeasuringRenderState(questions),
+        measuring: buildMeasuringRenderState(questions, playAreaBbox),
         osmMatching,
         radar,
         radarAreaFeatures: radar.previewFeatures,
@@ -83,21 +83,26 @@ export function useQuestionMapRenderState(): QuestionMapRenderState {
     const { selectedStations } = useHidingZoneDerived();
     const { playArea } = usePlayArea();
 
-    return useMemo(
-        () =>
-            buildQuestionMapRenderState(
-                questions,
-                selectedStations,
-                radiusMeters,
-                playArea.bbox,
-                playArea.boundary as FeatureCollection<Polygon | MultiPolygon>,
-            ),
-        [
+    return useMemo(() => {
+        const measuringQs = questions.filter((q) => q.type === "measuring");
+        if (measuringQs.length > 0) {
+            console.log(
+                `[questionGeometry] building render state for ${measuringQs.length} measuring question(s) ` +
+                    `[${measuringQs.map((q) => `${(q as any).category}=${q.answer}`).join(", ")}]`,
+            );
+        }
+        return buildQuestionMapRenderState(
             questions,
             selectedStations,
             radiusMeters,
             playArea.bbox,
-            playArea.boundary,
-        ],
-    );
+            playArea.boundary as FeatureCollection<Polygon | MultiPolygon>,
+        );
+    }, [
+        questions,
+        selectedStations,
+        radiusMeters,
+        playArea.bbox,
+        playArea.boundary,
+    ]);
 }

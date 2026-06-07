@@ -1,8 +1,13 @@
+import type { Feature, MultiPolygon, Polygon } from "geojson";
+
 import {
     buildMeasuringRenderState,
     clearMeasuringCircleCache,
 } from "@/features/questions/measuring/measuringGeometry";
-import { clearLineDistanceCache } from "@/features/questions/measuring/lineMeasuringGeometry";
+import {
+    clearLineBufferCache,
+    clearLineDistanceCache,
+} from "@/features/questions/measuring/lineMeasuringGeometry";
 import {
     __clearLineBundlesForTest,
     __setLineBundleForTest,
@@ -76,15 +81,39 @@ function makeLineBundle(coords: [number, number][]): LineBundle {
     };
 }
 
+/** Compute a [west, south, east, north] bbox from a GeoJSON feature. */
+function computeFeatureBbox(
+    f: Feature<Polygon | MultiPolygon>,
+): [number, number, number, number] {
+    let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+    const walk = (c: unknown) => {
+        if (typeof (c as number[])?.[0] === "number") {
+            const [x, y] = c as number[];
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+        } else if (Array.isArray(c)) {
+            for (const item of c) walk(item);
+        }
+    };
+    walk(f.geometry.coordinates);
+    return [minX, minY, maxX, maxY];
+}
+
 describe("buildMeasuringRenderState", () => {
     beforeEach(() => {
         clearMeasuringCircleCache();
+        clearLineBufferCache();
         clearLineDistanceCache();
         __clearLineBundlesForTest();
     });
 
     it("returns empty collections for empty input", () => {
-        const result = buildMeasuringRenderState([]);
+        const result = buildMeasuringRenderState([], undefined);
         expect(result.hitMaskFeatures.features).toHaveLength(0);
         expect(result.missMaskFeatures.features).toHaveLength(0);
         expect(result.nearestPointConnectors.features).toHaveLength(0);
@@ -104,7 +133,7 @@ describe("buildMeasuringRenderState", () => {
             distanceUnit: "m",
             isLocked: false,
         } as QuestionState;
-        const result = buildMeasuringRenderState([radarQuestion]);
+        const result = buildMeasuringRenderState([radarQuestion], undefined);
         expect(result.hitMaskFeatures.features).toHaveLength(0);
         expect(result.missMaskFeatures.features).toHaveLength(0);
         expect(result.nearestPointConnectors.features).toHaveLength(0);
@@ -114,14 +143,14 @@ describe("buildMeasuringRenderState", () => {
     describe("Closer (positive answer)", () => {
         it("places circle in hitMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(1);
             expect(result.missMaskFeatures.features).toHaveLength(0);
         });
 
         it("centers the circle on the target POI, not the seeker pin", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             const circle = result.hitMaskFeatures.features[0];
             // The circle should be centered near target POI [139.761, 35.681]
             const coords = circle.geometry.coordinates[0] as [number, number][];
@@ -151,7 +180,7 @@ describe("buildMeasuringRenderState", () => {
     describe("Farther (negative answer)", () => {
         it("places circle in missMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "negative" });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(1);
         });
@@ -160,7 +189,7 @@ describe("buildMeasuringRenderState", () => {
     describe("Unanswered", () => {
         it("produces neither hit nor miss features", () => {
             const q = makeMeasuringQuestion({ answer: "unanswered" });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(0);
         });
@@ -172,7 +201,7 @@ describe("buildMeasuringRenderState", () => {
                 answer: "positive",
                 selectedOsmId: null,
             });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
         });
     });
@@ -183,7 +212,7 @@ describe("buildMeasuringRenderState", () => {
                 answer: "positive",
                 seekerDistanceMeters: 0,
             });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
         });
 
@@ -192,7 +221,7 @@ describe("buildMeasuringRenderState", () => {
                 answer: "positive",
                 seekerDistanceMeters: -100,
             });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
         });
     });
@@ -203,7 +232,7 @@ describe("buildMeasuringRenderState", () => {
                 answer: "positive",
                 selectedOsmId: 999,
             });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
         });
     });
@@ -211,8 +240,8 @@ describe("buildMeasuringRenderState", () => {
     describe("LRU caching", () => {
         it("returns the same circle reference for identical inputs", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result1 = buildMeasuringRenderState([q]);
-            const result2 = buildMeasuringRenderState([q]);
+            const result1 = buildMeasuringRenderState([q], undefined);
+            const result2 = buildMeasuringRenderState([q], undefined);
             expect(result1.hitMaskFeatures.features[0]).toBe(
                 result2.hitMaskFeatures.features[0],
             );
@@ -220,9 +249,9 @@ describe("buildMeasuringRenderState", () => {
 
         it("returns different circles after cache clear", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result1 = buildMeasuringRenderState([q]);
+            const result1 = buildMeasuringRenderState([q], undefined);
             clearMeasuringCircleCache();
-            const result2 = buildMeasuringRenderState([q]);
+            const result2 = buildMeasuringRenderState([q], undefined);
             expect(result1.hitMaskFeatures.features[0]).not.toBe(
                 result2.hitMaskFeatures.features[0],
             );
@@ -237,8 +266,8 @@ describe("buildMeasuringRenderState", () => {
                 answer: "positive",
                 seekerDistanceMeters: 2500,
             });
-            const result1 = buildMeasuringRenderState([q1]);
-            const result2 = buildMeasuringRenderState([q2]);
+            const result1 = buildMeasuringRenderState([q1], undefined);
+            const result2 = buildMeasuringRenderState([q2], undefined);
             expect(result1.hitMaskFeatures.features[0]).not.toBe(
                 result2.hitMaskFeatures.features[0],
             );
@@ -255,8 +284,8 @@ describe("buildMeasuringRenderState", () => {
                 selectedOsmId: 200,
                 selectedOsmType: "way",
             });
-            const result1 = buildMeasuringRenderState([q1]);
-            const result2 = buildMeasuringRenderState([q2]);
+            const result1 = buildMeasuringRenderState([q1], undefined);
+            const result2 = buildMeasuringRenderState([q2], undefined);
             expect(result1.hitMaskFeatures.features[0]).not.toBe(
                 result2.hitMaskFeatures.features[0],
             );
@@ -284,13 +313,13 @@ describe("buildMeasuringRenderState", () => {
                 selectedOsmType: null,
                 seekerDistanceMeters: null,
             });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             // Line category should produce a circle despite null selection
             expect(result.hitMaskFeatures.features).toHaveLength(1);
         });
 
-        it("centers the circle on the derived nearest point, not on center", () => {
-            // Horizontal line at lat=35.675 (same lat as center)
+        it("buffers along the line, not just at the nearest point", () => {
+            // Horizontal line at lat=35.675 spanning 1° of longitude (~100 km).
             __setLineBundleForTest(
                 "coastline",
                 makeLineBundle([
@@ -307,27 +336,30 @@ describe("buildMeasuringRenderState", () => {
                 selectedOsmType: null,
                 seekerDistanceMeters: null,
             });
-            const result = buildMeasuringRenderState([q]);
-            const circle = result.hitMaskFeatures.features[0];
-            const coords = circle.geometry.coordinates[0] as [number, number][];
-            let sumLon = 0;
-            let sumLat = 0;
-            for (const [lon, lat] of coords) {
-                sumLon += lon;
-                sumLat += lat;
-            }
-            const avgLon = sumLon / coords.length;
-            const avgLat = sumLat / coords.length;
+            const result = buildMeasuringRenderState([q], undefined);
+            const mask = result.hitMaskFeatures.features[0];
 
-            // Nearest point should be on the line at lat=35.675, same lon
-            expect(avgLon).toBeCloseTo(139.75, 1);
-            expect(avgLat).toBeCloseTo(35.675, 1);
+            // Should be a Polygon or MultiPolygon (not undefined)
+            expect(mask).toBeTruthy();
+            expect(
+                mask.geometry.type === "Polygon" ||
+                    mask.geometry.type === "MultiPolygon",
+            ).toBe(true);
 
-            // Should NOT be at seeker center lat=35.68
-            const distFromSeeker = Math.sqrt(
-                (avgLon - 139.75) ** 2 + (avgLat - 35.68) ** 2,
-            );
-            expect(distFromSeeker).toBeGreaterThan(0.002);
+            // The buffer should span the entire line (wide longitude extent),
+            // not just a ~500 m circle around [139.75, 35.675].
+            const bbox = computeFeatureBbox(mask);
+            const lonSpan = bbox[2] - bbox[0];
+
+            // A circle at the nearest point would have a longitude span of
+            // ~0.01° (radius ≈ 700 m). The clipped line buffer spans ~0.46°.
+            // Require at least 0.3° to confirm it's a line buffer.
+            expect(lonSpan).toBeGreaterThan(0.3);
+
+            // Lat range should be centred near the line (35.675) with some
+            // padding from the buffer radius.
+            expect(bbox[1]).toBeLessThan(35.675);
+            expect(bbox[3]).toBeGreaterThan(35.675);
         });
 
         it("emits one connector and one marker for a line-category question", () => {
@@ -346,7 +378,7 @@ describe("buildMeasuringRenderState", () => {
                 selectedOsmType: null,
                 seekerDistanceMeters: null,
             });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.nearestPointConnectors.features).toHaveLength(1);
             expect(result.nearestPointMarkers.features).toHaveLength(1);
 
@@ -366,7 +398,7 @@ describe("buildMeasuringRenderState", () => {
                 selectedOsmType: null,
                 seekerDistanceMeters: null,
             });
-            const result = buildMeasuringRenderState([q]);
+            const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(0);
             expect(result.nearestPointConnectors.features).toHaveLength(0);
@@ -393,7 +425,10 @@ describe("buildMeasuringRenderState", () => {
                 seekerDistanceMeters: null,
             });
 
-            const result = buildMeasuringRenderState([museumQ, coastlineQ]);
+            const result = buildMeasuringRenderState(
+                [museumQ, coastlineQ],
+                undefined,
+            );
             expect(result.hitMaskFeatures.features).toHaveLength(1); // museum
             expect(result.missMaskFeatures.features).toHaveLength(1); // coastline
             expect(result.nearestPointConnectors.features).toHaveLength(1); // coast only

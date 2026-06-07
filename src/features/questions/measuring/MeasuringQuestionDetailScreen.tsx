@@ -176,7 +176,10 @@ function LineMeasuringResult({
                     disabledAnswers={
                         !answerEnabled ? ["positive", "negative"] : undefined
                     }
-                    onChange={(answer) =>
+                    onChange={(answer) => {
+                        console.log(
+                            `[measuringDetail] answer change: ${question.answer} → ${answer} (${question.category})`,
+                        );
                         updateQuestion(question.id, (current) =>
                             current.type === "measuring"
                                 ? {
@@ -185,8 +188,8 @@ function LineMeasuringResult({
                                       updatedAt: new Date().toISOString(),
                                   }
                                 : current,
-                        )
-                    }
+                        );
+                    }}
                     questionType={question.type}
                     testIDPrefix="measuring-answer-option"
                 />

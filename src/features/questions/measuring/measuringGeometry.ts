@@ -8,9 +8,12 @@ import type {
 } from "geojson";
 
 import type { QuestionState } from "@/features/questions/questionTypes";
-import type { Position } from "@/shared/geojson";
+import type { Bbox } from "@/shared/geojson";
 import { isLineMeasuringCategory } from "./measuringCategories";
-import { computeLineDistance } from "./lineMeasuringGeometry";
+import {
+    computeLineBuffer,
+    computeLineDistance,
+} from "./lineMeasuringGeometry";
 import type { MeasuringRenderState } from "./measuringTypes";
 
 // ─── Circle fragment cache ──────────────────────────────────────────────────
@@ -90,6 +93,7 @@ export function clearMeasuringCircleCache(): void {
 
 export function buildMeasuringRenderState(
     questions: QuestionState[],
+    playAreaBbox: Bbox | undefined,
 ): MeasuringRenderState {
     const measuring = questions.filter(
         (q): q is Extract<QuestionState, { type: "measuring" }> =>
@@ -102,15 +106,10 @@ export function buildMeasuringRenderState(
     const markers: Feature<GeoPoint>[] = [];
 
     for (const q of measuring) {
-        let circleCenter: Position | null = null;
-        let radiusMeters: number | null = null;
-
         if (isLineMeasuringCategory(q.category)) {
             // Derive on render — nothing is read from the question except center.
             const result = computeLineDistance(q.center, q.category);
             if (!result || result.distanceMeters <= 0) continue;
-            circleCenter = result.nearestPoint;
-            radiusMeters = result.distanceMeters;
 
             // Always show the auto-picked target, answered or not.
             connectors.push({
@@ -129,6 +128,34 @@ export function buildMeasuringRenderState(
                     coordinates: result.nearestPoint,
                 },
             });
+
+            // Buffer the line at the seeker's distance so the mask covers
+            // all points within range of ANY point on the line, not just
+            // the single nearest point.
+            if (q.answer === "positive" || q.answer === "negative") {
+                console.log(
+                    `[measuringGeometry] computing line buffer for ${q.category} answer=${q.answer} dist=${result.distanceMeters}m`,
+                );
+                const buf = computeLineBuffer(
+                    q.center,
+                    q.category,
+                    result.distanceMeters,
+                    playAreaBbox,
+                );
+                if (buf) {
+                    console.log(
+                        `[measuringGeometry] line buffer ready — ${buf.geometry.type}`,
+                    );
+                    (q.answer === "positive" ? hitFeatures : missFeatures).push(
+                        buf,
+                    );
+                } else {
+                    console.log(
+                        `[measuringGeometry] line buffer returned null`,
+                    );
+                }
+            }
+            continue;
         } else {
             // Point category: selected POI + stored distance.
             if (
@@ -158,19 +185,6 @@ export function buildMeasuringRenderState(
                 missFeatures.push(circ);
             }
             continue;
-        }
-
-        // Line-category circle fragment (point path already handled above).
-        if (
-            (q.answer === "positive" || q.answer === "negative") &&
-            circleCenter !== null &&
-            radiusMeters !== null
-        ) {
-            const circ = circle(circleCenter, radiusMeters / 1000, {
-                steps: MEASURING_CIRCLE_STEPS,
-                units: "kilometers",
-            });
-            (q.answer === "positive" ? hitFeatures : missFeatures).push(circ);
         }
     }
 

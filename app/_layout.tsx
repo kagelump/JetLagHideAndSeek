@@ -47,6 +47,19 @@ function AppContent() {
     useEffect(() => {
         let cancelled = false;
 
+        // Defensive timeout: MapLibre's OfflineManager native module can
+        // hang on physical iOS devices (New Architecture interop issue). If
+        // the promise never settles we still need to dismiss the splash
+        // screen so the app doesn't appear frozen.
+        const timeoutId = setTimeout(() => {
+            console.warn(
+                "[Splash] configureNativeTileCache timed out after 5 s — proceeding anyway.",
+            );
+            if (!cancelled) {
+                setIsTileCacheConfigured(true);
+            }
+        }, 5000);
+
         configureNativeTileCache()
             .catch((error: unknown) => {
                 console.warn(
@@ -55,6 +68,7 @@ function AppContent() {
                 );
             })
             .finally(() => {
+                clearTimeout(timeoutId);
                 if (!cancelled) {
                     setIsTileCacheConfigured(true);
                 }
@@ -62,6 +76,7 @@ function AppContent() {
 
         return () => {
             cancelled = true;
+            clearTimeout(timeoutId);
         };
     }, []);
 
