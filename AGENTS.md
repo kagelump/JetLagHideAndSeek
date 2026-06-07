@@ -1,43 +1,50 @@
 # Agent Guide
 
-This file is for agents working on the Expo app. This is an Expo SDK 54
-React Native rewrite of the Hide & Seek mapper, built around a native map and an
+This file is for agents working on the Expo app: an Expo SDK 54 React Native
+rewrite of the Hide & Seek mapper, built around a native MapLibre map and an
 Apple Maps-style bottom sheet. Keep changes mobile-first; do not port web UI
 patterns wholesale.
 
 ## Project Snapshot
 
-- Entry points: `app/_layout.tsx` wraps the app in gesture/safe-area providers,
-  and `app/index.tsx` renders `src/screens/MapAppScreen.tsx`.
-- Main screen: `MapAppScreen` composes `NativeMap` and `AppBottomSheet` inside
-  `PlayAreaProvider` and `HidingZoneProvider`.
-- Current milestone: MapLibre map, bottom-sheet navigation, Settings → Play
-  Area and Hiding Zones, Questions → Radar and Matching (with Voronoi overlays),
-  and kdbush/geokdbush spatial index for bundled OSM POI searches. App-state
-  persistence and copy/paste wire format cover play area, hiding zones, and
-  questions.
-- Default play area: Tokyo 23 Wards, OSM relation `19631009`, loaded from
-  `assets/default-zones/tokyo.json`.
-- Deterministic E2E play-area fixture: Osaka, OSM relation `358674`, loaded from
-  `assets/default-zones/osaka.json`.
-- Hiding-zone presets: Tokyo Metro and Toei Subway, generated from ODPT GTFS
-  data in `data/odpt/generated/hiding-zone-presets.json`.
+- Entry points: `app/_layout.tsx` wraps the app in gesture/safe-area providers
+  and `AppStateProviders` (TanStack Query client + play-area/hiding-zone/question
+  stores + persistence coordinator). `app/index.tsx` renders
+  `src/screens/MapAppScreen.tsx`, which consumes that state via hooks and
+  composes `NativeMap` + `AppBottomSheet`. Providers live at the root, not inside
+  `MapAppScreen`.
+- Shipped: MapLibre map, bottom-sheet navigation, Settings → Play Area / Hiding
+  Zones / Offline Data / Admin Divisions, and five question types — `radar`,
+  `matching` (incl. a `transit-line` category), `measuring`, `thermometer`,
+  `tentacles` — with Voronoi/half-plane overlays and a kdbush/geokdbush spatial
+  index over bundled OSM POIs.
+- Persistence: app state (play area, hiding zones, questions, settings) persists
+  to AsyncStorage via `src/state/persistence.ts`. Share/import uses a versioned
+  wire format (`src/sharing/`, incl. links + QR).
+- Default play area: Tokyo 23 Wards, OSM relation `19631009`
+  (`assets/default-zones/tokyo.json`). Deterministic E2E fixture: Osaka, OSM
+  relation `358674` (`assets/default-zones/osaka.json`).
+- Hiding-zone presets: Tokyo Metro and Toei Subway, generated from ODPT GTFS into
+  `data/odpt/generated/hiding-zone-presets.json`.
 
 ## Commands
 
-Run commands from the repo root.
+Run from the repo root.
 
 ```bash
+pnpm check      # lint + format:check + typecheck + perf:typecheck + POI-selector drift guard
+pnpm test       # jest + node --test suites (pretest); NOT run by pnpm check
+pnpm typecheck
 pnpm lint
 pnpm format:check
-pnpm typecheck
-pnpm check
-pnpm test
 pnpm test:data:odpt
-pnpm test -- NativeMap.test.tsx
-pnpm data:odpt
-pnpm data:poi
+pnpm test -- NativeMap.test.tsx        # single suite
+pnpm data:poi        # regenerate bundled POIs -> assets/poi (commit the output)
+pnpm data:measuring  # regenerate measuring bundles -> assets/measuring (commit)
+pnpm data:odpt       # regenerate ODPT presets (needs network + ODPT_KEY)
 ```
+
+`pnpm check` does **not** run jest — run `pnpm test` as well.
 
 For local app work:
 
@@ -48,43 +55,39 @@ pnpm exec expo start --dev-client --host localhost --port 8081 -c
 For the local E2E stack:
 
 ```bash
-pnpm test:e2e:stack
-pnpm test:e2e:ios:stack
+pnpm test:e2e:stack      # Android
+pnpm test:e2e:ios:stack  # iOS
 ```
 
-That helper starts Metro, runs the Maestro flows, writes debug artifacts under
+The helper starts Metro, runs the Maestro flows, writes debug artifacts under
 `e2e/artifacts/`, and stops Metro. A simulator/emulator and dev build must
-already be available locally; the known iOS target has been
-`iPhone 16 Pro - iOS 18.3`.
+already be available locally; the known iOS target is `iPhone 16 Pro - iOS 18.3`.
 
 For remote device E2E on GitHub Actions:
 
 ```bash
-gh workflow run "Maestro E2E" --ref my-agent-branch -f platform=android
-gh workflow run "Maestro E2E" --ref my-agent-branch -f platform=ios
-gh workflow run "Maestro E2E" --ref my-agent-branch -f platform=android -f flow=smoke
+gh workflow run "Maestro E2E" --ref <branch> -f platform=android
+gh workflow run "Maestro E2E" --ref <branch> -f platform=android -f flow=smoke
 gh run watch
 ```
 
-Use this workflow to hand off final native/device checks after new code changes
-when local simulator setup is unavailable, slow, or likely to differ from CI.
-Prefer `platform=android` for a faster smoke signal, `platform=ios` for iOS
+Prefer `platform=android` for a fast smoke signal, `platform=ios` for
 accessibility/bottom-sheet/MapLibre risk, and `platform=all` before merging
-larger user-facing changes.
+larger user-facing changes. Use this to hand off final native checks when local
+simulator setup is unavailable, slow, or likely to differ from CI.
 
 ## Native Build Rules
 
-- Expo Go will not work. This app uses native modules, especially
-  `@maplibre/maplibre-react-native` and AsyncStorage, so use a dev build.
-- After adding or changing native dependencies or Expo plugins, regenerate and
-  rebuild the native app:
+- Expo Go won't work: native modules (`@maplibre/maplibre-react-native`,
+  AsyncStorage) require a dev build.
+- After adding or changing native deps or Expo plugins, regenerate and rebuild:
 
 ```bash
 LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform ios --clean
 LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 Pro" --no-bundler
 ```
 
-- `app.json` must keep the MapLibre plugin. Location copy lives in
+- `app.json` must keep the MapLibre plugin; location copy lives in
   `ios.infoPlist.NSLocationWhenInUseUsageDescription`.
 - `babel.config.js` must keep `react-native-reanimated/plugin` last.
 - `metro.config.js` pins native singletons. If a new native package starts
@@ -92,48 +95,59 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
 
 ## Source Layout
 
-- `src/features/map/`: MapLibre rendering, camera helpers, OSM raster style,
-  user location, GeoJSON boundary loading, and play-area math.
-- `src/features/sheet/`: one persistent bottom sheet and sheet-route UI.
+- `app/`: Expo Router entry (`_layout.tsx`, `index.tsx`).
+- `src/screens/`: top-level screens; `MapAppScreen` is the coordinator.
+- `src/features/map/`: MapLibre rendering, camera helpers (`camera.ts`), OSM
+  raster style, user location, GeoJSON boundary loading, play-area math.
+- `src/features/sheet/`: the one persistent bottom sheet, sheet routes
+  (`sheetRoutes.ts`), and `SheetScrollView`.
 - `src/features/playArea/`: Play Area settings UI and Photon search mapping.
-- `src/features/hidingZone/`: Hiding Zones settings UI, preset data adapters,
-  radius/unit helpers, and derived GeoJSON overlays.
-- `src/features/questions/`: question catalog, radar question UI/controller,
-  matching question subsystem (OSM candidates, Voronoi masks, bundled POIs,
-  kdbush spatial index), map render-state helpers, and future question types.
-- `src/features/questions/matching/spatialIndex.ts`: kdbush/geokdbush spatial
-  index built from columnar bundle data for O(log n) nearest-neighbor queries.
-- `src/features/questions/clipVoronoiCells.ts`: clips `@turf/voronoi` cells
-  to the play-area boundary with a bbox-pre-filtered polyclip-ts pipeline.
-- `src/state/`: React state providers. Keep them mobile-specific.
-- `data/odpt/`: ODPT source config, fetch script, attribution docs, ignored
-  download cache, and checked-in processed preset JSON.
-- `data/geofabrik/`: OSM POI extraction pipeline (config, scripts, attribution).
-  The PBF cache and heavy intermediate extracts are git-ignored; the committed
-  runtime artifact is `assets/poi/`.
-- `assets/poi/`: committed bundled offline POIs consumed by matching questions
-  (`src/features/questions/matching/bundledPois.ts`). Regenerate with `pnpm data:poi`.
-- `src/theme/colors.ts`: shared color tokens for the mobile app.
-- `src/types/`: local ambient types for JSON and third-party packages.
-- `docs/implementation_notes.md`: milestone-specific native, map, and E2E
-  notes. Update it when you learn a new durable setup/debugging fact.
+- `src/features/hidingZone/`: Hiding Zones UI, preset adapters, radius/unit
+  helpers, derived GeoJSON overlays.
+- `src/features/questions/`: question host screens, `coreTypes.ts` /
+  `questionTypes.ts`, the `questionRegistry.ts` definition map,
+  `clipVoronoiCells.ts`, and one folder per type (`radar/`, `matching/`,
+  `measuring/`, `thermometer/`, `tentacles/`, plus `transitLine/` and shared
+  `components/`). `matching/` holds OSM candidates, Voronoi masks, bundled POIs,
+  `spatialIndex.ts` (kdbush/geokdbush), `matchingSelectors.ts` /
+  `matchingCategories.ts`, and `osmMatchingCache.ts`.
+- `src/state/`: React context stores (`playAreaStore`, `hidingZoneStore`,
+  `questionStore`), `AppStateProviders.tsx`, `appState.ts` (Zod schemas),
+  `persistence.ts` (AsyncStorage), `queryClient.ts`. Keep these mobile-specific.
+- `src/sharing/`: versioned share/import wire format — `wire/` (codec, Zod
+  schema, base64url, minify), `export/`, `import/`, `links/`, `qr/`.
+- `src/components/`, `src/shared/`, `src/config/`: shared UI, utilities
+  (distance units, geojson, debounce, location), and app-link config.
+- `src/theme/colors.ts`: shared color tokens. `src/types/`: ambient JSON and
+  third-party types.
+- `data/odpt/`: ODPT config, fetch script, attribution, ignored cache, checked-in
+  preset JSON.
+- `data/geofabrik/`: OSM POI + measuring extraction pipeline (config, scripts,
+  attribution). The PBF cache and heavy intermediates are git-ignored; committed
+  runtime artifacts are `assets/poi/` and `assets/measuring/`.
+- `assets/`: committed runtime data — `default-zones/`, `poi/`, `measuring/`,
+  `map/`.
+- `docs/`: `implementation_notes.md` (durable native/map/E2E facts — update it
+  when you learn one) plus design/audit notes and `question_impl/` task
+  breakdowns.
 
-## Bundled POI Data
+## Bundled POI and Measuring Data
 
-- One command regenerates everything: `pnpm data:poi` (re-emits the
-  category→tag registry to `data/geofabrik/poi-selectors.json`, then extracts and
-  reduces OSM POIs into `assets/poi/`). Do not chain the sub-steps by hand.
-- The output in `assets/poi/` is **committed** — CI cannot regenerate it (the
-  ~450 MB Geofabrik PBF is not available there). After running `pnpm data:poi`,
-  `git add assets/poi data/geofabrik/poi-selectors.json` and commit.
-- `bundledPois.ts` `require()`s `assets/poi/<region>.json` with a literal path, so a
-  missing artifact is a **Metro build break**, not a runtime fallback. Keep it committed.
-- You do not need to remember to verify: `pnpm check` runs the registry drift guard
-  (`test:data:poi-selectors`) and `pnpm test` runs the reducer tests
-  (`data/geofabrik/scripts/poiReducer.test.mjs`). If you edit
-  `matchingSelectors.ts`, `pnpm check` fails until you rerun `pnpm data:poi`.
-- The category→tag mapping lives **only** in `matchingSelectors.ts`; `matchingCategories.ts`
-  derives its Overpass-QL from it. Never hand-edit `poi-selectors.json`.
+- One command regenerates POIs: `pnpm data:poi` (re-emits the category→tag
+  registry to `data/geofabrik/poi-selectors.json`, then extracts and reduces OSM
+  POIs into `assets/poi/`). Do not chain the sub-steps by hand.
+- `assets/poi/` (and `assets/measuring/`, via `pnpm data:measuring`) are
+  **committed** — CI cannot regenerate them (the ~450 MB Geofabrik PBF is not
+  available there). After regenerating, `git add` the outputs (plus
+  `data/geofabrik/poi-selectors.json` for POIs) and commit.
+- `bundledPois.ts` `require()`s `assets/poi/<region>.json` by literal path, so a
+  missing artifact is a **Metro build break**, not a runtime fallback.
+- The category→tag mapping lives **only** in `matchingSelectors.ts`;
+  `matchingCategories.ts` derives its Overpass-QL from it. Never hand-edit
+  `poi-selectors.json`. You don't need to remember to verify: `pnpm check` runs
+  the registry drift guard (`test:data:poi-selectors`) and `pretest` runs the
+  reducer / measuring extract tests, so editing `matchingSelectors.ts` fails the
+  check until you rerun `pnpm data:poi`.
 - The legacy `data/geofabrik/generated/` extracts (`*.osm.pbf`, `*.geojson*`) are
   git-ignored intermediates — never commit them.
 
@@ -146,220 +160,184 @@ mobile app state -> derived map render state -> NativeMap layers
                  -> AppBottomSheet route screens
 ```
 
-Prefer mobile-specific state and adapters over importing legacy web context.
-The web app can be a reference for domain logic, but avoid bringing over
-Leaflet, sidebar, browser-storage, or root-controller assumptions.
+Prefer mobile-specific state and adapters over importing legacy web context. The
+web app can be a reference for domain logic, but avoid bringing over Leaflet,
+sidebar, browser-storage, or root-controller assumptions.
 
-Keep `MapAppScreen` as a coordinator. Avoid turning it into the owner of every
-mode, form, network request, and map side effect. If a new workflow has state,
-put that state in a focused feature/store and let the map render derived data.
+Keep `MapAppScreen` a coordinator. Don't make it the owner of every mode, form,
+network request, and map side effect. If a new workflow has state, put it in a
+focused feature/store and let the map render derived data.
 
 ## MapLibre and Geometry Rules
 
-- MapLibre coordinates are `[longitude, latitude]`.
-- Bboxes are `[west, south, east, north]`.
-- `ShapeSource`/layer children should stay before marker-like overlays. MapLibre
-  RN can behave badly when native children are ordered casually.
-- Be conservative with MapLibre RN style expressions on iOS. Feature-driven
-  colors such as `["to-color", ["get", "color"], fallback]` are known to work,
-  but complex numeric expressions on circle styles have crashed native MapLibre.
-  Prefer separate filtered layers with literal numeric radii/widths when the
-  visual states are bounded.
-- `NativeMap` fits the play area into the upper map area using
+- Coordinates are `[longitude, latitude]`; bboxes are `[west, south, east, north]`.
+- Keep `ShapeSource`/layer children before marker-like overlays — MapLibre RN can
+  misbehave when native children are ordered casually.
+- Be conservative with iOS style expressions. Feature-driven colors like
+  `["to-color", ["get", "color"], fallback]` work, but complex numeric
+  expressions on circle styles have crashed native MapLibre — prefer separate
+  filtered layers with literal numeric radii/widths when the states are bounded.
+- `NativeMap` fits the play area into the upper map area via
   `getTopViewportFitPadding`. If sheet snap points or top chrome change, revisit
-  `src/features/map/camera.ts`.
-- Keep map camera behavior in small helpers (`camera.ts`) and test it with unit
-  tests. This makes native ref behavior easier to mock.
-- Use bundled fixtures for deterministic tests where possible. Networked
-  Overpass/Photon paths should be mocked in Jest.
-- Hiding-zone circles are geographic polygons generated from station points and
-  radius meters, then merged before rendering. Do not use MapLibre pixel-radius
-  circles for hiding-zone eligibility areas.
-- Assert hiding-zone polygon correctness in Jest by inspecting the generated
-  GeoJSON and `ShapeSource.shape` props. Maestro should cover the user settings
-  workflow and can capture screenshots for agent/debug review, but it should not
-  be the source of truth for polygon geometry.
+  `src/features/map/camera.ts`. Keep camera behavior in small helpers and
+  unit-test it (easier to mock native refs).
+- Hiding-zone circles are geographic polygons built from station points + radius
+  meters, then merged before rendering — never MapLibre pixel-radius circles for
+  eligibility areas. Assert polygon correctness in Jest by inspecting the
+  generated GeoJSON and `ShapeSource.shape`; Maestro covers the settings workflow
+  but is not the source of truth for geometry.
+- Use bundled fixtures for deterministic tests; mock networked Overpass/Photon
+  paths in Jest.
 
 ## Bottom Sheet Rules
 
-- Use one persistent `@gorhom/bottom-sheet` for primary navigation.
-- Keep fixed snap points paired with `enableDynamicSizing={false}`; v5 can
-  otherwise create surprising near-zero snap behavior.
-- Current routes live in `src/features/sheet/sheetRoutes.ts`.
-- Routes that need more space, such as `play-area`, should snap to the large
-  index before E2E tries to interact with their controls.
-- Use modals sparingly. Prefer same-sheet routes unless the interaction is a
-  destructive confirmation or an import/review flow.
-- Drawer screens with content that may overflow the sheet height must use
-  `SheetScrollView` (`src/features/sheet/SheetScrollView.tsx`) instead of a
-  plain `ScrollView`. It provides consistent bottom padding (`40px`) and
-  `keyboardShouldPersistTaps="handled"` by default. Pass per-screen styles
-  via `style` and `contentContainerStyle` props; do not duplicate `flex: 1`
-  or `paddingBottom` since the component owns those.
+- One persistent `@gorhom/bottom-sheet` drives primary navigation; routes live in
+  `src/features/sheet/sheetRoutes.ts`.
+- Keep fixed snap points with `enableDynamicSizing={false}`; v5 can otherwise
+  produce near-zero snap behavior. Routes that need room (e.g. `play-area`)
+  should snap to the large index before E2E interacts with their controls.
+- Prefer same-sheet routes; use modals sparingly (destructive confirmations or
+  import/review flows).
+- Drawer screens whose content may overflow must use `SheetScrollView` (not a
+  plain `ScrollView`) — it owns bottom padding (`40px`), `flex: 1`, and
+  `keyboardShouldPersistTaps="handled"`. Pass per-screen `style` /
+  `contentContainerStyle`; don't re-add `flex` or `paddingBottom`.
 
 ## Play Area Rules
 
-- `loadPlayAreaByRelationId` handles bundled Tokyo, bundled Osaka, memory cache,
-  AsyncStorage cache, and Overpass fetch in that order.
-- The selected play area is currently in memory only. Do not imply persistence
-  in UI or tests until milestone 4 state persistence exists.
+- `loadPlayAreaByRelationId` resolves bundled Tokyo, bundled Osaka, memory cache,
+  AsyncStorage cache, then Overpass fetch, in that order.
 - `searchPlayAreas` queries Photon and keeps relation results only
-  (`osm_type === "R"`). Tests should exercise mapping/deduping without network.
-- When accepting direct relation IDs, keep validation strict: positive safe
-  integer strings only.
-- Store distances internally in meters, even if display units are km or miles.
+  (`osm_type === "R"`). Exercise mapping/deduping without network in tests.
+- Accept direct relation IDs strictly: positive safe-integer strings only.
+- Store distances internally in meters, even when display units are km or mi.
 
 ## Hiding Zone Rules
 
-- Hiding-zone state is currently in memory only. Do not imply persistence in UI
-  or tests yet.
-- Preset suggestions use bbox intersection with the current play-area bbox.
-  Suggestions are not auto-selected.
-- Preset selection is additive. Removing one preset should not remove a station
-  that is still contributed by another selected preset.
-- Radius display units are `m`, `km`, and `mi`; `HidingZoneProvider` stores the
+- Preset suggestions use bbox intersection with the current play-area bbox and
+  are not auto-selected.
+- Preset selection is additive. Removing one preset must not drop a station still
+  contributed by another selected preset.
+- Radius display units are `m`, `km`, `mi`; `HidingZoneProvider` stores the
   canonical value in meters.
-- Route and station overlay colors should come from generated preset route
-  colors. Stations may be contributed by more than one selected route, so render
-  multiple colors as concentric station rings instead of choosing a single
-  arbitrary transfer color.
-- ODPT generated data is checked in, but raw GTFS zips live in ignored
+- Color routes/stations from generated preset route colors. A station shared by
+  multiple selected routes renders concentric rings, not one arbitrary color.
+- ODPT generated data is checked in; raw GTFS zips live in ignored
   `data/odpt/cache/`.
-- Some GTFS feeds, including cached Tokyo Metro data seen during development,
-  may omit `shapes.txt` or route `shape_id` values. Preserve the fallback that
-  derives route geometry from ordered `stop_times` so generated route lines do
-  not silently become empty while colors still exist.
-- `data/odpt/scripts/fetch-odpt.mjs --cache-only` is useful for regenerating
-  checked-in preset JSON from ignored cached GTFS zips when network access or
-  `ODPT_KEY` is unavailable.
-- Keep `data/odpt/NOTICE.md` and `data/odpt/sources.md` current when adding or
-  refreshing ODPT providers. Generated JSON also carries an attribution block.
-- `pnpm data:odpt` requires network access and `ODPT_KEY` for
-  Tokyo Metro.
+- Some GTFS feeds (incl. cached Tokyo Metro data) omit `shapes.txt` or route
+  `shape_id`. Preserve the fallback that derives route geometry from ordered
+  `stop_times` so route lines don't silently empty while colors still exist.
+- `data/odpt/scripts/fetch-odpt.mjs --cache-only` regenerates checked-in preset
+  JSON from cached GTFS zips when network access or `ODPT_KEY` is unavailable.
+- Keep `data/odpt/NOTICE.md` and `data/odpt/sources.md` current; generated JSON
+  carries an attribution block. `pnpm data:odpt` needs network + `ODPT_KEY`.
 
 ## POI Spatial Index
 
-- kdbush/geokdbush (~5 KB total, pure JS) replaces the old dual-path
-  (fast-path for ≤5k features + cell-grid for dense categories) with a single
-  O(log n) nearest-neighbor query per category/region.
-- The index is built in `spatialIndex.ts` directly from columnar bundle arrays
-  (`col.lon[i]`, `col.lat[i]`) — no `OsmFeature` allocation during construction.
-- `findMatchingFeaturesWithIndex` in `osmMatchingCache.ts` is the unified entry
+- kdbush/geokdbush (~5 KB total, pure JS) give one O(log n) nearest-neighbor
+  query per category/region. The index builds in `spatialIndex.ts` directly from
+  columnar bundle arrays (`col.lon[i]`, `col.lat[i]`) — no `OsmFeature`
+  allocation during construction.
+- `findMatchingFeaturesWithIndex` (`osmMatchingCache.ts`) is the unified entry
   point: spatial index for bundleable categories, Overpass fallback otherwise.
-- Perf test: `pnpm test -- --testPathPattern "poiSearch"`.
-- `@turf/voronoi` produces `undefined` entries in `features[]` for input
-  points whose cell does not intersect the bbox. `computeVoronoiCells` filters
-  these out. When writing new code that iterates `cells.features`, guard against
-  undefined entries or route through `computeVoronoiCells`.
+- The index builds lazily on first query per (region, category). A dense category
+  (park ≈ 22k features) pays a one-time ~200 ms build; subsequent searches are
+  <5 ms. Perf test: `pnpm test -- --testPathPattern "poiSearch"`.
+- `@turf/voronoi` returns `undefined` entries in `features[]` for points whose
+  cell doesn't intersect the bbox. Route through `computeVoronoiCells` (which
+  filters them) or guard for undefined when iterating raw output. This is the one
+  Voronoi gotcha to remember everywhere.
 
 ## Question Rules
 
 - Use original game terminology: the circle question is `radar`, not `radius`.
-  Hiding-zone station buffers are still radius-based, so keep that terminology
-  in hiding-zone code and UI.
-- The generic question shape lives in `src/features/questions/questionTypes.ts`
-  and `src/features/questions/questionCatalog.ts`. Add new question families to
-  the catalog first, and expose them in Add Question only once their UI/state
-  behavior is implemented.
-- `QuestionDetailScreen` should stay a thin host that dispatches by question
-  type. Keep type-specific editing logic in focused detail components/hooks,
-  like `useRadarDistanceDraftInput`.
-- `QuestionProvider` exposes generic creation/update/delete state. Prefer
-  `createQuestion` and `updateQuestion` plus type-specific helpers over adding
-  one-off global setters for each question family.
-- Radar questions store `distanceMeters`, `distanceOption`, and `distanceUnit`.
-  Presets are `500m`, `1km`, `2km`, `5km`, `10km`, `15km`, `40km`, `80km`,
-  `150km`, plus `other`.
-- Legacy persisted/shared `type: "radius"` question payloads are normalized to
-  `type: "radar"` on restore/import. Preserve this compatibility unless the
-  app-state/wire version is intentionally bumped.
-- Question map overlays should come from derived question render state before
-  reaching `NativeMap`. Keep MapLibre layer ordering conservative, and avoid
-  teaching `NativeMap` every future question family directly.
+  Hiding-zone station buffers are still radius-based — keep that word in
+  hiding-zone code and UI.
+- Five implemented types: `radar`, `matching` (incl. the `transit-line` category
+  with a dedicated detail screen), `measuring`, `thermometer`, `tentacles`. The
+  type union is `coreTypes.ts`; per-type config (title, cost, answer model, map
+  behavior) lives in each folder's `*Config.ts` and is collected in
+  `questionRegistry.ts` (`questionDefinitions`). Add a new family to the registry
+  first, and gate it in Add Question via its `implemented` flag.
+- Answer models: most types are `binary` (positive/negative); `tentacles` is
+  `poi` (answer derived from `selectedOsmId`). Use the `questionRegistry.ts`
+  helpers (`getQuestionDefinition`, `isPoiAnswerModel`, `derivePoiAnswer`,
+  `getQuestionAnswerStatus`) rather than re-deriving answer state per screen.
+- `QuestionDetailScreen` stays a thin host that dispatches by type. Keep
+  type-specific editing in focused detail components/hooks (e.g.
+  `useRadarDistanceDraftInput`).
+- `QuestionProvider` (`questionStore.tsx`) exposes generic create/update/delete
+  plus type-specific helpers (e.g. thermometer pin updates, `activePinKey`).
+  Prefer those over one-off global setters per family.
+- Radar stores `distanceMeters`, `distanceOption`, and `distanceUnit`. Presets
+  are `500m`, `1km`, `2km`, `5km`, `10km`, `15km`, `40km`, `80km`, `150km`, plus
+  `other`.
+- Legacy persisted/shared `type: "radius"` payloads normalize to `type: "radar"`
+  on restore/import (`questionStore.tsx`, `appState.ts`, `sharing/wire/schema.ts`).
+  Preserve this unless the app-state/wire version is intentionally bumped.
+- Question map overlays come from derived question render state before reaching
+  `NativeMap`. Keep MapLibre layer ordering conservative; don't teach `NativeMap`
+  every future question family directly.
 
 ## Testing Expectations
 
 For most code changes, run at least:
 
 ```bash
-pnpm test
 pnpm typecheck
+pnpm test
 ```
 
-For UI, state, or config changes, prefer the full:
-
-```bash
-pnpm check
-```
+For UI, state, or config changes, also run `pnpm check` (lint + format +
+typecheck + perf-typecheck + POI-selector drift). Remember `pnpm check` does not
+run jest, so keep running `pnpm test` too.
 
 For native accessibility, bottom-sheet, MapLibre, or app-start changes, run the
-Maestro stack when the simulator/dev build is available:
-
-```bash
-pnpm test:e2e:stack
-pnpm test:e2e:ios:stack
-```
-
-When local native E2E is not practical, use the GitHub Actions workflow as the
-final check and watch it from the shell:
+Maestro stack when a simulator/dev build is available (`pnpm test:e2e:stack`,
+`pnpm test:e2e:ios:stack`). Otherwise use the GitHub Actions workflow as the
+final check and watch it:
 
 ```bash
 gh workflow run "Maestro E2E" --ref <branch> -f platform=android
 gh run watch
 ```
 
-Use `-f flow=<name>` for focused validation while iterating, and run the full
+Use `-f flow=<name>` for focused validation while iterating, and the full
 workflow for broad UI, navigation, native dependency, or app-start changes.
 
-Jest setup already mocks MapLibre, Gorhom bottom sheet, Reanimated,
-AsyncStorage, and `expo-location` in `jest.setup.ts`. Extend those mocks in one
-place instead of recreating ad hoc mocks in each test.
+Jest setup already mocks MapLibre, Gorhom bottom sheet, Reanimated, AsyncStorage,
+and `expo-location` in `jest.setup.ts`. Extend those mocks in one place instead
+of recreating ad hoc mocks per test.
 
 ## React Native E2E and Accessibility
 
-Maestro/XCUITest does not test the React component tree. It interacts with the
-native iOS accessibility/view hierarchy, which can disagree with JSX, Jest
-queries, and screenshots.
+Maestro/XCUITest drive the native iOS accessibility/view hierarchy, not the React
+tree — so they can disagree with JSX, Jest queries, and screenshots. A screenshot
+only proves pixels rendered, not that a node is targetable by native automation.
 
-Keep these separate when debugging E2E:
-
-- The React tree is what React Native Testing Library sees.
-- The native view/accessibility tree is what Maestro and XCUITest see.
-- A screenshot only proves pixels rendered; it does not prove the element is
-  targetable by native automation.
-
-Practical rules:
-
-- If Maestro says an element is missing, inspect the debug hierarchy artifact,
-  not just the screenshot.
-- Put E2E selectors on stable native-accessible interaction targets.
-- For iOS `TextInput`, especially when empty, a visible input may not expose the
-  expected `testID`. If a visible control cannot be targeted by ID in Maestro,
-  prefer a stable native-accessible parent; otherwise use carefully documented
-  coordinate taps as a last resort. The current Play Area flow uses coordinate
-  taps for the direct relation ID field and Apply button.
-- Keep unit-test IDs and E2E IDs aligned in intent, but do not assume a Jest
-  `getByTestId` pass guarantees Maestro can find the same node.
-- Avoid unnecessary generic keyboard actions in Maestro. iOS number pads may not
-  expose a standard dismiss action; if the next control is visible, tap it
-  directly.
-- If replacing text labels with icon-only buttons, provide stable
-  accessibility labels and update both Jest and Maestro assertions together.
-
-Accessibility lint is useful as a guardrail. It can catch missing labels, roles,
-and bad accessibility prop usage, but it cannot prove that iOS exposes a
-specific node through XCUITest. Use lint as the typecheck for the interaction
-surface, and Maestro as the integration test for that surface.
+- If Maestro says an element is missing, inspect the debug hierarchy artifact, not
+  just the screenshot.
+- Put E2E selectors on stable, native-accessible interaction targets. Keep
+  unit-test IDs and E2E IDs aligned in intent, but a Jest `getByTestId` pass does
+  not guarantee Maestro can find the same node.
+- iOS `TextInput` (especially when empty) may not expose its `testID`. Prefer a
+  stable native-accessible parent; use carefully documented coordinate taps only
+  as a last resort (the Play Area flow taps coordinates for the direct relation ID
+  field and Apply button).
+- iOS number pads may not expose a standard dismiss action. If the next control is
+  visible, tap it directly instead of a generic keyboard action.
+- Replacing text labels with icon-only buttons: add stable accessibility labels
+  and update both Jest and Maestro assertions together.
+- Treat accessibility lint as the typecheck for the interaction surface (missing
+  labels/roles, bad prop usage) and Maestro as its integration test — neither
+  proves XCUITest exposure on its own.
 
 ## Current Sharp Edges
 
-- Photon and Overpass are live services. Keep happy-path unit tests independent
-  of those networks, and reserve live checks for manual verification.
-- Native dependency changes can require prebuild plus a dev-client rebuild even
+- Photon and Overpass are live services. Keep happy-path unit tests off those
+  networks and reserve live checks for manual verification.
+- Native dependency changes can require a prebuild plus a dev-client rebuild even
   when TypeScript and Jest pass.
-- `@turf/voronoi` produces `undefined` entries in `features[]` for input points
-  whose Voronoi cell does not intersect the bbox. `computeVoronoiCells` filters
-  them out, but any code iterating raw `@turf/voronoi` output must also guard.
-- The kdbush index is built lazily on first query per (region, category).
-  First search for a dense category (park: 22k features) includes a one-time
-  ~200 ms index-construction cost. Subsequent searches are <5 ms.
+- Watch the two indexing/geometry gotchas above: lazy kdbush index construction
+  (one-time cost on the first dense-category search) and `@turf/voronoi`
+  `undefined` cells (always route through `computeVoronoiCells`).
