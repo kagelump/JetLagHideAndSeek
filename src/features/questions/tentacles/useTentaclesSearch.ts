@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 
 import { haversineDistanceMeters } from "@/shared/geojson";
 import type { Position } from "@/shared/geojson";
@@ -51,9 +51,6 @@ export function useTentaclesSearch({
     distanceMeters,
 }: UseTentaclesSearchOptions): UseTentaclesSearchResult {
     const matchingCategory = TENTACLES_TO_MATCHING[category] ?? null;
-    const lastResultRef = useRef<
-        (OsmFeature & { distanceMeters: number })[] | null
-    >(null);
 
     // For transit-line: get station positions from hiding zones.
     const { selectedStations } = useHidingZoneDerived();
@@ -86,7 +83,6 @@ export function useTentaclesSearch({
                 .filter((c) => c.distanceMeters <= distanceMeters)
                 .sort((a, b) => a.distanceMeters - b.distanceMeters);
 
-            lastResultRef.current = inRadius;
             return inRadius;
         }
 
@@ -121,7 +117,6 @@ export function useTentaclesSearch({
         }));
 
         candidates.sort((a, b) => a.distanceMeters - b.distanceMeters);
-        lastResultRef.current = candidates;
         return candidates;
     }, [
         matchingCategory,

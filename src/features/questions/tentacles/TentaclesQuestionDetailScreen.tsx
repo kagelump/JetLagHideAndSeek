@@ -117,6 +117,7 @@ export function TentaclesQuestionDetailScreen({
         void run();
         return () => {
             cancelled = true;
+            searchRunningRef.current = false;
         };
     }, [searchGeneration]);
 
