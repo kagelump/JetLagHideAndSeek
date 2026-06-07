@@ -56,6 +56,30 @@ const MARGIN_METERS = 50_000;
 /** Approximate degrees per meter at mid-latitudes (1° ≈ 111,320 m). */
 const DEG_PER_METER = 1 / 111_320;
 
+/** Convert meters to degrees longitude at a given latitude. */
+function metersToDegLon(meters: number, lat: number): number {
+    return meters / (111_320 * Math.cos((lat * Math.PI) / 180));
+}
+
+/** Convert meters to degrees latitude (constant). */
+function metersToDegLat(meters: number): number {
+    return meters * DEG_PER_METER;
+}
+
+/** Approximate great-circle length of a LineString in meters. */
+function lineLengthMeters(coords: Position[]): number {
+    let total = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+        total += haversineDistanceMeters(
+            coords[i][1],
+            coords[i][0],
+            coords[i + 1][1],
+            coords[i + 1][0],
+        );
+    }
+    return total;
+}
+
 // ─── Line buffer cache ───────────────────────────────────────────────────────
 
 /** Increment to invalidate all cached buffer results when the algorithm changes. */
@@ -234,15 +258,17 @@ export function computeLineBuffer(
 
     // ── 1. Build query window ────────────────────────────────────────────
 
-    const radiusDeg = radiusMeters * DEG_PER_METER;
     let queryBbox: Bbox;
 
     if (playAreaBbox) {
+        // Use the play-area midpoint latitude for longitude scaling so
+        // the east-west expansion is correct regardless of latitude.
+        const midLat = (playAreaBbox[1] + playAreaBbox[3]) / 2;
         queryBbox = [
-            playAreaBbox[0] - radiusDeg,
-            playAreaBbox[1] - radiusDeg,
-            playAreaBbox[2] + radiusDeg,
-            playAreaBbox[3] + radiusDeg,
+            playAreaBbox[0] - metersToDegLon(radiusMeters, midLat),
+            playAreaBbox[1] - metersToDegLat(radiusMeters),
+            playAreaBbox[2] + metersToDegLon(radiusMeters, midLat),
+            playAreaBbox[3] + metersToDegLat(radiusMeters),
         ];
     } else {
         // Fallback: center ± fixed margin.
@@ -267,21 +293,37 @@ export function computeLineBuffer(
         return null;
     }
 
-    console.log(`[lineBuffer] ${surviving.length} features in query window`);
-
     // ── 3. Clip each feature to the query window ─────────────────────────
 
+    // Drop features whose total extent is tiny relative to the buffer
+    // radius.  A 200 m spur buffered at 4 km creates a large circular
+    // artifact that doesn't represent a real rail corridor.
+    const minFeatureLenM = Math.min(radiusMeters * 0.1, 500);
+
     const clippedSegments: Position[][] = [];
+    let droppedShort = 0;
     for (const f of surviving) {
         if (f.geometry.type === "LineString") {
-            for (const seg of clipLineToBbox(
-                f.geometry.coordinates as Position[],
-                queryBbox,
-            )) {
+            const coords = f.geometry.coordinates as Position[];
+            if (lineLengthMeters(coords) < minFeatureLenM) {
+                droppedShort++;
+                continue;
+            }
+            for (const seg of clipLineToBbox(coords, queryBbox)) {
                 if (seg.length >= 2) clippedSegments.push(seg);
             }
         } else {
-            for (const line of (f.geometry as MultiLineString).coordinates) {
+            const mlCoords = (f.geometry as MultiLineString).coordinates;
+            // Compute total length across all parts.
+            let totalLen = 0;
+            for (const line of mlCoords) {
+                totalLen += lineLengthMeters(line as Position[]);
+            }
+            if (totalLen < minFeatureLenM) {
+                droppedShort++;
+                continue;
+            }
+            for (const line of mlCoords) {
                 for (const seg of clipLineToBbox(
                     line as Position[],
                     queryBbox,
@@ -292,12 +334,21 @@ export function computeLineBuffer(
         }
     }
 
+    if (droppedShort > 0) {
+        console.log(
+            `[lineBuffer] dropped ${droppedShort} short features (< ${minFeatureLenM.toFixed(0)}m)`,
+        );
+    }
+
+    console.log(
+        `[lineBuffer] ${surviving.length} features in query window, ` +
+            `${clippedSegments.length} clipped segments`,
+    );
+
     if (clippedSegments.length === 0) {
         bufferCache.set(key, null);
         return null;
     }
-
-    console.log(`[lineBuffer] clipped to ${clippedSegments.length} segments`);
 
     // ── 4. Simplify clipped segments ─────────────────────────────────────
 

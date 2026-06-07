@@ -160,3 +160,104 @@ describe("measuring bundle structural validator", () => {
         });
     }
 });
+
+// ─── High-speed-rail shape smoke test ──────────────────────────────────────
+
+function haversineKm(a, b) {
+    const R = 6371;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(b[1] - a[1]);
+    const dLon = toRad(b[0] - a[0]);
+    const lat1 = toRad(a[1]);
+    const lat2 = toRad(b[1]);
+    const sinDLat = Math.sin(dLat / 2);
+    const sinDLon = Math.sin(dLon / 2);
+    const h =
+        sinDLat * sinDLat +
+        Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+    return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function featureLengthKm(f) {
+    const coords = f.geometry.coordinates;
+    let total = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+        total += haversineKm(coords[i], coords[i + 1]);
+    }
+    return total;
+}
+
+describe("high-speed-rail shape smoke test", () => {
+    const bundlePath = resolve(measuringDir, "high-speed-rail.json");
+
+    let bundle;
+    it("loads the bundle", () => {
+        bundle = JSON.parse(readFileSync(bundlePath, "utf8"));
+    });
+
+    it("has between 50 and 600 features (merged, not raw fragments)", () => {
+        const n = bundle.features.length;
+        assert.ok(
+            n >= 50 && n <= 600,
+            `expected 50–600 merged features, got ${n}`,
+        );
+    });
+
+    it("has at least 3 features longer than 20 km (major corridors)", () => {
+        const long = bundle.features.filter((f) => featureLengthKm(f) > 20);
+        assert.ok(
+            long.length >= 3,
+            `expected ≥3 features > 20 km, got ${long.length}`,
+        );
+    });
+
+    it("has features covering the full Shinkansen latitude range", () => {
+        // Tokaido Shinkansen: ~34.7 (Shizuoka) to 35.7 (Tokyo)
+        // Tohoku Shinkansen:  35.7 (Tokyo) to ~37.9 (Aomori)
+        // Joetsu Shinkansen:  35.7 (Tokyo) to ~37.0 (Niigata)
+        const bands = [
+            [34.5, 35.0],
+            [35.0, 35.5],
+            [35.5, 36.0],
+            [36.0, 36.5],
+            [36.5, 37.0],
+            [37.0, 37.5],
+            [37.5, 38.0],
+        ];
+
+        for (const [lo, hi] of bands) {
+            const count = bundle.features.filter((f) => {
+                const b = f.bbox;
+                return b[3] >= lo && b[1] <= hi;
+            }).length;
+            assert.ok(
+                count > 0,
+                `no features in lat band [${lo}, ${hi}] — possible merge regression`,
+            );
+        }
+    });
+
+    it("has no gap larger than 0.4° between consecutive feature lat spans", () => {
+        // Sort by southernmost extent, track max lat seen, find biggest gap.
+        const sorted = bundle.features
+            .map((f) => ({ lo: f.bbox[1], hi: f.bbox[3] }))
+            .sort((a, b) => a.lo - b.lo);
+
+        let maxSeen = sorted[0].hi;
+        let maxGap = 0;
+        for (let i = 1; i < sorted.length; i++) {
+            const { lo, hi } = sorted[i];
+            if (lo > maxSeen) {
+                const gap = lo - maxSeen;
+                if (gap > maxGap) maxGap = gap;
+            }
+            if (hi > maxSeen) maxSeen = hi;
+        }
+
+        assert.ok(
+            maxGap <= 0.4,
+            `max lat gap between features is ${maxGap.toFixed(3)}° (> 0.4°) — ` +
+                `merge may have dropped a region`,
+        );
+    });
+});
