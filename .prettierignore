@@ -17,4 +17,10 @@ data/geofabrik/dist
 data/geofabrik/poi-selectors.json
 assets/poi
 
+# Measuring line/polygon bundles: machine-generated, minified artifacts from
+# `data/geofabrik/scripts/extract-measuring-bundles.mjs`. Prettier must not
+# reformat them — pretty-printing roughly doubles their on-disk and bundled
+# (Metro/Hermes `require()`) size and the runtime parse cost.
+assets/measuring
+
 .claude/worktrees
