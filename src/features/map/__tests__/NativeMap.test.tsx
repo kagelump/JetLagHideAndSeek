@@ -1,7 +1,7 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Location from "expo-location";
 import type { ReactElement } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { defaultPlayArea } from "@/features/map/playArea";
@@ -56,6 +56,57 @@ function CreateTransitLineQuestion() {
     useEffect(() => {
         createQuestion("matching", { center: defaultPlayArea.center });
     }, [createQuestion]);
+
+    return null;
+}
+
+/**
+ * Creates a measuring question with a selected POI and the given answer,
+ * then verifies the combined inside mask receives those features.
+ *
+ * Uses a ref guard so strict-mode double-rendering doesn't create
+ * duplicate questions.
+ */
+function CreateMeasuringQuestionWithAnswer({
+    answer,
+}: {
+    answer: "positive" | "negative";
+}) {
+    const { createQuestion, updateQuestion } = useQuestionActions();
+    const doneRef = useRef(false);
+
+    useEffect(() => {
+        if (doneRef.current) return;
+        doneRef.current = true;
+
+        const q = createQuestion("measuring", {
+            center: [139.75, 35.675],
+            category: "museum",
+        });
+
+        updateQuestion(q.id, (current) => {
+            if (current.type !== "measuring") return current;
+            return {
+                ...current,
+                candidates: [
+                    {
+                        lat: 35.681,
+                        lon: 139.761,
+                        name: "Test Museum",
+                        osmId: 100,
+                        osmType: "node" as const,
+                        tags: {},
+                        distanceMeters: 1200,
+                    },
+                ],
+                selectedOsmId: 100,
+                selectedOsmType: "node",
+                seekerDistanceMeters: 1200,
+                answer,
+                updatedAt: new Date().toISOString(),
+            };
+        });
+    }, [createQuestion, updateQuestion, answer]);
 
     return null;
 }
@@ -189,6 +240,66 @@ describe("NativeMap", () => {
         expect(polygonWithCutout).toBeTruthy();
         expect(signedRingArea(outerRing)).toBeGreaterThan(0);
         expect(signedRingArea(firstCutoutRing)).toBeLessThan(0);
+    });
+
+    describe("measuring mask wiring regression", () => {
+        it("includes measuring hit mask circle in the combined mask for 'closer'", async () => {
+            const screen = renderWithSafeArea(
+                <>
+                    <CreateMeasuringQuestionWithAnswer answer="positive" />
+                    <NativeMap
+                        canMove={false}
+                        isQuestionDetailRoute={false}
+                        onPinCommit={jest.fn()}
+                        pins={[]}
+                        questionId={null}
+                    />
+                </>,
+            );
+
+            // The combined mask should render with the measuring circle as a
+            // required constraint. Without any hiding zones, the only mask
+            // feature is the measuring hit circle.
+            await waitFor(() => {
+                const shape = screen
+                    .getAllByTestId("map-shape-source")
+                    .find(
+                        (source) =>
+                            source.props.id === "combined-inside-mask-19631009",
+                    )?.props.shape;
+                expect(shape).toBeTruthy();
+                expect(shape.features.length).toBeGreaterThan(0);
+            });
+        });
+
+        it("includes measuring miss mask circle in the combined mask for 'farther'", async () => {
+            const screen = renderWithSafeArea(
+                <>
+                    <CreateMeasuringQuestionWithAnswer answer="negative" />
+                    <NativeMap
+                        canMove={false}
+                        isQuestionDetailRoute={false}
+                        onPinCommit={jest.fn()}
+                        pins={[]}
+                        questionId={null}
+                    />
+                </>,
+            );
+
+            // The combined mask should render with the measuring circle as an
+            // excluded area. Without any hiding zones, the miss circle is
+            // subtracted from the play area.
+            await waitFor(() => {
+                const shape = screen
+                    .getAllByTestId("map-shape-source")
+                    .find(
+                        (source) =>
+                            source.props.id === "combined-inside-mask-19631009",
+                    )?.props.shape;
+                expect(shape).toBeTruthy();
+                expect(shape.features.length).toBeGreaterThan(0);
+            });
+        });
     });
 
     it("fits the camera when the map finishes loading", () => {

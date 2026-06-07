@@ -125,6 +125,9 @@ export function NativeMap({
                 ...asSeparateMaskConstraints(
                     questionMapRenderState.tentacles.hitMaskFeatures,
                 ),
+                ...asSeparateMaskConstraints(
+                    questionMapRenderState.measuring.hitMaskFeatures,
+                ),
             ],
             [
                 questionMapRenderState.radar.missMaskFeatures,
@@ -132,6 +135,9 @@ export function NativeMap({
                 questionMapRenderState.osmMatching.missMaskFeatures,
                 ...asSeparateMaskConstraints(
                     questionMapRenderState.tentacles.missMaskFeatures,
+                ),
+                ...asSeparateMaskConstraints(
+                    questionMapRenderState.measuring.missMaskFeatures,
                 ),
             ],
         );
@@ -147,6 +153,8 @@ export function NativeMap({
         questionMapRenderState.thermometer.hitMaskFeatures,
         questionMapRenderState.tentacles.hitMaskFeatures,
         questionMapRenderState.tentacles.missMaskFeatures,
+        questionMapRenderState.measuring.hitMaskFeatures,
+        questionMapRenderState.measuring.missMaskFeatures,
     ]);
     const mapStyle = useMemo(() => buildOsmRasterStyleJson(), []);
     const fitPadding = useMemo(

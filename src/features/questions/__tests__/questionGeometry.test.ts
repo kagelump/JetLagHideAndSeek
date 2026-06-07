@@ -4,6 +4,7 @@ import type { TransitStation } from "@/features/hidingZone/hidingZoneTypes";
 import { defaultPlayArea } from "@/features/map/playArea";
 import { buildQuestionMapRenderState } from "@/features/questions/questionGeometry";
 import type { MatchingQuestion } from "@/features/questions/matching/matchingTypes";
+import type { MeasuringQuestion } from "@/features/questions/measuring/measuringTypes";
 import {
     getTransitLineOptions,
     reconcileTransitLineQuestionSelection,
@@ -203,5 +204,103 @@ describe("buildQuestionMapRenderState OSM matching", () => {
             0,
         );
         expect(renderState.osmMatching.poiFeatures.features).toHaveLength(0);
+    });
+});
+
+describe("buildQuestionMapRenderState measuring", () => {
+    const measuringQuestion: MeasuringQuestion = {
+        answer: "unanswered",
+        candidates: [
+            {
+                lat: 35.681,
+                lon: 139.761,
+                name: "Test Museum",
+                osmId: 100,
+                osmType: "node",
+                tags: {},
+                distanceMeters: 1200,
+            },
+        ],
+        category: "museum",
+        center: [139.75, 35.675],
+        createdAt: "2026-06-07T00:00:00.000Z",
+        id: "measuring-1",
+        isLocked: false,
+        seekerDistanceMeters: null,
+        seekerDistanceUnit: "m",
+        selectedOsmId: null,
+        selectedOsmType: null,
+        type: "measuring",
+        updatedAt: "2026-06-07T00:00:00.000Z",
+    };
+
+    it("populates measuring.hitMaskFeatures when answer is positive with selected POI", () => {
+        const q: MeasuringQuestion = {
+            ...measuringQuestion,
+            answer: "positive",
+            selectedOsmId: 100,
+            selectedOsmType: "node",
+            seekerDistanceMeters: 1200,
+        };
+        const renderState = buildQuestionMapRenderState(
+            [q],
+            stations,
+            600,
+            playAreaBbox,
+            playAreaBoundary,
+        );
+
+        expect(renderState.measuring.hitMaskFeatures.features).toHaveLength(1);
+        expect(renderState.measuring.missMaskFeatures.features).toHaveLength(0);
+    });
+
+    it("populates measuring.missMaskFeatures when answer is negative with selected POI", () => {
+        const q: MeasuringQuestion = {
+            ...measuringQuestion,
+            answer: "negative",
+            selectedOsmId: 100,
+            selectedOsmType: "node",
+            seekerDistanceMeters: 1200,
+        };
+        const renderState = buildQuestionMapRenderState(
+            [q],
+            stations,
+            600,
+            playAreaBbox,
+            playAreaBoundary,
+        );
+
+        expect(renderState.measuring.hitMaskFeatures.features).toHaveLength(0);
+        expect(renderState.measuring.missMaskFeatures.features).toHaveLength(1);
+    });
+
+    it("produces empty measuring masks when answer is unanswered", () => {
+        const renderState = buildQuestionMapRenderState(
+            [measuringQuestion],
+            stations,
+            600,
+            playAreaBbox,
+            playAreaBoundary,
+        );
+
+        expect(renderState.measuring.hitMaskFeatures.features).toHaveLength(0);
+        expect(renderState.measuring.missMaskFeatures.features).toHaveLength(0);
+    });
+
+    it("filters out non-measuring questions from measuring render state", () => {
+        const renderState = buildQuestionMapRenderState(
+            [osmQuestion],
+            stations,
+            600,
+            playAreaBbox,
+            playAreaBoundary,
+        );
+
+        expect(renderState.measuring).toEqual({
+            hitMaskFeatures: { features: [], type: "FeatureCollection" },
+            missMaskFeatures: { features: [], type: "FeatureCollection" },
+            nearestPointConnectors: { features: [], type: "FeatureCollection" },
+            nearestPointMarkers: { features: [], type: "FeatureCollection" },
+        });
     });
 });
