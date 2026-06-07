@@ -879,10 +879,9 @@ position)`.
 
 ### For the next task
 
-- Task 10 (Tentacles UI) should follow the same pattern: build the non-POI-picker
-  half of the detail screen (category picker, map layers, search integration)
-  using `useQuestionActions` for write-back, with stable testIDs for both Jest
-  and Maestro.
+- Task 10 (Tentacles Geometry) wires the Voronoi algorithm into `questionGeometry.ts`,
+  reusing `clipCellsToPlayArea` for radius-circle clipping. Task 11 (Tentacles UI)
+  builds the detail screen, search hook, and map layer on top of it.
 
 ---
 
@@ -1031,6 +1030,21 @@ the IDs are not meaningful outside the current search session.
 - **`TentaclesRadiusLayer` placed between `ThermometerPreviewLayer` and
   `MLUserLocation`** in NativeMap's JSX tree, maintaining the shapes-before-markers
   ordering rule from AGENTS.md.
+
+### Code review fixes (post-implementation)
+
+The `/code-review max --fix` pass caught two issues:
+
+- **Search lockout bug.** `searchRunningRef.current` was set `true` at search
+  start but never reset in the effect cleanup. When the search generation changed
+  while a search was in-flight, the old search aborted (`cancelled = true`) but
+  the ref stayed `true`. All subsequent effect iterations skipped at the guard
+  (`if (searchRunningRef.current) return`) — searches stopped permanently after
+  the first center/category change. Fixed by adding
+  `searchRunningRef.current = false` to the cleanup.
+
+- **Dead `lastResultRef` in `useTentaclesSearch.ts`.** The ref was written twice
+  but never read. Removed.
 
 ### For the next task
 
