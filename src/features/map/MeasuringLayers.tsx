@@ -35,9 +35,9 @@ export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
                 <MLLineLayer
                     id="measuring-line-ref-layer"
                     style={{
-                        lineColor: "#FF8C00",
+                        lineColor: "#ff0000",
                         lineOpacity: 0.7,
-                        lineWidth: 3,
+                        lineWidth: 10,
                     }}
                 />
             </MLShapeSource>

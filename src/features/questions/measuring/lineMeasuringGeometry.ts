@@ -1,6 +1,5 @@
 import nearestPointOnLine from "@turf/nearest-point-on-line";
 import buffer from "@turf/buffer";
-import simplify from "@turf/simplify";
 import { multiLineString, point } from "@turf/helpers";
 
 import {
@@ -20,7 +19,7 @@ export type NearestPointResult = {
     distanceMeters: number;
 };
 
-// ─── LRU cache ───────────────────────────────────────────────────────────────
+// --- LRU cache ----------------------------------------------------------------
 
 /** Increment to invalidate all cached results when the algorithm changes. */
 const LINE_DISTANCE_CACHE_VERSION = 1;
@@ -30,7 +29,7 @@ const LINE_DISTANCE_CACHE_MAX = 100;
 
 /**
  * LRU cache keyed on (version, category, center). Two questions with the same
- * center share a hit — the result depends solely on center + category.
+ * center share a hit -- the result depends solely on center + category.
  */
 const distanceCache = new Map<string, NearestPointResult | null>();
 
@@ -48,12 +47,12 @@ export function clearLineDistanceCache(): void {
     distanceCache.clear();
 }
 
-// ─── Query margin ────────────────────────────────────────────────────────────
+// --- Query margin -------------------------------------------------------------
 
 /** 50 km query window covers any plausible seeker distance. */
 const MARGIN_METERS = 50_000;
 
-/** Approximate degrees per meter at mid-latitudes (1° ≈ 111,320 m). */
+/** Approximate degrees per meter at mid-latitudes (1 deg ~ 111,320 m). */
 const DEG_PER_METER = 1 / 111_320;
 
 /** Convert meters to degrees longitude at a given latitude. */
@@ -80,10 +79,10 @@ function lineLengthMeters(coords: Position[]): number {
     return total;
 }
 
-// ─── Line buffer cache ───────────────────────────────────────────────────────
+// --- Line buffer cache --------------------------------------------------------
 
 /** Increment to invalidate all cached buffer results when the algorithm changes. */
-const LINE_BUFFER_CACHE_VERSION = 1;
+const LINE_BUFFER_CACHE_VERSION = 2;
 
 /** Maximum number of cached buffer results. */
 const LINE_BUFFER_CACHE_MAX = 50;
@@ -112,126 +111,22 @@ export function clearLineBufferCache(): void {
     bufferCache.clear();
 }
 
-// ─── Bbox line clipping ──────────────────────────────────────────────────────
-
-/**
- * Clip a single line segment to an axis-aligned bbox using Liang-Barsky.
- * Returns the clipped [p0, p1] segment, or null if the segment lies entirely
- * outside the bbox.
- */
-function clipSegment(
-    a: Position,
-    b: Position,
-    bbox: Bbox,
-): [Position, Position] | null {
-    const [minX, minY, maxX, maxY] = bbox;
-    const dx = b[0] - a[0];
-    const dy = b[1] - a[1];
-
-    let t0 = 0;
-    let t1 = 1;
-
-    const p = [-dx, dx, -dy, dy];
-    const q = [a[0] - minX, maxX - a[0], a[1] - minY, maxY - a[1]];
-
-    for (let i = 0; i < 4; i++) {
-        if (p[i] === 0) {
-            // Parallel to this edge — if outside, reject.
-            if (q[i] < 0) return null;
-        } else {
-            const t = q[i] / p[i];
-            if (p[i] < 0) {
-                t0 = Math.max(t0, t);
-            } else {
-                t1 = Math.min(t1, t);
-            }
-        }
-    }
-
-    if (t0 > t1) return null;
-
-    return [
-        [a[0] + t0 * dx, a[1] + t0 * dy],
-        [a[0] + t1 * dx, a[1] + t1 * dy],
-    ];
-}
-
-/**
- * Clip a polyline (LineString coordinate array) to a bbox. Returns zero or
- * more clipped LineStrings — a line can enter, exit, and re-enter the bbox.
- */
-function clipLineToBbox(line: Position[], bbox: Bbox): Position[][] {
-    const result: Position[][] = [];
-    let current: Position[] = [];
-
-    function inside(p: Position): boolean {
-        return (
-            p[0] >= bbox[0] &&
-            p[0] <= bbox[2] &&
-            p[1] >= bbox[1] &&
-            p[1] <= bbox[3]
-        );
-    }
-
-    for (let i = 0; i < line.length; i++) {
-        const pt = line[i];
-        const ptInside = inside(pt);
-
-        if (i === 0) {
-            if (ptInside) current.push(pt);
-            continue;
-        }
-
-        const prev = line[i - 1];
-        const prevInside = inside(prev);
-
-        if (prevInside && ptInside) {
-            // Both inside — continue current segment.
-            current.push(pt);
-        } else if (prevInside && !ptInside) {
-            // Exiting.
-            const clipped = clipSegment(prev, pt, bbox);
-            if (clipped) current.push(clipped[1]);
-            result.push(current);
-            current = [];
-        } else if (!prevInside && ptInside) {
-            // Entering.
-            const clipped = clipSegment(prev, pt, bbox);
-            if (clipped) current.push(clipped[0]);
-            current.push(pt);
-        } else {
-            // Both outside — segment may still cross the bbox.
-            const clipped = clipSegment(prev, pt, bbox);
-            if (clipped) {
-                result.push([clipped[0], clipped[1]]);
-            }
-        }
-    }
-
-    if (current.length > 0) result.push(current);
-
-    return result;
-}
-
-// ─── Line buffer ─────────────────────────────────────────────────────────────
+// --- Line buffer --------------------------------------------------------------
 
 /** Fallback margin (25 km) when no play-area bbox is available. */
 const FALLBACK_MARGIN_DEG = 25_000 * DEG_PER_METER;
-
-/** Simplify tolerance — enough to collapse redundant vertices (~50 m). */
-const SIMPLIFY_TOLERANCE_DEG = 0.0005;
 
 /**
  * Builds a buffer polygon around line features near the play area.
  *
  * Pipeline:
- * 1. Expand playAreaBbox by radiusMeters → query window (or fall back to
- *    center ± 25 km if no play area).
+ * 1. Expand playAreaBbox by radiusMeters -> query window (or fall back to
+ *    center +/- 25 km if no play area).
  * 2. Filter line features to those intersecting the query window.
- * 3. Clip each feature's geometry to the query window (removes irrelevant
- *    portions of long segments).
- * 4. Simplify clipped lines to reduce vertex count.
- * 5. Merge into a MultiLineString and buffer with @turf/buffer (JSTS).
+ * 3. Drop features shorter than a threshold relative to the buffer radius.
+ * 4. Merge surviving lines into a MultiLineString and buffer with
+ *    @turf/buffer (JSTS). The mask builder clips the result to the play
+ *    area, so no pre-clipping or simplification is needed.
  */
 export function computeLineBuffer(
     center: Position,
@@ -256,13 +151,11 @@ export function computeLineBuffer(
         return null;
     }
 
-    // ── 1. Build query window ────────────────────────────────────────────
+    // -- 1. Build query window --------------------------------------------------
 
     let queryBbox: Bbox;
 
     if (playAreaBbox) {
-        // Use the play-area midpoint latitude for longitude scaling so
-        // the east-west expansion is correct regardless of latitude.
         const midLat = (playAreaBbox[1] + playAreaBbox[3]) / 2;
         queryBbox = [
             playAreaBbox[0] - metersToDegLon(radiusMeters, midLat),
@@ -271,7 +164,6 @@ export function computeLineBuffer(
             playAreaBbox[3] + metersToDegLat(radiusMeters),
         ];
     } else {
-        // Fallback: center ± fixed margin.
         queryBbox = [
             center[0] - FALLBACK_MARGIN_DEG,
             center[1] - FALLBACK_MARGIN_DEG,
@@ -280,7 +172,7 @@ export function computeLineBuffer(
         ];
     }
 
-    // ── 2. Filter features by bbox intersection ──────────────────────────
+    // -- 2. Filter features by bbox intersection --------------------------------
 
     const surviving: Feature[] = [];
     for (const f of fc.features) {
@@ -293,14 +185,11 @@ export function computeLineBuffer(
         return null;
     }
 
-    // ── 3. Clip each feature to the query window ─────────────────────────
+    // -- 3. Collect coordinates, drop short features ----------------------------
 
-    // Drop features whose total extent is tiny relative to the buffer
-    // radius.  A 200 m spur buffered at 4 km creates a large circular
-    // artifact that doesn't represent a real rail corridor.
     const minFeatureLenM = Math.min(radiusMeters * 0.1, 500);
 
-    const clippedSegments: Position[][] = [];
+    const lines: Position[][] = [];
     let droppedShort = 0;
     for (const f of surviving) {
         if (f.geometry.type === "LineString") {
@@ -309,12 +198,9 @@ export function computeLineBuffer(
                 droppedShort++;
                 continue;
             }
-            for (const seg of clipLineToBbox(coords, queryBbox)) {
-                if (seg.length >= 2) clippedSegments.push(seg);
-            }
+            lines.push(coords);
         } else {
             const mlCoords = (f.geometry as MultiLineString).coordinates;
-            // Compute total length across all parts.
             let totalLen = 0;
             for (const line of mlCoords) {
                 totalLen += lineLengthMeters(line as Position[]);
@@ -324,11 +210,8 @@ export function computeLineBuffer(
                 continue;
             }
             for (const line of mlCoords) {
-                for (const seg of clipLineToBbox(
-                    line as Position[],
-                    queryBbox,
-                )) {
-                    if (seg.length >= 2) clippedSegments.push(seg);
+                if ((line as Position[]).length >= 2) {
+                    lines.push(line as Position[]);
                 }
             }
         }
@@ -342,54 +225,17 @@ export function computeLineBuffer(
 
     console.log(
         `[lineBuffer] ${surviving.length} features in query window, ` +
-            `${clippedSegments.length} clipped segments`,
+            `${lines.length} line segments`,
     );
 
-    if (clippedSegments.length === 0) {
+    if (lines.length === 0) {
         bufferCache.set(key, null);
         return null;
     }
 
-    // ── 4. Simplify clipped segments ─────────────────────────────────────
+    // -- 4. Buffer ---------------------------------------------------------------
 
-    const simplifiedFc = simplify(
-        {
-            type: "FeatureCollection",
-            features: clippedSegments.map((coords) => ({
-                type: "Feature" as const,
-                properties: {},
-                geometry: { type: "LineString" as const, coordinates: coords },
-            })),
-        },
-        {
-            tolerance: SIMPLIFY_TOLERANCE_DEG,
-            highQuality: false,
-            mutate: false,
-        },
-    );
-
-    // Extract simplified coordinates.
-    const simplified: Position[][] = [];
-    for (const f of simplifiedFc.features) {
-        if (f.geometry.type !== "LineString") continue;
-        const coords = f.geometry.coordinates as Position[];
-        if (coords.length >= 2) simplified.push(coords);
-    }
-
-    if (simplified.length === 0) {
-        bufferCache.set(key, null);
-        return null;
-    }
-
-    let simpVerts = 0;
-    for (const seg of simplified) simpVerts += seg.length;
-    console.log(
-        `[lineBuffer] simplified: ${simplified.length} segments, ${simpVerts} vertices`,
-    );
-
-    // ── 5. Buffer ────────────────────────────────────────────────────────
-
-    const merged = multiLineString(simplified);
+    const merged = multiLineString(lines);
     const result = buffer(merged, radiusMeters, {
         units: "meters",
     }) as Feature<Polygon | MultiPolygon>;
@@ -400,7 +246,7 @@ export function computeLineBuffer(
         return null;
     }
 
-    console.log(`[lineBuffer] done — ${result.geometry.type}`);
+    console.log(`[lineBuffer] done -- ${result.geometry.type}`);
 
     // Evict oldest entry when cache exceeds max size.
     if (bufferCache.size >= LINE_BUFFER_CACHE_MAX) {
@@ -412,7 +258,7 @@ export function computeLineBuffer(
     return result;
 }
 
-// ─── Bbox helpers ────────────────────────────────────────────────────────────
+// --- Bbox helpers -------------------------------------------------------------
 
 function featureBbox(f: Feature): Bbox {
     if (f.bbox) return f.bbox as Bbox;
@@ -442,7 +288,7 @@ function computeBboxFromCoords(geometry: Feature["geometry"]): Bbox {
     return [minX, minY, maxX, maxY];
 }
 
-// ─── Main algorithm ──────────────────────────────────────────────────────────
+// --- Main algorithm -----------------------------------------------------------
 
 /**
  * Nearest point on bundled line/polygon geometry for a center + category.

@@ -8,7 +8,7 @@ export const colors = {
     mapBlue: "#9ec5df",
     mapGreen: "#9bc4a3",
     mapRoad: "#f1d083",
-    measuringLine: "#e46f4d",
+    measuringLine: "#ff0000",
     muted: "#667085",
     panel: "#fffefa",
     tint: "#1f6f78",
