@@ -84,7 +84,7 @@ export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
             {/* ── Connector: seeker pin → nearest point ──────────────── */}
             <MLShapeSource
                 id="measuring-connectors"
-                key={connectorsKey}
+                key={`conn:${connectorsKey}`}
                 shape={measuring.nearestPointConnectors}
             >
                 <MLLineLayer
@@ -101,7 +101,7 @@ export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
             {/* ── Nearest-point marker ────────────────────────────────── */}
             <MLShapeSource
                 id="measuring-markers"
-                key={markersKey}
+                key={`markers:${markersKey}`}
                 shape={measuring.nearestPointMarkers}
             >
                 <MLCircleLayer
