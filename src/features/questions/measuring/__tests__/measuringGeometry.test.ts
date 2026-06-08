@@ -405,6 +405,142 @@ describe("buildMeasuringRenderState", () => {
             expect(result.nearestPointMarkers.features).toHaveLength(0);
         });
 
+        describe("answer toggling for a line-category question", () => {
+            const bundle = makeLineBundle([
+                [139.0, 35.675],
+                [140.0, 35.675],
+            ]);
+
+            beforeEach(() => {
+                __setLineBundleForTest("coastline", bundle);
+            });
+
+            it("unanswered → produces no mask features", () => {
+                const q = makeMeasuringQuestion({
+                    answer: "unanswered",
+                    category: "coastline",
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    seekerDistanceMeters: null,
+                });
+                const result = buildMeasuringRenderState([q], undefined);
+                expect(result.hitMaskFeatures.features).toHaveLength(0);
+                expect(result.missMaskFeatures.features).toHaveLength(0);
+                // Connector and marker still appear for unanswered.
+                expect(result.nearestPointConnectors.features).toHaveLength(1);
+                expect(result.nearestPointMarkers.features).toHaveLength(1);
+            });
+
+            it("unanswered → positive → buffer in hitMaskFeatures", () => {
+                const q = makeMeasuringQuestion({
+                    answer: "positive",
+                    category: "coastline",
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    seekerDistanceMeters: null,
+                });
+                const result = buildMeasuringRenderState([q], undefined);
+                expect(result.hitMaskFeatures.features).toHaveLength(1);
+                expect(result.missMaskFeatures.features).toHaveLength(0);
+            });
+
+            it("unanswered → negative → buffer in missMaskFeatures", () => {
+                const q = makeMeasuringQuestion({
+                    answer: "negative",
+                    category: "coastline",
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    seekerDistanceMeters: null,
+                });
+                const result = buildMeasuringRenderState([q], undefined);
+                expect(result.hitMaskFeatures.features).toHaveLength(0);
+                expect(result.missMaskFeatures.features).toHaveLength(1);
+            });
+
+            it("positive → negative → buffer moves from hit to miss", () => {
+                const positiveQ = makeMeasuringQuestion({
+                    answer: "positive",
+                    category: "coastline",
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    seekerDistanceMeters: null,
+                });
+                const posResult = buildMeasuringRenderState(
+                    [positiveQ],
+                    undefined,
+                );
+                expect(posResult.hitMaskFeatures.features).toHaveLength(1);
+                expect(posResult.missMaskFeatures.features).toHaveLength(0);
+
+                // Simulate answer toggle by building a new question with
+                // answer: "negative" (the updated question object that
+                // updateQuestion would produce).
+                const negativeQ = makeMeasuringQuestion({
+                    ...positiveQ,
+                    answer: "negative",
+                });
+                const negResult = buildMeasuringRenderState(
+                    [negativeQ],
+                    undefined,
+                );
+                expect(negResult.hitMaskFeatures.features).toHaveLength(0);
+                expect(negResult.missMaskFeatures.features).toHaveLength(1);
+            });
+
+            it("negative → positive → buffer moves from miss to hit", () => {
+                const negativeQ = makeMeasuringQuestion({
+                    answer: "negative",
+                    category: "coastline",
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    seekerDistanceMeters: null,
+                });
+                const negResult = buildMeasuringRenderState(
+                    [negativeQ],
+                    undefined,
+                );
+                expect(negResult.hitMaskFeatures.features).toHaveLength(0);
+                expect(negResult.missMaskFeatures.features).toHaveLength(1);
+
+                const positiveQ = makeMeasuringQuestion({
+                    ...negativeQ,
+                    answer: "positive",
+                });
+                const posResult = buildMeasuringRenderState(
+                    [positiveQ],
+                    undefined,
+                );
+                expect(posResult.hitMaskFeatures.features).toHaveLength(1);
+                expect(posResult.missMaskFeatures.features).toHaveLength(0);
+            });
+
+            it("positive → unanswered → buffer is removed", () => {
+                const positiveQ = makeMeasuringQuestion({
+                    answer: "positive",
+                    category: "coastline",
+                    selectedOsmId: null,
+                    selectedOsmType: null,
+                    seekerDistanceMeters: null,
+                });
+                const posResult = buildMeasuringRenderState(
+                    [positiveQ],
+                    undefined,
+                );
+                expect(posResult.hitMaskFeatures.features).toHaveLength(1);
+
+                const unansweredQ = makeMeasuringQuestion({
+                    ...positiveQ,
+                    answer: "unanswered",
+                });
+                const unResult = buildMeasuringRenderState(
+                    [unansweredQ],
+                    undefined,
+                );
+                expect(unResult.hitMaskFeatures.features).toHaveLength(0);
+                expect(unResult.missMaskFeatures.features).toHaveLength(0);
+            });
+        });
+
         it("mixes point-category and line-category questions correctly", () => {
             // Point category: museum (positive)
             const museumQ = makeMeasuringQuestion({ answer: "positive" });

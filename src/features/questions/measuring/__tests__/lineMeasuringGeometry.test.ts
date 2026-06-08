@@ -291,4 +291,142 @@ describe("computeLineDistance", () => {
             expect(result!.nearestPoint[1]).toBeCloseTo(35.0, 2);
         });
     });
+
+    describe("zero-length segment deduplication", () => {
+        it("strips consecutive duplicate coordinates", () => {
+            // Line with a duplicate at index 1.
+            const line = makeLineFeature([
+                [139.0, 35.0],
+                [139.5, 35.0], // duplicate
+                [139.5, 35.0], // duplicate
+                [140.0, 35.0],
+            ]);
+            __setLineBundleForTest("coastline", makeBundle([line]));
+
+            const result = computeLineDistance([139.75, 35.01], "coastline");
+            expect(result).not.toBeNull();
+            // Should still work — the duplicate is stripped, not the crash.
+            expect(result!.distanceMeters).toBeGreaterThan(0);
+            expect(result!.nearestPoint[0]).toBeGreaterThan(139.0);
+            expect(result!.nearestPoint[0]).toBeLessThan(140.0);
+        });
+
+        it("drops lines that collapse to < 2 coords after dedup", () => {
+            // All coordinates are the same point — dedup reduces to 1 coord.
+            const line = makeLineFeature([
+                [139.5, 35.0],
+                [139.5, 35.0],
+                [139.5, 35.0],
+            ]);
+            __setLineBundleForTest("coastline", makeBundle([line]));
+
+            // This line gets dropped. If another valid line exists, it works.
+            const validLine = makeLineFeature([
+                [139.0, 35.0],
+                [140.0, 35.0],
+            ]);
+            __setLineBundleForTest("coastline", makeBundle([line, validLine]));
+
+            const result = computeLineDistance([139.25, 35.01], "coastline");
+            expect(result).not.toBeNull();
+        });
+    });
+
+    describe("NaN / bad coordinate resilience", () => {
+        it("filters out a line containing NaN and still processes valid lines", () => {
+            const badLine = makeLineFeature([
+                [139.0, 35.0],
+                [139.5, NaN],
+                [140.0, 35.0],
+            ]);
+            const goodLine = makeLineFeature([
+                [139.0, 35.2],
+                [140.0, 35.2],
+            ]);
+            __setLineBundleForTest(
+                "coastline",
+                makeBundle([badLine, goodLine]),
+            );
+
+            // Center near the good line.
+            const result = computeLineDistance([139.5, 35.21], "coastline");
+            expect(result).not.toBeNull();
+            // Should snap to the good line (lat ~35.2), not the bad one.
+            expect(result!.nearestPoint[1]).toBeCloseTo(35.2, 1);
+        });
+
+        it("filters out a line containing null coordinate entry", () => {
+            const badLine: LineBundle["features"][number] = {
+                type: "Feature",
+                bbox: [139.0, 35.0, 140.0, 35.2],
+                geometry: {
+                    type: "LineString",
+                    // null entry simulates Metro/Hermes bundling corruption
+                    coordinates: [
+                        [139.0, 35.0],
+                        null,
+                        [140.0, 35.0],
+                    ] as unknown as [number, number][],
+                },
+                properties: {},
+            };
+            const goodLine = makeLineFeature([
+                [139.0, 35.2],
+                [140.0, 35.2],
+            ]);
+            __setLineBundleForTest(
+                "coastline",
+                makeBundle([badLine, goodLine]),
+            );
+
+            const result = computeLineDistance([139.5, 35.21], "coastline");
+            expect(result).not.toBeNull();
+            // Should survive and snap to the good line.
+            expect(result!.nearestPoint[1]).toBeCloseTo(35.2, 1);
+        });
+
+        it("filters out an empty LineString", () => {
+            const emptyLine = makeLineFeature([]);
+            const goodLine = makeLineFeature([
+                [139.0, 35.0],
+                [140.0, 35.0],
+            ]);
+            __setLineBundleForTest(
+                "coastline",
+                makeBundle([emptyLine, goodLine]),
+            );
+
+            const result = computeLineDistance([139.5, 35.01], "coastline");
+            expect(result).not.toBeNull();
+        });
+    });
+
+    describe("real bundles", () => {
+        it("handles admin-1st-border (prefecture) bundle without throwing", () => {
+            // Load the real bundle — this is the exact data that was crashing
+            // due to zero-length segments in features 341 and 346.
+            const bundle: LineBundle = require("../../../../../assets/measuring/admin-1st-border.json");
+            __setLineBundleForTest("admin-1st-border", bundle);
+
+            // Center near a known prefecture border in Tokyo area.
+            const result = computeLineDistance(
+                [139.6926, 35.6478],
+                "admin-1st-border",
+            );
+            expect(result).not.toBeNull();
+            expect(result!.distanceMeters).toBeGreaterThan(0);
+        });
+
+        it("handles body-of-water bundle without throwing", () => {
+            const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
+            __setLineBundleForTest("body-of-water", bundle);
+
+            const result = computeLineDistance(
+                [139.75, 35.68],
+                "body-of-water",
+            );
+            expect(result).not.toBeNull();
+            expect(result!.distanceMeters).toBeGreaterThan(0);
+        });
+    });
 });

@@ -47,10 +47,17 @@ function LineMeasuringResult({
 }: LineMeasuringResultProps) {
     const categoryTitle = getMeasuringCategoryTitle(question.category);
 
-    const result = useMemo(
-        () => computeLineDistance(question.center, question.category),
-        [question.center, question.category],
-    );
+    const result = useMemo(() => {
+        try {
+            return computeLineDistance(question.center, question.category);
+        } catch (err) {
+            console.warn(
+                `[LineMeasuringResult] computeLineDistance failed:`,
+                err,
+            );
+            return null;
+        }
+    }, [question.center, question.category]);
 
     const displayDistance =
         result?.distanceMeters !== undefined && result.distanceMeters !== null

@@ -79,6 +79,104 @@ function lineLengthMeters(coords: Position[]): number {
     return total;
 }
 
+// --- Coordinate validation ----------------------------------------------------
+
+/**
+ * Returns true when `c` is a safe coordinate pair [lon, lat] with finite
+ * numeric values.  Guards against NaN, Infinity, null, and undefined entries
+ * that can appear when Metro/Hermes bundles large JSON assets.
+ */
+function isValidCoord(c: unknown): c is Position {
+    return (
+        c != null &&
+        Array.isArray(c) &&
+        typeof c[0] === "number" &&
+        isFinite(c[0]) &&
+        typeof c[1] === "number" &&
+        isFinite(c[1])
+    );
+}
+
+// --- Line simplification --------------------------------------------------------
+
+/**
+ * Douglas-Peucker simplification operating on `[lon, lat]` arrays.
+ *
+ * The tolerance is in meters; segments are planar-approximated using a
+ * latitude-aware metre-to-degree conversion.  This is accurate enough for
+ * the short intra-segment distances that simplification operates on.
+ *
+ * Returns a new array — never mutates the input.
+ */
+function simplifyCoords(coords: Position[], toleranceM: number): Position[] {
+    if (coords.length <= 2) return [...coords];
+
+    // Approximate degrees per metre at the midpoint latitude.
+    const midLat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
+    const kx = 111_320 * Math.cos((midLat * Math.PI) / 180);
+    const ky = 111_320;
+
+    // sqDistToSegment returns metre² distances, so compare against tolerance².
+    const sqTol = toleranceM * toleranceM;
+
+    function sqDistToSegment(p: Position, a: Position, b: Position): number {
+        const dx = (b[0] - a[0]) * kx;
+        const dy = (b[1] - a[1]) * ky;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) {
+            const dxi = (p[0] - a[0]) * kx;
+            const dyi = (p[1] - a[1]) * ky;
+            return dxi * dxi + dyi * dyi;
+        }
+        let t = ((p[0] - a[0]) * kx * dx + (p[1] - a[1]) * ky * dy) / lenSq;
+        if (t < 0) t = 0;
+        if (t > 1) t = 1;
+        const projX = a[0] + t * (b[0] - a[0]);
+        const projY = a[1] + t * (b[1] - a[1]);
+        const dxi = (p[0] - projX) * kx;
+        const dyi = (p[1] - projY) * ky;
+        return dxi * dxi + dyi * dyi;
+    }
+
+    function findFarthest(
+        pts: Position[],
+        first: number,
+        last: number,
+    ): { index: number; dist: number } {
+        let maxDist = 0;
+        let maxIdx = first + 1;
+        const a = pts[first];
+        const b = pts[last];
+        for (let i = first + 1; i < last; i++) {
+            const d = sqDistToSegment(pts[i], a, b);
+            if (d > maxDist) {
+                maxDist = d;
+                maxIdx = i;
+            }
+        }
+        return { index: maxIdx, dist: maxDist };
+    }
+
+    function simplifyRange(
+        pts: Position[],
+        first: number,
+        last: number,
+        out: Position[],
+    ): void {
+        const { index, dist } = findFarthest(pts, first, last);
+        if (dist > sqTol) {
+            simplifyRange(pts, first, index, out);
+            out.push(pts[index]);
+            simplifyRange(pts, index, last, out);
+        }
+    }
+
+    const result: Position[] = [coords[0]];
+    simplifyRange(coords, 0, coords.length - 1, result);
+    result.push(coords[coords.length - 1]);
+    return result;
+}
+
 // --- Line buffer cache --------------------------------------------------------
 
 /** Increment to invalidate all cached buffer results when the algorithm changes. */
@@ -223,9 +321,11 @@ export function computeLineBuffer(
         );
     }
 
+    const totalCoords = lines.reduce((sum, l) => sum + l.length, 0);
+
     console.log(
         `[lineBuffer] ${surviving.length} features in query window, ` +
-            `${lines.length} line segments`,
+            `${lines.length} segments, ${totalCoords} total coords`,
     );
 
     if (lines.length === 0) {
@@ -233,12 +333,75 @@ export function computeLineBuffer(
         return null;
     }
 
+    // Defensive: filter out lines with non-numeric / non-finite coordinates.
+    // Hermes/Metro bundling of large JSON assets can occasionally produce NaN,
+    // Infinity, or null entries that pass JSON.parse but fail inside
+    // @turf/buffer (which calls point() on every vertex via JSTS).
+    let cleanBufLines = lines.filter(
+        (coords) => coords.length >= 2 && coords.every((c) => isValidCoord(c)),
+    );
+
+    // Remove consecutive duplicate coordinates — zero-length segments can
+    // cause degenerate behaviour inside the buffer pipeline.
+    cleanBufLines = cleanBufLines
+        .map((coords) => {
+            const deduped: Position[] = [coords[0]];
+            for (let i = 1; i < coords.length; i++) {
+                const prev = coords[i - 1];
+                const curr = coords[i];
+                if (prev[0] !== curr[0] || prev[1] !== curr[1]) {
+                    deduped.push(curr);
+                }
+            }
+            return deduped.length >= 2 ? deduped : null;
+        })
+        .filter((coords): coords is Position[] => coords !== null);
+
+    if (cleanBufLines.length === 0) {
+        bufferCache.set(key, null);
+        return null;
+    }
+
+    const cleanCoords = cleanBufLines.reduce((sum, l) => sum + l.length, 0);
+
+    // Simplify lines before buffering.  Tolerance is 5% of the buffer
+    // radius (min 10 m) — invisible on the map mask (<1 px at typical
+    // zoom) but reduces JSTS vertex count ~10–20×.
+    const simplifyTol = Math.max(radiusMeters * 0.05, 10);
+    const simplifiedLines = cleanBufLines.map((coords) =>
+        simplifyCoords(coords, simplifyTol),
+    );
+    const simpleCoords = simplifiedLines.reduce((sum, l) => sum + l.length, 0);
+
+    console.log(
+        `[lineBuffer] after dedup: ${cleanBufLines.length} segs, ` +
+            `${cleanCoords} coords → simplify(${simplifyTol.toFixed(0)}m): ` +
+            `${simpleCoords} coords`,
+    );
+
     // -- 4. Buffer ---------------------------------------------------------------
 
-    const merged = multiLineString(lines);
-    const result = buffer(merged, radiusMeters, {
-        units: "meters",
-    }) as Feature<Polygon | MultiPolygon>;
+    let merged;
+    try {
+        merged = multiLineString(simplifiedLines);
+    } catch (err) {
+        console.warn(`[lineBuffer] multiLineString failed:`, err);
+        bufferCache.set(key, null);
+        return null;
+    }
+
+    const t0 = performance.now();
+    let result;
+    try {
+        result = buffer(merged, radiusMeters, {
+            units: "meters",
+        }) as Feature<Polygon | MultiPolygon>;
+    } catch (err) {
+        console.warn(`[lineBuffer] buffer failed:`, err);
+        bufferCache.set(key, null);
+        return null;
+    }
+    const bufferMs = performance.now() - t0;
 
     if (!result) {
         console.log(`[lineBuffer] buffer returned undefined`);
@@ -246,7 +409,10 @@ export function computeLineBuffer(
         return null;
     }
 
-    console.log(`[lineBuffer] done -- ${result.geometry.type}`);
+    console.log(
+        `[lineBuffer] buffer done: ${result.geometry.type} ` +
+            `in ${bufferMs.toFixed(0)}ms`,
+    );
 
     // Evict oldest entry when cache exceeds max size.
     if (bufferCache.size >= LINE_BUFFER_CACHE_MAX) {
@@ -337,12 +503,69 @@ export function computeLineDistance(
         }
     }
 
-    if (lines.length === 0) {
+    // Defensive: filter out any line that contains a non-numeric / non-finite
+    // coordinate.  Hermes/Metro bundling of large JSON assets can occasionally
+    // produce NaN, Infinity, null, or undefined values that pass JSON.parse but
+    // fail inside @turf/nearest-point-on-line (which calls point() on every
+    // vertex).
+    let cleanLines = lines.filter(
+        (coords) => coords.length >= 2 && coords.every((c) => isValidCoord(c)),
+    );
+
+    // Remove consecutive duplicate coordinates (zero-length segments) from
+    // each line.  Zero-length segments cause a division-by-zero inside
+    // nearestPointOnSegment → NaN result → point([NaN, NaN]) throws.
+    cleanLines = cleanLines
+        .map((coords) => {
+            const deduped: Position[] = [coords[0]];
+            for (let i = 1; i < coords.length; i++) {
+                const prev = coords[i - 1];
+                const curr = coords[i];
+                if (prev[0] !== curr[0] || prev[1] !== curr[1]) {
+                    deduped.push(curr);
+                }
+            }
+            return deduped.length >= 2 ? deduped : null;
+        })
+        .filter((coords): coords is Position[] => coords !== null);
+
+    if (cleanLines.length === 0) {
         distanceCache.set(key, null);
         return null;
     }
 
-    const snapped = nearestPointOnLine(multiLineString(lines), point(center));
+    // Simplify with 10 m tolerance — fast path for nearestPointOnLine
+    // without measurably changing the result.
+    const simplifiedLines = cleanLines.map((coords) =>
+        simplifyCoords(coords, 10),
+    );
+    const preSimplifyCoords = cleanLines.reduce((s, l) => s + l.length, 0);
+    const postSimplifyCoords = simplifiedLines.reduce(
+        (s, l) => s + l.length,
+        0,
+    );
+
+    const t0 = performance.now();
+    let snapped;
+    try {
+        snapped = nearestPointOnLine(
+            multiLineString(simplifiedLines),
+            point(center),
+        );
+    } catch (err) {
+        console.warn(
+            `[lineDistance] nearestPointOnLine failed for category=${category} center=${center}:`,
+            err,
+        );
+        distanceCache.set(key, null);
+        return null;
+    }
+    const turfMs = performance.now() - t0;
+
+    console.log(
+        `[lineDistance] ${preSimplifyCoords} coords → simplify(10m): ` +
+            `${postSimplifyCoords} coords, turf in ${turfMs.toFixed(0)}ms`,
+    );
     const nearestPoint = snapped.geometry.coordinates as Position;
     const distanceMeters = haversineDistanceMeters(
         center[1],
