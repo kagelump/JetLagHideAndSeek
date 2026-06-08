@@ -1,7 +1,7 @@
 /* global console, process, fetch */
 
-import { execFileSync } from "node:child_process";
-import { createReadStream, existsSync } from "node:fs";
+import { execFileSync, execSync } from "node:child_process";
+import { createReadStream, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { dirname, join, resolve } from "node:path";
@@ -26,7 +26,7 @@ const CATEGORIES = [
     },
     {
         key: "high-speed-rail",
-        osmiumFilter: "r/route=railway w/railway=rail",
+        osmiumFilter: "w/railway=rail",
         postFilter: "high-speed",
         geometry: "pass",
     },
@@ -61,6 +61,94 @@ const SIMPLIFY_TOLERANCES = {
     "admin-2nd-border": 0.0003,
 };
 
+// ─── Minimum feature length (meters) ────────────────────────────────────────────
+
+/**
+ * Features shorter than this threshold are dropped during ingestion. The
+ * runtime query already discards features < min(radiusMeters * 0.1, 500 m);
+ * filtering here saves bundle bytes and avoids wasted bbox checks at runtime.
+ *
+ * High-speed-rail is 0 (disabled) because the stitcher needs short junction-
+ * connector ways (crossovers, station throats, often 20–80 m) as building
+ * blocks to assemble continuous corridors. Assembled features shorter than
+ * 1 km are removed by a separate post-stitch filter inside the HSR pipeline.
+ */
+const MIN_FEATURE_LENGTH_M = {
+    "high-speed-rail": 0,
+    coastline: 100,
+    "body-of-water": 100,
+    "admin-1st-border": 200,
+    "admin-2nd-border": 100,
+};
+
+// ─── Coordinate cleaning ────────────────────────────────────────────────────────
+
+/**
+ * Strips consecutive duplicate coordinates from an array. Zero-length segments
+ * cause a division-by-zero inside @turf/nearest-point-on-line's
+ * nearestPointOnSegment → NaN → point([NaN, NaN]) throws.
+ */
+function cleanCoordsInline(coords) {
+    if (coords.length < 2) return coords;
+    const out = [coords[0]];
+    for (let i = 1; i < coords.length; i++) {
+        const prev = coords[i - 1];
+        const curr = coords[i];
+        if (prev[0] !== curr[0] || prev[1] !== curr[1]) out.push(curr);
+    }
+    return out;
+}
+
+/** Counts consecutive duplicate coordinate pairs across all features. */
+function countDupPairs(features) {
+    let count = 0;
+    const check = (coords) => {
+        for (let i = 0; i < coords.length - 1; i++) {
+            if (
+                coords[i][0] === coords[i + 1][0] &&
+                coords[i][1] === coords[i + 1][1]
+            ) {
+                count++;
+            }
+        }
+    };
+    for (const f of features) {
+        const g = f.geometry;
+        if (g.type === "LineString") {
+            check(g.coordinates);
+        } else if (g.type === "MultiLineString") {
+            for (const seg of g.coordinates) check(seg);
+        }
+    }
+    return count;
+}
+
+/**
+ * Stitches features grouped by `relationId`. Features with the same
+ * relationId share exact OSM node coordinates (they're segments of the
+ * same prefecture boundary). Features with different relationIds are
+ * NOT merged — they represent different prefectures' borders.
+ */
+function stitchByRelationId(features) {
+    const groups = new Map();
+    const orphans = [];
+    for (const f of features) {
+        const rid = f.properties?.relationId;
+        if (rid != null) {
+            let group = groups.get(rid);
+            if (!group) groups.set(rid, (group = []));
+            group.push(f);
+        } else {
+            orphans.push(f);
+        }
+    }
+    const result = [...orphans];
+    for (const group of groups.values()) {
+        result.push(...stitchSegments(group));
+    }
+    return result;
+}
+
 // ─── Post-filter predicates ───────────────────────────────────────────────────
 
 function highSpeedPostFilter(tags) {
@@ -73,7 +161,10 @@ function highSpeedPostFilter(tags) {
 }
 
 function adminLevelPostFilter(tags, level) {
-    return tags.admin_level === String(level);
+    return (
+        tags.boundary === "administrative" &&
+        tags.admin_level === String(level)
+    );
 }
 
 function applyPostFilter(category, tags) {
@@ -95,13 +186,24 @@ function featureToLineStrings(feature) {
     const { type, coordinates } = feature.geometry;
     if (type === "LineString" || type === "MultiLineString") return [feature];
 
+    // Extract OSM relation ID (osmium exports it as properties["@id"] when
+    // -a type,id is used). Pass it through so bundle features carry a stable
+    // relationId that can be used for per-prefecture filtering at runtime.
+    const relationId =
+        feature.properties?.["@id"] != null
+            ? Number(feature.properties["@id"])
+            : undefined;
+
+    const props =
+        relationId !== undefined ? { relationId } : {};
+
     const lines = [];
     const pushRing = (ring) => {
         if (ring.length < 4) return; // skip degenerate rings
         lines.push({
             type: "Feature",
             geometry: { type: "LineString", coordinates: ring },
-            properties: {},
+            properties: { ...props },
         });
     };
 
@@ -324,6 +426,21 @@ function stitchSegments(features) {
         }
     }
 
+    // Seed degree-1 ways first — those with at least one endpoint that no other
+    // way shares (true chain termini). Processing termini before interior ways
+    // prevents the greedy order from consuming a junction's "correct" forward
+    // continuation before the chain that needs it arrives, which would otherwise
+    // force the stitcher to append a backward stub and create a local zigzag.
+    const degree1Seeds = [];
+    const otherSeeds = [];
+    for (let w = 0; w < n; w++) {
+        const c = features[w].geometry.coordinates;
+        const dS = (nodes.get(nodeKey(c[0])) ?? []).length;
+        const dE = (nodes.get(nodeKey(c[c.length - 1])) ?? []).length;
+        (dS === 1 || dE === 1 ? degree1Seeds : otherSeeds).push(w);
+    }
+    const seedOrder = [...degree1Seeds, ...otherSeeds];
+
     const used = new Array(n).fill(false);
 
     // From node `key`, having arrived with departure tangent `inbound` (the
@@ -352,9 +469,10 @@ function stitchSegments(features) {
 
     const result = [];
 
-    for (let seed = 0; seed < n; seed++) {
+    for (const seed of seedOrder) {
         if (used[seed]) continue;
         used[seed] = true;
+        const seedProps = features[seed].properties;
         let coords = [...features[seed].geometry.coordinates];
 
         // Grow forward from the tail node.
@@ -380,19 +498,19 @@ function stitchSegments(features) {
             coords = seg.slice(0, seg.length - 1).concat(coords);
         }
 
-        result.push(makeFeature(coords));
+        result.push(makeFeature(coords, seedProps));
     }
 
     return result;
 }
 
-function makeFeature(coords) {
+function makeFeature(coords, props) {
     const bbox = computeBbox(coords);
     return {
         type: "Feature",
         bbox,
         geometry: { type: "LineString", coordinates: coords },
-        properties: {},
+        properties: { ...(props ?? {}) },
     };
 }
 
@@ -815,7 +933,6 @@ async function main() {
         `measuring-admin-${Date.now()}`,
     );
     await mkdir(adminTmpDir, { recursive: true });
-    const adminPbfPath = join(adminTmpDir, "admin-boundaries.osm.pbf");
     const adminSeqPath = join(adminTmpDir, "admin-boundaries.seq");
     let adminSeqExists = false;
 
@@ -830,10 +947,19 @@ async function main() {
             category.key === "admin-1st-border" ||
             category.key === "admin-2nd-border"
         ) {
-            // Shared coarse filter for admin boundaries.
+            // Three-step pipeline so osmium can assemble relations into
+            // complete Polygons:
+            // 1. tags-filter: extract only r/boundary=administrative.
+            // 2. Extract relation IDs to a text file, then getid -r -i
+            //    to pull in all member ways from the wide PBF.
+            // 3. Export the complete set.
             if (!adminSeqExists) {
                 console.log(
                     `  [shared] Filtering r/boundary=administrative...`,
+                );
+                const adminRelsPbf = join(
+                    adminTmpDir,
+                    "admin-rels-only.osm.pbf",
                 );
                 execFileSync(
                     "osmium",
@@ -842,21 +968,72 @@ async function main() {
                         widePbfPath,
                         "r/boundary=administrative",
                         "-o",
-                        adminPbfPath,
+                        adminRelsPbf,
                         "-O",
                     ],
                     { stdio: "inherit" },
                 );
-                console.log(`  [shared] Exporting to GeoJSONSeq...`);
+
+                console.log(`  [shared] Extracting relation IDs...`);
+                const idsPath = join(adminTmpDir, "admin-rel-ids.txt");
+                const opl = execSync(
+                    `osmium cat "${adminRelsPbf}" -f opl`,
+                    { maxBuffer: 512 * 1024 * 1024 },
+                ).toString();
+                const ids = [];
+                for (const line of opl.split("\n")) {
+                    if (!line.startsWith("r")) continue;
+                    // Keep the 'r' prefix so osmium getid knows the type.
+                    ids.push(line.split(" ")[0]);
+                }
+                writeFileSync(idsPath, ids.join("\n") + "\n");
+                console.log(
+                    `  [shared] Found ${ids.length} relation IDs`,
+                );
+
+                console.log(
+                    `  [shared] Pulling in member ways with getid -r...`,
+                );
+                const adminCompletePbf = join(
+                    adminTmpDir,
+                    "admin-complete.osm.pbf",
+                );
+                // osmium getid exits 1 when some referenced objects are
+                // outside the extract (missing ways/nodes). The output file
+                // is still valid — just with those objects omitted.
+                try {
+                    execFileSync(
+                        "osmium",
+                        [
+                            "getid",
+                            widePbfPath,
+                            "-r",
+                            "-i",
+                            idsPath,
+                            "-o",
+                            adminCompletePbf,
+                            "-O",
+                        ],
+                        { stdio: "inherit" },
+                    );
+                } catch (err) {
+                    if (!existsSync(adminCompletePbf)) throw err;
+                    console.log(
+                        `  [shared] getid reported missing objects ` +
+                            `(some member ways outside extract) — continuing`,
+                    );
+                }
+
+                console.log(`  [shared] Exporting to GeoJSON...`);
                 execFileSync(
                     "osmium",
                     [
                         "export",
-                        adminPbfPath,
+                        adminCompletePbf,
                         "-f",
-                        "geojsonseq",
+                        "geojson",
                         "-a",
-                        "type",
+                        "type,id",
                         "-o",
                         adminSeqPath,
                         "-O",
@@ -865,7 +1042,6 @@ async function main() {
                 );
                 adminSeqExists = true;
             }
-            pbfPath = adminPbfPath;
         } else {
             console.log(`  Filtering: ${category.osmiumFilter}`);
             const tmpDir = join(
@@ -907,7 +1083,7 @@ async function main() {
                     "-f",
                     "geojsonseq",
                     "-a",
-                    "type",
+                    "type,id",
                     "-o",
                     seqPath,
                     "-O",
@@ -916,110 +1092,253 @@ async function main() {
             );
         }
 
-        // Stream, post-filter, convert, simplify, collect.
+        // Process features — streaming GeoJSONSeq for most categories,
+        // full GeoJSON parse for admin (assembled relation polygons).
         console.log(`  Processing features...`);
         const features = [];
-        const rl = createInterface({
-            input: createReadStream(seqPath, { encoding: "utf8" }),
-            crlfDelay: Infinity,
-        });
 
-        for await (const line of rl) {
-            const RS = String.fromCharCode(0x1e);
-            const clean = line.startsWith(RS)
-                ? line.slice(1).trim()
-                : line.trim();
-            if (!clean) continue;
+        const isAdmin =
+            category.key === "admin-1st-border" ||
+            category.key === "admin-2nd-border";
 
-            let feature;
-            try {
-                feature = JSON.parse(clean);
-            } catch {
-                continue;
-            }
+        if (isAdmin) {
+            // Admin: read the assembled GeoJSON FeatureCollection.
+            const raw = readFileSync(seqPath, "utf8");
+            const fc = JSON.parse(raw);
 
-            // Apply post-filter.
-            if (category.postFilter) {
-                if (!applyPostFilter(category, feature.properties ?? {})) {
-                    continue;
-                }
-            }
-
-            // Convert polygon to outer-ring LineString.
-            let lineFeatures;
-            if (category.geometry === "polygon-to-ring") {
-                lineFeatures = featureToLineStrings(feature);
-            } else {
-                // Coastline / high-speed-rail: pass-through LineString.
+            for (const feature of fc.features ?? []) {
+                // Only interested in assembled relation polygons.
                 if (
-                    feature.geometry.type === "LineString" ||
-                    feature.geometry.type === "MultiLineString"
+                    feature.properties?.["@type"] !== "relation" ||
+                    !applyPostFilter(category, feature.properties ?? {})
                 ) {
-                    lineFeatures = [feature];
-                } else {
-                    // Skip non-line geometry (shouldn't happen with way filters).
                     continue;
                 }
-            }
 
-            for (const lf of lineFeatures) {
-                // Split MultiLineStrings into individual LineStrings.
-                // Route relation exports may produce MultiLineStrings when
-                // member ways have gaps; splitting lets stitchSegments
-                // reconnect them properly.
-                const lineStrings =
-                    lf.geometry.type === "MultiLineString"
-                        ? lf.geometry.coordinates.map((coords) => ({
-                              type: "Feature",
-                              geometry: {
-                                  type: "LineString",
-                                  coordinates: coords,
-                              },
-                              properties: lf.properties ?? {},
-                          }))
-                        : [lf];
+                // Extract relationId and name for runtime filtering.
+                const props = {
+                    relationId: Number(feature.properties["@id"]),
+                };
+                // Carry name tags for potential future UI use.
+                for (const k of ["name", "name:en"]) {
+                    if (feature.properties[k] != null) {
+                        props[k] = feature.properties[k];
+                    }
+                }
 
-                for (const ls of lineStrings) {
-                    // High-speed-rail is simplified *after* stitching (below) so
-                    // the shared-node assembler sees full-resolution endpoints;
-                    // every other category simplifies here.
-                    const tolerance =
-                        SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
-                    const simplified =
-                        category.key === "high-speed-rail"
-                            ? ls
-                            : simplifyFeature(ls, tolerance);
+                const lineFeatures = featureToLineStrings(feature);
+                for (const lf of lineFeatures) {
+                    // Merge relation metadata into each ring segment.
+                    lf.properties = { ...props };
 
-                    // Compute bbox on the (possibly simplified) geometry.
-                    const bbox = computeBbox(simplified.geometry.coordinates);
+                    const lineStrings =
+                        lf.geometry.type === "MultiLineString"
+                            ? lf.geometry.coordinates.map((coords) => ({
+                                  type: "Feature",
+                                  geometry: {
+                                      type: "LineString",
+                                      coordinates: coords,
+                                  },
+                                  properties: { ...props },
+                              }))
+                            : [lf];
 
-                    features.push({
-                        type: "Feature",
-                        bbox,
-                        geometry: simplified.geometry,
-                        properties: {},
-                    });
+                    for (const ls of lineStrings) {
+                        const tolerance =
+                            SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
+                        const simplified = simplifyFeature(ls, tolerance);
+                        const bbox = computeBbox(
+                            simplified.geometry.coordinates,
+                        );
+
+                        features.push({
+                            type: "Feature",
+                            bbox,
+                            geometry: simplified.geometry,
+                            properties: { ...props },
+                        });
+                    }
                 }
             }
-        }
+        } else {
+            // Non-admin: stream GeoJSONSeq line by line.
+            const rl = createInterface({
+                input: createReadStream(seqPath, { encoding: "utf8" }),
+                crlfDelay: Infinity,
+            });
+
+            for await (const line of rl) {
+                const RS = String.fromCharCode(0x1e);
+                const clean = line.startsWith(RS)
+                    ? line.slice(1).trim()
+                    : line.trim();
+                if (!clean) continue;
+
+                let feature;
+                try {
+                    feature = JSON.parse(clean);
+                } catch {
+                    continue;
+                }
+
+                // Apply post-filter.
+                if (category.postFilter) {
+                    if (!applyPostFilter(category, feature.properties ?? {})) {
+                        continue;
+                    }
+                }
+
+                // Convert polygon to outer-ring LineString.
+                let lineFeatures;
+                if (category.geometry === "polygon-to-ring") {
+                    lineFeatures = featureToLineStrings(feature);
+                } else {
+                    // Coastline / high-speed-rail: pass-through LineString.
+                    if (
+                        feature.geometry.type === "LineString" ||
+                        feature.geometry.type === "MultiLineString"
+                    ) {
+                        lineFeatures = [feature];
+                    } else {
+                        // Skip non-line geometry.
+                        continue;
+                    }
+                }
+
+                    for (const lf of lineFeatures) {
+                        // Split MultiLineStrings into individual LineStrings.
+                        const lineStrings =
+                            lf.geometry.type === "MultiLineString"
+                                ? lf.geometry.coordinates.map((coords) => ({
+                                      type: "Feature",
+                                      geometry: {
+                                          type: "LineString",
+                                          coordinates: coords,
+                                      },
+                                      properties: lf.properties ?? {},
+                                  }))
+                                : [lf];
+
+                        for (const ls of lineStrings) {
+                            // High-speed-rail is simplified *after* stitching
+                            // so the shared-node assembler sees full-resolution
+                            // endpoints; every other category simplifies here.
+                            const tolerance =
+                                SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
+                            const simplified =
+                                category.key === "high-speed-rail"
+                                    ? ls
+                                    : simplifyFeature(ls, tolerance);
+                            const bbox = computeBbox(
+                                simplified.geometry.coordinates,
+                            );
+
+                            features.push({
+                                type: "Feature",
+                                bbox,
+                                geometry: simplified.geometry,
+                                properties: {},
+                            });
+                        }
+                    }
+                }
+            }
 
         console.log(`  Collected ${features.length.toLocaleString()} features`);
+
+        // ── General post-processing (all categories) ─────────────────────
+
+        // 1. Strip consecutive duplicate coordinates.
+        const dupPairsBefore = countDupPairs(features);
+        for (const f of features) {
+            const g = f.geometry;
+            if (g.type === "LineString") {
+                g.coordinates = cleanCoordsInline(g.coordinates);
+            } else if (g.type === "MultiLineString") {
+                g.coordinates = g.coordinates.map((seg) =>
+                    cleanCoordsInline(seg),
+                );
+            }
+        }
+        const dupPairsAfter = countDupPairs(features);
+        if (dupPairsBefore > 0) {
+            console.log(
+                `  cleanCoords: ${dupPairsBefore} dup-pairs → ${dupPairsAfter}`,
+            );
+        }
+
+        // 2. Drop features shorter than the category minimum.
+        const minLen = MIN_FEATURE_LENGTH_M[category.key];
+        if (minLen && minLen > 0) {
+            const before = features.length;
+            const kept = features.filter((f) => {
+                const coords = f.geometry.coordinates;
+                if (f.geometry.type === "LineString") {
+                    return lineLengthMeters(coords) >= minLen;
+                }
+                // MultiLineString: sum of all segments.
+                let total = 0;
+                for (const seg of coords) {
+                    total += lineLengthMeters(seg);
+                }
+                return total >= minLen;
+            });
+            const dropped = features.length - kept.length;
+            if (dropped > 0) {
+                console.log(
+                    `  minLength: dropped ${dropped} features < ${minLen}m (${features.length - kept.length} of ${before})`,
+                );
+            }
+            features.length = 0;
+            features.push(...kept);
+        }
+
+        // 3. Recompute bboxes after coordinate changes.
+        for (const f of features) {
+            f.bbox = computeBbox(f.geometry.coordinates);
+        }
 
         // ── High-speed-rail post-processing ─────────────────────────────
         if (category.key === "high-speed-rail") {
             const t0 = Date.now();
             console.log(`  Stitching ${features.length} features...`);
-            const stitched = stitchSegments(features);
+            const stitchedRaw = stitchSegments(features);
+            // Drop degenerate loop ways (A→B→A) whose first and last node are
+            // identical. These are OSM turnaround/siding artifacts that render
+            // as out-and-back stubs rather than through-lines.
+            const stitched = stitchedRaw.filter((f) => {
+                const c = f.geometry.coordinates;
+                return nodeKey(c[0]) !== nodeKey(c[c.length - 1]);
+            });
+            const loopsDropped = stitchedRaw.length - stitched.length;
             console.log(
-                `  Stitched: ${features.length} → ${stitched.length} features ` +
-                    `(${((Date.now() - t0) / 1000).toFixed(1)}s)`,
+                `  Stitched: ${features.length} → ${stitched.length} features` +
+                    (loopsDropped ? ` (${loopsDropped} degenerate loops dropped)` : "") +
+                    ` (${((Date.now() - t0) / 1000).toFixed(1)}s)`,
             );
+
+            // Drop assembled features shorter than 1 km. Isolated station
+            // sidings or stub ways that didn't join a main corridor produce
+            // short disconnected features that add noise to nearest-point
+            // queries without contributing meaningful measurement geometry.
+            const HSR_MIN_ASSEMBLED_M = 1000;
+            const stitchedLong = stitched.filter(
+                (f) =>
+                    lineLengthMeters(f.geometry.coordinates) >=
+                    HSR_MIN_ASSEMBLED_M,
+            );
+            if (stitchedLong.length < stitched.length) {
+                console.log(
+                    `  Post-stitch minLength: ${stitched.length} → ${stitchedLong.length} features` +
+                        ` (dropped ${stitched.length - stitchedLong.length} stubs < ${HSR_MIN_ASSEMBLED_M}m)`,
+                );
+            }
 
             const t1 = Date.now();
             console.log(`  De-duplicating parallel tracks...`);
-            const deduped = dedupeParallelTracks(stitched);
+            const deduped = dedupeParallelTracks(stitchedLong);
             console.log(
-                `  De-duplicated: ${stitched.length} → ${deduped.length} features ` +
+                `  De-duplicated: ${stitchedLong.length} → ${deduped.length} features ` +
                     `(${((Date.now() - t1) / 1000).toFixed(1)}s)`,
             );
 

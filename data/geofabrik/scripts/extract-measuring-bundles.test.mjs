@@ -153,13 +153,50 @@ describe("measuring bundle structural validator", () => {
                 }
             });
 
-            it("every feature has empty properties object", () => {
+            it("every feature has valid properties", () => {
+                const isAdminBorder =
+                    key === "admin-1st-border" ||
+                    key === "admin-2nd-border";
                 for (const f of bundle.features) {
-                    assert.deepStrictEqual(
-                        f.properties,
-                        {},
-                        "properties should be empty",
-                    );
+                    if (isAdminBorder) {
+                        // Admin border features carry relationId (required)
+                        // and optionally name / name:en.
+                        assert.ok(
+                            typeof f.properties.relationId === "number",
+                            `missing relationId: ${JSON.stringify(f.properties)}`,
+                        );
+                        const keys = Object.keys(f.properties);
+                        const allowed = new Set([
+                            "relationId",
+                            "name",
+                            "name:en",
+                        ]);
+                        for (const k of keys) {
+                            assert.ok(
+                                allowed.has(k),
+                                `unexpected property "${k}" in ${JSON.stringify(f.properties)}`,
+                            );
+                        }
+                        if (keys.includes("name")) {
+                            assert.ok(
+                                typeof f.properties.name === "string",
+                                "name must be a string",
+                            );
+                        }
+                        if (keys.includes("name:en")) {
+                            assert.ok(
+                                typeof f.properties["name:en"] ===
+                                    "string",
+                                "name:en must be a string",
+                            );
+                        }
+                    } else {
+                        assert.deepStrictEqual(
+                            f.properties,
+                            {},
+                            "properties should be empty",
+                        );
+                    }
                 }
             });
         });
@@ -199,11 +236,15 @@ describe("high-speed-rail shape smoke test", () => {
         bundle = JSON.parse(readFileSync(bundlePath, "utf8"));
     });
 
-    it("has between 50 and 600 features (merged, not raw fragments)", () => {
+    it("has between 8 and 600 features (merged, not raw fragments)", () => {
+        // Lower bound: enough to catch gross fragmentation (would get thousands
+        // of raw ways if stitching regressed). Post-stitch dedup collapses
+        // parallel double-tracks; 1 km min-length drops station stubs; so the
+        // expected count for the Kantō window is in the low tens.
         const n = bundle.features.length;
         assert.ok(
-            n >= 30 && n <= 600,
-            `expected 50–600 merged features, got ${n}`,
+            n >= 8 && n <= 600,
+            `expected 8–600 merged features, got ${n}`,
         );
     });
 
