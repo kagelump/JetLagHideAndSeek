@@ -15,7 +15,9 @@ import {
     clipLineFeaturesToPlayArea,
     computeLineBufferCached,
     computeLineCategory,
+    getClippedLineFeaturesCached,
     getDilatedPlayArea,
+    makeClippedLineCacheKey,
     polygonFeaturesToLineFeatures,
     type LineCategoryComputation,
 } from "./lineMeasuringGeometry";
@@ -32,6 +34,7 @@ export function buildMeasuringRenderState(
     playAreaBbox: Bbox | undefined,
     playAreaBoundary: FeatureCollection<Polygon | MultiPolygon> | undefined,
 ): MeasuringRenderState {
+    const tTotal0 = performance.now();
     const measuring = questions.filter(
         (q): q is Extract<QuestionState, { type: "measuring" }> =>
             q.type === "measuring",
@@ -195,6 +198,7 @@ export function buildMeasuringRenderState(
     // Derived from computeLineCategory's windowFeatures — the same set
     // that feeds the mask buffer. Clipped to the ε-dilated play-area
     // boundary when available.
+    const tLineFeatures0 = performance.now();
     const lineFeatures: Feature<LineString | MultiLineString>[] = [];
     const seenCategories = new Set<string>();
     for (const q of measuring) {
@@ -214,14 +218,48 @@ export function buildMeasuringRenderState(
             // Convert polygon features to boundary lines before clipping
             // so the reference line renders as the shoreline, not a filled
             // polygon (P0 — body-of-water dissolved polygons).
+            const tPolyToLine0 = performance.now();
             const lineOnlyFeatures = polygonFeaturesToLineFeatures(
                 nearby.windowFeatures,
             );
-            const dilated = getDilatedPlayArea(playAreaBoundary);
-            const clipped = clipLineFeaturesToPlayArea(
-                lineOnlyFeatures,
-                dilated,
+            const tPolyToLineMs = performance.now() - tPolyToLine0;
+            console.log(
+                `[measuringGeometry] polygonFeaturesToLineFeatures: ` +
+                    `${nearby.windowFeatures.length} window → ${lineOnlyFeatures.length} line features ` +
+                    `in ${tPolyToLineMs.toFixed(0)}ms for ${q.category}`,
             );
+
+            const tDilate0 = performance.now();
+            const dilated = getDilatedPlayArea(playAreaBoundary);
+            const tDilateMs = performance.now() - tDilate0;
+            console.log(
+                `[measuringGeometry] getDilatedPlayArea in ${tDilateMs.toFixed(0)}ms`,
+            );
+
+            const tClip0 = performance.now();
+            const cacheKey = playAreaBbox
+                ? makeClippedLineCacheKey(q.category, playAreaBbox)
+                : null;
+            const clipped =
+                cacheKey && playAreaBbox
+                    ? getClippedLineFeaturesCached(
+                          lineOnlyFeatures,
+                          dilated,
+                          playAreaBbox,
+                          cacheKey,
+                      )
+                    : clipLineFeaturesToPlayArea(
+                          lineOnlyFeatures,
+                          dilated,
+                          playAreaBbox,
+                      );
+            const tClipMs = performance.now() - tClip0;
+            console.log(
+                `[measuringGeometry] clipLineFeaturesToPlayArea: ` +
+                    `${lineOnlyFeatures.length} → ${clipped.length} features ` +
+                    `in ${tClipMs.toFixed(0)}ms for ${q.category}`,
+            );
+
             for (const f of clipped) {
                 lineFeatures.push(f);
             }
@@ -238,6 +276,17 @@ export function buildMeasuringRenderState(
             }
         }
     }
+    const tLineFeaturesMs = performance.now() - tLineFeatures0;
+    console.log(
+        `[measuringGeometry] lineFeatures derivation: ${lineFeatures.length} total ` +
+            `in ${tLineFeaturesMs.toFixed(0)}ms`,
+    );
+
+    const tTotalMs = performance.now() - tTotal0;
+    console.log(
+        `[measuringGeometry] buildMeasuringRenderState total: ${tTotalMs.toFixed(0)}ms ` +
+            `for ${measuring.length} question(s)`,
+    );
 
     return {
         hitMaskFeatures: { features: hitFeatures, type: "FeatureCollection" },

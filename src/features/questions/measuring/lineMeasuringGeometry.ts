@@ -1,6 +1,5 @@
 import nearestPointOnLine from "@turf/nearest-point-on-line";
 import buffer from "@turf/buffer";
-import lineSplit from "@turf/line-split";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { multiLineString, point } from "@turf/helpers";
 
@@ -65,7 +64,9 @@ export function selectWindowFeatures(
     center: Position,
     marginM: number,
 ): LineOrPolygonFeature[] {
+    const tLoad0 = performance.now();
     const fc = getLineBundle(category);
+    const tLoadMs = performance.now() - tLoad0;
     if (!fc || fc.features.length === 0) return [];
 
     let queryBbox: Bbox;
@@ -88,12 +89,19 @@ export function selectWindowFeatures(
         ];
     }
 
+    const tIter0 = performance.now();
     const result: LineOrPolygonFeature[] = [];
     for (const f of fc.features) {
         if (bboxIntersects(featureBbox(f as Feature), queryBbox)) {
             result.push(f as LineOrPolygonFeature);
         }
     }
+    const tIterMs = performance.now() - tIter0;
+    console.log(
+        `[selectWindow] bundle load: ${tLoadMs.toFixed(0)}ms, ` +
+            `bbox scan ${fc.features.length} features → ${result.length} hits ` +
+            `in ${tIterMs.toFixed(0)}ms`,
+    );
     return result;
 }
 
@@ -157,11 +165,17 @@ export function computeLineCategory(
     }
 
     const marginM = Math.max(distance.distanceMeters, MIN_WINDOW_MARGIN_M);
+    const tWindow0 = performance.now();
     const windowFeatures = selectWindowFeatures(
         category,
         playAreaBbox,
         center,
         marginM,
+    );
+    const tWindowMs = performance.now() - tWindow0;
+    console.log(
+        `[lineCategory] selectWindowFeatures: ${windowFeatures.length} features ` +
+            `in window (margin=${marginM.toFixed(0)}m) in ${tWindowMs.toFixed(0)}ms`,
     );
 
     const result: LineCategoryComputation = {
@@ -885,14 +899,22 @@ export function computeLineDistance(
         // Promote to most-recently-used.
         distanceCache.delete(key);
         distanceCache.set(key, cached);
+        console.log(
+            `[lineDistance] cache hit for ${category} @ ${center[0].toFixed(6)},${center[1].toFixed(6)}`,
+        );
         return cached;
     }
 
+    const tLoad0 = performance.now();
     const fc = getLineBundle(category);
+    const tLoadMs = performance.now() - tLoad0;
     if (!fc || fc.features.length === 0) {
         distanceCache.set(key, null);
         return null;
     }
+    console.log(
+        `[lineDistance] bundle load: ${fc.features.length} features in ${tLoadMs.toFixed(0)}ms`,
+    );
 
     const marginDeg = MARGIN_METERS * DEG_PER_METER;
     const queryBbox: Bbox = [
@@ -905,9 +927,16 @@ export function computeLineDistance(
     // Collect surviving LineString coordinate arrays.
     // For polygon features: if the center is inside → distance = 0.
     // Otherwise, extract boundary rings and treat as line segments.
+    const tFilter0 = performance.now();
     const lines: Position[][] = [];
+    let bboxHits = 0;
+    let bboxMisses = 0;
     for (const f of fc.features) {
-        if (!bboxIntersects(featureBbox(f), queryBbox)) continue;
+        if (!bboxIntersects(featureBbox(f), queryBbox)) {
+            bboxMisses++;
+            continue;
+        }
+        bboxHits++;
         const geom = f.geometry;
         if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
             // Check if the seeker is inside the water body.
@@ -937,12 +966,18 @@ export function computeLineDistance(
             }
         }
     }
+    const tFilterMs = performance.now() - tFilter0;
+    console.log(
+        `[lineDistance] bbox filter: ${bboxHits} hits, ${bboxMisses} misses ` +
+            `→ ${lines.length} rings in ${tFilterMs.toFixed(0)}ms`,
+    );
 
     // Defensive: filter out any line that contains a non-numeric / non-finite
     // coordinate.  Hermes/Metro bundling of large JSON assets can occasionally
     // produce NaN, Infinity, null, or undefined values that pass JSON.parse but
     // fail inside @turf/nearest-point-on-line (which calls point() on every
     // vertex).
+    const tClean0 = performance.now();
     let cleanLines = lines.filter(
         (coords) => coords.length >= 2 && coords.every((c) => isValidCoord(c)),
     );
@@ -968,16 +1003,26 @@ export function computeLineDistance(
         distanceCache.set(key, null);
         return null;
     }
+    const tCleanMs = performance.now() - tClean0;
 
     // Simplify with 10 m tolerance — fast path for nearestPointOnLine
     // without measurably changing the result.
+    const tSimplify0 = performance.now();
     const simplifiedLines = cleanLines.map((coords) =>
         simplifyCoords(coords, 10),
     );
+    const tSimplifyMs = performance.now() - tSimplify0;
     const preSimplifyCoords = cleanLines.reduce((s, l) => s + l.length, 0);
     const postSimplifyCoords = simplifiedLines.reduce(
         (s, l) => s + l.length,
         0,
+    );
+
+    console.log(
+        `[lineDistance] clean: ${lines.length}→${cleanLines.length} rings ` +
+            `(${tCleanMs.toFixed(0)}ms), ` +
+            `simplify: ${preSimplifyCoords}→${postSimplifyCoords} coords ` +
+            `(${tSimplifyMs.toFixed(0)}ms)`,
     );
 
     const t0 = performance.now();
@@ -1098,23 +1143,110 @@ export function clearDilatedBoundaryCache(): void {
     dilatedBoundaryCache.clear();
 }
 
+// ─── Clipped line cache (P6-C) ──────────────────────────────────────────
+
+/** Increment to invalidate all cached clipped-line results. */
+const CLIPPED_LINE_CACHE_VERSION = 1;
+
+/** Maximum number of cached clipped-line results. */
+const CLIPPED_LINE_CACHE_MAX = 20;
+
+const clippedLineCache = new Map<
+    string,
+    Feature<LineString | MultiLineString>[]
+>();
+
+/**
+ * Returns a stable cache key for the clipped-line cache, keyed on
+ * (version, category, play-area bbox). The bbox uniquely identifies the
+ * play area for practical purposes; it is stable across renders.
+ */
+export function makeClippedLineCacheKey(category: string, bbox: Bbox): string {
+    return [
+        CLIPPED_LINE_CACHE_VERSION,
+        category,
+        ...bbox.map((v) => v.toFixed(4)),
+    ].join(":");
+}
+
+/**
+ * Cached wrapper around `clipLineFeaturesToPlayArea`. On cache miss
+ * delegates to the pure clip function; on hit returns the cached array.
+ * Evicts the oldest entry when the cache exceeds the max size.
+ */
+export function getClippedLineFeaturesCached(
+    features: Feature<LineString | MultiLineString>[],
+    dilatedPlayArea: Feature<Polygon | MultiPolygon>,
+    playAreaBbox: Bbox,
+    cacheKey: string,
+): Feature<LineString | MultiLineString>[] {
+    const cached = clippedLineCache.get(cacheKey);
+    if (cached) return cached;
+
+    const result = clipLineFeaturesToPlayArea(
+        features,
+        dilatedPlayArea,
+        playAreaBbox,
+    );
+
+    // Evict oldest entry when cache exceeds max size.
+    if (clippedLineCache.size >= CLIPPED_LINE_CACHE_MAX) {
+        const oldest = clippedLineCache.keys().next().value;
+        if (oldest !== undefined) clippedLineCache.delete(oldest);
+    }
+    clippedLineCache.set(cacheKey, result);
+
+    return result;
+}
+
+/** Test seam: clear the clipped-line cache. */
+export function clearClippedLineCache(): void {
+    clippedLineCache.clear();
+}
+
 // ─── Line–polygon clip ─────────────────────────────────────────────────
 
 /**
  * Clips each feature to the dilated play-area boundary.
  *
- * Implementation uses `@turf/line-split` + `@turf/boolean-point-in-polygon`:
- * split each line by the polygon, keep pieces whose midpoint is inside.
- * MultiLineString features are decomposed, clipped per component, and
- * recombined.
+ * Uses a vertex-based clip (O(n) per ring): runs of consecutive inside
+ * vertices are emitted as separate LineStrings. An `isFullyInside`
+ * fast-path short-circuits rings entirely inside the polygon.
+ *
+ * Bbox pre-filter (P6-A): features and individual rings whose bbox does
+ * not intersect the play-area bbox are rejected before any
+ * point-in-polygon tests, eliminating the dominant cost for the large
+ * fraction of features that lie entirely outside the play area.
+ *
+ * @param playAreaBbox Optional pre-computed bbox of the play area. When
+ *   omitted, computed from `dilatedPlayArea.geometry`.
  */
 export function clipLineFeaturesToPlayArea(
     features: Feature<LineString | MultiLineString>[],
     dilatedPlayArea: Feature<Polygon | MultiPolygon>,
+    playAreaBbox?: Bbox,
 ): Feature<LineString | MultiLineString>[] {
     const result: Feature<LineString | MultiLineString>[] = [];
+    const tStart = performance.now();
+
+    // Compute dilated bbox once (A).
+    const clipBbox =
+        playAreaBbox ?? computeBboxFromCoords(dilatedPlayArea.geometry);
+
+    let totalLines = 0;
+    for (const f of features) {
+        if (f.geometry.type === "MultiLineString") {
+            totalLines += (f.geometry as MultiLineString).coordinates.length;
+        } else {
+            totalLines += 1;
+        }
+    }
 
     for (const f of features) {
+        // A: Per-feature bbox pre-filter — drop features entirely outside
+        // the play-area bbox before any ring-level work.
+        if (!bboxIntersects(featureBbox(f), clipBbox)) continue;
+
         if (f.geometry.type === "LineString") {
             const clipped = clipLineString(
                 f as Feature<LineString>,
@@ -1125,112 +1257,85 @@ export function clipLineFeaturesToPlayArea(
             const clipped = clipMultiLineString(
                 f as Feature<MultiLineString>,
                 dilatedPlayArea,
+                clipBbox,
             );
             if (clipped) result.push(clipped);
         }
     }
 
+    const tTotalMs = performance.now() - tStart;
+    console.log(
+        `[clipLineFeatures] done: ${features.length} → ${result.length} features ` +
+            `(${totalLines} lines) in ${tTotalMs.toFixed(0)}ms`,
+    );
+
     return result;
 }
 
+/**
+ * B: Vertex-based clip for a single LineString. Runs of consecutive
+ * inside vertices are emitted as separate pieces. Fully-inside lines
+ * are returned unchanged (fast path).
+ */
 function clipLineString(
     feature: Feature<LineString>,
     polygon: Feature<Polygon | MultiPolygon>,
 ): Feature<LineString | MultiLineString> | null {
     const coords = feature.geometry.coordinates as Position[];
 
-    // Quick check: if all coords are already inside, skip the split.
+    // Fast path: all vertices inside → return unchanged.
     if (isFullyInside(coords, polygon)) return feature;
 
-    // Split the line by the polygon boundary.
-    let splitFc;
-    try {
-        splitFc = lineSplit(feature, polygon);
-    } catch {
-        // lineSplit can throw on degenerate input — retain the feature as-is
-        // if it has any inside points.
-        return clipLineStringFallback(feature, polygon);
-    }
+    // B: Vertex-based clip — O(n) single pass.
+    const pieces = clipCoordsToPolygon(coords, polygon);
+    if (pieces.length === 0) return null;
 
-    if (!splitFc || splitFc.features.length === 0) {
-        return clipLineStringFallback(feature, polygon);
-    }
-
-    // Keep pieces whose midpoint is inside the dilated polygon.
-    const insidePieces: Position[][] = [];
-    for (const piece of splitFc.features) {
-        const pieceCoords = piece.geometry.coordinates as Position[];
-        if (pieceCoords.length < 2) continue;
-        const midIdx = Math.floor(pieceCoords.length / 2);
-        const mid = pieceCoords[midIdx];
-        if (booleanPointInPolygon(mid, polygon)) {
-            insidePieces.push(pieceCoords);
-        }
-    }
-
-    if (insidePieces.length === 0) return null;
-
-    if (insidePieces.length === 1) {
+    if (pieces.length === 1) {
         return {
             type: "Feature",
             properties: { ...feature.properties },
-            geometry: { type: "LineString", coordinates: insidePieces[0] },
+            geometry: { type: "LineString", coordinates: pieces[0] },
         };
     }
 
-    // Recombine into MultiLineString
     return {
         type: "Feature",
         properties: { ...feature.properties },
-        geometry: {
-            type: "MultiLineString",
-            coordinates: insidePieces,
-        },
+        geometry: { type: "MultiLineString", coordinates: pieces },
     };
 }
 
+/**
+ * B: Vertex-based clip for a MultiLineString. Each ring is independently
+ * clipped; the surviving pieces are recombined. Rings whose bbox does
+ * not intersect `playAreaBbox` are skipped entirely (P6-A).
+ */
 function clipMultiLineString(
     feature: Feature<MultiLineString>,
     polygon: Feature<Polygon | MultiPolygon>,
+    playAreaBbox?: Bbox,
 ): Feature<LineString | MultiLineString> | null {
+    const lines = feature.geometry.coordinates;
     const allPieces: Position[][] = [];
-    for (const line of feature.geometry.coordinates) {
-        const coords = line as Position[];
+    for (let li = 0; li < lines.length; li++) {
+        const coords = lines[li] as Position[];
         if (coords.length < 2) continue;
 
-        // Quick check: fully inside → keep as-is.
+        // A: Per-ring bbox pre-filter.
+        if (playAreaBbox) {
+            const ringBbox = computeRingBbox(coords);
+            if (!bboxIntersects(ringBbox, playAreaBbox)) continue;
+        }
+
+        // Fast path: fully inside → keep as-is.
         if (isFullyInside(coords, polygon)) {
             allPieces.push(coords);
             continue;
         }
 
-        let splitFc;
-        const lineFeat: Feature<LineString> = {
-            type: "Feature",
-            properties: {},
-            geometry: { type: "LineString", coordinates: coords },
-        };
-        try {
-            splitFc = lineSplit(lineFeat, polygon);
-        } catch {
-            // Keep any inside segments via fallback.
-            const fallback = clipCoordsToPolygon(coords, polygon);
-            if (fallback.length > 0) allPieces.push(...fallback);
-            continue;
-        }
-        if (!splitFc || splitFc.features.length === 0) {
-            const fallback = clipCoordsToPolygon(coords, polygon);
-            if (fallback.length > 0) allPieces.push(...fallback);
-            continue;
-        }
-        for (const piece of splitFc.features) {
-            const pieceCoords = piece.geometry.coordinates as Position[];
-            if (pieceCoords.length < 2) continue;
-            const midIdx = Math.floor(pieceCoords.length / 2);
-            if (booleanPointInPolygon(pieceCoords[midIdx], polygon)) {
-                allPieces.push(pieceCoords);
-            }
-        }
+        // B: Vertex-based clip.
+        const pieces = clipCoordsToPolygon(coords, polygon);
+        if (pieces.length > 0) allPieces.push(...pieces);
     }
 
     if (allPieces.length === 0) return null;
@@ -1252,6 +1357,21 @@ function clipMultiLineString(
 
 // ─── Clip helpers ──────────────────────────────────────────────────────
 
+/** Bbox of a single coordinate array (lightweight, no recursion). */
+function computeRingBbox(coords: Position[]): Bbox {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const [x, y] of coords) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+    }
+    return [minX, minY, maxX, maxY];
+}
+
 /** True when every coord is inside the polygon. */
 function isFullyInside(
     coords: Position[],
@@ -1261,8 +1381,9 @@ function isFullyInside(
 }
 
 /**
- * Fallback clip: runs of consecutive inside vertices emitted as separate
- * LineStrings. Used when `lineSplit` fails on degenerate input.
+ * Vertex-based clip: runs of consecutive inside vertices emitted as
+ * separate LineStrings. O(n) per ring — one point-in-polygon test per
+ * vertex. This is the primary clip path (P6-B).
  */
 function clipCoordsToPolygon(
     coords: Position[],
@@ -1280,29 +1401,4 @@ function clipCoordsToPolygon(
     }
     if (run.length >= 2) result.push(run);
     return result;
-}
-
-/**
- * Fallback for a single LineString feature: keeps the portion with inside
- * vertices. Used when `lineSplit` throws.
- */
-function clipLineStringFallback(
-    feature: Feature<LineString>,
-    polygon: Feature<Polygon | MultiPolygon>,
-): Feature<LineString | MultiLineString> | null {
-    const coords = feature.geometry.coordinates as Position[];
-    const pieces = clipCoordsToPolygon(coords, polygon);
-    if (pieces.length === 0) return null;
-    if (pieces.length === 1) {
-        return {
-            type: "Feature",
-            properties: { ...feature.properties },
-            geometry: { type: "LineString", coordinates: pieces[0] },
-        };
-    }
-    return {
-        type: "Feature",
-        properties: { ...feature.properties },
-        geometry: { type: "MultiLineString", coordinates: pieces },
-    };
 }

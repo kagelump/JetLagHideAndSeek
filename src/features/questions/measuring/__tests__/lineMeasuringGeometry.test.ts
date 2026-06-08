@@ -11,6 +11,7 @@ import {
     clearLineCategoryCache,
     clearLineDistanceCache,
     clearLineBufferCache,
+    clearClippedLineCache,
     clearDilatedBoundaryCache,
     clipLineFeaturesToPlayArea,
     computeLineCategory,
@@ -19,7 +20,9 @@ import {
     applyBufferBudget,
     featureToRings,
     polygonFeaturesToLineFeatures,
+    getClippedLineFeaturesCached,
     getDilatedPlayArea,
+    makeClippedLineCacheKey,
 } from "@/features/questions/measuring/lineMeasuringGeometry";
 import {
     __clearLineBundlesForTest,
@@ -125,6 +128,7 @@ beforeEach(() => {
     clearLineCategoryCache();
     clearLineDistanceCache();
     clearLineBufferCache();
+    clearClippedLineCache();
     clearDilatedBoundaryCache();
     __clearLineBundlesForTest();
 });
@@ -559,6 +563,8 @@ describe("clipLineFeaturesToPlayArea", () => {
     });
 
     it("line crossing the boundary → cut at the boundary (spill fix)", () => {
+        // Vertex-based clip keeps runs of ≥2 inside vertices. The test
+        // includes two inside vertices so the run survives.
         const line: Feature<LineString> = {
             type: "Feature",
             properties: {},
@@ -566,6 +572,7 @@ describe("clipLineFeaturesToPlayArea", () => {
                 type: "LineString",
                 coordinates: [
                     [138.5, 35.1], // outside, west
+                    [139.05, 35.1], // inside
                     [139.15, 35.1], // inside
                 ],
             },
@@ -614,8 +621,9 @@ describe("clipLineFeaturesToPlayArea", () => {
                     ], // inside
                     [
                         [138.5, 35.15],
+                        [139.05, 35.15],
                         [139.1, 35.15],
-                    ], // crossing
+                    ], // crossing (two inside vertices survive)
                 ],
             },
         };
@@ -625,6 +633,345 @@ describe("clipLineFeaturesToPlayArea", () => {
         for (const f of result) {
             expect(allCoordsWithin(f, PLAY_AREA_BBOX)).toBe(true);
         }
+    });
+
+    describe("P6-A: bbox pre-filter", () => {
+        it("drops a feature whose bbox is entirely outside the play area", () => {
+            // Line far north of the play area.
+            const outsideLine: Feature<LineString> = {
+                type: "Feature",
+                bbox: [139.0, 36.0, 139.1, 36.1],
+                properties: {},
+                geometry: {
+                    type: "LineString",
+                    coordinates: [
+                        [139.0, 36.0],
+                        [139.1, 36.1],
+                    ],
+                },
+            };
+            const result = clipLineFeaturesToPlayArea(
+                [outsideLine],
+                dilatedPlayArea(),
+                PLAY_AREA_BBOX,
+            );
+            expect(result).toHaveLength(0);
+        });
+
+        it("drops a feature entirely outside even without explicit playAreaBbox", () => {
+            const outsideLine: Feature<LineString> = {
+                type: "Feature",
+                bbox: [140.0, 36.0, 140.1, 36.1],
+                properties: {},
+                geometry: {
+                    type: "LineString",
+                    coordinates: [
+                        [140.0, 36.0],
+                        [140.1, 36.1],
+                    ],
+                },
+            };
+            const result = clipLineFeaturesToPlayArea(
+                [outsideLine],
+                dilatedPlayArea(),
+            );
+            expect(result).toHaveLength(0);
+        });
+
+        it("keeps a feature whose bbox intersects the play area", () => {
+            const insideLine: Feature<LineString> = {
+                type: "Feature",
+                bbox: [139.05, 35.05, 139.15, 35.15],
+                properties: {},
+                geometry: {
+                    type: "LineString",
+                    coordinates: [
+                        [139.05, 35.05],
+                        [139.15, 35.15],
+                    ],
+                },
+            };
+            const result = clipLineFeaturesToPlayArea(
+                [insideLine],
+                dilatedPlayArea(),
+                PLAY_AREA_BBOX,
+            );
+            expect(result).toHaveLength(1);
+        });
+    });
+
+    describe("P6-B: vertex-based clip", () => {
+        it("keeps only inside vertices (sub-vertex endpoint trade-off)", () => {
+            // Line crosses into the play area: first two vertices outside,
+            // last two inside.
+            const line: Feature<LineString> = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "LineString",
+                    coordinates: [
+                        [138.8, 35.1], // outside
+                        [138.9, 35.1], // outside
+                        [139.05, 35.1], // inside
+                        [139.15, 35.1], // inside
+                    ],
+                },
+            };
+            const result = clipLineFeaturesToPlayArea(
+                [line],
+                dilatedPlayArea(),
+            );
+            expect(result).toHaveLength(1);
+            // Every returned coord is inside the play area.
+            const coords = (result[0].geometry as LineString).coordinates;
+            for (const c of coords) {
+                expect(c[0]).toBeGreaterThanOrEqual(PLAY_AREA_BBOX[0] - 0.001);
+                expect(c[0]).toBeLessThanOrEqual(PLAY_AREA_BBOX[2] + 0.001);
+                expect(c[1]).toBeGreaterThanOrEqual(PLAY_AREA_BBOX[1] - 0.001);
+                expect(c[1]).toBeLessThanOrEqual(PLAY_AREA_BBOX[3] + 0.001);
+            }
+            // No outside vertex survives.
+            const minLon = Math.min(...coords.map((c) => c[0]));
+            expect(minLon).toBeGreaterThanOrEqual(138.99);
+        });
+
+        it("line crossing in and out → two inside pieces", () => {
+            const line: Feature<LineString> = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "LineString",
+                    coordinates: [
+                        [138.5, 35.1], // outside
+                        [139.05, 35.1], // inside run 1
+                        [139.1, 35.1], // inside run 1
+                        [140.0, 36.0], // outside
+                        [139.05, 35.15], // inside run 2
+                        [139.1, 35.15], // inside run 2
+                        [140.0, 36.0], // outside
+                    ],
+                },
+            };
+            const result = clipLineFeaturesToPlayArea(
+                [line],
+                dilatedPlayArea(),
+            );
+            expect(result).toHaveLength(1);
+            // Two inside runs → MultiLineString.
+            expect(result[0].geometry.type).toBe("MultiLineString");
+            const ml = result[0].geometry as MultiLineString;
+            expect(ml.coordinates.length).toBe(2);
+        });
+    });
+
+    describe("MultiLineString recombination", () => {
+        it("one inside ring + one outside ring → single LineString", () => {
+            const ml: Feature<MultiLineString> = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "MultiLineString",
+                    coordinates: [
+                        [
+                            [139.05, 35.1],
+                            [139.15, 35.1],
+                        ], // inside
+                        [
+                            [140.0, 36.0],
+                            [140.1, 36.0],
+                        ], // outside (bbox-filtered)
+                    ],
+                },
+            };
+            const result = clipLineFeaturesToPlayArea(
+                [ml],
+                dilatedPlayArea(),
+                PLAY_AREA_BBOX,
+            );
+            expect(result).toHaveLength(1);
+            // Single surviving ring → LineString.
+            expect(result[0].geometry.type).toBe("LineString");
+        });
+
+        it("two inside rings → MultiLineString", () => {
+            const ml: Feature<MultiLineString> = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "MultiLineString",
+                    coordinates: [
+                        [
+                            [139.05, 35.1],
+                            [139.15, 35.1],
+                        ],
+                        [
+                            [139.05, 35.15],
+                            [139.15, 35.15],
+                        ],
+                    ],
+                },
+            };
+            const result = clipLineFeaturesToPlayArea([ml], dilatedPlayArea());
+            expect(result).toHaveLength(1);
+            expect(result[0].geometry.type).toBe("MultiLineString");
+            expect(
+                (result[0].geometry as MultiLineString).coordinates,
+            ).toHaveLength(2);
+        });
+    });
+});
+
+// ─── P6-C: clipped line cache tests ────────────────────────────────────
+
+describe("clipped line cache", () => {
+    function dilatedPlayArea() {
+        return getDilatedPlayArea(PLAY_AREA);
+    }
+
+    it("caches the clip result and returns it on second call", () => {
+        const line: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [139.05, 35.1],
+                    [139.15, 35.1],
+                ],
+            },
+        };
+        const cacheKey = makeClippedLineCacheKey(
+            "body-of-water",
+            PLAY_AREA_BBOX,
+        );
+
+        const r1 = getClippedLineFeaturesCached(
+            [line],
+            dilatedPlayArea(),
+            PLAY_AREA_BBOX,
+            cacheKey,
+        );
+        const r2 = getClippedLineFeaturesCached(
+            [line],
+            dilatedPlayArea(),
+            PLAY_AREA_BBOX,
+            cacheKey,
+        );
+
+        // Same array reference (cache hit).
+        expect(r1).toBe(r2);
+        expect(r1).toHaveLength(1);
+    });
+
+    it("clearClippedLineCache forces recompute", () => {
+        const line: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [139.05, 35.1],
+                    [139.15, 35.1],
+                ],
+            },
+        };
+        const cacheKey = makeClippedLineCacheKey(
+            "body-of-water",
+            PLAY_AREA_BBOX,
+        );
+
+        const r1 = getClippedLineFeaturesCached(
+            [line],
+            dilatedPlayArea(),
+            PLAY_AREA_BBOX,
+            cacheKey,
+        );
+        clearClippedLineCache();
+        const r2 = getClippedLineFeaturesCached(
+            [line],
+            dilatedPlayArea(),
+            PLAY_AREA_BBOX,
+            cacheKey,
+        );
+
+        // Different array references after cache clear.
+        expect(r1).not.toBe(r2);
+        expect(r1).toHaveLength(1);
+        expect(r2).toHaveLength(1);
+    });
+
+    it("different categories produce different cache entries", () => {
+        const line: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [139.05, 35.1],
+                    [139.15, 35.1],
+                ],
+            },
+        };
+
+        const keyA = makeClippedLineCacheKey("body-of-water", PLAY_AREA_BBOX);
+        const keyB = makeClippedLineCacheKey("coastline", PLAY_AREA_BBOX);
+
+        const r1 = getClippedLineFeaturesCached(
+            [line],
+            dilatedPlayArea(),
+            PLAY_AREA_BBOX,
+            keyA,
+        );
+        const r2 = getClippedLineFeaturesCached(
+            [line],
+            dilatedPlayArea(),
+            PLAY_AREA_BBOX,
+            keyB,
+        );
+
+        // Different keys → different cache entries (still same result for
+        // this fixture since the clip doesn't depend on category).
+        expect(r1).toHaveLength(1);
+        expect(r2).toHaveLength(1);
+        // Cache keys differ.
+        expect(keyA).not.toBe(keyB);
+    });
+});
+
+// ─── Real-bundle clip regression guard (P6) ────────────────────────────
+
+describe("real bundles", () => {
+    it("clips the real body-of-water window in well under a second", () => {
+        const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
+        __setLineBundleForTest("body-of-water", bundle);
+        const cat = computeLineCategory(
+            [139.75, 35.68],
+            "body-of-water",
+            [139.0, 35.0, 140.0, 36.0],
+        );
+        expect(cat).not.toBeNull();
+        const lines = polygonFeaturesToLineFeatures(cat!.windowFeatures);
+
+        const tokyoBoundary = require("../../../../../assets/default-zones/tokyo.json");
+        const dilated = getDilatedPlayArea(tokyoBoundary);
+
+        const t0 = performance.now();
+        const clipped = clipLineFeaturesToPlayArea(
+            lines,
+            dilated,
+            [139.0, 35.0, 140.0, 36.0],
+        );
+        const ms = performance.now() - t0;
+
+        console.log(
+            `[test] real body-of-water clip: ${lines.length} features → ` +
+                `${clipped.length} kept in ${ms.toFixed(0)}ms`,
+        );
+
+        // Must produce some clipped output.
+        expect(clipped.length).toBeGreaterThan(0);
+        // Pre-fix: ~62,000 ms. After P6 A+B: well under 1000 ms.
+        expect(ms).toBeLessThan(1000);
     });
 });
 
