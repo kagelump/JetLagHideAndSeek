@@ -6,6 +6,12 @@ geometry path to native code. Sibling to `docs/measuring_perf_audit.md` and
 `docs/measuring-perf/` (P0–P8), which cover the pure-JS optimizations that
 should be exhausted **before** this is worth doing._
 
+> **Update 2026-06-09:** there is now a concrete implementation plan for option
+> 2 — see [`docs/native-geometry/implementation-plan.md`](native-geometry/implementation-plan.md).
+> It's being pursued because the goal is to **reduce** line simplification (the
+> mask sits too far off the true geometry), which makes pure-JS lever #1
+> ("simplify harder") counter-productive rather than the recommended first step.
+
 ## TL;DR
 
 The dominant cost in building a line-category measuring mask
