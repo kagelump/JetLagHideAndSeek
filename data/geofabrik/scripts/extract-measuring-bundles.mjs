@@ -1829,8 +1829,8 @@ async function main() {
                 // low floor (~100 m); stream wants a high floor to cull the
                 // ~94 k minor streams.
                 const WATERWAY_MIN_LENGTH = {
-                    river: 10000,
-                    canal: 10000,
+                    river: 100,
+                    canal: 100,
                     stream: 500,
                 };
                 const longEnough = stitched.filter((f) => {
