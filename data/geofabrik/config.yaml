@@ -37,7 +37,134 @@ measuring:
     sourcePbfUrl: "https://download.geofabrik.de/asia/japan-latest.osm.pbf"
     # Kantō extent expanded by ~1° (~110 km) per side. [W, S, E, N].
     extractBbox: [137.9, 33.9, 141.9, 37.9]
+    # Output directory relative to the repo root.
     outputDir: ../../assets/measuring
+
+    # ── Category definitions ──────────────────────────────────────────
+    #
+    # Each category produces one bundle JSON.  Fields:
+    #   osmiumFilter       — osmium tags-filter expression (w=way, r=relation)
+    #   postFilter         — optional secondary filter: high-speed (speed≥200
+    #                         km/h or highspeed=yes), admin-4 (admin_level=4),
+    #                         admin-7 (admin_level=7)
+    #   geometry           — processing mode (see below)
+    #   simplifyTolerance  — Douglas-Peucker tolerance in degrees
+    #   minFeatureLengthM  — drop features shorter than this (meters); 0 = keep all
+    #
+    # geometry modes:
+    #   pass             — keep LineString / MultiLineString as-is
+    #   polygon-to-ring  — extract outer ring(s) from Polygon/MultiPolygon
+    #   polygon-dissolve — dissolve polygons into a compact MultiPolygon set;
+    #                       also accepts LineString waterway centerlines
+    categories:
+        - key: coastline
+          osmiumFilter: "w/natural=coastline"
+          geometry: pass
+          simplifyTolerance: 0.0005 # degrees (~56 m at mid-latitudes)
+          minFeatureLengthM: 100
+
+        - key: high-speed-rail
+          osmiumFilter: "w/railway=rail"
+          postFilter: high-speed
+          geometry: pass
+          simplifyTolerance: 0.0001 # degrees (~11 m) — fine; stitcher needs full-res endpoints
+          minFeatureLengthM: 0 # disabled — junction stubs (20–80 m) are building blocks for stitching
+
+        - key: body-of-water
+          osmiumFilter: "w/natural=water r/natural=water w/landuse=basin w/waterway=riverbank w/waterway=river w/waterway=canal"
+          geometry: polygon-dissolve
+          simplifyTolerance: 0.0002 # degrees (~22 m) — applied after dissolve
+          minFeatureLengthM: 100
+
+        - key: admin-1st-border
+          osmiumFilter: "r/boundary=administrative"
+          postFilter: admin-4 # prefecture-level (ISO 3166-2)
+          geometry: polygon-to-ring
+          simplifyTolerance: 0.0003 # degrees (~33 m)
+          minFeatureLengthM: 200
+
+        - key: admin-2nd-border
+          osmiumFilter: "r/boundary=administrative"
+          postFilter: admin-7 # ward/municipality-level
+          geometry: polygon-to-ring
+          simplifyTolerance: 0.0003 # degrees (~33 m)
+          minFeatureLengthM: 100
+
+    # ── Algorithm tuning ─────────────────────────────────────────────
+
+    # Simplify tolerance for waterway centerlines (degrees, ≈ 111 m at mid-latitudes).
+    # Applied after stitching; primarily controls bundle vertex count, not accuracy.
+    waterwayLineSimplify: 0.0005
+
+    # Polygon dissolve grid.
+    dissolve:
+        # Tile side length in degrees.  0.25° ≈ 28 km — large enough that most
+        # water bodies fall inside one tile, small enough for fast union per tile.
+        tileDeg: 0.25
+        # Overlap between adjacent tiles in degrees.  Prevents seams at tile
+        # boundaries: features straddling a boundary are present in both tiles.
+        overlapDeg: 0.01
+
+    # Exact shared-node stitching parameters.
+    stitching:
+        # Decimal places at which two OSM node coordinates are treated as identical.
+        nodePrecision: 7
+        # Maximum turn allowed when choosing a continuation at a junction, as the
+        # cosine between two ways' departure tangents.  -1 = straight, 0 = 90°.
+        maxTurnCos: -0.5
+
+    # Parallel-track de-duplication (HSR post-processing).
+    parallelDedup:
+        maxLateralM: 30 # max perpendicular distance for dual tracks
+        minCosine: 0.966 # cos(15°) — track direction tolerance
+        hugSamples: 80 # sample points along shorter track
+
+    # Collinear gap bridging (HSR post-processing).
+    # Joins corridor ends facing each other across small OSM coverage breaks.
+    bridge:
+        # Maximum gap between two collinear ends to bridge (meters).
+        maxGapM: 1500
+        # Cosine between the two ends' departure tangents.  Near -1 means the ends
+        # face each other head-on (their tangents point in opposite directions).
+        minFacingCos: 0.95
+
+    # High-speed-rail post-processing.
+    hsr:
+        # Drop assembled corridors shorter than this (meters).  Isolated station
+        # sidings or stub ways that didn't join a main corridor produce short
+        # disconnected features that add noise without meaningful measurement value.
+        minAssembledM: 1000
+
+    # Waterway centerline post-processing.
+    waterway:
+        # Per-type minimum length after stitching (meters).  River/canal use a
+        # low floor to retain smaller waterways; stream uses a higher floor to
+        # cull the ~94 k minor streams that would otherwise bloat the bundle.
+        minLength:
+            river: 100
+            canal: 100
+            stream: 500
+
+    # Continuity validation defaults for validateLineContinuity (HSR smoke test).
+    # Throws if the stitched HSR geometry exceeds these thresholds, failing loudly
+    # instead of shipping a fragmented bundle.
+    continuity:
+        # Maximum number of disconnected connected components among main corridors.
+        maxComponents: 40
+        # Maximum number of interior collinear holes (endpoint pairs that face each
+        # other across a gap of holeMinM–holeMaxM, away from the extract edge).
+        maxHoles: 8
+        # Only features ≥ this length (meters) count as "main corridors."
+        minFeatureLenM: 1000
+        # Hole detection range — minimum gap between collinear ends (meters).
+        holeMinM: 40
+        # Hole detection range — maximum gap between collinear ends (meters).
+        holeMaxM: 2500
+        # Endpoint proximity tolerance for union-find connected components (meters).
+        joinTolM: 25
+        # Loose ends within this distance of the extract bbox edge (degrees) are
+        # excluded from hole detection — they're legitimate map-edge cutoffs.
+        edgeMarginDeg: 0.02
 
 regions:
     - id: japan-kanto

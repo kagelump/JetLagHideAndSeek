@@ -21,74 +21,82 @@ const geofabrikDir = resolve(scriptDir, "..");
 const configPath = resolve(geofabrikDir, "config.yaml");
 const root = resolve(geofabrikDir, "..", "..");
 
+// ─── Config ────────────────────────────────────────────────────────────────────
+
+/** Full config, read once at module load. */
+const _cfg = YAML.parse(readFileSync(configPath, "utf8"));
+const _m = _cfg.measuring ?? {};
+
 // ─── Category definitions ────────────────────────────────────────────────────
 
-const CATEGORIES = [
-    {
-        key: "coastline",
-        osmiumFilter: "w/natural=coastline",
-        postFilter: null,
-        geometry: "pass",
-    },
-    {
-        key: "high-speed-rail",
-        osmiumFilter: "w/railway=rail",
-        postFilter: "high-speed",
-        geometry: "pass",
-    },
-    {
-        key: "body-of-water",
-        osmiumFilter:
-            "w/natural=water r/natural=water w/landuse=basin w/waterway=riverbank " +
-            "w/waterway=river w/waterway=canal",
-        postFilter: null,
-        geometry: "polygon-dissolve",
-    },
-    {
-        key: "admin-1st-border",
-        osmiumFilter: "r/boundary=administrative",
-        postFilter: "admin-4",
-        geometry: "polygon-to-ring",
-    },
-    {
-        key: "admin-2nd-border",
-        osmiumFilter: "r/boundary=administrative",
-        postFilter: "admin-7",
-        geometry: "polygon-to-ring",
-    },
-];
+const CATEGORIES = (_m.categories ?? []).map((c) => ({
+    ...c,
+    postFilter: c.postFilter ?? null,
+    simplifyTolerance: c.simplifyTolerance ?? 0.0001,
+    minFeatureLengthM: c.minFeatureLengthM ?? 100,
+}));
 
-// ─── Simplify tolerances (degrees) ────────────────────────────────────────────
+// ─── Per-category lookup tables ──────────────────────────────────────────────
 
-const SIMPLIFY_TOLERANCES = {
-    "high-speed-rail": 0.0001,
-    coastline: 0.0005,
-    "body-of-water": 0.0002,
-    "admin-1st-border": 0.0003,
-    "admin-2nd-border": 0.0003,
-};
+/** Simplify tolerances in degrees, keyed by category key. */
+const SIMPLIFY_TOLERANCES = Object.fromEntries(
+    CATEGORIES.map((c) => [c.key, c.simplifyTolerance]),
+);
+
+/** Minimum feature length in meters, keyed by category key. */
+const MIN_FEATURE_LENGTH_M = Object.fromEntries(
+    CATEGORIES.map((c) => [c.key, c.minFeatureLengthM]),
+);
+
+// ─── Algorithm tuning constants ──────────────────────────────────────────────
 
 /** Simplify tolerance for waterway centerlines (degrees, ≈ 111 m). */
-const WATERWAY_LINE_SIMPLIFY = 0.001;
+const WATERWAY_LINE_SIMPLIFY = _m.waterwayLineSimplify ?? 0.001;
 
-// ─── Minimum feature length (meters) ────────────────────────────────────────────
+// -- Polygon dissolve --
 
-/**
- * Features shorter than this threshold are dropped during ingestion. The
- * runtime query already discards features < min(radiusMeters * 0.1, 500 m);
- * filtering here saves bundle bytes and avoids wasted bbox checks at runtime.
- *
- * High-speed-rail is 0 (disabled) because the stitcher needs short junction-
- * connector ways (crossovers, station throats, often 20–80 m) as building
- * blocks to assemble continuous corridors. Assembled features shorter than
- * 1 km are removed by a separate post-stitch filter inside the HSR pipeline.
- */
-const MIN_FEATURE_LENGTH_M = {
-    "high-speed-rail": 0,
-    coastline: 100,
-    "body-of-water": 100,
-    "admin-1st-border": 200,
-    "admin-2nd-border": 100,
+const DISSOLVE_TILE_DEG = _m.dissolve?.tileDeg ?? 0.25;
+const DISSOLVE_TILE_OVERLAP_DEG = _m.dissolve?.overlapDeg ?? 0.01;
+
+// -- Segment stitching --
+
+const NODE_PRECISION = _m.stitching?.nodePrecision ?? 7;
+const STITCH_MAX_TURN_COS = _m.stitching?.maxTurnCos ?? -0.5;
+
+// -- Parallel track de-duplication --
+
+const PARALLEL_MAX_LATERAL_M = _m.parallelDedup?.maxLateralM ?? 30;
+const PARALLEL_MIN_COSINE = _m.parallelDedup?.minCosine ?? 0.966;
+/** Sample at most this many points along a track for the hug test. */
+const PARALLEL_HUG_SAMPLES = _m.parallelDedup?.hugSamples ?? 80;
+
+// -- Collinear gap bridging --
+
+const BRIDGE_MAX_GAP_M = _m.bridge?.maxGapM ?? 1500;
+const BRIDGE_MIN_FACING_COS = _m.bridge?.minFacingCos ?? 0.95;
+
+// -- HSR post-processing --
+
+const HSR_MIN_ASSEMBLED_M = _m.hsr?.minAssembledM ?? 1000;
+
+// -- Waterway centerline post-processing --
+
+const WATERWAY_MIN_LENGTH = _m.waterway?.minLength ?? {
+    river: 100,
+    canal: 100,
+    stream: 500,
+};
+
+// -- Continuity validation defaults --
+
+const CONTINUITY_DEFAULTS = _m.continuity ?? {
+    maxComponents: 40,
+    maxHoles: 8,
+    minFeatureLenM: 1000,
+    holeMinM: 40,
+    holeMaxM: 2500,
+    joinTolM: 25,
+    edgeMarginDeg: 0.02,
 };
 
 // ─── Coordinate cleaning ────────────────────────────────────────────────────────
@@ -428,11 +436,11 @@ function unionAllCoords(coordsList) {
  * Tile size in degrees for the dissolve grid. 0.25° ≈ 28 km at mid-latitudes
  * — large enough that most water bodies fall entirely inside one tile,
  * small enough that the union within each tile is fast.
+ *
+ * Overlap between adjacent tiles prevents seams at tile boundaries.
+ *
+ * Values are read from config.yaml → measuring.dissolve.
  */
-const DISSOLVE_TILE_DEG = 0.25;
-
-/** Overlap between adjacent tiles to prevent seams at tile boundaries. */
-const DISSOLVE_TILE_OVERLAP_DEG = 0.01;
 
 /**
  * Dissolves an array of Polygon / MultiPolygon features into a smaller set
@@ -705,17 +713,8 @@ function pointSegDistMeters(p, a, b) {
 // A node where exactly two way-ends meet is an unambiguous pass-through and is
 // always joined; at a junction (>2 way-ends) we continue along the straightest
 // available track and let genuinely diverging branches start their own line.
-
-/** Decimal places at which two OSM node coordinates are treated as identical. */
-const NODE_PRECISION = 7;
-
-/**
- * Maximum turn allowed when choosing a continuation at a junction, as the
- * cosine between the two ways' departure tangents. A straight pass-through is
- * ≈ -1 (the tangents leave the shared node in opposite directions); a 90° turn
- * is ≈ 0. We continue only when the straightest option turns by < ~60°.
- */
-const STITCH_MAX_TURN_COS = -0.5;
+//
+// Tuning values (nodePrecision, maxTurnCos) are in config.yaml → measuring.stitching.
 
 /** Stable key for a coordinate so shared OSM nodes hash to the same bucket. */
 function nodeKey(pt) {
@@ -853,11 +852,9 @@ function makeFeature(coords, props) {
 }
 
 // ─── Parallel track de-duplication ───────────────────────────────────────────
-
-const PARALLEL_MAX_LATERAL_M = 30; // max perpendicular distance for dual tracks
-const PARALLEL_MIN_COSINE = 0.966; // cos(15°)
-/** Sample at most this many points along a track for the hug test. */
-const PARALLEL_HUG_SAMPLES = 80;
+//
+// Tuning values (maxLateralM, minCosine, hugSamples) are in
+// config.yaml → measuring.parallelDedup.
 
 /** Bbox [w,s,e,n] of a coordinate array, expanded by `padDeg`. */
 function coordsBbox(coords, padDeg = 0) {
@@ -962,11 +959,10 @@ function dedupeParallelTracks(features) {
 // missing the high-speed tag, leaving a short gap between two otherwise-collinear
 // corridors. This pass joins such corridor ends. It runs only on the assembled
 // corridors and requires the two ends to face each other nearly head-on, so it
-// cannot reconnect unrelated tracks. Gaps larger than BRIDGE_MAX_GAP_M are left
+// cannot reconnect unrelated tracks. Gaps larger than the configured max are left
 // for `validateLineContinuity` to flag rather than bridged blindly.
-
-const BRIDGE_MAX_GAP_M = 1500;
-const BRIDGE_MIN_FACING_COS = 0.95; // facing tangents must be near-antiparallel
+//
+// Tuning values (maxGapM, minFacingCos) are in config.yaml → measuring.bridge.
 
 function bridgeCollinearGaps(features) {
     let feats = features.map((f) => f.geometry.coordinates);
@@ -1055,13 +1051,13 @@ function lineLengthMeters(coords) {
  */
 function validateLineContinuity(features, extractBbox, opts = {}) {
     const {
-        maxComponents = 40,
-        maxHoles = 8,
-        minFeatureLenM = 1000,
-        holeMinM = 40,
-        holeMaxM = 2500,
-        joinTolM = 25,
-        edgeMarginDeg = 0.02,
+        maxComponents = CONTINUITY_DEFAULTS.maxComponents,
+        maxHoles = CONTINUITY_DEFAULTS.maxHoles,
+        minFeatureLenM = CONTINUITY_DEFAULTS.minFeatureLenM,
+        holeMinM = CONTINUITY_DEFAULTS.holeMinM,
+        holeMaxM = CONTINUITY_DEFAULTS.holeMaxM,
+        joinTolM = CONTINUITY_DEFAULTS.joinTolM,
+        edgeMarginDeg = CONTINUITY_DEFAULTS.edgeMarginDeg,
     } = opts;
 
     // Restrict every check to substantial features; short sidings/stubs near
@@ -1828,11 +1824,6 @@ async function main() {
                 // Min-length filter per waterway type. River/canal want a
                 // low floor (~100 m); stream wants a high floor to cull the
                 // ~94 k minor streams.
-                const WATERWAY_MIN_LENGTH = {
-                    river: 100,
-                    canal: 100,
-                    stream: 500,
-                };
                 const longEnough = stitched.filter((f) => {
                     const ww = f.properties?.waterway;
                     const floor = WATERWAY_MIN_LENGTH[ww] ?? 500;
@@ -1898,7 +1889,6 @@ async function main() {
             // sidings or stub ways that didn't join a main corridor produce
             // short disconnected features that add noise to nearest-point
             // queries without contributing meaningful measurement geometry.
-            const HSR_MIN_ASSEMBLED_M = 1000;
             const stitchedLong = stitched.filter(
                 (f) =>
                     lineLengthMeters(f.geometry.coordinates) >=
