@@ -782,7 +782,7 @@ function createDefaultQuestion(
         case "measuring":
             return {
                 answer: "unanswered",
-                category: (category as MeasuringCategory) ?? "rail-station",
+                category: (category as MeasuringCategory) ?? "park",
                 center,
                 createdAt: now,
                 id: createQuestionId(),

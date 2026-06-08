@@ -143,7 +143,7 @@ describe("MeasuringQuestionDetailScreen", () => {
     // ── Point categories ──────────────────────────────────────────────────
 
     describe("Point categories", () => {
-        it("renders the category picker with section labels", async () => {
+        it("shows the category change header when unanswered", async () => {
             const question = makeQuestion();
             const onUpdate = jest.fn();
 
@@ -153,8 +153,10 @@ describe("MeasuringQuestionDetailScreen", () => {
 
             await waitFor(() => {
                 expect(
-                    screen.getByTestId("measuring-category-museum"),
+                    screen.getByTestId("measuring-category-change"),
                 ).toBeTruthy();
+                expect(screen.getByText("Museum")).toBeTruthy();
+                expect(screen.getByText("Change")).toBeTruthy();
             });
         });
 
@@ -263,11 +265,9 @@ describe("MeasuringQuestionDetailScreen", () => {
             });
         });
 
-        it("switches category when a different category is pressed", async () => {
+        it("opens the category modal when change header is pressed", async () => {
             const question = makeQuestion();
-            const onUpdate = jest.fn((_questionId, updater) => {
-                return updater(question);
-            });
+            const onUpdate = jest.fn();
 
             const rendered = render(
                 <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
@@ -275,16 +275,64 @@ describe("MeasuringQuestionDetailScreen", () => {
 
             await waitFor(() => {
                 expect(
-                    rendered.getByTestId("measuring-category-park"),
+                    rendered.getByTestId("measuring-category-change"),
                 ).toBeTruthy();
             });
 
-            fireEvent.press(rendered.getByTestId("measuring-category-park"));
+            fireEvent.press(rendered.getByTestId("measuring-category-change"));
 
-            const lastCall = onUpdate.mock.calls.at(-1)!;
-            const updater = lastCall[1];
-            const result = updater(question) as MeasuringQuestion;
-            expect(result.category).toBe("park");
+            // Modal should be visible — its content appears in the tree
+            await waitFor(() => {
+                expect(
+                    rendered.getByTestId("measuring-category-modal-close"),
+                ).toBeTruthy();
+                // Park should be a selectable option in the modal
+                expect(
+                    rendered.getByTestId("measuring-category-modal-park"),
+                ).toBeTruthy();
+            });
+        });
+
+        it("shows collapsed box when answer is selected", async () => {
+            const question = makeQuestion({ answer: "positive" });
+            const onUpdate = jest.fn();
+
+            const rendered = render(
+                <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
+            );
+
+            await waitFor(() => {
+                expect(
+                    rendered.getByTestId("measuring-category-collapsed"),
+                ).toBeTruthy();
+                expect(rendered.getByText("Museum")).toBeTruthy();
+                expect(rendered.getByText("Change")).toBeTruthy();
+            });
+        });
+
+        it("opens modal from collapsed box when answered", async () => {
+            const question = makeQuestion({ answer: "positive" });
+            const onUpdate = jest.fn();
+
+            const rendered = render(
+                <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
+            );
+
+            await waitFor(() => {
+                expect(
+                    rendered.getByTestId("measuring-category-collapsed"),
+                ).toBeTruthy();
+            });
+
+            fireEvent.press(
+                rendered.getByTestId("measuring-category-collapsed"),
+            );
+
+            await waitFor(() => {
+                expect(
+                    rendered.getByTestId("measuring-category-modal-museum"),
+                ).toBeTruthy();
+            });
         });
     });
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
@@ -13,11 +13,10 @@ import type { DistanceUnit } from "@/shared/distanceUnits";
 import {
     getMeasuringCategoryTitle,
     isLineMeasuringCategory,
-    measuringCategoriesBySection,
-    type MeasuringCategorySection,
 } from "./measuringCategories";
 import { computeLineDistance } from "./lineMeasuringGeometry";
 import { computeNearestPoiDistance } from "./pointMeasuringGeometry";
+import { MeasuringCategoryModal } from "./MeasuringCategoryModal";
 import type { MeasuringCategory, MeasuringQuestion } from "./measuringTypes";
 
 type MeasuringQuestionDetailScreenProps = {
@@ -194,6 +193,7 @@ export function MeasuringQuestionDetailScreen({
     updateQuestion,
 }: MeasuringQuestionDetailScreenProps) {
     const categoryTitle = getMeasuringCategoryTitle(question.category);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
 
     const handleCategoryChange = useCallback(
         (category: MeasuringCategory) => {
@@ -234,80 +234,57 @@ export function MeasuringQuestionDetailScreen({
         );
     }
 
-    // Point categories: category picker + point-distance resolver.
+    // Point categories: collapsed box (when answered) or inline picker
+    // (when unanswered), plus modal for changing category.
+    const isAnswered = question.answer !== "unanswered";
+
     return (
         <>
-            {/* ── Category picker ──────────────────────────────────── */}
+            {/* ── Category section ────────────────────────────────── */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Category</Text>
-                <View style={styles.categoryPicker}>
-                    {(
-                        Object.entries(measuringCategoriesBySection) as [
-                            MeasuringCategorySection,
-                            (typeof measuringCategoriesBySection)[MeasuringCategorySection],
-                        ][]
-                    ).map(([section, configs]) => {
-                        const implemented = configs.filter(
-                            (
-                                c,
-                            ): c is (typeof configs)[number] & {
-                                implemented: true;
-                            } => c.implemented,
-                        );
-                        if (implemented.length === 0) return null;
-                        return (
-                            <View key={section} style={styles.categorySection}>
-                                <Text style={styles.categorySectionLabel}>
-                                    {section}
-                                </Text>
-                                {implemented.map((config) => {
-                                    const isSelected =
-                                        question.category === config.category;
-                                    return (
-                                        <Pressable
-                                            accessibilityLabel={`${config.title} measuring category`}
-                                            accessibilityRole="button"
-                                            accessibilityState={{
-                                                selected: isSelected,
-                                            }}
-                                            key={config.category}
-                                            onPress={() =>
-                                                handleCategoryChange(
-                                                    config.category,
-                                                )
-                                            }
-                                            style={[
-                                                styles.categoryRow,
-                                                isSelected
-                                                    ? styles.categoryRowSelected
-                                                    : null,
-                                            ]}
-                                            testID={`measuring-category-${config.category}`}
-                                        >
-                                            <View
-                                                style={[
-                                                    styles.categoryRadio,
-                                                    isSelected
-                                                        ? styles.categoryRadioSelected
-                                                        : null,
-                                                ]}
-                                            />
-                                            <Text style={styles.categoryTitle}>
-                                                {config.title}
-                                            </Text>
-                                        </Pressable>
-                                    );
-                                })}
-                            </View>
-                        );
-                    })}
-                </View>
+                {isAnswered ? (
+                    <Pressable
+                        accessibilityLabel={`${categoryTitle} — tap to change category`}
+                        accessibilityRole="button"
+                        onPress={() => setShowCategoryModal(true)}
+                        style={[styles.categoryPicker, styles.collapsedBox]}
+                        testID="measuring-category-collapsed"
+                    >
+                        <Text style={styles.categoryTitle}>
+                            {categoryTitle}
+                        </Text>
+                        <Text style={styles.changeHint}>Change</Text>
+                    </Pressable>
+                ) : (
+                    <View style={styles.categoryPicker}>
+                        <Pressable
+                            accessibilityLabel="Open category picker"
+                            accessibilityRole="button"
+                            onPress={() => setShowCategoryModal(true)}
+                            style={styles.changeHeader}
+                            testID="measuring-category-change"
+                        >
+                            <Text style={styles.changeHeaderText}>
+                                {categoryTitle}
+                            </Text>
+                            <Text style={styles.changeHint}>Change</Text>
+                        </Pressable>
+                    </View>
+                )}
             </View>
 
             <MeasuringAutoResult
                 question={question}
                 updateQuestion={updateQuestion}
                 distanceResolver={computeNearestPoiDistance}
+            />
+
+            <MeasuringCategoryModal
+                visible={showCategoryModal}
+                selectedCategory={question.category}
+                onSelect={handleCategoryChange}
+                onClose={() => setShowCategoryModal(false)}
             />
         </>
     );
@@ -322,48 +299,36 @@ const styles = StyleSheet.create({
         marginTop: 10,
         overflow: "hidden",
     },
-    categoryRadio: {
-        borderColor: colors.muted,
-        borderRadius: 10,
-        borderWidth: 2,
-        height: 20,
-        marginRight: 10,
-        width: 20,
-    },
-    categoryRadioSelected: {
-        backgroundColor: colors.tint,
-        borderColor: colors.tint,
-        borderWidth: 6,
-    },
-    categoryRow: {
-        alignItems: "center",
-        flexDirection: "row",
-        minHeight: 44,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-    },
-    categoryRowSelected: {
-        backgroundColor: colors.buttonSubtle,
-    },
-    categorySection: {
-        borderColor: colors.border,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        paddingBottom: 4,
-        paddingTop: 6,
-    },
-    categorySectionLabel: {
-        color: colors.muted,
-        fontSize: 11,
-        fontWeight: "800",
-        letterSpacing: 0.4,
-        marginBottom: 2,
-        paddingHorizontal: 14,
-        textTransform: "uppercase",
-    },
     categoryTitle: {
         color: colors.ink,
         fontSize: 16,
         fontWeight: "600",
+    },
+    changeHeader: {
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        minHeight: 48,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+    },
+    changeHeaderText: {
+        color: colors.ink,
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    changeHint: {
+        color: colors.tint,
+        fontSize: 14,
+        fontWeight: "700",
+    },
+    collapsedBox: {
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        minHeight: 48,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
     },
     distanceValue: {
         color: colors.tint,

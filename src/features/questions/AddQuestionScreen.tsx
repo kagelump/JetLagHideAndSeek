@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { requestUserCoordinate } from "@/shared/location";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
+import { MeasuringCategoryModal } from "@/features/questions/measuring/MeasuringCategoryModal";
+import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
 import { usePlayArea } from "@/state/playAreaStore";
 import { useQuestionActions } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
@@ -14,6 +17,10 @@ type AddQuestionScreenProps = {
 export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
     const { playArea } = usePlayArea();
     const { createQuestion } = useQuestionActions();
+    const [showMeasuringModal, setShowMeasuringModal] = useState(false);
+    const [pendingMeasuringCenter, setPendingMeasuringCenter] = useState<
+        [number, number] | null
+    >(null);
 
     const addRadarQuestion = async () => {
         const result = await requestUserCoordinate();
@@ -31,12 +38,19 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
         onNavigate("question-detail");
     };
 
-    const addMeasuringQuestion = async () => {
+    const openMeasuringModal = async () => {
         const result = await requestUserCoordinate();
+        setPendingMeasuringCenter(result.coordinate ?? playArea.center);
+        setShowMeasuringModal(true);
+    };
+
+    const handleMeasuringCategoryPick = (category: MeasuringCategory) => {
         createQuestion("measuring", {
-            center: result.coordinate ?? playArea.center,
-            category: "commercial-airport",
+            center: pendingMeasuringCenter ?? playArea.center,
+            category,
         });
+        setShowMeasuringModal(false);
+        setPendingMeasuringCenter(null);
         onNavigate("question-detail");
     };
 
@@ -116,7 +130,7 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
                 accessibilityLabel="Add measuring question"
                 accessibilityRole="button"
                 onPress={() => {
-                    void addMeasuringQuestion();
+                    void openMeasuringModal();
                 }}
                 style={({ pressed }) => [
                     styles.optionRow,
@@ -153,6 +167,16 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
                 </View>
                 <Text style={styles.chevron}>›</Text>
             </Pressable>
+
+            <MeasuringCategoryModal
+                visible={showMeasuringModal}
+                selectedCategory={"rail-station"}
+                onSelect={handleMeasuringCategoryPick}
+                onClose={() => {
+                    setShowMeasuringModal(false);
+                    setPendingMeasuringCenter(null);
+                }}
+            />
         </SheetScrollView>
     );
 }
