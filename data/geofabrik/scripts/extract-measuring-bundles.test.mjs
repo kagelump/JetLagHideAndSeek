@@ -7,6 +7,9 @@ import { fileURLToPath } from "node:url";
 import {
     stitchSegments,
     validateLineContinuity,
+    cleanPolygonFeature,
+    polygonPerimeterMeters,
+    polygonDissolve,
 } from "./extract-measuring-bundles.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -44,8 +47,13 @@ describe("measuring bundle structural validator", () => {
                 return;
             }
 
-            it("has schemaVersion 1", () => {
-                assert.strictEqual(bundle.schemaVersion, 1);
+            it("has schemaVersion 1 (or 2 for polygon-dissolve bundles)", () => {
+                if (key === "body-of-water") {
+                    // body-of-water uses polygon-dissolve → schemaVersion 2
+                    assert.strictEqual(bundle.schemaVersion, 2);
+                } else {
+                    assert.strictEqual(bundle.schemaVersion, 1);
+                }
             });
 
             it("has correct category field", () => {
@@ -92,11 +100,16 @@ describe("measuring bundle structural validator", () => {
                 );
             });
 
-            it("every feature is a LineString or MultiLineString", () => {
+            it("every feature is a LineString, MultiLineString, Polygon, or MultiPolygon", () => {
+                const validTypes = new Set([
+                    "LineString",
+                    "MultiLineString",
+                    "Polygon",
+                    "MultiPolygon",
+                ]);
                 for (const f of bundle.features) {
                     assert.ok(
-                        f.geometry.type === "LineString" ||
-                            f.geometry.type === "MultiLineString",
+                        validTypes.has(f.geometry.type),
                         `unexpected geometry type: ${f.geometry.type}`,
                     );
                 }
@@ -110,11 +123,36 @@ describe("measuring bundle structural validator", () => {
                             f.geometry.coordinates.length >= 2,
                             "LineString needs at least 2 coords",
                         );
-                    } else {
+                    } else if (f.geometry.type === "MultiLineString") {
                         for (const seg of f.geometry.coordinates) {
                             assert.ok(
                                 seg.length >= 2,
                                 "MultiLineString segment needs at least 2 coords",
+                            );
+                        }
+                    } else if (f.geometry.type === "Polygon") {
+                        // Polygon: array of rings, at least 1 outer ring with ≥ 4 coords.
+                        assert.ok(
+                            f.geometry.coordinates.length >= 1,
+                            "Polygon needs at least 1 ring",
+                        );
+                        assert.ok(
+                            f.geometry.coordinates[0].length >= 4,
+                            "Polygon outer ring needs at least 4 coords",
+                        );
+                    } else if (f.geometry.type === "MultiPolygon") {
+                        assert.ok(
+                            f.geometry.coordinates.length >= 1,
+                            "MultiPolygon needs at least 1 polygon",
+                        );
+                        for (const poly of f.geometry.coordinates) {
+                            assert.ok(
+                                poly.length >= 1,
+                                "MultiPolygon part needs at least 1 ring",
+                            );
+                            assert.ok(
+                                poly[0].length >= 4,
+                                "MultiPolygon outer ring needs at least 4 coords",
                             );
                         }
                     }
@@ -412,5 +450,293 @@ describe("high-speed-rail continuity", () => {
             metrics.holes <= 8,
             `too many interior collinear holes: ${metrics.holes}`,
         );
+    });
+});
+
+// ─── Polygon-dissolve unit tests ────────────────────────────────────────────
+
+function makePolygon(coords) {
+    return {
+        type: "Feature",
+        bbox: [
+            Math.min(...coords[0].map((c) => c[0])),
+            Math.min(...coords[0].map((c) => c[1])),
+            Math.max(...coords[0].map((c) => c[0])),
+            Math.max(...coords[0].map((c) => c[1])),
+        ],
+        geometry: {
+            type: "Polygon",
+            coordinates: coords,
+        },
+        properties: {},
+    };
+}
+
+describe("polygonDissolve", () => {
+    const EXTRACT_BBOX = [139.0, 35.0, 140.0, 36.0];
+
+    it("dissolve merges overlapping polygons into a single polygon", () => {
+        // Two overlapping squares that fit entirely within the tile at
+        // [139.0, 35.0] (tile bbox ≈ [138.99, 34.99, 139.26, 35.26]).
+        const a = makePolygon([
+            [
+                [139.0, 35.0],
+                [139.12, 35.0],
+                [139.12, 35.12],
+                [139.0, 35.12],
+                [139.0, 35.0],
+            ],
+        ]);
+        const b = makePolygon([
+            [
+                [139.08, 35.08],
+                [139.2, 35.08],
+                [139.2, 35.2],
+                [139.08, 35.2],
+                [139.08, 35.08],
+            ],
+        ]);
+        const result = polygonDissolve([a, b], EXTRACT_BBOX, 0.0001);
+
+        // Two overlapping squares in the same tile MUST merge into one feature.
+        assert.strictEqual(
+            result.length,
+            1,
+            `expected 1 merged feature, got ${result.length}`,
+        );
+
+        const f = result[0];
+        assert.ok(
+            f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon",
+            `unexpected geometry type: ${f.geometry.type}`,
+        );
+        assert.ok(Array.isArray(f.bbox) && f.bbox.length === 4);
+
+        // All rings must be closed and have ≥ 4 coords.
+        const rings =
+            f.geometry.type === "Polygon"
+                ? f.geometry.coordinates
+                : f.geometry.coordinates.flat();
+        for (const ring of rings) {
+            assert.ok(
+                ring.length >= 4,
+                `degenerate ring: ${ring.length} coords`,
+            );
+            const first = ring[0];
+            const last = ring[ring.length - 1];
+            assert.strictEqual(first[0], last[0], "ring does not close (lon)");
+            assert.strictEqual(first[1], last[1], "ring does not close (lat)");
+        }
+
+        // Shoelace area of the merged feature should approximate the union
+        // area (≈ 0.0272 sq deg), NOT the sum (≈ 0.0288 sq deg).  The two
+        // 0.12°×0.12° squares overlap by 0.04°×0.04°.
+        function shoelaceAreaSqDeg(ring) {
+            let area = 0;
+            for (let i = 0; i < ring.length - 1; i++) {
+                area += ring[i][0] * ring[i + 1][1];
+                area -= ring[i + 1][0] * ring[i][1];
+            }
+            return Math.abs(area) / 2;
+        }
+        const totalArea = rings.reduce(
+            (sum, r) => sum + shoelaceAreaSqDeg(r),
+            0,
+        );
+        const sumArea = 0.0288; // 2 × 0.0144
+        assert.ok(
+            totalArea < sumArea - 0.0005,
+            `area ${totalArea.toFixed(4)} ≈ sum ${sumArea} — polygons did not merge`,
+        );
+    });
+
+    it("tiling produces no gaps at tile boundaries", () => {
+        // A single polygon that straddles the 0.25° tile boundary at lon=139.25.
+        // It should appear (possibly split) in both tiles with no lost area.
+        const straddle = makePolygon([
+            [
+                [139.2, 35.1],
+                [139.3, 35.1],
+                [139.3, 35.2],
+                [139.2, 35.2],
+                [139.2, 35.1],
+            ],
+        ]);
+        const result = polygonDissolve([straddle], EXTRACT_BBOX, 0.001);
+        // With a single polygon, we should get at least 1 feature.
+        assert.ok(result.length >= 1, "straddling polygon was lost");
+        // The union of all result features should cover the original area.
+        // Quick check: at least one feature contains the center of the straddle.
+        const center = [139.25, 35.15];
+        let insideCenter = false;
+        for (const f of result) {
+            const rings =
+                f.geometry.type === "Polygon"
+                    ? f.geometry.coordinates
+                    : f.geometry.coordinates.flat();
+            for (const ring of rings) {
+                // Simple point-in-polygon (even-odd rule).
+                let inside = false;
+                for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                    const xi = ring[i][0],
+                        yi = ring[i][1];
+                    const xj = ring[j][0],
+                        yj = ring[j][1];
+                    if (
+                        yi > center[1] !== yj > center[1] &&
+                        center[0] <
+                            ((xj - xi) * (center[1] - yi)) / (yj - yi) + xi
+                    ) {
+                        inside = !inside;
+                    }
+                }
+                if (inside) {
+                    insideCenter = true;
+                    break;
+                }
+            }
+            if (insideCenter) break;
+        }
+        assert.ok(
+            insideCenter,
+            "straddling polygon center [139.25, 35.15] not inside any output feature",
+        );
+    });
+
+    it("output features are valid polygons with bbox", () => {
+        const square = makePolygon([
+            [
+                [139.1, 35.1],
+                [139.2, 35.1],
+                [139.2, 35.2],
+                [139.1, 35.2],
+                [139.1, 35.1],
+            ],
+        ]);
+        const result = polygonDissolve([square], EXTRACT_BBOX, 0.001);
+        assert.ok(result.length >= 1);
+        for (const f of result) {
+            assert.ok(
+                f.geometry.type === "Polygon" ||
+                    f.geometry.type === "MultiPolygon",
+            );
+            assert.ok(Array.isArray(f.bbox) && f.bbox.length === 4);
+            for (const v of f.bbox) {
+                assert.ok(Number.isFinite(v));
+            }
+        }
+    });
+
+    it("returns empty array for empty input", () => {
+        const result = polygonDissolve([], EXTRACT_BBOX, 0.001);
+        assert.strictEqual(result.length, 0);
+    });
+
+    it("handles a MultiPolygon input feature", () => {
+        const mp = {
+            type: "Feature",
+            bbox: [139.0, 35.0, 139.4, 35.4],
+            geometry: {
+                type: "MultiPolygon",
+                coordinates: [
+                    [
+                        [
+                            [139.0, 35.0],
+                            [139.2, 35.0],
+                            [139.2, 35.2],
+                            [139.0, 35.2],
+                            [139.0, 35.0],
+                        ],
+                    ],
+                    [
+                        [
+                            [139.2, 35.2],
+                            [139.4, 35.2],
+                            [139.4, 35.4],
+                            [139.2, 35.4],
+                            [139.2, 35.2],
+                        ],
+                    ],
+                ],
+            },
+            properties: {},
+        };
+        const result = polygonDissolve([mp], EXTRACT_BBOX, 0.001);
+        assert.ok(result.length >= 1);
+        // The two disjoint parts of the MultiPolygon should be preserved
+        // (each in its own tile).
+        for (const f of result) {
+            assert.ok(
+                f.geometry.type === "Polygon" ||
+                    f.geometry.type === "MultiPolygon",
+            );
+        }
+    });
+});
+
+describe("cleanPolygonFeature", () => {
+    it("strips consecutive duplicate coords from all rings", () => {
+        const feat = {
+            type: "Feature",
+            geometry: {
+                type: "Polygon",
+                coordinates: [
+                    [
+                        [139.0, 35.0],
+                        [139.0, 35.0], // duplicate
+                        [139.1, 35.0],
+                        [139.1, 35.1],
+                        [139.0, 35.1],
+                        [139.0, 35.0],
+                    ],
+                ],
+            },
+            properties: {},
+        };
+        const cleaned = cleanPolygonFeature(feat);
+        assert.ok(cleaned);
+        const ring = cleaned.geometry.coordinates[0];
+        assert.strictEqual(ring.length, 5); // 5 unique vertices (including closing)
+    });
+
+    it("drops rings that collapse to fewer than 3 coords", () => {
+        const feat = {
+            type: "Feature",
+            geometry: {
+                type: "Polygon",
+                coordinates: [
+                    [
+                        [139.0, 35.0],
+                        [139.0, 35.0],
+                        [139.0, 35.0],
+                        [139.0, 35.0],
+                    ],
+                ],
+            },
+            properties: {},
+        };
+        const cleaned = cleanPolygonFeature(feat);
+        // All coords are identical → ring collapses → feature is dropped.
+        assert.strictEqual(cleaned, null);
+    });
+});
+
+describe("polygonPerimeterMeters", () => {
+    it("computes perimeter of a square polygon", () => {
+        // ~0.01° square at latitude 35° → approximately 4 * 0.01 * 111320 ≈ 4453 m.
+        const geom = {
+            type: "Polygon",
+            coordinates: [
+                [
+                    [139.0, 35.0],
+                    [139.01, 35.0],
+                    [139.01, 35.01],
+                    [139.0, 35.01],
+                    [139.0, 35.0],
+                ],
+            ],
+        };
+        const perim = polygonPerimeterMeters(geom);
+        assert.ok(perim > 3000 && perim < 6000, `got perimeter=${perim}`);
     });
 });

@@ -21,6 +21,11 @@ import type {
 import type { MeasuringCategory } from "./measuringTypes";
 import { getLineBundle } from "./lineBundleLoader";
 
+/** Feature type that includes both line and polygon geometry. */
+type LineOrPolygonFeature = Feature<
+    LineString | MultiLineString | Polygon | MultiPolygon
+>;
+
 export type NearestPointResult = {
     /** Nearest point on the line/edge (GeoJSON [lon, lat]). */
     nearestPoint: Position;
@@ -45,7 +50,7 @@ export type LineCategoryComputation = {
     distanceMeters: number;
     /** Bundle features intersecting the play-area ± max(distance, MIN_MARGIN)
      *  window. The single source for both mask and reference line. */
-    windowFeatures: Feature<LineString | MultiLineString>[];
+    windowFeatures: LineOrPolygonFeature[];
 };
 
 // ─── Window feature selection ──────────────────────────────────────────
@@ -59,7 +64,7 @@ export function selectWindowFeatures(
     playAreaBbox: Bbox | undefined,
     center: Position,
     marginM: number,
-): Feature<LineString | MultiLineString>[] {
+): LineOrPolygonFeature[] {
     const fc = getLineBundle(category);
     if (!fc || fc.features.length === 0) return [];
 
@@ -83,10 +88,10 @@ export function selectWindowFeatures(
         ];
     }
 
-    const result: Feature<LineString | MultiLineString>[] = [];
+    const result: LineOrPolygonFeature[] = [];
     for (const f of fc.features) {
         if (bboxIntersects(featureBbox(f as Feature), queryBbox)) {
-            result.push(f as Feature<LineString | MultiLineString>);
+            result.push(f as LineOrPolygonFeature);
         }
     }
     return result;
@@ -95,7 +100,7 @@ export function selectWindowFeatures(
 // ─── computeLineCategory cache ─────────────────────────────────────────
 
 /** Increment to invalidate all cached line-category results. */
-const LINE_CATEGORY_CACHE_VERSION = 1;
+const LINE_CATEGORY_CACHE_VERSION = 2;
 
 /** Maximum number of cached line-category results. */
 const LINE_CATEGORY_CACHE_MAX = 50;
@@ -178,7 +183,7 @@ export function computeLineCategory(
 // --- LRU cache ----------------------------------------------------------------
 
 /** Increment to invalidate all cached results when the algorithm changes. */
-const LINE_DISTANCE_CACHE_VERSION = 1;
+const LINE_DISTANCE_CACHE_VERSION = 2;
 
 /** Maximum number of cached nearest-point results. */
 const LINE_DISTANCE_CACHE_MAX = 100;
@@ -333,10 +338,52 @@ function simplifyCoords(coords: Position[], toleranceM: number): Position[] {
     return result;
 }
 
+/**
+ * Simplifies each ring of a Polygon or MultiPolygon geometry using
+ * Douglas-Peucker. Returns null if the geometry degenerates (all rings
+ * collapse to < 3 coords).
+ */
+function simplifyPolygonCoords(
+    geom: Polygon | MultiPolygon,
+    toleranceM: number,
+): Polygon | MultiPolygon | null {
+    if (geom.type === "Polygon") {
+        const simplified = geom.coordinates
+            .map((ring) => simplifyCoords(ring as Position[], toleranceM))
+            .filter((ring) => ring.length >= 4);
+        if (simplified.length === 0) return null;
+        return { type: "Polygon", coordinates: simplified };
+    }
+    // MultiPolygon
+    const simplified = geom.coordinates
+        .map((poly) =>
+            poly
+                .map((ring) => simplifyCoords(ring as Position[], toleranceM))
+                .filter((ring) => ring.length >= 4),
+        )
+        .filter((poly) => poly.length > 0);
+    if (simplified.length === 0) return null;
+    return { type: "MultiPolygon", coordinates: simplified };
+}
+
 // --- Line buffer cache --------------------------------------------------------
 
 /** Increment to invalidate all cached buffer results when the algorithm changes. */
-const LINE_BUFFER_CACHE_VERSION = 3;
+const LINE_BUFFER_CACHE_VERSION = 5;
+
+// ─── Buffer input budget ─────────────────────────────────────────────────
+
+/** Maximum number of line segments allowed before the escalation loop
+ *  drops/simplifies features to stay within budget. */
+const MAX_BUFFER_SEGMENTS = 400;
+
+/** Maximum number of total coordinates allowed before the escalation loop
+ *  drops/simplifies features to stay within budget. */
+const MAX_BUFFER_COORDS = 4000;
+
+/** Buffer circle resolution — 4 steps is imperceptible on the mask after
+ *  intersection + difference, and ~2× faster than the default (8 or 64). */
+const BUFFER_STEPS = 4;
 
 /** Maximum number of cached buffer results. */
 const LINE_BUFFER_CACHE_MAX = 50;
@@ -367,6 +414,65 @@ export function clearLineBufferCache(): void {
     bufferCache.clear();
 }
 
+// --- Line buffer input budget ------------------------------------------------
+
+/**
+ * Applies a bounded escalation loop to drop/simplify line segments until
+ * they fit within `MAX_BUFFER_SEGMENTS` and `MAX_BUFFER_COORDS`.
+ *
+ * Exported for direct unit-testing so tests can assert budget enforcement
+ * without also exercising the full `@turf/buffer` path.
+ *
+ * @returns the budget-constrained set of coordinate arrays (may be empty).
+ */
+export function applyBufferBudget(
+    lines: Position[][],
+    radiusMeters: number,
+): Position[][] {
+    let working = lines;
+    let tol = Math.max(radiusMeters * 0.05, 10);
+
+    for (let round = 0; round < 6; round++) {
+        const segs = working.length;
+        const coords = working.reduce((s, l) => s + l.length, 0);
+        if (segs <= MAX_BUFFER_SEGMENTS && coords <= MAX_BUFFER_COORDS) {
+            if (round > 0) {
+                console.log(
+                    `[lineBuffer] budget met after ${round} escalation round(s): ` +
+                        `${segs} segs, ${coords} coords`,
+                );
+            }
+            return working;
+        }
+        tol *= 2;
+        const lenFloor = tol * 4; // drop features shorter than the new tolerance band
+        working = working
+            .filter((l) => lineLengthMeters(l) >= lenFloor)
+            .map((l) => simplifyCoords(l, tol));
+    }
+
+    // Final round: enforce hard caps by keeping the largest features.
+    console.log(
+        `[lineBuffer] budget escalation exhausted (6 rounds), ` +
+            `enforcing hard cap: ${working.length} → ${MAX_BUFFER_SEGMENTS} segs`,
+    );
+    // Sort by coordinate count descending (longest features first).
+    working.sort((a, b) => b.length - a.length);
+    working = working.slice(0, MAX_BUFFER_SEGMENTS);
+    // Re-simplify at a high tolerance for the survivors.
+    working = working.map((l) => simplifyCoords(l, tol));
+    // If still over coord budget, truncate each line.
+    const coords = working.reduce((s, l) => s + l.length, 0);
+    if (coords > MAX_BUFFER_COORDS) {
+        const ratio = MAX_BUFFER_COORDS / coords;
+        working = working.map((l) =>
+            l.slice(0, Math.max(2, Math.floor(l.length * ratio))),
+        );
+    }
+
+    return working;
+}
+
 // --- Line buffer --------------------------------------------------------------
 
 /**
@@ -383,132 +489,251 @@ export function clearLineBufferCache(): void {
  * variant.
  */
 export function computeLineBuffer(
-    windowFeatures: Feature<LineString | MultiLineString>[],
+    windowFeatures: LineOrPolygonFeature[],
     radiusMeters: number,
 ): Feature<Polygon | MultiPolygon> | null {
     if (radiusMeters <= 0) return null;
     if (windowFeatures.length === 0) return null;
 
-    // -- 1. Collect coordinates, drop short features ----------------------------
+    // -- Separate polygon features from line features. -------------------------
+    // Polygon categories (e.g. body-of-water) ship dissolved polygons that
+    // can be buffered directly — no line assembly needed.
 
-    const minFeatureLenM = Math.min(radiusMeters * 0.1, 500);
-
-    const lines: Position[][] = [];
-    let droppedShort = 0;
+    const polyFeatures: Feature<Polygon | MultiPolygon>[] = [];
+    const lineFeatures: Feature<LineString | MultiLineString>[] = [];
     for (const f of windowFeatures) {
-        if (f.geometry.type === "LineString") {
-            const coords = f.geometry.coordinates as Position[];
-            if (lineLengthMeters(coords) < minFeatureLenM) {
-                droppedShort++;
-                continue;
-            }
-            lines.push(coords);
+        const g = f.geometry;
+        if (g.type === "Polygon" || g.type === "MultiPolygon") {
+            polyFeatures.push(f as Feature<Polygon | MultiPolygon>);
         } else {
-            const mlCoords = (f.geometry as MultiLineString).coordinates;
-            let totalLen = 0;
-            for (const line of mlCoords) {
-                totalLen += lineLengthMeters(line as Position[]);
+            lineFeatures.push(f as Feature<LineString | MultiLineString>);
+        }
+    }
+
+    // -- 1. Polygon buffer path -------------------------------------------------
+
+    const polygonBuffers: Feature<Polygon | MultiPolygon>[] = [];
+
+    if (polyFeatures.length > 0) {
+        // Simplify polygons before buffering (same tolerance as line path).
+        const simplifyTol = Math.max(radiusMeters * 0.05, 10);
+
+        // Count total coords for budget check.
+        let totalPolyCoords = 0;
+        const walkCoords = (c: unknown) => {
+            if (Array.isArray(c) && typeof c[0] === "number") {
+                totalPolyCoords++;
+            } else if (Array.isArray(c)) {
+                for (const item of c) walkCoords(item);
             }
-            if (totalLen < minFeatureLenM) {
-                droppedShort++;
-                continue;
+        };
+        for (const pf of polyFeatures) {
+            walkCoords(pf.geometry.coordinates);
+        }
+
+        // If polygon coords exceed budget, simplify more aggressively.
+        let polyTol = simplifyTol;
+        if (totalPolyCoords > MAX_BUFFER_COORDS) {
+            polyTol = Math.max(radiusMeters * 0.2, 50);
+            console.log(
+                `[lineBuffer] polygon budget: ${totalPolyCoords} coords → ` +
+                    `simplify at ${polyTol.toFixed(0)}m`,
+            );
+        }
+
+        for (const pf of polyFeatures) {
+            // Simplify polygon rings.
+            let geom = pf.geometry;
+            if (polyTol > 0) {
+                const simplified = simplifyPolygonCoords(geom, polyTol);
+                if (!simplified) continue;
+                geom = simplified;
             }
-            for (const line of mlCoords) {
-                if ((line as Position[]).length >= 2) {
-                    lines.push(line as Position[]);
+
+            // Buffer the dissolved polygon directly.
+            try {
+                const buf = buffer(
+                    { type: "Feature", properties: {}, geometry: geom },
+                    radiusMeters,
+                    { units: "meters", steps: BUFFER_STEPS },
+                ) as Feature<Polygon | MultiPolygon> | undefined;
+                if (buf) polygonBuffers.push(buf);
+            } catch (err) {
+                console.warn(`[lineBuffer] polygon buffer failed:`, err);
+            }
+        }
+
+        console.log(
+            `[lineBuffer] polygon path: ${polyFeatures.length} polys, ` +
+                `${totalPolyCoords} coords → ${polygonBuffers.length} buffers`,
+        );
+    }
+
+    // -- 2. Line buffer path (existing logic) -----------------------------------
+
+    let lineBufferResult: Feature<Polygon | MultiPolygon> | null = null;
+
+    if (lineFeatures.length > 0) {
+        const minFeatureLenM = Math.min(radiusMeters * 0.1, 500);
+
+        const lines: Position[][] = [];
+        let droppedShort = 0;
+        for (const f of lineFeatures) {
+            if (f.geometry.type === "LineString") {
+                const coords = f.geometry.coordinates as Position[];
+                if (lineLengthMeters(coords) < minFeatureLenM) {
+                    droppedShort++;
+                    continue;
+                }
+                lines.push(coords);
+            } else {
+                const mlCoords = (f.geometry as MultiLineString).coordinates;
+                let totalLen = 0;
+                for (const line of mlCoords) {
+                    totalLen += lineLengthMeters(line as Position[]);
+                }
+                if (totalLen < minFeatureLenM) {
+                    droppedShort++;
+                    continue;
+                }
+                for (const line of mlCoords) {
+                    if ((line as Position[]).length >= 2) {
+                        lines.push(line as Position[]);
+                    }
+                }
+            }
+        }
+
+        if (droppedShort > 0) {
+            console.log(
+                `[lineBuffer] dropped ${droppedShort} short features (< ${minFeatureLenM.toFixed(0)}m)`,
+            );
+        }
+
+        const totalCoords = lines.reduce((sum, l) => sum + l.length, 0);
+
+        console.log(
+            `[lineBuffer] ${lineFeatures.length} features in window, ` +
+                `${lines.length} segments, ${totalCoords} total coords`,
+        );
+
+        if (lines.length > 0) {
+            // Defensive: filter out lines with non-numeric / non-finite coordinates.
+            let cleanBufLines = lines.filter(
+                (coords) =>
+                    coords.length >= 2 && coords.every((c) => isValidCoord(c)),
+            );
+
+            // Remove consecutive duplicate coordinates.
+            cleanBufLines = cleanBufLines
+                .map((coords) => {
+                    const deduped: Position[] = [coords[0]];
+                    for (let i = 1; i < coords.length; i++) {
+                        const prev = coords[i - 1];
+                        const curr = coords[i];
+                        if (prev[0] !== curr[0] || prev[1] !== curr[1]) {
+                            deduped.push(curr);
+                        }
+                    }
+                    return deduped.length >= 2 ? deduped : null;
+                })
+                .filter((coords): coords is Position[] => coords !== null);
+
+            if (cleanBufLines.length > 0) {
+                const cleanCoords = cleanBufLines.reduce(
+                    (sum, l) => sum + l.length,
+                    0,
+                );
+
+                const simplifyTol = Math.max(radiusMeters * 0.05, 10);
+                const simplifiedLines = cleanBufLines.map((coords) =>
+                    simplifyCoords(coords, simplifyTol),
+                );
+                const simpleCoords = simplifiedLines.reduce(
+                    (sum, l) => sum + l.length,
+                    0,
+                );
+
+                console.log(
+                    `[lineBuffer] after dedup: ${cleanBufLines.length} segs, ` +
+                        `${cleanCoords} coords → simplify(${simplifyTol.toFixed(0)}m): ` +
+                        `${simpleCoords} coords`,
+                );
+
+                const budgetedLines = applyBufferBudget(
+                    simplifiedLines,
+                    radiusMeters,
+                );
+
+                if (budgetedLines.length > 0) {
+                    let merged;
+                    try {
+                        merged = multiLineString(budgetedLines);
+                    } catch (err) {
+                        console.warn(
+                            `[lineBuffer] multiLineString failed:`,
+                            err,
+                        );
+                    }
+
+                    if (merged) {
+                        const t0 = performance.now();
+                        try {
+                            lineBufferResult = buffer(merged, radiusMeters, {
+                                units: "meters",
+                                steps: BUFFER_STEPS,
+                            }) as Feature<Polygon | MultiPolygon>;
+                        } catch (err) {
+                            console.warn(`[lineBuffer] buffer failed:`, err);
+                        }
+                        const bufferMs = performance.now() - t0;
+                        if (lineBufferResult) {
+                            console.log(
+                                `[lineBuffer] line buffer done: ${lineBufferResult.geometry.type} ` +
+                                    `in ${bufferMs.toFixed(0)}ms`,
+                            );
+                        }
+                    }
                 }
             }
         }
     }
 
-    if (droppedShort > 0) {
-        console.log(
-            `[lineBuffer] dropped ${droppedShort} short features (< ${minFeatureLenM.toFixed(0)}m)`,
-        );
+    // -- 3. Combine line and polygon buffer results -----------------------------
+
+    if (polygonBuffers.length === 0 && !lineBufferResult) return null;
+    if (polygonBuffers.length === 0) return lineBufferResult;
+    if (!lineBufferResult && polygonBuffers.length === 1) {
+        return polygonBuffers[0];
     }
 
-    const totalCoords = lines.reduce((sum, l) => sum + l.length, 0);
+    // Union all buffer results together.
+    const allBuffers: Feature<Polygon | MultiPolygon>[] =
+        polygonBuffers.slice();
+    if (lineBufferResult) allBuffers.push(lineBufferResult);
 
-    console.log(
-        `[lineBuffer] ${windowFeatures.length} features in window, ` +
-            `${lines.length} segments, ${totalCoords} total coords`,
-    );
+    // No union needed for a single result.
+    if (allBuffers.length === 1) return allBuffers[0];
 
-    if (lines.length === 0) return null;
-
-    // Defensive: filter out lines with non-numeric / non-finite coordinates.
-    let cleanBufLines = lines.filter(
-        (coords) => coords.length >= 2 && coords.every((c) => isValidCoord(c)),
-    );
-
-    // Remove consecutive duplicate coordinates — zero-length segments can
-    // cause degenerate behaviour inside the buffer pipeline.
-    cleanBufLines = cleanBufLines
-        .map((coords) => {
-            const deduped: Position[] = [coords[0]];
-            for (let i = 1; i < coords.length; i++) {
-                const prev = coords[i - 1];
-                const curr = coords[i];
-                if (prev[0] !== curr[0] || prev[1] !== curr[1]) {
-                    deduped.push(curr);
-                }
-            }
-            return deduped.length >= 2 ? deduped : null;
-        })
-        .filter((coords): coords is Position[] => coords !== null);
-
-    if (cleanBufLines.length === 0) return null;
-
-    const cleanCoords = cleanBufLines.reduce((sum, l) => sum + l.length, 0);
-
-    // Simplify lines before buffering.  Tolerance is 5% of the buffer
-    // radius (min 10 m) — invisible on the map mask (<1 px at typical
-    // zoom) but reduces JSTS vertex count ~10–20×.
-    const simplifyTol = Math.max(radiusMeters * 0.05, 10);
-    const simplifiedLines = cleanBufLines.map((coords) =>
-        simplifyCoords(coords, simplifyTol),
-    );
-    const simpleCoords = simplifiedLines.reduce((sum, l) => sum + l.length, 0);
-
-    console.log(
-        `[lineBuffer] after dedup: ${cleanBufLines.length} segs, ` +
-            `${cleanCoords} coords → simplify(${simplifyTol.toFixed(0)}m): ` +
-            `${simpleCoords} coords`,
-    );
-
-    // -- 2. Buffer ---------------------------------------------------------------
-
-    let merged;
+    // Use @turf/buffer with 0 radius as a cheap union (buffers the union of
+    // the FeatureCollection).
+    const combined: FeatureCollection<Polygon | MultiPolygon> = {
+        type: "FeatureCollection",
+        features: allBuffers,
+    };
     try {
-        merged = multiLineString(simplifiedLines);
-    } catch (err) {
-        console.warn(`[lineBuffer] multiLineString failed:`, err);
-        return null;
-    }
-
-    const t0 = performance.now();
-    let result;
-    try {
-        result = buffer(merged, radiusMeters, {
+        const unioned = buffer(combined, 0, {
             units: "meters",
-        }) as Feature<Polygon | MultiPolygon>;
-    } catch (err) {
-        console.warn(`[lineBuffer] buffer failed:`, err);
-        return null;
-    }
-    const bufferMs = performance.now() - t0;
-
-    if (!result) {
-        console.log(`[lineBuffer] buffer returned undefined`);
-        return null;
+            steps: BUFFER_STEPS,
+        }) as FeatureCollection<Polygon | MultiPolygon> | undefined;
+        if (unioned?.features?.[0]) {
+            return unioned.features[0] as Feature<Polygon | MultiPolygon>;
+        }
+    } catch {
+        // Fallback: return the first buffer.
     }
 
-    console.log(
-        `[lineBuffer] buffer done: ${result.geometry.type} ` +
-            `in ${bufferMs.toFixed(0)}ms`,
-    );
-
-    return result;
+    return allBuffers[0];
 }
 
 /**
@@ -520,7 +745,7 @@ export function computeLineBufferCached(
     category: MeasuringCategory,
     center: Position,
     radiusMeters: number,
-    windowFeatures: Feature<LineString | MultiLineString>[],
+    windowFeatures: LineOrPolygonFeature[],
 ): Feature<Polygon | MultiPolygon> | null {
     if (radiusMeters <= 0) return null;
 
@@ -575,6 +800,73 @@ function computeBboxFromCoords(geometry: Feature["geometry"]): Bbox {
     return [minX, minY, maxX, maxY];
 }
 
+// --- Polygon → boundary rings converter -------------------------------------
+
+/**
+ * Extracts boundary ring(s) from a Polygon or MultiPolygon feature as an
+ * array of `Position[][]` suitable for nearest-point-on-line queries.
+ *
+ * For Polygon: returns [outer ring, ...hole rings].
+ * For MultiPolygon: returns all rings from all component polygons.
+ * For line geometry: returns a single-element array wrapping the coordinates.
+ *
+ * Holes are included so that a seeker inside a lake-with-island measures
+ * distance to the nearest shoreline edge, not the outer boundary.
+ */
+export function featureToRings(feature: LineOrPolygonFeature): Position[][] {
+    const geom = feature.geometry;
+    if (geom.type === "Polygon") {
+        return geom.coordinates as Position[][];
+    }
+    if (geom.type === "MultiPolygon") {
+        return geom.coordinates.flatMap((poly) => poly) as Position[][];
+    }
+    if (geom.type === "LineString") {
+        return [geom.coordinates as Position[]];
+    }
+    // MultiLineString
+    return geom.coordinates as Position[][];
+}
+
+/**
+ * Converts polygon features in a mixed array to their boundary LineString
+ * features for reference-line rendering. Line features pass through unchanged.
+ */
+export function polygonFeaturesToLineFeatures(
+    features: LineOrPolygonFeature[],
+): Feature<LineString | MultiLineString>[] {
+    const result: Feature<LineString | MultiLineString>[] = [];
+    for (const f of features) {
+        const geom = f.geometry;
+        if (geom.type === "LineString" || geom.type === "MultiLineString") {
+            result.push(f as Feature<LineString | MultiLineString>);
+            continue;
+        }
+        // Polygon → boundary LineString(s).
+        const rings = featureToRings(f);
+        if (rings.length === 1) {
+            result.push({
+                type: "Feature",
+                properties: { ...f.properties },
+                geometry: {
+                    type: "LineString",
+                    coordinates: rings[0],
+                },
+            });
+        } else if (rings.length > 1) {
+            result.push({
+                type: "Feature",
+                properties: { ...f.properties },
+                geometry: {
+                    type: "MultiLineString",
+                    coordinates: rings,
+                },
+            });
+        }
+    }
+    return result;
+}
+
 // --- Main algorithm -----------------------------------------------------------
 
 /**
@@ -611,14 +903,36 @@ export function computeLineDistance(
     ];
 
     // Collect surviving LineString coordinate arrays.
+    // For polygon features: if the center is inside → distance = 0.
+    // Otherwise, extract boundary rings and treat as line segments.
     const lines: Position[][] = [];
     for (const f of fc.features) {
         if (!bboxIntersects(featureBbox(f), queryBbox)) continue;
-        if (f.geometry.type === "LineString") {
-            lines.push(f.geometry.coordinates as Position[]);
+        const geom = f.geometry;
+        if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
+            // Check if the seeker is inside the water body.
+            if (
+                booleanPointInPolygon(
+                    center,
+                    f as Feature<Polygon | MultiPolygon>,
+                )
+            ) {
+                const result: NearestPointResult = {
+                    nearestPoint: center,
+                    distanceMeters: 0,
+                };
+                distanceCache.set(key, result);
+                return result;
+            }
+            // Outside — extract boundary rings for nearest-point search.
+            for (const ring of featureToRings(f)) {
+                lines.push(ring);
+            }
+        } else if (geom.type === "LineString") {
+            lines.push(geom.coordinates as Position[]);
         } else {
             // MultiLineString
-            for (const seg of (f.geometry as MultiLineString).coordinates) {
+            for (const seg of (geom as MultiLineString).coordinates) {
                 lines.push(seg as Position[]);
             }
         }

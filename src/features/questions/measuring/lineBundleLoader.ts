@@ -1,9 +1,17 @@
-import type { Feature, LineString, MultiLineString } from "geojson";
+import type {
+    Feature,
+    LineString,
+    MultiLineString,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
 
 import type { Bbox } from "@/shared/geojson";
 import type { MeasuringCategory } from "./measuringTypes";
 
-type LineFeature = Feature<LineString | MultiLineString>;
+export type BundleFeature = Feature<
+    LineString | MultiLineString | Polygon | MultiPolygon
+>;
 
 export type LineBundle = {
     schemaVersion: number;
@@ -11,7 +19,7 @@ export type LineBundle = {
     generatedAt: string;
     source: string;
     extractBbox: Bbox;
-    features: LineFeature[];
+    features: BundleFeature[];
 };
 
 const cache = new Map<string, LineBundle | null>();

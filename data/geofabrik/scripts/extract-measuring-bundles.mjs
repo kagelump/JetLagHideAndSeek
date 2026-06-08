@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 import YAML from "yaml";
+import { union, intersection } from "polyclip-ts";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const geofabrikDir = resolve(scriptDir, "..");
@@ -40,7 +41,7 @@ const CATEGORIES = [
         osmiumFilter:
             "w/natural=water r/natural=water w/landuse=basin w/waterway=riverbank",
         postFilter: null,
-        geometry: "polygon-to-ring",
+        geometry: "polygon-dissolve",
     },
     {
         key: "admin-1st-border",
@@ -210,6 +211,345 @@ function computeBbox(coords) {
     };
     walk(coords);
     return [minX, minY, maxX, maxY];
+}
+
+// ─── Polygon helpers (for polygon-dissolve mode) ────────────────────────────
+
+/**
+ * Computes a bbox for Polygon / MultiPolygon geometry, walking all rings.
+ */
+function computePolygonBbox(geom) {
+    let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+    const walkRing = (ring) => {
+        for (const c of ring) {
+            if (c[0] < minX) minX = c[0];
+            if (c[0] > maxX) maxX = c[0];
+            if (c[1] < minY) minY = c[1];
+            if (c[1] > maxY) maxY = c[1];
+        }
+    };
+    if (geom.type === "Polygon") {
+        for (const ring of geom.coordinates) walkRing(ring);
+    } else if (geom.type === "MultiPolygon") {
+        for (const poly of geom.coordinates) {
+            for (const ring of poly) walkRing(ring);
+        }
+    }
+    return [minX, minY, maxX, maxY];
+}
+
+/**
+ * Great-circle perimeter of a polygon ring in meters.
+ */
+function ringPerimeterMeters(ring) {
+    let total = 0;
+    for (let i = 0; i < ring.length - 1; i++) {
+        total += haversineMeters(ring[i], ring[i + 1]);
+    }
+    return total;
+}
+
+/**
+ * Total perimeter of a Polygon or MultiPolygon (outer ring + holes) in meters.
+ * Used for the min-feature-length filter before dissolve.
+ */
+function polygonPerimeterMeters(geom) {
+    let total = 0;
+    if (geom.type === "Polygon") {
+        for (const ring of geom.coordinates) {
+            total += ringPerimeterMeters(ring);
+        }
+    } else if (geom.type === "MultiPolygon") {
+        for (const poly of geom.coordinates) {
+            for (const ring of poly) total += ringPerimeterMeters(ring);
+        }
+    }
+    return total;
+}
+
+/**
+ * Strips consecutive duplicate coordinates from a single ring. Returns the
+ * cleaned ring (may be shorter). Rings that collapse to < 3 coords are
+ * returned as-is (caller should filter them out).
+ */
+function cleanRingCoords(ring) {
+    if (ring.length < 3) return ring;
+    const out = [ring[0]];
+    for (let i = 1; i < ring.length; i++) {
+        const prev = ring[i - 1];
+        const curr = ring[i];
+        if (prev[0] !== curr[0] || prev[1] !== curr[1]) out.push(curr);
+    }
+    return out;
+}
+
+/**
+ * Cleans consecutive duplicate coordinates from all rings of a Polygon or
+ * MultiPolygon. Drops rings that collapse to < 3 coords. Returns null if
+ * the geometry degenerates (all rings collapsed).
+ */
+function cleanPolygonFeature(feature) {
+    const geom = feature.geometry;
+    if (geom.type === "Polygon") {
+        const cleaned = geom.coordinates.map(cleanRingCoords).filter(
+            (r) =>
+                r.length >= 4 &&
+                r[0][0] === r[r.length - 1][0] &&
+                r[0][1] === r[r.length - 1][1]
+                    ? r
+                    : r.length >= 3, // non-closed rings are valid in some OSM data
+        );
+        if (cleaned.length === 0) return null;
+        return {
+            ...feature,
+            geometry: { type: "Polygon", coordinates: cleaned },
+        };
+    } else if (geom.type === "MultiPolygon") {
+        const cleaned = geom.coordinates
+            .map((poly) =>
+                poly.map(cleanRingCoords).filter((r) => r.length >= 3),
+            )
+            .filter((poly) => poly.length > 0 && poly[0].length >= 3);
+        if (cleaned.length === 0) return null;
+        return {
+            ...feature,
+            geometry: { type: "MultiPolygon", coordinates: cleaned },
+        };
+    }
+    return feature;
+}
+
+/**
+ * Simplifies each ring of a Polygon or MultiPolygon using RDP. Drops rings
+ * that collapse to < 4 coordinates (RDP on a small polygon returns only
+ * [first, last] when no vertex exceeds tolerance). Returns null when every
+ * ring degenerates — matching the runtime `simplifyPolygonCoords` contract.
+ */
+function simplifyPolygonFeature(feature, tolerance) {
+    const geom = feature.geometry;
+    if (geom.type === "Polygon") {
+        const simplified = geom.coordinates
+            .map((ring) => simplifyCoords(ring, tolerance))
+            .filter((ring) => ring.length >= 4);
+        if (simplified.length === 0) return null;
+        return {
+            ...feature,
+            geometry: { type: "Polygon", coordinates: simplified },
+        };
+    } else if (geom.type === "MultiPolygon") {
+        const simplified = geom.coordinates
+            .map((poly) =>
+                poly
+                    .map((ring) => simplifyCoords(ring, tolerance))
+                    .filter((ring) => ring.length >= 4),
+            )
+            .filter((poly) => poly.length > 0);
+        if (simplified.length === 0) return null;
+        return {
+            ...feature,
+            geometry: { type: "MultiPolygon", coordinates: simplified },
+        };
+    }
+    return feature;
+}
+
+/**
+ * Returns true when two bboxes intersect (inclusive).
+ */
+function bboxesIntersect(a, b) {
+    return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+}
+
+/**
+ * Unions an array of polyclip-ts coordinate arrays (each a GeoJSON
+ * `geometry.coordinates` for a Polygon or MultiPolygon) into as few merge
+ * groups as possible, returning one coordinate array per surviving group
+ * (normally a single group).
+ *
+ * Uses a single variadic `union(first, ...rest)` pass: polyclip-ts sweeps all
+ * inputs in one O(n log n) pass. The previous sequential accumulation
+ * (`acc = union(acc, next)`) was O(n²) — it re-processed the growing
+ * accumulator on every step and made the dissolve effectively hang on dense
+ * tiles (benchmarked: 2,000 trivial squares took 123 s sequential vs 0.1 s
+ * variadic).
+ *
+ * Fail-safe: polyclip-ts occasionally throws on degenerate OSM rings. When a
+ * union throws, the input is split in half and each half is dissolved
+ * independently, so one bad polygon isolates itself in its own group instead
+ * of poisoning the whole tile. A final guarded pass tries to re-merge the
+ * surviving groups.
+ */
+function unionAllCoords(coordsList) {
+    if (coordsList.length <= 1) return coordsList.slice();
+    try {
+        return [union(coordsList[0], ...coordsList.slice(1))];
+    } catch {
+        const mid = Math.floor(coordsList.length / 2);
+        const groups = [
+            ...unionAllCoords(coordsList.slice(0, mid)),
+            ...unionAllCoords(coordsList.slice(mid)),
+        ];
+        if (groups.length <= 1) return groups;
+        try {
+            return [union(groups[0], ...groups.slice(1))];
+        } catch {
+            return groups;
+        }
+    }
+}
+
+// ─── Polygon dissolve (for polygon-dissolve mode) ──────────────────────────
+
+/**
+ * Tile size in degrees for the dissolve grid. 0.25° ≈ 28 km at mid-latitudes
+ * — large enough that most water bodies fall entirely inside one tile,
+ * small enough that the union within each tile is fast.
+ */
+const DISSOLVE_TILE_DEG = 0.25;
+
+/** Overlap between adjacent tiles to prevent seams at tile boundaries. */
+const DISSOLVE_TILE_OVERLAP_DEG = 0.01;
+
+/**
+ * Dissolves an array of Polygon / MultiPolygon features into a smaller set
+ * of tiled, unioned MultiPolygon features.
+ *
+ * Strategy: partition input polygons into a coarse grid, union within each
+ * tile, intersect with the tile bounds for clean edges, simplify, and emit
+ * one feature per non-empty tile. Adjacent tiles overlap by a small ε so
+ * features straddling a boundary are present in both tiles and dissolved
+ * across the seam.
+ */
+function polygonDissolve(inputFeatures, extractBbox, simplifyTolerance) {
+    const t0 = Date.now();
+
+    // Build tile grid.
+    const tiles = [];
+    for (
+        let tx = extractBbox[0];
+        tx < extractBbox[2];
+        tx += DISSOLVE_TILE_DEG
+    ) {
+        for (
+            let ty = extractBbox[1];
+            ty < extractBbox[3];
+            ty += DISSOLVE_TILE_DEG
+        ) {
+            const tileBbox = [
+                tx - DISSOLVE_TILE_OVERLAP_DEG,
+                ty - DISSOLVE_TILE_OVERLAP_DEG,
+                tx + DISSOLVE_TILE_DEG + DISSOLVE_TILE_OVERLAP_DEG,
+                ty + DISSOLVE_TILE_DEG + DISSOLVE_TILE_OVERLAP_DEG,
+            ];
+            tiles.push(tileBbox);
+        }
+    }
+
+    console.log(
+        `  [dissolve] ${inputFeatures.length.toLocaleString()} input polygons, ` +
+            `${tiles.length} tiles (${DISSOLVE_TILE_DEG}° each)`,
+    );
+
+    const results = [];
+    let emptyTiles = 0;
+    let unionTimeMs = 0;
+
+    for (const tileBbox of tiles) {
+        // Find polygons whose bbox intersects this tile.
+        const tilePolys = inputFeatures.filter((f) =>
+            bboxesIntersect(f.bbox, tileBbox),
+        );
+        if (tilePolys.length === 0) {
+            emptyTiles++;
+            continue;
+        }
+
+        // Union all polygons in this tile in a single variadic pass.
+        // polyclip-ts union/intersection expect raw coordinate arrays, NOT
+        // GeoJSON geometry objects ({type, coordinates}); work with
+        // .coordinates throughout and re-wrap the result. `unionAllCoords`
+        // is fail-safe: a polygon that makes polyclip-ts throw isolates
+        // itself into its own merge group instead of dropping out, so every
+        // input polygon still contributes.
+        const tUnion = Date.now();
+        const groups = unionAllCoords(
+            tilePolys.map((f) => f.geometry.coordinates),
+        );
+        unionTimeMs += Date.now() - tUnion;
+
+        if (groups.length > 1) {
+            console.log(
+                `  [dissolve] tile [${tileBbox[0].toFixed(2)},${tileBbox[1].toFixed(2)}] ` +
+                    `${tilePolys.length} polys → ${groups.length} merge groups ` +
+                    `(some unions failed — kept as separate features)`,
+            );
+        }
+
+        // Intersect each merge group with the tile bounds to get clean
+        // edges, simplify, and emit.
+        const tileGeom = {
+            type: "Polygon",
+            coordinates: [
+                [
+                    [tileBbox[0], tileBbox[1]],
+                    [tileBbox[2], tileBbox[1]],
+                    [tileBbox[2], tileBbox[3]],
+                    [tileBbox[0], tileBbox[3]],
+                    [tileBbox[0], tileBbox[1]],
+                ],
+            ],
+        };
+
+        for (const merged of groups) {
+            if (!merged) continue;
+
+            let clipped;
+            try {
+                clipped = intersection(merged, tileGeom.coordinates);
+            } catch {
+                // Fall back to the merged result if intersection fails.
+                clipped = merged;
+            }
+
+            if (!clipped) continue;
+
+            // Wrap polyclip-ts raw coordinate result back into a GeoJSON
+            // geometry object for simplify/bbox helpers.
+            const feat = {
+                type: "Feature",
+                geometry: { type: "MultiPolygon", coordinates: clipped },
+                properties: {},
+            };
+
+            // Simplify.
+            const simplified = simplifyPolygonFeature(feat, simplifyTolerance);
+
+            // Skip features that fully degenerate (all rings collapsed to < 4 coords).
+            if (!simplified) continue;
+
+            // Compute bbox of the simplified geometry.
+            const bbox = computePolygonBbox(simplified.geometry);
+
+            results.push({
+                type: "Feature",
+                bbox,
+                geometry: simplified.geometry,
+                properties: {},
+            });
+        }
+    }
+
+    console.log(
+        `  [dissolve] ${results.length} tile features ` +
+            `(${emptyTiles} empty tiles), ` +
+            `union: ${(unionTimeMs / 1000).toFixed(1)}s, ` +
+            `total: ${((Date.now() - t0) / 1000).toFixed(1)}s`,
+    );
+
+    return results;
 }
 
 // ─── Simplification ──────────────────────────────────────────────────────────
@@ -1168,9 +1508,21 @@ async function main() {
                     }
                 }
 
-                // Convert polygon to outer-ring LineString.
+                // Convert polygon to outer-ring LineString, or keep as polygon
+                // for dissolve.
                 let lineFeatures;
-                if (category.geometry === "polygon-to-ring") {
+                if (category.geometry === "polygon-dissolve") {
+                    // Keep polygon geometry as-is for the dissolve pipeline.
+                    // Only accept Polygon / MultiPolygon from the source.
+                    if (
+                        feature.geometry.type === "Polygon" ||
+                        feature.geometry.type === "MultiPolygon"
+                    ) {
+                        lineFeatures = [feature];
+                    } else {
+                        continue;
+                    }
+                } else if (category.geometry === "polygon-to-ring") {
                     lineFeatures = featureToLineStrings(feature);
                 } else {
                     // Coastline / high-speed-rail: pass-through LineString.
@@ -1186,6 +1538,19 @@ async function main() {
                 }
 
                 for (const lf of lineFeatures) {
+                    if (category.geometry === "polygon-dissolve") {
+                        // Store raw polygon geometry; dissolve + simplify
+                        // happens in post-processing.
+                        const bbox = computePolygonBbox(lf.geometry);
+                        features.push({
+                            type: "Feature",
+                            bbox,
+                            geometry: lf.geometry,
+                            properties: {},
+                        });
+                        continue;
+                    }
+
                     // Split MultiLineStrings into individual LineStrings.
                     const lineStrings =
                         lf.geometry.type === "MultiLineString"
@@ -1228,23 +1593,46 @@ async function main() {
 
         // ── General post-processing (all categories) ─────────────────────
 
+        const isPolygonDissolve = category.geometry === "polygon-dissolve";
+
         // 1. Strip consecutive duplicate coordinates.
-        const dupPairsBefore = countDupPairs(features);
-        for (const f of features) {
-            const g = f.geometry;
-            if (g.type === "LineString") {
-                g.coordinates = cleanCoordsInline(g.coordinates);
-            } else if (g.type === "MultiLineString") {
-                g.coordinates = g.coordinates.map((seg) =>
-                    cleanCoordsInline(seg),
+        if (isPolygonDissolve) {
+            // Polygon dissolve: clean rings, filter degenerate geometries.
+            const cleaned = [];
+            let droppedDegen = 0;
+            for (const f of features) {
+                const c = cleanPolygonFeature(f);
+                if (c) {
+                    cleaned.push(c);
+                } else {
+                    droppedDegen++;
+                }
+            }
+            if (droppedDegen > 0) {
+                console.log(
+                    `  cleanCoords: dropped ${droppedDegen} degenerate polygons`,
                 );
             }
-        }
-        const dupPairsAfter = countDupPairs(features);
-        if (dupPairsBefore > 0) {
-            console.log(
-                `  cleanCoords: ${dupPairsBefore} dup-pairs → ${dupPairsAfter}`,
-            );
+            features.length = 0;
+            features.push(...cleaned);
+        } else {
+            const dupPairsBefore = countDupPairs(features);
+            for (const f of features) {
+                const g = f.geometry;
+                if (g.type === "LineString") {
+                    g.coordinates = cleanCoordsInline(g.coordinates);
+                } else if (g.type === "MultiLineString") {
+                    g.coordinates = g.coordinates.map((seg) =>
+                        cleanCoordsInline(seg),
+                    );
+                }
+            }
+            const dupPairsAfter = countDupPairs(features);
+            if (dupPairsBefore > 0) {
+                console.log(
+                    `  cleanCoords: ${dupPairsBefore} dup-pairs → ${dupPairsAfter}`,
+                );
+            }
         }
 
         // 2. Drop features shorter than the category minimum.
@@ -1252,6 +1640,10 @@ async function main() {
         if (minLen && minLen > 0) {
             const before = features.length;
             const kept = features.filter((f) => {
+                if (isPolygonDissolve) {
+                    // Use perimeter for polygon min-length filter.
+                    return polygonPerimeterMeters(f.geometry) >= minLen;
+                }
                 const coords = f.geometry.coordinates;
                 if (f.geometry.type === "LineString") {
                     return lineLengthMeters(coords) >= minLen;
@@ -1275,7 +1667,19 @@ async function main() {
 
         // 3. Recompute bboxes after coordinate changes.
         for (const f of features) {
-            f.bbox = computeBbox(f.geometry.coordinates);
+            if (isPolygonDissolve) {
+                f.bbox = computePolygonBbox(f.geometry);
+            } else {
+                f.bbox = computeBbox(f.geometry.coordinates);
+            }
+        }
+
+        // ── Polygon dissolve post-processing ────────────────────────────
+        if (isPolygonDissolve) {
+            const tolerance = SIMPLIFY_TOLERANCES[category.key] ?? 0.0005;
+            const dissolved = polygonDissolve(features, extractBbox, tolerance);
+            features.length = 0;
+            features.push(...dissolved);
         }
 
         // ── High-speed-rail post-processing ─────────────────────────────
@@ -1353,8 +1757,10 @@ async function main() {
         }
 
         // Write bundle.
+        const bundleSchemaVersion =
+            category.geometry === "polygon-dissolve" ? 2 : 1;
         const bundle = {
-            schemaVersion: 1,
+            schemaVersion: bundleSchemaVersion,
             category: category.key,
             generatedAt,
             source: "japan-latest",
@@ -1474,7 +1880,14 @@ async function checkAgainstCommitted(tempDir, root) {
 
 // Exported for unit/structural tests (the module runs `main` only when invoked
 // directly via the guard below, so importing it has no side effects).
-export { stitchSegments, validateLineContinuity };
+export {
+    stitchSegments,
+    validateLineContinuity,
+    polygonDissolve,
+    cleanPolygonFeature,
+    simplifyPolygonFeature,
+    polygonPerimeterMeters,
+};
 
 if (import.meta.url === `file://${process.argv[1]}`) {
     main().catch((err) => {

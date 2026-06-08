@@ -16,6 +16,7 @@ import {
     computeLineBufferCached,
     computeLineCategory,
     getDilatedPlayArea,
+    polygonFeaturesToLineFeatures,
     type LineCategoryComputation,
 } from "./lineMeasuringGeometry";
 import {
@@ -47,7 +48,9 @@ export function buildMeasuringRenderState(
         string,
         {
             nearestPoint: Position;
-            windowFeatures: Feature<LineString | MultiLineString>[];
+            windowFeatures: Feature<
+                LineString | MultiLineString | Polygon | MultiPolygon
+            >[];
         }
     >();
 
@@ -207,9 +210,16 @@ export function buildMeasuringRenderState(
             // reference line never spills off-map (fixes HSR past
             // Yokohama) and coincident borders survive (fixes prefecture
             // border on Tokyo 23-wards edge).
+            //
+            // Convert polygon features to boundary lines before clipping
+            // so the reference line renders as the shoreline, not a filled
+            // polygon (P0 — body-of-water dissolved polygons).
+            const lineOnlyFeatures = polygonFeaturesToLineFeatures(
+                nearby.windowFeatures,
+            );
             const dilated = getDilatedPlayArea(playAreaBoundary);
             const clipped = clipLineFeaturesToPlayArea(
-                nearby.windowFeatures,
+                lineOnlyFeatures,
                 dilated,
             );
             for (const f of clipped) {
@@ -218,7 +228,12 @@ export function buildMeasuringRenderState(
         } else {
             // No boundary available — use window features unclipped
             // (backward-compatible path for tests without a boundary).
-            for (const f of nearby.windowFeatures) {
+            // Convert polygon features to boundary lines so the reference
+            // line always renders as a line.
+            const lineOnlyFeatures = polygonFeaturesToLineFeatures(
+                nearby.windowFeatures,
+            );
+            for (const f of lineOnlyFeatures) {
                 lineFeatures.push(f);
             }
         }

@@ -10,10 +10,15 @@ import type {
 import {
     clearLineCategoryCache,
     clearLineDistanceCache,
+    clearLineBufferCache,
     clearDilatedBoundaryCache,
     clipLineFeaturesToPlayArea,
     computeLineCategory,
     computeLineDistance,
+    computeLineBuffer,
+    applyBufferBudget,
+    featureToRings,
+    polygonFeaturesToLineFeatures,
     getDilatedPlayArea,
 } from "@/features/questions/measuring/lineMeasuringGeometry";
 import {
@@ -119,6 +124,7 @@ function allCoordsWithin(
 beforeEach(() => {
     clearLineCategoryCache();
     clearLineDistanceCache();
+    clearLineBufferCache();
     clearDilatedBoundaryCache();
     __clearLineBundlesForTest();
 });
@@ -681,5 +687,651 @@ describe("computeLineCategory", () => {
             PLAY_AREA_BBOX,
         );
         expect(result).toBeNull();
+    });
+});
+
+// ─── computeLineBuffer input budget tests ───────────────────────────────
+
+describe("computeLineBuffer input budget", () => {
+    /**
+     * Build a line feature as a ring with the given centroid and approximate
+     * side length in degrees. Used to generate many small features.
+     */
+    function makeRingFeature(
+        cx: number,
+        cy: number,
+        sideDeg: number,
+    ): Feature<LineString> {
+        const h = sideDeg / 2;
+        return {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [cx - h, cy - h],
+                    [cx + h, cy - h],
+                    [cx + h, cy + h],
+                    [cx - h, cy + h],
+                    [cx - h, cy - h],
+                ],
+            },
+        };
+    }
+
+    /**
+     * Helper: compute approximate bbox from a GeoJSON geometry by walking
+     * all coordinate arrays. Used when `feature.bbox` is not set.
+     */
+    function geometryBbox(
+        g: Feature["geometry"],
+    ): [number, number, number, number] {
+        let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity;
+        const walk = (c: unknown) => {
+            if (Array.isArray(c) && typeof c[0] === "number") {
+                const [x, y] = c as [number, number];
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            } else if (Array.isArray(c)) {
+                for (const item of c) walk(item);
+            }
+        };
+        walk((g as { coordinates: unknown }).coordinates);
+        return [minX, minY, maxX, maxY];
+    }
+
+    describe("applyBufferBudget", () => {
+        it("stays under the segment budget", () => {
+            // Build 600 lines: 400 long (~2 km, 10 coords) + 200 short
+            // (~700 m, 3 coords). Total 600 segs / 4,600 coords exceeds
+            // both budgets → escalation drops the short lines.
+            const lines: [number, number][][] = [];
+            // 400 long lines (~0.02° ≈ 2.2 km each)
+            for (let i = 0; i < 400; i++) {
+                const cx = 139.0 + (i % 20) * 0.05;
+                const cy = 35.0 + Math.floor(i / 20) * 0.05;
+                const seg: [number, number][] = [];
+                for (let j = 0; j <= 10; j++) {
+                    seg.push([cx + j * 0.002, cy]);
+                }
+                lines.push(seg);
+            }
+            // 200 short lines (~0.006° ≈ 660 m each)
+            for (let i = 0; i < 200; i++) {
+                const cx = 139.2 + (i % 20) * 0.05;
+                const cy = 35.0 + Math.floor(i / 20) * 0.05;
+                lines.push([
+                    [cx, cy],
+                    [cx + 0.006, cy],
+                ]);
+            }
+            const result = applyBufferBudget(lines, 2000);
+            expect(result.length).toBeLessThanOrEqual(400);
+            // Should still have some lines (not empty).
+            expect(result.length).toBeGreaterThan(0);
+        });
+
+        it("drops short features while keeping long ones", () => {
+            // 401 lines: 1 long (~0.2° ≈ 22 km, 10 coords) + 400 tiny
+            // (~0.002° ≈ 220 m each). Total 401 segs triggers budget;
+            // escalation drops the tiny features.
+            const longLine: [number, number][] = [];
+            for (let i = 0; i <= 10; i++) {
+                longLine.push([139.0 + i * 0.02, 35.0]);
+            }
+            const tinyLines: [number, number][][] = [];
+            for (let i = 0; i < 400; i++) {
+                const cx = 139.2 + (i % 20) * 0.01;
+                const cy = 35.0 + Math.floor(i / 20) * 0.01;
+                const ring = makeRingFeature(cx, cy, 0.002);
+                tinyLines.push(ring.geometry.coordinates as [number, number][]);
+            }
+            const result = applyBufferBudget([longLine, ...tinyLines], 2000);
+            // The tiny rings should all be dropped; only the long line survives.
+            expect(result.length).toBe(1);
+        });
+
+        it("completes quickly for 1,000 features (perf guard)", () => {
+            const manyLines: [number, number][][] = [];
+            for (let i = 0; i < 1000; i++) {
+                const cx = 139.0 + (i % 50) * 0.02;
+                const cy = 35.0 + Math.floor(i / 50) * 0.02;
+                // Each line ~2 km, 10 coords → 1,000 segs, 10,000 coords
+                const seg: [number, number][] = [];
+                for (let j = 0; j <= 10; j++) {
+                    seg.push([cx + j * 0.002, cy]);
+                }
+                manyLines.push(seg);
+            }
+            const t0 = performance.now();
+            const result = applyBufferBudget(manyLines, 2000);
+            const ms = performance.now() - t0;
+            expect(result).not.toBeNull();
+            expect(ms).toBeLessThan(1000);
+        });
+    });
+
+    describe("computeLineBuffer", () => {
+        it("returns a buffer polygon for a single long line (no regression)", () => {
+            const feature: Feature<LineString> = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "LineString",
+                    coordinates: [
+                        [139.0, 35.0],
+                        [139.2, 35.0],
+                    ],
+                },
+            };
+            const result = computeLineBuffer([feature], 2000);
+            expect(result).not.toBeNull();
+            expect(result!.geometry.type).toMatch(/Polygon/);
+
+            // Compute bbox from geometry (buffer may not set .bbox).
+            const bbox = geometryBbox(result!.geometry);
+            // West edge near 139.0 - ~0.02° (~2 km)
+            expect(bbox[0]).toBeLessThan(138.99);
+            // East edge near 139.2 + ~0.02°
+            expect(bbox[2]).toBeGreaterThan(139.19);
+        });
+
+        it("does not hang on 1,000 small features", () => {
+            const features: Feature<LineString>[] = [];
+            for (let i = 0; i < 1000; i++) {
+                const cx = 139.0 + (i % 50) * 0.01;
+                const cy = 35.0 + Math.floor(i / 50) * 0.01;
+                features.push(makeRingFeature(cx, cy, 0.002));
+            }
+            const t0 = performance.now();
+            computeLineBuffer(features, 2000);
+            const ms = performance.now() - t0;
+            // Should return something (or null is acceptable for all-dropped
+            // features). The key assertion: it does not hang.
+            expect(ms).toBeLessThan(2000);
+        });
+
+        it("returns null when all features are dropped by budget", () => {
+            // 1,000 features each consisting of a single point-length
+            // LineString — all will be filtered out.
+            const features: Feature<LineString>[] = [];
+            for (let i = 0; i < 1000; i++) {
+                features.push({
+                    type: "Feature",
+                    properties: {},
+                    geometry: {
+                        type: "LineString",
+                        coordinates: [
+                            [139.0, 35.0],
+                            [139.0001, 35.0],
+                        ],
+                    },
+                });
+            }
+            const result = computeLineBuffer(features, 50000);
+            // All features are too short for a 50 km buffer — budget drops them all.
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("real bundles", () => {
+        it("ships a dissolved (not per-ring) body-of-water bundle", () => {
+            // P0 regression guard: the dissolve must collapse ~26k raw water
+            // polygons into a small set of MultiPolygons. A revert to the old
+            // polygon-to-ring bundle (45k+ LineStrings) or a broken dissolve
+            // (31k un-merged polygons) fails here, loudly and deterministically.
+            const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
+            expect(bundle.schemaVersion).toBe(2);
+            expect(bundle.features.length).toBeLessThan(2000);
+            expect(bundle.features[0].geometry.type).toMatch(
+                /^(Polygon|MultiPolygon)$/,
+            );
+        });
+
+        it("buffers the real body-of-water window without softlocking", () => {
+            const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
+            __setLineBundleForTest("body-of-water", bundle);
+            const cat = computeLineCategory(
+                [139.75, 35.68],
+                "body-of-water",
+                [139.0, 35.0, 140.0, 36.0],
+            );
+            expect(cat).not.toBeNull();
+            const t0 = performance.now();
+            const buf = computeLineBuffer(
+                cat!.windowFeatures,
+                cat!.distanceMeters,
+            );
+            const ms = performance.now() - t0;
+            expect(buf).not.toBeNull();
+            // Boundedness guard, not a tight perf assertion. The dissolved
+            // Tokyo Bay window is genuine dense coastline geometry (~67
+            // MultiPolygons), so buffering takes ~2.5 s locally and more on
+            // CI — but the P1 budget + polygon-coord simplification keep it
+            // bounded. Pre-fix this softlocked (never returned). The generous
+            // ceiling catches a regression to unbounded work without flaking
+            // on slower CI.
+            expect(ms).toBeLessThan(8000);
+        });
+    });
+});
+
+// ─── Polygon body-of-water tests (P0 — dissolved polygon bundle) ────────
+
+function makePolygonFeature(
+    coords: [number, number][][],
+    bbox?: [number, number, number, number],
+): LineBundle["features"][number] {
+    const xs = coords.flat().map((c) => c[0]);
+    const ys = coords.flat().map((c) => c[1]);
+    return {
+        type: "Feature",
+        bbox: bbox ?? [
+            Math.min(...xs),
+            Math.min(...ys),
+            Math.max(...xs),
+            Math.max(...ys),
+        ],
+        geometry: {
+            type: coords.length === 1 ? "Polygon" : "MultiPolygon",
+            coordinates: coords as
+                | [number, number][][]
+                | [number, number][][][],
+        },
+        properties: {},
+    } as LineBundle["features"][number];
+}
+
+function makePolygonBundle(
+    features: LineBundle["features"],
+    category?: string,
+): LineBundle {
+    return {
+        schemaVersion: 2,
+        category: category ?? "body-of-water",
+        generatedAt: "2026-01-01T00:00:00.000Z",
+        source: "test-fixture",
+        extractBbox: [137.9, 33.9, 141.9, 37.9],
+        features,
+    };
+}
+
+describe("polygon body-of-water", () => {
+    beforeEach(() => {
+        clearLineDistanceCache();
+        clearLineBufferCache();
+        __clearLineBundlesForTest();
+    });
+
+    describe("computeLineDistance with polygons", () => {
+        it("seeker outside water snaps to the shoreline", () => {
+            // A square lake from [139.0,35.0] to [139.1,35.1].
+            const lake = makePolygonFeature([
+                [
+                    [139.0, 35.0],
+                    [139.1, 35.0],
+                    [139.1, 35.1],
+                    [139.0, 35.1],
+                    [139.0, 35.0],
+                ],
+            ]);
+            __setLineBundleForTest("body-of-water", makePolygonBundle([lake]));
+
+            // Center outside the lake (to the northeast).
+            const result = computeLineDistance(
+                [139.15, 35.15],
+                "body-of-water",
+            );
+            expect(result).not.toBeNull();
+            // Distance should be > 0 (outside the lake).
+            expect(result!.distanceMeters).toBeGreaterThan(0);
+            // Nearest point should be on one of the lake's edges.
+            // The closest point should be near the northeast corner [139.1, 35.1].
+            expect(result!.nearestPoint[0]).toBeCloseTo(139.1, 1);
+            expect(result!.nearestPoint[1]).toBeCloseTo(35.1, 1);
+        });
+
+        it("seeker inside water returns distance 0", () => {
+            const lake = makePolygonFeature([
+                [
+                    [139.0, 35.0],
+                    [139.1, 35.0],
+                    [139.1, 35.1],
+                    [139.0, 35.1],
+                    [139.0, 35.0],
+                ],
+            ]);
+            __setLineBundleForTest("body-of-water", makePolygonBundle([lake]));
+
+            // Center inside the lake.
+            const result = computeLineDistance(
+                [139.05, 35.05],
+                "body-of-water",
+            );
+            expect(result).not.toBeNull();
+            expect(result!.distanceMeters).toBe(0);
+            expect(result!.nearestPoint).toEqual([139.05, 35.05]);
+        });
+
+        it("seeker inside a MultiPolygon water body returns distance 0", () => {
+            // Two disjoint square lakes as a MultiPolygon.
+            const lakes: LineBundle["features"][number] = {
+                type: "Feature",
+                bbox: [139.0, 35.0, 139.15, 35.15],
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: [
+                        [
+                            [
+                                [139.0, 35.0],
+                                [139.05, 35.0],
+                                [139.05, 35.05],
+                                [139.0, 35.05],
+                                [139.0, 35.0],
+                            ],
+                        ],
+                        [
+                            [
+                                [139.1, 35.1],
+                                [139.15, 35.1],
+                                [139.15, 35.15],
+                                [139.1, 35.15],
+                                [139.1, 35.1],
+                            ],
+                        ],
+                    ],
+                },
+                properties: {},
+            };
+            __setLineBundleForTest("body-of-water", makePolygonBundle([lakes]));
+
+            // Center inside the second part.
+            const result = computeLineDistance(
+                [139.12, 35.12],
+                "body-of-water",
+            );
+            expect(result).not.toBeNull();
+            expect(result!.distanceMeters).toBe(0);
+        });
+
+        it("seeker outside a polygon with holes snaps to nearest edge", () => {
+            // Lake with an island hole — outer ring [139.0,35.0]-[139.2,35.2],
+            // hole at [139.05,35.05]-[139.15,35.15].
+            const lakeWithIsland: LineBundle["features"][number] = {
+                type: "Feature",
+                bbox: [139.0, 35.0, 139.2, 35.2],
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [
+                        [
+                            [139.0, 35.0],
+                            [139.2, 35.0],
+                            [139.2, 35.2],
+                            [139.0, 35.2],
+                            [139.0, 35.0],
+                        ],
+                        [
+                            [139.05, 35.05],
+                            [139.15, 35.05],
+                            [139.15, 35.15],
+                            [139.05, 35.15],
+                            [139.05, 35.05],
+                        ],
+                    ],
+                },
+                properties: {},
+            };
+            __setLineBundleForTest(
+                "body-of-water",
+                makePolygonBundle([lakeWithIsland]),
+            );
+
+            // Center inside the hole (on the island) — should measure to
+            // the hole boundary, not distance 0.
+            const result = computeLineDistance([139.1, 35.1], "body-of-water");
+            expect(result).not.toBeNull();
+            // The seeker is NOT inside water (they're on the island).
+            // Distance should be > 0 — to the hole edge.
+            expect(result!.distanceMeters).toBeGreaterThan(0);
+        });
+
+        it("handles mixed polygon and line features in the bundle", () => {
+            // A square lake + a line segment outside it.
+            const lake = makePolygonFeature([
+                [
+                    [139.0, 35.0],
+                    [139.05, 35.0],
+                    [139.05, 35.05],
+                    [139.0, 35.05],
+                    [139.0, 35.0],
+                ],
+            ]);
+            const line = makeLineFeature([
+                [139.1, 35.0],
+                [139.15, 35.0],
+            ]);
+            __setLineBundleForTest(
+                "body-of-water",
+                makePolygonBundle([
+                    lake,
+                    line as LineBundle["features"][number],
+                ]),
+            );
+
+            // Center far from both — should not crash.
+            const result = computeLineDistance([140.0, 36.0], "body-of-water");
+            // Outside the 50 km margin — should be null.
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("computeLineBuffer with polygons", () => {
+        it("returns a buffer polygon for a polygon feature", () => {
+            const lake: LineBundle["features"][number] = {
+                type: "Feature",
+                bbox: [139.0, 35.0, 139.05, 35.05],
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [
+                        [
+                            [139.0, 35.0],
+                            [139.05, 35.0],
+                            [139.05, 35.05],
+                            [139.0, 35.05],
+                            [139.0, 35.0],
+                        ],
+                    ],
+                },
+                properties: {},
+            };
+            const result = computeLineBuffer([lake], 1000);
+            expect(result).not.toBeNull();
+            expect(result!.geometry.type).toMatch(/Polygon/);
+        });
+
+        it("returns null for empty polygon features array", () => {
+            const result = computeLineBuffer([], 1000);
+            expect(result).toBeNull();
+        });
+
+        it("handles MultiPolygon features", () => {
+            const mp: LineBundle["features"][number] = {
+                type: "Feature",
+                bbox: [139.0, 35.0, 139.15, 35.15],
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: [
+                        [
+                            [
+                                [139.0, 35.0],
+                                [139.05, 35.0],
+                                [139.05, 35.05],
+                                [139.0, 35.05],
+                                [139.0, 35.0],
+                            ],
+                        ],
+                        [
+                            [
+                                [139.1, 35.1],
+                                [139.15, 35.1],
+                                [139.15, 35.15],
+                                [139.1, 35.15],
+                                [139.1, 35.1],
+                            ],
+                        ],
+                    ],
+                },
+                properties: {},
+            };
+            const result = computeLineBuffer([mp], 1000);
+            expect(result).not.toBeNull();
+            expect(result!.geometry.type).toMatch(/Polygon/);
+        });
+    });
+
+    describe("polygonFeaturesToLineFeatures", () => {
+        it("converts a Polygon feature to a LineString (boundary ring)", () => {
+            const poly: LineBundle["features"][number] = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [
+                        [
+                            [139.0, 35.0],
+                            [139.1, 35.0],
+                            [139.1, 35.1],
+                            [139.0, 35.1],
+                            [139.0, 35.0],
+                        ],
+                    ],
+                },
+            };
+            const lines = polygonFeaturesToLineFeatures([poly]);
+            expect(lines).toHaveLength(1);
+            expect(lines[0].geometry.type).toBe("LineString");
+            // Check the ring coordinates match.
+            const coords = (lines[0].geometry as LineString).coordinates;
+            expect(coords).toHaveLength(5); // 5 coords for a closed square ring
+            expect(coords[0]).toEqual([139.0, 35.0]);
+        });
+
+        it("converts a MultiPolygon to a MultiLineString", () => {
+            const mp: LineBundle["features"][number] = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: [
+                        [
+                            [
+                                [139.0, 35.0],
+                                [139.05, 35.0],
+                                [139.05, 35.05],
+                                [139.0, 35.05],
+                                [139.0, 35.0],
+                            ],
+                        ],
+                        [
+                            [
+                                [139.1, 35.1],
+                                [139.15, 35.1],
+                                [139.15, 35.15],
+                                [139.1, 35.15],
+                                [139.1, 35.1],
+                            ],
+                        ],
+                    ],
+                },
+            };
+            const lines = polygonFeaturesToLineFeatures([mp]);
+            expect(lines).toHaveLength(1);
+            expect(lines[0].geometry.type).toBe("MultiLineString");
+            const coords = (lines[0].geometry as MultiLineString).coordinates;
+            expect(coords).toHaveLength(2); // 2 rings
+        });
+
+        it("passes through LineString features unchanged", () => {
+            const line = makeLineFeature([
+                [139.0, 35.0],
+                [139.1, 35.0],
+            ]);
+            const result = polygonFeaturesToLineFeatures([
+                line as LineBundle["features"][number],
+            ]);
+            expect(result).toHaveLength(1);
+            expect(result[0].geometry.type).toBe("LineString");
+        });
+    });
+
+    describe("featureToRings", () => {
+        it("extracts rings from a Polygon", () => {
+            const poly: LineBundle["features"][number] = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [
+                        [
+                            [139.0, 35.0],
+                            [139.1, 35.0],
+                            [139.1, 35.1],
+                            [139.0, 35.1],
+                            [139.0, 35.0],
+                        ],
+                        [
+                            [139.02, 35.02],
+                            [139.08, 35.02],
+                            [139.08, 35.08],
+                            [139.02, 35.08],
+                            [139.02, 35.02],
+                        ],
+                    ],
+                },
+            };
+            const rings = featureToRings(poly);
+            // Outer ring + hole.
+            expect(rings).toHaveLength(2);
+            expect(rings[0]).toHaveLength(5);
+            expect(rings[1]).toHaveLength(5);
+        });
+
+        it("extracts rings from a MultiPolygon", () => {
+            const mp: LineBundle["features"][number] = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: [
+                        [
+                            [
+                                [139.0, 35.0],
+                                [139.05, 35.0],
+                                [139.05, 35.05],
+                                [139.0, 35.05],
+                                [139.0, 35.0],
+                            ],
+                        ],
+                        [
+                            [
+                                [139.1, 35.1],
+                                [139.15, 35.1],
+                                [139.15, 35.15],
+                                [139.1, 35.15],
+                                [139.1, 35.1],
+                            ],
+                        ],
+                    ],
+                },
+            };
+            const rings = featureToRings(mp);
+            // 2 polygons, each with 1 ring.
+            expect(rings).toHaveLength(2);
+        });
     });
 });
