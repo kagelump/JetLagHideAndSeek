@@ -1,9 +1,18 @@
-import type { Feature, MultiPolygon, Polygon } from "geojson";
+import type {
+    Feature,
+    FeatureCollection,
+    LineString,
+    MultiLineString,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
 
 import { buildMeasuringRenderState } from "@/features/questions/measuring/measuringGeometry";
 import {
     clearLineBufferCache,
+    clearLineCategoryCache,
     clearLineDistanceCache,
+    clearDilatedBoundaryCache,
 } from "@/features/questions/measuring/lineMeasuringGeometry";
 import {
     clearPointBufferCache,
@@ -99,6 +108,66 @@ function makeLineBundle(coords: [number, number][]): LineBundle {
     };
 }
 
+// ─── Play area fixture ──────────────────────────────────────────────────
+
+/** Square play area from [west,south] to [east,north]. */
+function makeSquarePlayArea(
+    west: number,
+    south: number,
+    east: number,
+    north: number,
+): FeatureCollection<Polygon | MultiPolygon> {
+    return {
+        type: "FeatureCollection",
+        features: [
+            {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [
+                        [
+                            [west, south],
+                            [east, south],
+                            [east, north],
+                            [west, north],
+                            [west, south],
+                        ],
+                    ],
+                },
+            },
+        ],
+    };
+}
+
+// Small square play area for consistent test reasoning
+const PLAY_AREA = makeSquarePlayArea(139.0, 35.0, 139.2, 35.2);
+const PLAY_AREA_BBOX: [number, number, number, number] = [
+    139.0, 35.0, 139.2, 35.2,
+];
+
+/** True when every coordinate of every segment is within the bbox (plus pad). */
+function allCoordsWithin(
+    feature: Feature<LineString | MultiLineString>,
+    bbox: [number, number, number, number],
+    padDeg = 0.001,
+): boolean {
+    const [w, s, e, n] = bbox;
+    const segs =
+        feature.geometry.type === "LineString"
+            ? [feature.geometry.coordinates]
+            : feature.geometry.coordinates;
+    return segs.every((seg) =>
+        (seg as [number, number][]).every(
+            ([lon, lat]) =>
+                lon >= w - padDeg &&
+                lon <= e + padDeg &&
+                lat >= s - padDeg &&
+                lat <= n + padDeg,
+        ),
+    );
+}
+
 /** Compute a [west, south, east, north] bbox from a GeoJSON feature. */
 function computeFeatureBbox(
     f: Feature<Polygon | MultiPolygon>,
@@ -129,7 +198,9 @@ describe("buildMeasuringRenderState", () => {
         clearPointBufferCache();
         clearPointDistanceCache();
         clearLineBufferCache();
+        clearLineCategoryCache();
         clearLineDistanceCache();
+        clearDilatedBoundaryCache();
         __clearLineBundlesForTest();
         clearBundledRegionCache();
         registerMuseumRegion();
@@ -138,7 +209,7 @@ describe("buildMeasuringRenderState", () => {
     // ── Empty / no measuring questions ───────────────────────────────────
 
     it("returns empty collections for empty input", () => {
-        const result = buildMeasuringRenderState([], undefined);
+        const result = buildMeasuringRenderState([], undefined, undefined);
         expect(result.hitMaskFeatures.features).toHaveLength(0);
         expect(result.missMaskFeatures.features).toHaveLength(0);
         expect(result.nearestPointConnectors.features).toHaveLength(0);
@@ -158,7 +229,11 @@ describe("buildMeasuringRenderState", () => {
             distanceUnit: "m",
             isLocked: false,
         } as QuestionState;
-        const result = buildMeasuringRenderState([radarQuestion], undefined);
+        const result = buildMeasuringRenderState(
+            [radarQuestion],
+            undefined,
+            undefined,
+        );
         expect(result.hitMaskFeatures.features).toHaveLength(0);
         expect(result.missMaskFeatures.features).toHaveLength(0);
         expect(result.nearestPointConnectors.features).toHaveLength(0);
@@ -170,14 +245,14 @@ describe("buildMeasuringRenderState", () => {
     describe("Point categories — positive (closer)", () => {
         it("places union buffer in hitMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(1);
             expect(result.missMaskFeatures.features).toHaveLength(0);
         });
 
         it("union buffer covers the nearest POI", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             const mask = result.hitMaskFeatures.features[0];
             expect(mask).toBeTruthy();
             expect(
@@ -188,7 +263,7 @@ describe("buildMeasuringRenderState", () => {
 
         it("emits connector and marker to the nearest POI", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             // Point categories now emit connectors + markers (same as lines).
             expect(
                 result.nearestPointConnectors.features.length,
@@ -208,14 +283,14 @@ describe("buildMeasuringRenderState", () => {
     describe("Point categories — negative (farther)", () => {
         it("places union buffer in missMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "negative" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(1);
         });
 
         it("emits connector and marker even for unanswered questions", () => {
             const q = makeMeasuringQuestion({ answer: "unanswered" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             // Connector/marker show the auto-picked nearest, answered or not.
             expect(
                 result.nearestPointConnectors.features.length,
@@ -231,14 +306,14 @@ describe("buildMeasuringRenderState", () => {
     describe("Unanswered", () => {
         it("produces neither hit nor miss features for point categories", () => {
             const q = makeMeasuringQuestion({ answer: "unanswered" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(0);
         });
 
         it("still emits connector and marker for unanswered", () => {
             const q = makeMeasuringQuestion({ answer: "unanswered" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(
                 result.nearestPointConnectors.features.length,
             ).toBeGreaterThanOrEqual(1);
@@ -257,7 +332,7 @@ describe("buildMeasuringRenderState", () => {
                 answer: "positive",
                 center: [130.0, 30.0], // far from Tokyo
             });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(0);
             expect(result.nearestPointConnectors.features).toHaveLength(0);
@@ -269,14 +344,14 @@ describe("buildMeasuringRenderState", () => {
     describe("Answer toggling for point categories", () => {
         it("unanswered → positive → buffer in hitMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(1);
             expect(result.missMaskFeatures.features).toHaveLength(0);
         });
 
         it("unanswered → negative → buffer in missMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "negative" });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(1);
         });
@@ -285,12 +360,14 @@ describe("buildMeasuringRenderState", () => {
             const result1 = buildMeasuringRenderState(
                 [makeMeasuringQuestion({ answer: "positive" })],
                 undefined,
+                undefined,
             );
             expect(result1.hitMaskFeatures.features).toHaveLength(1);
             expect(result1.missMaskFeatures.features).toHaveLength(0);
 
             const result2 = buildMeasuringRenderState(
                 [makeMeasuringQuestion({ answer: "negative" })],
+                undefined,
                 undefined,
             );
             expect(result2.hitMaskFeatures.features).toHaveLength(0);
@@ -301,11 +378,13 @@ describe("buildMeasuringRenderState", () => {
             const result1 = buildMeasuringRenderState(
                 [makeMeasuringQuestion({ answer: "positive" })],
                 undefined,
+                undefined,
             );
             expect(result1.hitMaskFeatures.features).toHaveLength(1);
 
             const result2 = buildMeasuringRenderState(
                 [makeMeasuringQuestion({ answer: "unanswered" })],
+                undefined,
                 undefined,
             );
             expect(result2.hitMaskFeatures.features).toHaveLength(0);
@@ -330,7 +409,7 @@ describe("buildMeasuringRenderState", () => {
                 category: "coastline",
                 center: [139.75, 35.68],
             });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(1);
         });
 
@@ -348,7 +427,7 @@ describe("buildMeasuringRenderState", () => {
                 category: "coastline",
                 center: [139.75, 35.68],
             });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             const mask = result.hitMaskFeatures.features[0];
 
             expect(mask).toBeTruthy();
@@ -377,7 +456,7 @@ describe("buildMeasuringRenderState", () => {
                 answer: "unanswered",
                 category: "coastline",
             });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.nearestPointConnectors.features).toHaveLength(1);
             expect(result.nearestPointMarkers.features).toHaveLength(1);
 
@@ -391,7 +470,7 @@ describe("buildMeasuringRenderState", () => {
                 answer: "positive",
                 category: "coastline",
             });
-            const result = buildMeasuringRenderState([q], undefined);
+            const result = buildMeasuringRenderState([q], undefined, undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(0);
             expect(result.nearestPointConnectors.features).toHaveLength(0);
@@ -413,7 +492,11 @@ describe("buildMeasuringRenderState", () => {
                     answer: "unanswered",
                     category: "coastline",
                 });
-                const result = buildMeasuringRenderState([q], undefined);
+                const result = buildMeasuringRenderState(
+                    [q],
+                    undefined,
+                    undefined,
+                );
                 expect(result.hitMaskFeatures.features).toHaveLength(0);
                 expect(result.missMaskFeatures.features).toHaveLength(0);
                 expect(result.nearestPointConnectors.features).toHaveLength(1);
@@ -425,7 +508,11 @@ describe("buildMeasuringRenderState", () => {
                     answer: "positive",
                     category: "coastline",
                 });
-                const result = buildMeasuringRenderState([q], undefined);
+                const result = buildMeasuringRenderState(
+                    [q],
+                    undefined,
+                    undefined,
+                );
                 expect(result.hitMaskFeatures.features).toHaveLength(1);
                 expect(result.missMaskFeatures.features).toHaveLength(0);
             });
@@ -435,7 +522,11 @@ describe("buildMeasuringRenderState", () => {
                     answer: "negative",
                     category: "coastline",
                 });
-                const result = buildMeasuringRenderState([q], undefined);
+                const result = buildMeasuringRenderState(
+                    [q],
+                    undefined,
+                    undefined,
+                );
                 expect(result.hitMaskFeatures.features).toHaveLength(0);
                 expect(result.missMaskFeatures.features).toHaveLength(1);
             });
@@ -445,7 +536,11 @@ describe("buildMeasuringRenderState", () => {
                     answer: "positive",
                     category: "coastline",
                 });
-                const posResult = buildMeasuringRenderState([posQ], undefined);
+                const posResult = buildMeasuringRenderState(
+                    [posQ],
+                    undefined,
+                    undefined,
+                );
                 expect(posResult.hitMaskFeatures.features).toHaveLength(1);
                 expect(posResult.missMaskFeatures.features).toHaveLength(0);
 
@@ -453,7 +548,11 @@ describe("buildMeasuringRenderState", () => {
                     answer: "negative",
                     category: "coastline",
                 });
-                const negResult = buildMeasuringRenderState([negQ], undefined);
+                const negResult = buildMeasuringRenderState(
+                    [negQ],
+                    undefined,
+                    undefined,
+                );
                 expect(negResult.hitMaskFeatures.features).toHaveLength(0);
                 expect(negResult.missMaskFeatures.features).toHaveLength(1);
             });
@@ -463,14 +562,22 @@ describe("buildMeasuringRenderState", () => {
                     answer: "positive",
                     category: "coastline",
                 });
-                const posResult = buildMeasuringRenderState([posQ], undefined);
+                const posResult = buildMeasuringRenderState(
+                    [posQ],
+                    undefined,
+                    undefined,
+                );
                 expect(posResult.hitMaskFeatures.features).toHaveLength(1);
 
                 const unQ = makeMeasuringQuestion({
                     answer: "unanswered",
                     category: "coastline",
                 });
-                const unResult = buildMeasuringRenderState([unQ], undefined);
+                const unResult = buildMeasuringRenderState(
+                    [unQ],
+                    undefined,
+                    undefined,
+                );
                 expect(unResult.hitMaskFeatures.features).toHaveLength(0);
                 expect(unResult.missMaskFeatures.features).toHaveLength(0);
             });
@@ -494,12 +601,169 @@ describe("buildMeasuringRenderState", () => {
             const result = buildMeasuringRenderState(
                 [museumQ, coastlineQ],
                 undefined,
+                undefined,
             );
             expect(result.hitMaskFeatures.features).toHaveLength(1); // museum
             expect(result.missMaskFeatures.features).toHaveLength(1); // coastline
             // Both point and line categories emit connectors now
             expect(result.nearestPointConnectors.features).toHaveLength(2);
             expect(result.nearestPointMarkers.features).toHaveLength(2);
+        });
+    });
+
+    // ── Consolidation tests (Steps 2–5) ───────────────────────────────────
+
+    describe("Line category — consolidation and clipping", () => {
+        /** Injects a bundle with the given features to "high-speed-rail". */
+        function injectHSR(features: LineBundle["features"]) {
+            __setLineBundleForTest("high-speed-rail", {
+                schemaVersion: 1,
+                category: "high-speed-rail",
+                generatedAt: "2026-01-01T00:00:00.000Z",
+                source: "test-fixture",
+                extractBbox: [137.9, 33.9, 141.9, 37.9],
+                features,
+            });
+        }
+
+        function makeLineFeat(
+            coords: [number, number][],
+        ): LineBundle["features"][number] {
+            const xs = coords.map((c) => c[0]);
+            const ys = coords.map((c) => c[1]);
+            return {
+                type: "Feature",
+                bbox: [
+                    Math.min(...xs),
+                    Math.min(...ys),
+                    Math.max(...xs),
+                    Math.max(...ys),
+                ],
+                geometry: { type: "LineString", coordinates: coords },
+                properties: {},
+            };
+        }
+
+        function hsrQuestion(
+            overrides: Partial<MeasuringQuestion> = {},
+        ): MeasuringQuestion {
+            return {
+                answer: "unanswered",
+                category: "high-speed-rail",
+                center: [139.1, 35.1], // inside PLAY_AREA
+                createdAt: "2026-01-01T00:00:00.000Z",
+                id: "q-hsr",
+                isLocked: false,
+                seekerDistanceUnit: "m",
+                type: "measuring",
+                updatedAt: "2026-01-01T00:00:00.000Z",
+                ...overrides,
+            };
+        }
+
+        it("Tōhoku regression — two disjoint in-area corridors both appear", () => {
+            // Two separate HSR lines that both pass through the play area.
+            // Tōkaidō: near the seeker center
+            const tokaido = makeLineFeat([
+                [139.05, 35.1],
+                [139.15, 35.1],
+            ]);
+            // Tōhoku: farther but still inside the play area
+            const tohoku = makeLineFeat([
+                [139.05, 35.15],
+                [139.15, 35.15],
+            ]);
+            injectHSR([tokaido, tohoku]);
+
+            const q = hsrQuestion({ answer: "positive" });
+            const result = buildMeasuringRenderState(
+                [q],
+                PLAY_AREA_BBOX,
+                PLAY_AREA,
+            );
+            // Both corridors should be in the reference line (consolidation fix)
+            expect(result.lineFeatures.features.length).toBeGreaterThanOrEqual(
+                2,
+            );
+        });
+
+        it("spill regression — reference line never leaves the play area", () => {
+            // HSR line starts inside and runs far outside
+            const spillLine = makeLineFeat([
+                [139.05, 35.1],
+                [139.1, 35.1],
+                [139.15, 35.05],
+                [140.5, 34.0], // far outside
+            ]);
+            injectHSR([spillLine]);
+
+            const q = hsrQuestion({ answer: "positive" });
+            const result = buildMeasuringRenderState(
+                [q],
+                PLAY_AREA_BBOX,
+                PLAY_AREA,
+            );
+            // Every reference line feature must be within the play area
+            for (const f of result.lineFeatures.features) {
+                expect(allCoordsWithin(f, PLAY_AREA_BBOX)).toBe(true);
+            }
+        });
+
+        it("mask ↔ reference-line consistency — both from same window", () => {
+            // Two in-area corridors, answered positive
+            const lineA = makeLineFeat([
+                [139.05, 35.05],
+                [139.15, 35.05],
+            ]);
+            const lineB = makeLineFeat([
+                [139.05, 35.15],
+                [139.15, 35.15],
+            ]);
+            injectHSR([lineA, lineB]);
+
+            const q = hsrQuestion({ answer: "positive" });
+            const result = buildMeasuringRenderState(
+                [q],
+                PLAY_AREA_BBOX,
+                PLAY_AREA,
+            );
+            // Mask exists (the buffer ran)
+            expect(result.hitMaskFeatures.features.length).toBeGreaterThan(0);
+            // Reference line has both corridors (same window source)
+            expect(result.lineFeatures.features.length).toBeGreaterThanOrEqual(
+                2,
+            );
+        });
+
+        it("shared-boundary at render level — prefecture border survives", () => {
+            // Border line coincident with the play-area north edge
+            const borderLine = makeLineFeat([
+                [139.0, 35.2], // on north edge
+                [139.2, 35.2], // on north edge
+            ]);
+            __setLineBundleForTest("admin-1st-border", {
+                schemaVersion: 1,
+                category: "admin-1st-border",
+                generatedAt: "2026-01-01T00:00:00.000Z",
+                source: "test-fixture",
+                extractBbox: [137.9, 33.9, 141.9, 37.9],
+                features: [borderLine],
+            });
+
+            const q: MeasuringQuestion = {
+                ...hsrQuestion(),
+                category: "admin-1st-border",
+                center: [139.1, 35.15], // just inside the play area
+            };
+            const result = buildMeasuringRenderState(
+                [q],
+                PLAY_AREA_BBOX,
+                PLAY_AREA,
+            );
+            // The coincident border should survive ε-dilation
+            expect(result.lineFeatures.features.length).toBeGreaterThanOrEqual(
+                1,
+            );
         });
     });
 });

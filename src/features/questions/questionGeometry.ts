@@ -49,7 +49,11 @@ export function buildQuestionMapRenderState(
     );
 
     return {
-        measuring: buildMeasuringRenderState(questions, playAreaBbox),
+        measuring: buildMeasuringRenderState(
+            questions,
+            playAreaBbox,
+            playAreaBoundary,
+        ),
         osmMatching,
         radar,
         radarAreaFeatures: radar.previewFeatures,

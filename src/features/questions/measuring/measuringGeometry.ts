@@ -1,5 +1,6 @@
 import type {
     Feature,
+    FeatureCollection,
     LineString,
     MultiLineString,
     MultiPolygon,
@@ -7,102 +8,28 @@ import type {
     Polygon,
 } from "geojson";
 
-import { bboxIntersects } from "@/shared/geojson";
 import type { Bbox, Position } from "@/shared/geojson";
 import type { QuestionState } from "@/features/questions/questionTypes";
 import { isLineMeasuringCategory } from "./measuringCategories";
 import {
-    computeLineBuffer,
-    computeLineDistance,
+    clipLineFeaturesToPlayArea,
+    computeLineBufferCached,
+    computeLineCategory,
+    getDilatedPlayArea,
+    type LineCategoryComputation,
 } from "./lineMeasuringGeometry";
 import {
     computeNearestPoiDistance,
     computePointUnionBuffer,
 } from "./pointMeasuringGeometry";
-import { getLineBundle } from "./lineBundleLoader";
 import type { MeasuringRenderState } from "./measuringTypes";
-
-// ─── Relation-id lookup ──────────────────────────────────────────────────────
-
-/** 100 m search radius for matching a nearest point to a bundle feature. */
-const NEARBY_TOLERANCE_DEG = 100 / 111_320;
-
-/**
- * Returns the set of `relationId`s from bundle features whose geometry is
- * within ~100 m of `pt`. Used to filter the orange reference line to only the
- * border that the connector actually points at.
- */
-function findNearbyRelationIds(
-    features: readonly Feature<LineString | MultiLineString>[],
-    pt: Position,
-): Set<number> {
-    const ids = new Set<number>();
-    for (const f of features) {
-        const rid = (f.properties as Record<string, unknown> | undefined)
-            ?.relationId;
-        if (typeof rid !== "number") continue;
-
-        const coords = f.geometry.coordinates;
-        if (f.geometry.type === "LineString") {
-            if (coordsNearPoint(coords as Position[], pt)) {
-                ids.add(rid);
-            }
-        } else {
-            for (const seg of coords as Position[][]) {
-                if (coordsNearPoint(seg, pt)) {
-                    ids.add(rid);
-                    break;
-                }
-            }
-        }
-    }
-    return ids;
-}
-
-function coordsNearPoint(coords: Position[], pt: Position): boolean {
-    const tol = NEARBY_TOLERANCE_DEG;
-    for (const c of coords) {
-        if (Math.abs(c[0] - pt[0]) < tol && Math.abs(c[1] - pt[1]) < tol) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/** Spatial fallback: true when any vertex of `f` is within ~100 m of `pt`. */
-function featureNearPoint(
-    f: Feature<LineString | MultiLineString>,
-    pt: Position,
-): boolean {
-    const tol = NEARBY_TOLERANCE_DEG;
-    const coords = f.geometry.coordinates;
-    if (f.geometry.type === "LineString") {
-        return coordsNearPointTol(coords as Position[], pt, tol);
-    }
-    for (const seg of coords as Position[][]) {
-        if (coordsNearPointTol(seg, pt, tol)) return true;
-    }
-    return false;
-}
-
-function coordsNearPointTol(
-    coords: Position[],
-    pt: Position,
-    tol: number,
-): boolean {
-    for (const c of coords) {
-        if (Math.abs(c[0] - pt[0]) < tol && Math.abs(c[1] - pt[1]) < tol) {
-            return true;
-        }
-    }
-    return false;
-}
 
 // ─── Render state ───────────────────────────────────────────────────────────
 
 export function buildMeasuringRenderState(
     questions: QuestionState[],
     playAreaBbox: Bbox | undefined,
+    playAreaBoundary: FeatureCollection<Polygon | MultiPolygon> | undefined,
 ): MeasuringRenderState {
     const measuring = questions.filter(
         (q): q is Extract<QuestionState, { type: "measuring" }> =>
@@ -114,45 +41,42 @@ export function buildMeasuringRenderState(
     const connectors: Feature<LineString>[] = [];
     const markers: Feature<GeoPoint>[] = [];
 
-    // Collect nearest points per category so the lineFeatures loop can
-    // filter to only the relevant border (not all borders in the play area).
+    // Collect category-level computations so the lineFeatures loop can
+    // derive the clipped reference line from windowFeatures.
     const nearestPerCategory = new Map<
         string,
-        { nearestPoint: Position; relationIds: Set<number> }
+        {
+            nearestPoint: Position;
+            windowFeatures: Feature<LineString | MultiLineString>[];
+        }
     >();
 
     for (const q of measuring) {
         if (isLineMeasuringCategory(q.category)) {
             // Derive on render — nothing is read from the question except center.
-            let result: {
-                nearestPoint: [number, number];
-                distanceMeters: number;
-            } | null;
+            let lineCat: LineCategoryComputation | null;
             try {
-                result = computeLineDistance(q.center, q.category);
+                lineCat = computeLineCategory(
+                    q.center,
+                    q.category,
+                    playAreaBbox,
+                );
             } catch (err) {
                 console.warn(
-                    `[measuringGeometry] computeLineDistance failed for category=${q.category} center=${q.center}:`,
+                    `[measuringGeometry] computeLineCategory failed for category=${q.category} center=${q.center}:`,
                     err,
                 );
                 continue;
             }
-            if (!result || result.distanceMeters <= 0) continue;
+            if (!lineCat || lineCat.distanceMeters <= 0) continue;
 
-            // Record the nearest point so we can identify which specific
-            // border feature(s) to highlight in the reference line.
+            // Record the category-level computation so the lineFeatures loop
+            // can derive the clipped reference line from windowFeatures.
             if (!nearestPerCategory.has(q.category)) {
-                const bundle = getLineBundle(q.category);
-                if (bundle) {
-                    const rIds = findNearbyRelationIds(
-                        bundle.features,
-                        result.nearestPoint,
-                    );
-                    nearestPerCategory.set(q.category, {
-                        nearestPoint: result.nearestPoint,
-                        relationIds: rIds,
-                    });
-                }
+                nearestPerCategory.set(q.category, {
+                    nearestPoint: lineCat.nearestPoint,
+                    windowFeatures: lineCat.windowFeatures,
+                });
             }
 
             // Always show the auto-picked target, answered or not.
@@ -161,7 +85,7 @@ export function buildMeasuringRenderState(
                 properties: {},
                 geometry: {
                     type: "LineString",
-                    coordinates: [q.center, result.nearestPoint],
+                    coordinates: [q.center, lineCat.nearestPoint],
                 },
             });
             markers.push({
@@ -169,7 +93,7 @@ export function buildMeasuringRenderState(
                 properties: {},
                 geometry: {
                     type: "Point",
-                    coordinates: result.nearestPoint,
+                    coordinates: lineCat.nearestPoint,
                 },
             });
 
@@ -179,15 +103,15 @@ export function buildMeasuringRenderState(
             if (q.answer === "positive" || q.answer === "negative") {
                 let buf: Feature<Polygon | MultiPolygon> | null;
                 try {
-                    buf = computeLineBuffer(
-                        q.center,
+                    buf = computeLineBufferCached(
                         q.category,
-                        result.distanceMeters,
-                        playAreaBbox,
+                        q.center,
+                        lineCat.distanceMeters,
+                        lineCat.windowFeatures,
                     );
                 } catch (err) {
                     console.warn(
-                        `[measuringGeometry] computeLineBuffer failed for category=${q.category}:`,
+                        `[measuringGeometry] computeLineBufferCached failed for category=${q.category}:`,
                         err,
                     );
                     continue;
@@ -264,9 +188,10 @@ export function buildMeasuringRenderState(
     }
 
     // Collect line geometry for line-category questions so the map can
-    // render the reference line (e.g. the nearest prefecture border) in
-    // orange. When relationId data is available, only features belonging
-    // to the nearest border are included — not every border in the play area.
+    // render the reference line (e.g. the nearest prefecture border).
+    // Derived from computeLineCategory's windowFeatures — the same set
+    // that feeds the mask buffer. Clipped to the ε-dilated play-area
+    // boundary when available.
     const lineFeatures: Feature<LineString | MultiLineString>[] = [];
     const seenCategories = new Set<string>();
     for (const q of measuring) {
@@ -274,45 +199,28 @@ export function buildMeasuringRenderState(
         if (seenCategories.has(q.category)) continue;
         seenCategories.add(q.category);
 
-        const bundle = getLineBundle(q.category);
-        if (!bundle) continue;
-
         const nearby = nearestPerCategory.get(q.category);
+        if (!nearby || nearby.windowFeatures.length === 0) continue;
 
-        for (const f of bundle.features) {
-            // Filter to the play area window so we don't render lines
-            // hundreds of km away.
-            if (playAreaBbox) {
-                const fb = (f.bbox?.slice(0, 4) ??
-                    computeBbox(f.geometry.coordinates)) as Bbox;
-                if (!bboxIntersects(fb, playAreaBbox)) continue;
+        if (playAreaBoundary) {
+            // Clip features to the ε-dilated play-area boundary so the
+            // reference line never spills off-map (fixes HSR past
+            // Yokohama) and coincident borders survive (fixes prefecture
+            // border on Tokyo 23-wards edge).
+            const dilated = getDilatedPlayArea(playAreaBoundary);
+            const clipped = clipLineFeaturesToPlayArea(
+                nearby.windowFeatures,
+                dilated,
+            );
+            for (const f of clipped) {
+                lineFeatures.push(f);
             }
-
-            // Only show the border that the connector actually points at.
-            // Prefer relationId filtering (specific prefecture); fall back
-            // to spatial proximity when relationId data is sparse.
-            if (nearby) {
-                // Try relationId match first.
-                const rid = (
-                    f.properties as Record<string, unknown> | undefined
-                )?.relationId;
-                if (
-                    nearby.relationIds.size > 0 &&
-                    (typeof rid !== "number" || !nearby.relationIds.has(rid))
-                ) {
-                    continue;
-                }
-                // Spatial fallback when no relationIds found: only include
-                // features within ~500 m of the nearest point.
-                if (
-                    nearby.relationIds.size === 0 &&
-                    !featureNearPoint(f, nearby.nearestPoint)
-                ) {
-                    continue;
-                }
+        } else {
+            // No boundary available — use window features unclipped
+            // (backward-compatible path for tests without a boundary).
+            for (const f of nearby.windowFeatures) {
+                lineFeatures.push(f);
             }
-
-            lineFeatures.push(f);
         }
     }
 
@@ -332,26 +240,4 @@ export function buildMeasuringRenderState(
             type: "FeatureCollection",
         },
     };
-}
-
-function computeBbox(
-    coords: number[][][] | number[][],
-): [number, number, number, number] {
-    let minX = Infinity,
-        minY = Infinity,
-        maxX = -Infinity,
-        maxY = -Infinity;
-    const walk = (c: unknown) => {
-        if (typeof (c as number[])?.[0] === "number") {
-            const [x, y] = c as number[];
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-        } else if (Array.isArray(c)) {
-            for (const item of c) walk(item);
-        }
-    };
-    walk(coords);
-    return [minX, minY, maxX, maxY];
 }

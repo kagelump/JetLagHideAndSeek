@@ -1,6 +1,20 @@
+import type {
+    Feature,
+    LineString,
+    MultiLineString,
+    MultiPolygon,
+    Polygon,
+    FeatureCollection,
+} from "geojson";
+
 import {
+    clearLineCategoryCache,
     clearLineDistanceCache,
+    clearDilatedBoundaryCache,
+    clipLineFeaturesToPlayArea,
+    computeLineCategory,
     computeLineDistance,
+    getDilatedPlayArea,
 } from "@/features/questions/measuring/lineMeasuringGeometry";
 import {
     __clearLineBundlesForTest,
@@ -41,8 +55,71 @@ function makeBundle(features: LineBundle["features"]): LineBundle {
     };
 }
 
+// ─── Play area fixture helpers ──────────────────────────────────────────
+
+/** Square play area from [west,south] to [east,north], as a FeatureCollection
+ *  (the shape buildMeasuringRenderState / the clip helper expect). */
+function makeSquarePlayArea(
+    west: number,
+    south: number,
+    east: number,
+    north: number,
+): FeatureCollection<Polygon | MultiPolygon> {
+    return {
+        type: "FeatureCollection",
+        features: [
+            {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [
+                        [
+                            [west, south],
+                            [east, south],
+                            [east, north],
+                            [west, north],
+                            [west, south], // ring must close
+                        ],
+                    ],
+                },
+            },
+        ],
+    };
+}
+
+// Small square around 139.0–139.2 lon, 35.0–35.2 lat for consistent test reasoning.
+const PLAY_AREA = makeSquarePlayArea(139.0, 35.0, 139.2, 35.2);
+const PLAY_AREA_BBOX: [number, number, number, number] = [
+    139.0, 35.0, 139.2, 35.2,
+];
+
+/** True when every coordinate of every segment is within the bbox (plus pad). */
+function allCoordsWithin(
+    feature: Feature<LineString | MultiLineString>,
+    bbox: [number, number, number, number],
+    padDeg = 0.001, // ~100 m — covers the 30 m clip dilation
+): boolean {
+    const [w, s, e, n] = bbox;
+    const segs =
+        feature.geometry.type === "LineString"
+            ? [feature.geometry.coordinates]
+            : feature.geometry.coordinates;
+    return segs.every((seg) =>
+        (seg as [number, number][]).every(
+            ([lon, lat]) =>
+                lon >= w - padDeg &&
+                lon <= e + padDeg &&
+                lat >= s - padDeg &&
+                lat <= n + padDeg,
+        ),
+    );
+}
+
 beforeEach(() => {
+    clearLineCategoryCache();
     clearLineDistanceCache();
+    clearDilatedBoundaryCache();
     __clearLineBundlesForTest();
 });
 
@@ -428,5 +505,181 @@ describe("computeLineDistance", () => {
             expect(result).not.toBeNull();
             expect(result!.distanceMeters).toBeGreaterThan(0);
         });
+    });
+});
+
+// ─── clipLineFeaturesToPlayArea tests ──────────────────────────────────
+
+describe("clipLineFeaturesToPlayArea", () => {
+    function dilatedPlayArea() {
+        return getDilatedPlayArea(PLAY_AREA);
+    }
+
+    it("line fully inside → returned unchanged", () => {
+        const line: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [139.05, 35.1],
+                    [139.15, 35.1],
+                ],
+            },
+        };
+        const result = clipLineFeaturesToPlayArea([line], dilatedPlayArea());
+        expect(result).toHaveLength(1);
+        expect(allCoordsWithin(result[0], PLAY_AREA_BBOX)).toBe(true);
+        // Endpoints roughly preserved
+        const coords = (result[0].geometry as LineString).coordinates;
+        expect(coords[0][0]).toBeCloseTo(139.05, 2);
+        expect(coords[coords.length - 1][0]).toBeCloseTo(139.15, 2);
+    });
+
+    it("line fully outside → dropped", () => {
+        const line: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [140.0, 36.0],
+                    [140.1, 36.0],
+                ],
+            },
+        };
+        const result = clipLineFeaturesToPlayArea([line], dilatedPlayArea());
+        expect(result).toHaveLength(0);
+    });
+
+    it("line crossing the boundary → cut at the boundary (spill fix)", () => {
+        const line: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [138.5, 35.1], // outside, west
+                    [139.15, 35.1], // inside
+                ],
+            },
+        };
+        const result = clipLineFeaturesToPlayArea([line], dilatedPlayArea());
+        expect(result.length).toBeGreaterThan(0);
+        // Every coord is within the play-area bbox
+        expect(allCoordsWithin(result[0], PLAY_AREA_BBOX)).toBe(true);
+        // Westmost lon is >= 139.0 - tolerance (no longer extends to 138.5)
+        const coords =
+            result[0].geometry.type === "LineString"
+                ? result[0].geometry.coordinates
+                : result[0].geometry.coordinates[0];
+        const minLon = Math.min(...coords.map((c) => c[0]));
+        expect(minLon).toBeGreaterThanOrEqual(138.99);
+    });
+
+    it("shared-boundary survival — coincident border kept (ε-dilation regression)", () => {
+        // Line exactly on the play area's north edge
+        const line: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [139.0, 35.2], // on north edge
+                    [139.2, 35.2], // on north edge
+                ],
+            },
+        };
+        const result = clipLineFeaturesToPlayArea([line], dilatedPlayArea());
+        // The coincident border must survive thanks to ε-dilation
+        expect(result).toHaveLength(1);
+    });
+
+    it("MultiLineString crossing boundary → clipped per component", () => {
+        const ml: Feature<MultiLineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "MultiLineString",
+                coordinates: [
+                    [
+                        [139.05, 35.1],
+                        [139.15, 35.1],
+                    ], // inside
+                    [
+                        [138.5, 35.15],
+                        [139.1, 35.15],
+                    ], // crossing
+                ],
+            },
+        };
+        const result = clipLineFeaturesToPlayArea([ml], dilatedPlayArea());
+        expect(result.length).toBeGreaterThan(0);
+        // No coordinate extends past the play-area bbox
+        for (const f of result) {
+            expect(allCoordsWithin(f, PLAY_AREA_BBOX)).toBe(true);
+        }
+    });
+});
+
+// ─── computeLineCategory tests ─────────────────────────────────────────
+
+describe("computeLineCategory", () => {
+    it("returns nearest point + distance + window features", () => {
+        const line = makeLineFeature([
+            [139.05, 35.1],
+            [139.15, 35.1],
+        ]);
+        __setLineBundleForTest("coastline", makeBundle([line]));
+
+        const result = computeLineCategory(
+            [139.1, 35.11],
+            "coastline",
+            PLAY_AREA_BBOX,
+        );
+        expect(result).not.toBeNull();
+        expect(result!.distanceMeters).toBeGreaterThan(0);
+        expect(result!.windowFeatures.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("window excludes features far outside the play-area ± radius window", () => {
+        const near = makeLineFeature([
+            [139.05, 35.1],
+            [139.15, 35.1],
+        ]);
+        // Far feature: ~200 km away
+        const far = makeLineFeature([
+            [137.0, 35.1],
+            [137.1, 35.1],
+        ]);
+        __setLineBundleForTest("coastline", makeBundle([near, far]));
+
+        const result = computeLineCategory(
+            [139.1, 35.11],
+            "coastline",
+            PLAY_AREA_BBOX,
+        );
+        expect(result).not.toBeNull();
+        expect(result!.windowFeatures).toHaveLength(1);
+    });
+
+    it("returns null for missing bundle", () => {
+        __setLineBundleForTest("coastline", null);
+        const result = computeLineCategory(
+            [139.1, 35.1],
+            "coastline",
+            PLAY_AREA_BBOX,
+        );
+        expect(result).toBeNull();
+    });
+
+    it("returns null for empty bundle", () => {
+        __setLineBundleForTest("coastline", makeBundle([]));
+        const result = computeLineCategory(
+            [139.1, 35.1],
+            "coastline",
+            PLAY_AREA_BBOX,
+        );
+        expect(result).toBeNull();
     });
 });

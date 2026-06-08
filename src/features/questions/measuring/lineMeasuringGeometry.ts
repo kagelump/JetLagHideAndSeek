@@ -1,5 +1,7 @@
 import nearestPointOnLine from "@turf/nearest-point-on-line";
 import buffer from "@turf/buffer";
+import lineSplit from "@turf/line-split";
+import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { multiLineString, point } from "@turf/helpers";
 
 import {
@@ -8,7 +10,14 @@ import {
     type Bbox,
     type Position,
 } from "@/shared/geojson";
-import type { Feature, MultiLineString, Polygon, MultiPolygon } from "geojson";
+import type {
+    Feature,
+    FeatureCollection,
+    LineString,
+    MultiLineString,
+    Polygon,
+    MultiPolygon,
+} from "geojson";
 import type { MeasuringCategory } from "./measuringTypes";
 import { getLineBundle } from "./lineBundleLoader";
 
@@ -18,6 +27,153 @@ export type NearestPointResult = {
     /** Haversine distance in meters from `center` to `nearestPoint`. */
     distanceMeters: number;
 };
+
+// ─── Central line computation ──────────────────────────────────────────
+
+/** Minimum query window (50 km) even when the seeker is on the line
+ *  (distance ≈ 0). Ensures windowFeatures always returns the bundle
+ *  features near the play area. */
+const MIN_WINDOW_MARGIN_M = 50_000;
+
+/**
+ * Result of one central line-category computation. `windowFeatures` is
+ * the single source from which both the mask buffer and the visible
+ * reference line are derived.
+ */
+export type LineCategoryComputation = {
+    nearestPoint: Position;
+    distanceMeters: number;
+    /** Bundle features intersecting the play-area ± max(distance, MIN_MARGIN)
+     *  window. The single source for both mask and reference line. */
+    windowFeatures: Feature<LineString | MultiLineString>[];
+};
+
+// ─── Window feature selection ──────────────────────────────────────────
+
+/**
+ * Returns bundle features whose bbox intersects the play-area bbox expanded
+ * by `marginM` metres. Falls back to center ± 25 km when no play area.
+ */
+export function selectWindowFeatures(
+    category: MeasuringCategory,
+    playAreaBbox: Bbox | undefined,
+    center: Position,
+    marginM: number,
+): Feature<LineString | MultiLineString>[] {
+    const fc = getLineBundle(category);
+    if (!fc || fc.features.length === 0) return [];
+
+    let queryBbox: Bbox;
+
+    if (playAreaBbox) {
+        const midLat = (playAreaBbox[1] + playAreaBbox[3]) / 2;
+        queryBbox = [
+            playAreaBbox[0] - metersToDegLon(marginM, midLat),
+            playAreaBbox[1] - metersToDegLat(marginM),
+            playAreaBbox[2] + metersToDegLon(marginM, midLat),
+            playAreaBbox[3] + metersToDegLat(marginM),
+        ];
+    } else {
+        const marginDeg = marginM * DEG_PER_METER;
+        queryBbox = [
+            center[0] - marginDeg,
+            center[1] - marginDeg,
+            center[0] + marginDeg,
+            center[1] + marginDeg,
+        ];
+    }
+
+    const result: Feature<LineString | MultiLineString>[] = [];
+    for (const f of fc.features) {
+        if (bboxIntersects(featureBbox(f as Feature), queryBbox)) {
+            result.push(f as Feature<LineString | MultiLineString>);
+        }
+    }
+    return result;
+}
+
+// ─── computeLineCategory cache ─────────────────────────────────────────
+
+/** Increment to invalidate all cached line-category results. */
+const LINE_CATEGORY_CACHE_VERSION = 1;
+
+/** Maximum number of cached line-category results. */
+const LINE_CATEGORY_CACHE_MAX = 50;
+
+const categoryCache = new Map<string, LineCategoryComputation | null>();
+
+function categoryCacheKey(
+    category: MeasuringCategory,
+    center: Position,
+    bbox: Bbox | undefined,
+): string {
+    return [
+        LINE_CATEGORY_CACHE_VERSION,
+        category,
+        center[0].toFixed(6),
+        center[1].toFixed(6),
+        bbox ? bbox.map((v) => v.toFixed(4)).join(",") : "no-bbox",
+    ].join(":");
+}
+
+/** Clears the in-memory line-category cache. Call in tests to reset state. */
+export function clearLineCategoryCache(): void {
+    categoryCache.clear();
+}
+
+// ─── Central function ──────────────────────────────────────────────────
+
+/**
+ * Computes the nearest point, distance, and windowed feature set for a
+ * line-category measuring question in one call. The returned
+ * `windowFeatures` are the single source for both `computeLineBuffer` and
+ * the clipped reference line.
+ *
+ * Cached on (category, center, playAreaBbox).
+ */
+export function computeLineCategory(
+    center: Position,
+    category: MeasuringCategory,
+    playAreaBbox: Bbox | undefined,
+): LineCategoryComputation | null {
+    const key = categoryCacheKey(category, center, playAreaBbox);
+    if (categoryCache.has(key)) {
+        const cached = categoryCache.get(key)!;
+        // Promote to most-recently-used.
+        categoryCache.delete(key);
+        categoryCache.set(key, cached);
+        return cached;
+    }
+
+    const distance = computeLineDistance(center, category);
+    if (!distance || distance.distanceMeters <= 0) {
+        categoryCache.set(key, null);
+        return null;
+    }
+
+    const marginM = Math.max(distance.distanceMeters, MIN_WINDOW_MARGIN_M);
+    const windowFeatures = selectWindowFeatures(
+        category,
+        playAreaBbox,
+        center,
+        marginM,
+    );
+
+    const result: LineCategoryComputation = {
+        nearestPoint: distance.nearestPoint,
+        distanceMeters: distance.distanceMeters,
+        windowFeatures,
+    };
+
+    // Evict oldest entry when cache exceeds max size.
+    if (categoryCache.size >= LINE_CATEGORY_CACHE_MAX) {
+        const oldest = categoryCache.keys().next().value;
+        if (oldest !== undefined) categoryCache.delete(oldest);
+    }
+    categoryCache.set(key, result);
+
+    return result;
+}
 
 // --- LRU cache ----------------------------------------------------------------
 
@@ -180,13 +336,15 @@ function simplifyCoords(coords: Position[], toleranceM: number): Position[] {
 // --- Line buffer cache --------------------------------------------------------
 
 /** Increment to invalidate all cached buffer results when the algorithm changes. */
-const LINE_BUFFER_CACHE_VERSION = 2;
+const LINE_BUFFER_CACHE_VERSION = 3;
 
 /** Maximum number of cached buffer results. */
 const LINE_BUFFER_CACHE_MAX = 50;
 
 /**
- * LRU cache keyed on (version, category, center, radiusMeters).
+ * LRU cache keyed on (version, category, center, radiusMeters). The
+ * windowFeatures are already selected upstream by `computeLineCategory`,
+ * so the cache key only needs (category, center, radius).
  */
 const bufferCache = new Map<string, Feature<Polygon | MultiPolygon> | null>();
 
@@ -211,85 +369,33 @@ export function clearLineBufferCache(): void {
 
 // --- Line buffer --------------------------------------------------------------
 
-/** Fallback margin (25 km) when no play-area bbox is available. */
-const FALLBACK_MARGIN_DEG = 25_000 * DEG_PER_METER;
-
 /**
- * Builds a buffer polygon around line features near the play area.
+ * Builds a buffer polygon around the provided window features.
  *
  * Pipeline:
- * 1. Expand playAreaBbox by radiusMeters -> query window (or fall back to
- *    center +/- 25 km if no play area).
- * 2. Filter line features to those intersecting the query window.
- * 3. Drop features shorter than a threshold relative to the buffer radius.
- * 4. Merge surviving lines into a MultiLineString and buffer with
+ * 1. Drop features shorter than a threshold relative to the buffer radius.
+ * 2. Clean (dedup coords, filter NaN), simplify, merge, and buffer with
  *    @turf/buffer (JSTS). The mask builder clips the result to the play
  *    area, so no pre-clipping or simplification is needed.
+ *
+ * This is a pure function — window selection is now done upstream by
+ * `computeLineCategory`. Use `computeLineBufferCached` for the cached
+ * variant.
  */
 export function computeLineBuffer(
-    center: Position,
-    category: MeasuringCategory,
+    windowFeatures: Feature<LineString | MultiLineString>[],
     radiusMeters: number,
-    playAreaBbox: Bbox | undefined,
 ): Feature<Polygon | MultiPolygon> | null {
     if (radiusMeters <= 0) return null;
+    if (windowFeatures.length === 0) return null;
 
-    const key = bufferCacheKey(category, center, radiusMeters);
-    if (bufferCache.has(key)) {
-        const cached = bufferCache.get(key)!;
-        // Promote to most-recently-used.
-        bufferCache.delete(key);
-        bufferCache.set(key, cached);
-        return cached;
-    }
-
-    const fc = getLineBundle(category);
-    if (!fc || fc.features.length === 0) {
-        bufferCache.set(key, null);
-        return null;
-    }
-
-    // -- 1. Build query window --------------------------------------------------
-
-    let queryBbox: Bbox;
-
-    if (playAreaBbox) {
-        const midLat = (playAreaBbox[1] + playAreaBbox[3]) / 2;
-        queryBbox = [
-            playAreaBbox[0] - metersToDegLon(radiusMeters, midLat),
-            playAreaBbox[1] - metersToDegLat(radiusMeters),
-            playAreaBbox[2] + metersToDegLon(radiusMeters, midLat),
-            playAreaBbox[3] + metersToDegLat(radiusMeters),
-        ];
-    } else {
-        queryBbox = [
-            center[0] - FALLBACK_MARGIN_DEG,
-            center[1] - FALLBACK_MARGIN_DEG,
-            center[0] + FALLBACK_MARGIN_DEG,
-            center[1] + FALLBACK_MARGIN_DEG,
-        ];
-    }
-
-    // -- 2. Filter features by bbox intersection --------------------------------
-
-    const surviving: Feature[] = [];
-    for (const f of fc.features) {
-        if (!bboxIntersects(featureBbox(f), queryBbox)) continue;
-        surviving.push(f);
-    }
-
-    if (surviving.length === 0) {
-        bufferCache.set(key, null);
-        return null;
-    }
-
-    // -- 3. Collect coordinates, drop short features ----------------------------
+    // -- 1. Collect coordinates, drop short features ----------------------------
 
     const minFeatureLenM = Math.min(radiusMeters * 0.1, 500);
 
     const lines: Position[][] = [];
     let droppedShort = 0;
-    for (const f of surviving) {
+    for (const f of windowFeatures) {
         if (f.geometry.type === "LineString") {
             const coords = f.geometry.coordinates as Position[];
             if (lineLengthMeters(coords) < minFeatureLenM) {
@@ -324,19 +430,13 @@ export function computeLineBuffer(
     const totalCoords = lines.reduce((sum, l) => sum + l.length, 0);
 
     console.log(
-        `[lineBuffer] ${surviving.length} features in query window, ` +
+        `[lineBuffer] ${windowFeatures.length} features in window, ` +
             `${lines.length} segments, ${totalCoords} total coords`,
     );
 
-    if (lines.length === 0) {
-        bufferCache.set(key, null);
-        return null;
-    }
+    if (lines.length === 0) return null;
 
     // Defensive: filter out lines with non-numeric / non-finite coordinates.
-    // Hermes/Metro bundling of large JSON assets can occasionally produce NaN,
-    // Infinity, or null entries that pass JSON.parse but fail inside
-    // @turf/buffer (which calls point() on every vertex via JSTS).
     let cleanBufLines = lines.filter(
         (coords) => coords.length >= 2 && coords.every((c) => isValidCoord(c)),
     );
@@ -357,10 +457,7 @@ export function computeLineBuffer(
         })
         .filter((coords): coords is Position[] => coords !== null);
 
-    if (cleanBufLines.length === 0) {
-        bufferCache.set(key, null);
-        return null;
-    }
+    if (cleanBufLines.length === 0) return null;
 
     const cleanCoords = cleanBufLines.reduce((sum, l) => sum + l.length, 0);
 
@@ -379,14 +476,13 @@ export function computeLineBuffer(
             `${simpleCoords} coords`,
     );
 
-    // -- 4. Buffer ---------------------------------------------------------------
+    // -- 2. Buffer ---------------------------------------------------------------
 
     let merged;
     try {
         merged = multiLineString(simplifiedLines);
     } catch (err) {
         console.warn(`[lineBuffer] multiLineString failed:`, err);
-        bufferCache.set(key, null);
         return null;
     }
 
@@ -398,14 +494,12 @@ export function computeLineBuffer(
         }) as Feature<Polygon | MultiPolygon>;
     } catch (err) {
         console.warn(`[lineBuffer] buffer failed:`, err);
-        bufferCache.set(key, null);
         return null;
     }
     const bufferMs = performance.now() - t0;
 
     if (!result) {
         console.log(`[lineBuffer] buffer returned undefined`);
-        bufferCache.set(key, null);
         return null;
     }
 
@@ -413,6 +507,33 @@ export function computeLineBuffer(
         `[lineBuffer] buffer done: ${result.geometry.type} ` +
             `in ${bufferMs.toFixed(0)}ms`,
     );
+
+    return result;
+}
+
+/**
+ * Cached wrapper around `computeLineBuffer`. Keyed on
+ * (category, center, radiusMeters). Call this from render-state builders
+ * to avoid re-buffering the same window on every render.
+ */
+export function computeLineBufferCached(
+    category: MeasuringCategory,
+    center: Position,
+    radiusMeters: number,
+    windowFeatures: Feature<LineString | MultiLineString>[],
+): Feature<Polygon | MultiPolygon> | null {
+    if (radiusMeters <= 0) return null;
+
+    const key = bufferCacheKey(category, center, radiusMeters);
+    if (bufferCache.has(key)) {
+        const cached = bufferCache.get(key)!;
+        // Promote to most-recently-used.
+        bufferCache.delete(key);
+        bufferCache.set(key, cached);
+        return cached;
+    }
+
+    const result = computeLineBuffer(windowFeatures, radiusMeters);
 
     // Evict oldest entry when cache exceeds max size.
     if (bufferCache.size >= LINE_BUFFER_CACHE_MAX) {
@@ -584,4 +705,290 @@ export function computeLineDistance(
     distanceCache.set(key, result);
 
     return result;
+}
+
+// ─── ε-dilated clip polygon ────────────────────────────────────────────
+
+/** Small outward dilation (~30 m) for the play-area boundary so that
+ *  coincident borders (e.g. a prefecture boundary on the play-area edge)
+ *  are strictly inside and always survive the clip. */
+const CLIP_DILATION_M = 30;
+
+/**
+ * Cache keyed by a stable identity of the boundary features array.
+ * The boundary object is stable across renders, so the dilation runs
+ * once per play area. Uses a plain Map so tests can clear it.
+ */
+const dilatedBoundaryCache = new Map<
+    Feature<Polygon | MultiPolygon>[],
+    Feature<Polygon | MultiPolygon>
+>();
+
+/**
+ * Returns the play-area boundary dilated outward by `CLIP_DILATION_M`
+ * (30 m). Cached by boundary identity — reuses the same result across
+ * renders for a stable play area.
+ */
+export function getDilatedPlayArea(
+    boundary: FeatureCollection<Polygon | MultiPolygon>,
+): Feature<Polygon | MultiPolygon> {
+    const features = boundary.features;
+    const cached = dilatedBoundaryCache.get(features);
+    if (cached) return cached;
+
+    // @turf/buffer v7 overloads: Feature→Feature or FeatureCollection→FeatureCollection.
+    // Buffer the boundary FeatureCollection to get an ε-dilated polygon.
+    // The `as FeatureCollection` cast picks the FeatureCollection overload,
+    // which returns a FeatureCollection result with .features.
+    const dilatedFc = buffer(
+        boundary as FeatureCollection<Polygon | MultiPolygon>,
+        CLIP_DILATION_M,
+        { units: "meters" },
+    );
+    const dilated: Feature<Polygon | MultiPolygon> =
+        (dilatedFc?.features?.[0] as Feature<Polygon | MultiPolygon>) ??
+        boundary.features[0];
+
+    if (!dilated || !dilated.geometry) {
+        // Fallback: return the first feature as-is (should never happen).
+        console.warn(
+            "[dilatedPlayArea] buffer returned empty; using raw boundary",
+        );
+        const fallback = features[0] as Feature<Polygon | MultiPolygon>;
+        if (fallback) return fallback;
+        // Absolute last resort: a tiny square around origin.
+        return {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "Polygon",
+                coordinates: [
+                    [
+                        [0, 0],
+                        [0.01, 0],
+                        [0.01, 0.01],
+                        [0, 0.01],
+                        [0, 0],
+                    ],
+                ],
+            },
+        };
+    }
+
+    dilatedBoundaryCache.set(features, dilated);
+    return dilated;
+}
+
+/** Test seam: clear the dilated-boundary cache. */
+export function clearDilatedBoundaryCache(): void {
+    dilatedBoundaryCache.clear();
+}
+
+// ─── Line–polygon clip ─────────────────────────────────────────────────
+
+/**
+ * Clips each feature to the dilated play-area boundary.
+ *
+ * Implementation uses `@turf/line-split` + `@turf/boolean-point-in-polygon`:
+ * split each line by the polygon, keep pieces whose midpoint is inside.
+ * MultiLineString features are decomposed, clipped per component, and
+ * recombined.
+ */
+export function clipLineFeaturesToPlayArea(
+    features: Feature<LineString | MultiLineString>[],
+    dilatedPlayArea: Feature<Polygon | MultiPolygon>,
+): Feature<LineString | MultiLineString>[] {
+    const result: Feature<LineString | MultiLineString>[] = [];
+
+    for (const f of features) {
+        if (f.geometry.type === "LineString") {
+            const clipped = clipLineString(
+                f as Feature<LineString>,
+                dilatedPlayArea,
+            );
+            if (clipped) result.push(clipped);
+        } else {
+            const clipped = clipMultiLineString(
+                f as Feature<MultiLineString>,
+                dilatedPlayArea,
+            );
+            if (clipped) result.push(clipped);
+        }
+    }
+
+    return result;
+}
+
+function clipLineString(
+    feature: Feature<LineString>,
+    polygon: Feature<Polygon | MultiPolygon>,
+): Feature<LineString | MultiLineString> | null {
+    const coords = feature.geometry.coordinates as Position[];
+
+    // Quick check: if all coords are already inside, skip the split.
+    if (isFullyInside(coords, polygon)) return feature;
+
+    // Split the line by the polygon boundary.
+    let splitFc;
+    try {
+        splitFc = lineSplit(feature, polygon);
+    } catch {
+        // lineSplit can throw on degenerate input — retain the feature as-is
+        // if it has any inside points.
+        return clipLineStringFallback(feature, polygon);
+    }
+
+    if (!splitFc || splitFc.features.length === 0) {
+        return clipLineStringFallback(feature, polygon);
+    }
+
+    // Keep pieces whose midpoint is inside the dilated polygon.
+    const insidePieces: Position[][] = [];
+    for (const piece of splitFc.features) {
+        const pieceCoords = piece.geometry.coordinates as Position[];
+        if (pieceCoords.length < 2) continue;
+        const midIdx = Math.floor(pieceCoords.length / 2);
+        const mid = pieceCoords[midIdx];
+        if (booleanPointInPolygon(mid, polygon)) {
+            insidePieces.push(pieceCoords);
+        }
+    }
+
+    if (insidePieces.length === 0) return null;
+
+    if (insidePieces.length === 1) {
+        return {
+            type: "Feature",
+            properties: { ...feature.properties },
+            geometry: { type: "LineString", coordinates: insidePieces[0] },
+        };
+    }
+
+    // Recombine into MultiLineString
+    return {
+        type: "Feature",
+        properties: { ...feature.properties },
+        geometry: {
+            type: "MultiLineString",
+            coordinates: insidePieces,
+        },
+    };
+}
+
+function clipMultiLineString(
+    feature: Feature<MultiLineString>,
+    polygon: Feature<Polygon | MultiPolygon>,
+): Feature<LineString | MultiLineString> | null {
+    const allPieces: Position[][] = [];
+    for (const line of feature.geometry.coordinates) {
+        const coords = line as Position[];
+        if (coords.length < 2) continue;
+
+        // Quick check: fully inside → keep as-is.
+        if (isFullyInside(coords, polygon)) {
+            allPieces.push(coords);
+            continue;
+        }
+
+        let splitFc;
+        const lineFeat: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: coords },
+        };
+        try {
+            splitFc = lineSplit(lineFeat, polygon);
+        } catch {
+            // Keep any inside segments via fallback.
+            const fallback = clipCoordsToPolygon(coords, polygon);
+            if (fallback.length > 0) allPieces.push(...fallback);
+            continue;
+        }
+        if (!splitFc || splitFc.features.length === 0) {
+            const fallback = clipCoordsToPolygon(coords, polygon);
+            if (fallback.length > 0) allPieces.push(...fallback);
+            continue;
+        }
+        for (const piece of splitFc.features) {
+            const pieceCoords = piece.geometry.coordinates as Position[];
+            if (pieceCoords.length < 2) continue;
+            const midIdx = Math.floor(pieceCoords.length / 2);
+            if (booleanPointInPolygon(pieceCoords[midIdx], polygon)) {
+                allPieces.push(pieceCoords);
+            }
+        }
+    }
+
+    if (allPieces.length === 0) return null;
+
+    if (allPieces.length === 1) {
+        return {
+            type: "Feature",
+            properties: { ...feature.properties },
+            geometry: { type: "LineString", coordinates: allPieces[0] },
+        };
+    }
+
+    return {
+        type: "Feature",
+        properties: { ...feature.properties },
+        geometry: { type: "MultiLineString", coordinates: allPieces },
+    };
+}
+
+// ─── Clip helpers ──────────────────────────────────────────────────────
+
+/** True when every coord is inside the polygon. */
+function isFullyInside(
+    coords: Position[],
+    polygon: Feature<Polygon | MultiPolygon>,
+): boolean {
+    return coords.every((c) => booleanPointInPolygon(c, polygon));
+}
+
+/**
+ * Fallback clip: runs of consecutive inside vertices emitted as separate
+ * LineStrings. Used when `lineSplit` fails on degenerate input.
+ */
+function clipCoordsToPolygon(
+    coords: Position[],
+    polygon: Feature<Polygon | MultiPolygon>,
+): Position[][] {
+    const result: Position[][] = [];
+    let run: Position[] = [];
+    for (const c of coords) {
+        if (booleanPointInPolygon(c, polygon)) {
+            run.push(c);
+        } else {
+            if (run.length >= 2) result.push(run);
+            run = [];
+        }
+    }
+    if (run.length >= 2) result.push(run);
+    return result;
+}
+
+/**
+ * Fallback for a single LineString feature: keeps the portion with inside
+ * vertices. Used when `lineSplit` throws.
+ */
+function clipLineStringFallback(
+    feature: Feature<LineString>,
+    polygon: Feature<Polygon | MultiPolygon>,
+): Feature<LineString | MultiLineString> | null {
+    const coords = feature.geometry.coordinates as Position[];
+    const pieces = clipCoordsToPolygon(coords, polygon);
+    if (pieces.length === 0) return null;
+    if (pieces.length === 1) {
+        return {
+            type: "Feature",
+            properties: { ...feature.properties },
+            geometry: { type: "LineString", coordinates: pieces[0] },
+        };
+    }
+    return {
+        type: "Feature",
+        properties: { ...feature.properties },
+        geometry: { type: "MultiLineString", coordinates: pieces },
+    };
 }

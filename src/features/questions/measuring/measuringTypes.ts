@@ -57,8 +57,8 @@ export type MeasuringRenderState = {
     nearestPointConnectors: FeatureCollection<LineString>;
     /** A marker at each line-category question's nearest point. */
     nearestPointMarkers: FeatureCollection<Point>;
-    /** The line geometry for line-category questions, filtered to the
-     *  play area. Rendered as an orange reference line on the map. */
+    /** The line geometry for line-category questions, clipped to the
+     *  play area. Rendered as a reference line on the map. */
     lineFeatures: FeatureCollection<LineString | MultiLineString>;
 };
 

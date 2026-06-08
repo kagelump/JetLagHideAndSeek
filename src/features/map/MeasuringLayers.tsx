@@ -18,8 +18,9 @@ const EMPTY_FEATURES = {
 } as const;
 
 /**
- * Renders connector lines, nearest-point markers, and the reference line
- * geometry for line-category Measuring questions (e.g. Shinkansen tracks).
+ * Renders connector lines, nearest-point markers, and the clipped reference
+ * line geometry for line-category Measuring questions (e.g. Shinkansen
+ * tracks, prefecture borders).
  *
  * Always keeps the ShapeSources mounted — even with empty collections — so
  * MapLibre GL Native does not fail to re-register the source ids during
@@ -30,14 +31,14 @@ export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
 
     return (
         <>
-            {/* ── Reference line (orange) for line-category questions ── */}
+            {/* ── Reference line for line-category questions ── */}
             <MLShapeSource id="measuring-line-ref" shape={lineFeatures}>
                 <MLLineLayer
                     id="measuring-line-ref-layer"
                     style={{
-                        lineColor: "#ff0000",
-                        lineOpacity: 0.7,
-                        lineWidth: 10,
+                        lineColor: colors.measuringLine,
+                        lineOpacity: 0.6,
+                        lineWidth: 3,
                     }}
                 />
             </MLShapeSource>
