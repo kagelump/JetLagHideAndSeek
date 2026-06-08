@@ -157,7 +157,16 @@ boundary.
   backend-selection unit test.
 - **Acceptance:** `pnpm check && pnpm test` green; app behaves identically.
 
-### G1 — Vendor & build GEOS for iOS + Android
+### G1 — Vendor & build GEOS for iOS + Android — **Done** (see [g1-plan.md](./g1-plan.md))
+
+Landed: GEOS 3.14.1 fetched + built into `libgeos.xcframework` (iOS device+sim)
+and per-ABI `libgeos.a` (Android `arm64-v8a`/`x86_64`); local Expo Module with
+`geosVersion()` + `smokeTest()` smoke surface; build scripts under
+`modules/native-geometry/scripts/`. **Caveat:** the committed artifacts are
+currently caught by the unanchored `ios/`/`android/` `.gitignore` rules — fixing
+that is the P0 prerequisite for G2 (see g2-plan).
+
+The original goal/notes below are retained for reference.
 
 The real work, and the only genuinely hard part. Goal: produce static GEOS
 artifacts the local module can link, reproducibly, from a committed script.
@@ -188,7 +197,16 @@ artifacts the local module can link, reproducibly, from a committed script.
   script entry (e.g. `geos:build:ios`, `geos:build:android`) so the rebuild path
   is discoverable like the other generated-artifact pipelines.
 
-### G2 — Local Expo Module + WKB codec + native backend
+### G2 — Local Expo Module + WKB codec + native backend — **detailed plan: [g2-plan.md](./g2-plan.md)**
+
+> The full G2 breakdown (work items, layered testing/validation, the resolved
+> projection decision, and the `.gitignore` P0 fix) lives in
+> [g2-plan.md](./g2-plan.md). Summary below; the standalone plan supersedes it
+> where they differ — notably the **projection**: reading `@turf/buffer`'s source
+> shows it buffers in a per-feature **azimuthal-equidistant meter** projection
+> (via `@turf/center` + `d3-geo`, `scale = earthRadius`), **not** an
+> equirectangular `cos(lat)` factor. The native module stays projection-agnostic;
+> the JS adapter replicates turf's AEQD exactly for parity.
 
 - `modules/native-geometry/` via `npx create-expo-module --local`. Single
   synchronous function:
