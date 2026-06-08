@@ -3,8 +3,13 @@ node_modules/
 dist/
 build/
 coverage/
-ios/
-android/
+/ios/**
+/android/**
+
+# Re-include the Expo Module subdirectories that are not the generated
+# ios/ or android/ project roots.
+!modules/native-geometry/ios/
+!modules/native-geometry/android/
 *.log
 e2e/artifacts/
 data/odpt/cache/
@@ -22,3 +27,8 @@ data/geofabrik/dist/
 
 # jetbrains setting folder
 .idea/
+
+# GEOS build intermediates (vendor source, build dirs)
+modules/native-geometry/vendor/geos/
+modules/native-geometry/ios/build/
+modules/native-geometry/android/build/
