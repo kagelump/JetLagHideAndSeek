@@ -119,7 +119,7 @@ checked in** (see Phase G1).
 Phases G0–G4 deliver the user's goal (tighter mask, fast buffer). G5–G6 are
 optional follow-ups. Each phase is independently shippable.
 
-### G0 — Geometry backend seam (pure JS, zero behavior change) — **ship first**
+### G0 — Geometry backend seam (pure JS, zero behavior change) — **Done**
 
 Make the buffer primitive swappable before any native code exists. This de-risks
 everything: it's testable in Jest, reviewable in isolation, and is the rollback
