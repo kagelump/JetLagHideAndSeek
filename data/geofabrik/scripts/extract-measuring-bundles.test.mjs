@@ -8,6 +8,7 @@ import {
     stitchSegments,
     validateLineContinuity,
     cleanPolygonFeature,
+    simplifyPolygonFeature,
     polygonPerimeterMeters,
     polygonDissolve,
 } from "./extract-measuring-bundles.mjs";
@@ -194,6 +195,7 @@ describe("measuring bundle structural validator", () => {
             it("every feature has valid properties", () => {
                 const isAdminBorder =
                     key === "admin-1st-border" || key === "admin-2nd-border";
+                const isBodyOfWater = key === "body-of-water";
                 for (const f of bundle.features) {
                     if (isAdminBorder) {
                         // Admin border features carry relationId (required)
@@ -224,6 +226,26 @@ describe("measuring bundle structural validator", () => {
                             assert.ok(
                                 typeof f.properties["name:en"] === "string",
                                 "name:en must be a string",
+                            );
+                        }
+                    } else if (isBodyOfWater) {
+                        // Waterway centerline features carry a `waterway`
+                        // property (river/canal/stream); dissolved polygon
+                        // features have empty properties.
+                        const keys = Object.keys(f.properties);
+                        const allowed = new Set(["waterway"]);
+                        for (const k of keys) {
+                            assert.ok(
+                                allowed.has(k),
+                                `unexpected property "${k}" in body-of-water feature`,
+                            );
+                        }
+                        if (keys.includes("waterway")) {
+                            assert.ok(
+                                ["river", "canal", "stream"].includes(
+                                    f.properties.waterway,
+                                ),
+                                `unexpected waterway value: ${f.properties.waterway}`,
                             );
                         }
                     } else {
@@ -738,5 +760,145 @@ describe("polygonPerimeterMeters", () => {
         };
         const perim = polygonPerimeterMeters(geom);
         assert.ok(perim > 3000 && perim < 6000, `got perimeter=${perim}`);
+    });
+});
+
+// ─── simplifyPolygonFeature collapse-fallback (P7-B) ─────────────────────
+
+describe("simplifyPolygonFeature collapse-fallback", () => {
+    it("retains a thin (~20 m wide) polygon that would collapse at default tolerance", () => {
+        // A ~20 m wide riverbank rectangle. At 0.0002° (~22 m) tolerance,
+        // the narrow axis collapses to just the two endpoints — pre-fix
+        // this was dropped. Post-fix the collapse-fallback keeps it.
+        const cx = 139.7,
+            cy = 35.6;
+        const hw = 0.00009; // half-width ≈ 10 m at mid-latitudes
+        const hh = 0.0009; // half-height ≈ 100 m
+        const feat = {
+            type: "Feature",
+            geometry: {
+                type: "Polygon",
+                coordinates: [
+                    [
+                        [cx - hw, cy - hh],
+                        [cx + hw, cy - hh],
+                        [cx + hw, cy + hh],
+                        [cx - hw, cy + hh],
+                        [cx - hw, cy - hh],
+                    ],
+                ],
+            },
+            properties: {},
+        };
+        const result = simplifyPolygonFeature(feat, 0.0002);
+        assert.ok(
+            result,
+            "thin polygon should be retained by collapse-fallback",
+        );
+        assert.strictEqual(result.geometry.type, "Polygon");
+        // The ring should still have at least 4 coords.
+        assert.ok(
+            result.geometry.coordinates[0].length >= 4,
+            `ring collapsed to ${result.geometry.coordinates[0].length} coords`,
+        );
+    });
+
+    it("drops a polygon whose source ring genuinely has < 4 unique coords", () => {
+        // A degenerate ring: all coords identical.
+        const feat = {
+            type: "Feature",
+            geometry: {
+                type: "Polygon",
+                coordinates: [
+                    [
+                        [139.0, 35.0],
+                        [139.0, 35.0],
+                        [139.0, 35.0],
+                        [139.0, 35.0],
+                    ],
+                ],
+            },
+            properties: {},
+        };
+        const result = simplifyPolygonFeature(feat, 0.0002);
+        assert.strictEqual(
+            result,
+            null,
+            "genuinely degenerate ring should still be dropped",
+        );
+    });
+});
+
+// ─── Body-of-water waterway centerline regression guards (P7-A) ─────────
+
+describe("body-of-water waterway centerlines", () => {
+    const bundlePath = resolve(measuringDir, "body-of-water.json");
+
+    function haversineMeters(a, c) {
+        const R = 6371000;
+        const r = (x) => (x * Math.PI) / 180;
+        const dy = r(c[1] - a[1]);
+        const dx = r(c[0] - a[0]);
+        const s =
+            Math.sin(dy / 2) ** 2 +
+            Math.cos(r(a[1])) * Math.cos(r(c[1])) * Math.sin(dx / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(s));
+    }
+
+    it("contains at least one LineString or MultiLineString feature", () => {
+        // Pre-fix: body-of-water was polygon-only (all MultiPolygon).
+        // Post-fix: waterway centerlines add LineString features.
+        const bundle = JSON.parse(readFileSync(bundlePath, "utf8"));
+        const lineFeatures = bundle.features.filter(
+            (f) =>
+                f.geometry.type === "LineString" ||
+                f.geometry.type === "MultiLineString",
+        );
+        assert.ok(
+            lineFeatures.length > 0,
+            "body-of-water should contain waterway centerline features",
+        );
+    });
+
+    it("covers the upstream Meguro River corridor (P7 regression guard)", () => {
+        const bundle = JSON.parse(readFileSync(bundlePath, "utf8"));
+
+        // Collect all bundle vertices in the Meguro corridor bbox.
+        const vertices = [];
+        const walk = (c) => {
+            if (typeof c[0] === "number") {
+                if (
+                    c[0] > 139.64 &&
+                    c[0] < 139.76 &&
+                    c[1] > 35.59 &&
+                    c[1] < 35.66
+                ) {
+                    vertices.push(c);
+                }
+            } else {
+                c.forEach(walk);
+            }
+        };
+        for (const f of bundle.features) walk(f.geometry.coordinates);
+
+        assert.ok(vertices.length > 0, "no vertices found in Meguro corridor");
+
+        // Upstream Meguro sample points.
+        const samples = [
+            ["Ikejiri/Ohashi", 139.6855, 35.651],
+            ["Naka-Meguro", 139.6985, 35.644],
+        ];
+
+        for (const [name, lo, la] of samples) {
+            let best = Infinity;
+            for (const v of vertices) {
+                best = Math.min(best, haversineMeters([lo, la], v));
+            }
+            assert.ok(
+                best < 500,
+                `${name} nearest bundle vertex is ${best.toFixed(0)}m — ` +
+                    `should be < 500m (pre-fix was 1768m)`,
+            );
+        }
     });
 });

@@ -515,6 +515,22 @@ describe("computeLineDistance", () => {
             expect(result).not.toBeNull();
             expect(result!.distanceMeters).toBeGreaterThan(0);
         });
+
+        it("covers the upstream Meguro River (P7 regression guard)", () => {
+            // Pre-fix: a seeker near Ikejiri/Ohashi (upstream Meguro) got
+            // a nearest bundle vertex 1768m away because the river
+            // centerline was missing. Post-fix: waterway=river centerlines
+            // are included, so the distance should be small (< 500m).
+            const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
+            __setLineBundleForTest("body-of-water", bundle);
+
+            const result = computeLineDistance(
+                [139.6855, 35.651],
+                "body-of-water",
+            );
+            expect(result).not.toBeNull();
+            expect(result!.distanceMeters).toBeLessThan(500);
+        });
     });
 });
 

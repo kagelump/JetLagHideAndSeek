@@ -39,7 +39,8 @@ const CATEGORIES = [
     {
         key: "body-of-water",
         osmiumFilter:
-            "w/natural=water r/natural=water w/landuse=basin w/waterway=riverbank",
+            "w/natural=water r/natural=water w/landuse=basin w/waterway=riverbank " +
+            "w/waterway=river w/waterway=canal",
         postFilter: null,
         geometry: "polygon-dissolve",
     },
@@ -62,10 +63,13 @@ const CATEGORIES = [
 const SIMPLIFY_TOLERANCES = {
     "high-speed-rail": 0.0001,
     coastline: 0.0005,
-    "body-of-water": 0.0005,
+    "body-of-water": 0.0002,
     "admin-1st-border": 0.0003,
     "admin-2nd-border": 0.0003,
 };
+
+/** Simplify tolerance for waterway centerlines (degrees, ≈ 111 m). */
+const WATERWAY_LINE_SIMPLIFY = 0.001;
 
 // ─── Minimum feature length (meters) ────────────────────────────────────────────
 
@@ -323,17 +327,34 @@ function cleanPolygonFeature(feature) {
 }
 
 /**
- * Simplifies each ring of a Polygon or MultiPolygon using RDP. Drops rings
- * that collapse to < 4 coordinates (RDP on a small polygon returns only
- * [first, last] when no vertex exceeds tolerance). Returns null when every
- * ring degenerates — matching the runtime `simplifyPolygonCoords` contract.
+ * Simplifies each ring of a Polygon or MultiPolygon using RDP with a
+ * collapse-fallback so thin polygons are never silently dropped.
+ *
+ * For each ring:
+ * 1. Simplify at `tolerance`. If the result has ≥ 4 coords, keep it.
+ * 2. If it collapsed, retry at `tolerance / 4`.
+ * 3. If still collapsed, return the cleaned (de-duped) unsimplified ring.
+ * 4. Only drop rings whose *source* genuinely has < 4 unique coords.
+ *
+ * Returns null when every ring degenerates.
  */
 function simplifyPolygonFeature(feature, tolerance) {
+    const simplifyRing = (ring, tol) => {
+        const simplified = simplifyCoords(ring, tol);
+        if (simplified.length >= 4) return simplified;
+        // Retry at finer tolerance.
+        const finer = simplifyCoords(ring, tol / 4);
+        if (finer.length >= 4) return finer;
+        // Fallback: keep the cleaned (de-duped) unsimplified ring.
+        const cleaned = cleanRingCoords(ring);
+        return cleaned.length >= 4 ? cleaned : null;
+    };
+
     const geom = feature.geometry;
     if (geom.type === "Polygon") {
         const simplified = geom.coordinates
-            .map((ring) => simplifyCoords(ring, tolerance))
-            .filter((ring) => ring.length >= 4);
+            .map((ring) => simplifyRing(ring, tolerance))
+            .filter((ring) => ring !== null);
         if (simplified.length === 0) return null;
         return {
             ...feature,
@@ -343,8 +364,8 @@ function simplifyPolygonFeature(feature, tolerance) {
         const simplified = geom.coordinates
             .map((poly) =>
                 poly
-                    .map((ring) => simplifyCoords(ring, tolerance))
-                    .filter((ring) => ring.length >= 4),
+                    .map((ring) => simplifyRing(ring, tolerance))
+                    .filter((ring) => ring !== null),
             )
             .filter((poly) => poly.length > 0);
         if (simplified.length === 0) return null;
@@ -1512,13 +1533,26 @@ async function main() {
                 // for dissolve.
                 let lineFeatures;
                 if (category.geometry === "polygon-dissolve") {
-                    // Keep polygon geometry as-is for the dissolve pipeline.
-                    // Only accept Polygon / MultiPolygon from the source.
+                    // Accept Polygon / MultiPolygon for the dissolve pipeline,
+                    // and LineString / MultiLineString for waterway centerlines.
                     if (
                         feature.geometry.type === "Polygon" ||
                         feature.geometry.type === "MultiPolygon"
                     ) {
                         lineFeatures = [feature];
+                    } else if (
+                        feature.geometry.type === "LineString" ||
+                        feature.geometry.type === "MultiLineString"
+                    ) {
+                        // Tag with waterway type so post-processing can apply
+                        // per-type min-length floors.
+                        const waterwayType = feature.properties?.waterway;
+                        lineFeatures = [
+                            {
+                                ...feature,
+                                properties: { waterway: waterwayType },
+                            },
+                        ];
                     } else {
                         continue;
                     }
@@ -1539,15 +1573,48 @@ async function main() {
 
                 for (const lf of lineFeatures) {
                     if (category.geometry === "polygon-dissolve") {
-                        // Store raw polygon geometry; dissolve + simplify
-                        // happens in post-processing.
-                        const bbox = computePolygonBbox(lf.geometry);
-                        features.push({
-                            type: "Feature",
-                            bbox,
-                            geometry: lf.geometry,
-                            properties: {},
-                        });
+                        if (
+                            lf.geometry.type === "Polygon" ||
+                            lf.geometry.type === "MultiPolygon"
+                        ) {
+                            // Store raw polygon geometry; dissolve + simplify
+                            // happens in post-processing.
+                            const bbox = computePolygonBbox(lf.geometry);
+                            features.push({
+                                type: "Feature",
+                                bbox,
+                                geometry: lf.geometry,
+                                properties: {},
+                            });
+                        } else {
+                            // Waterway centerline: split MultiLineStrings,
+                            // store raw (un-simplified) so the shared-node
+                            // stitcher sees full-resolution endpoints.
+                            const lineStrings =
+                                lf.geometry.type === "MultiLineString"
+                                    ? lf.geometry.coordinates.map((coords) => ({
+                                          type: "Feature",
+                                          geometry: {
+                                              type: "LineString",
+                                              coordinates: coords,
+                                          },
+                                          properties: lf.properties ?? {},
+                                      }))
+                                    : [lf];
+                            for (const ls of lineStrings) {
+                                const bbox = computeBbox(
+                                    ls.geometry.coordinates,
+                                );
+                                features.push({
+                                    type: "Feature",
+                                    bbox,
+                                    geometry: ls.geometry,
+                                    properties: {
+                                        ...(lf.properties ?? {}),
+                                    },
+                                });
+                            }
+                        }
                         continue;
                     }
 
@@ -1595,12 +1662,37 @@ async function main() {
 
         const isPolygonDissolve = category.geometry === "polygon-dissolve";
 
+        // Partition polygon-dissolve features into polygon and line subsets
+        // before any post-processing. Polygons go through the existing
+        // clean → min-length → dissolve pipeline; waterway centerlines go
+        // through clean → stitch → min-length → simplify.
+        let polyFeatures = [];
+        let waterwayLineFeatures = [];
+        if (isPolygonDissolve) {
+            for (const f of features) {
+                if (
+                    f.geometry.type === "Polygon" ||
+                    f.geometry.type === "MultiPolygon"
+                ) {
+                    polyFeatures.push(f);
+                } else {
+                    waterwayLineFeatures.push(f);
+                }
+            }
+            if (waterwayLineFeatures.length > 0) {
+                console.log(
+                    `  [waterway] ${waterwayLineFeatures.length.toLocaleString()} line features ` +
+                        `(rivers/canals/streams)`,
+                );
+            }
+        }
+
         // 1. Strip consecutive duplicate coordinates.
         if (isPolygonDissolve) {
             // Polygon dissolve: clean rings, filter degenerate geometries.
             const cleaned = [];
             let droppedDegen = 0;
-            for (const f of features) {
+            for (const f of polyFeatures) {
                 const c = cleanPolygonFeature(f);
                 if (c) {
                     cleaned.push(c);
@@ -1613,8 +1705,7 @@ async function main() {
                     `  cleanCoords: dropped ${droppedDegen} degenerate polygons`,
                 );
             }
-            features.length = 0;
-            features.push(...cleaned);
+            polyFeatures = cleaned;
         } else {
             const dupPairsBefore = countDupPairs(features);
             for (const f of features) {
@@ -1638,38 +1729,52 @@ async function main() {
         // 2. Drop features shorter than the category minimum.
         const minLen = MIN_FEATURE_LENGTH_M[category.key];
         if (minLen && minLen > 0) {
-            const before = features.length;
-            const kept = features.filter((f) => {
-                if (isPolygonDissolve) {
-                    // Use perimeter for polygon min-length filter.
-                    return polygonPerimeterMeters(f.geometry) >= minLen;
-                }
-                const coords = f.geometry.coordinates;
-                if (f.geometry.type === "LineString") {
-                    return lineLengthMeters(coords) >= minLen;
-                }
-                // MultiLineString: sum of all segments.
-                let total = 0;
-                for (const seg of coords) {
-                    total += lineLengthMeters(seg);
-                }
-                return total >= minLen;
-            });
-            const dropped = features.length - kept.length;
-            if (dropped > 0) {
-                console.log(
-                    `  minLength: dropped ${dropped} features < ${minLen}m (${features.length - kept.length} of ${before})`,
+            if (isPolygonDissolve) {
+                const before = polyFeatures.length;
+                const kept = polyFeatures.filter(
+                    (f) => polygonPerimeterMeters(f.geometry) >= minLen,
                 );
+                const dropped = before - kept.length;
+                if (dropped > 0) {
+                    console.log(
+                        `  minLength: dropped ${dropped} polygon features < ${minLen}m ` +
+                            `(${dropped} of ${before})`,
+                    );
+                }
+                polyFeatures = kept;
+            } else {
+                const before = features.length;
+                const kept = features.filter((f) => {
+                    const coords = f.geometry.coordinates;
+                    if (f.geometry.type === "LineString") {
+                        return lineLengthMeters(coords) >= minLen;
+                    }
+                    // MultiLineString: sum of all segments.
+                    let total = 0;
+                    for (const seg of coords) {
+                        total += lineLengthMeters(seg);
+                    }
+                    return total >= minLen;
+                });
+                const dropped = features.length - kept.length;
+                if (dropped > 0) {
+                    console.log(
+                        `  minLength: dropped ${dropped} features < ${minLen}m ` +
+                            `(${features.length - kept.length} of ${before})`,
+                    );
+                }
+                features.length = 0;
+                features.push(...kept);
             }
-            features.length = 0;
-            features.push(...kept);
         }
 
         // 3. Recompute bboxes after coordinate changes.
-        for (const f of features) {
-            if (isPolygonDissolve) {
+        if (isPolygonDissolve) {
+            for (const f of polyFeatures) {
                 f.bbox = computePolygonBbox(f.geometry);
-            } else {
+            }
+        } else {
+            for (const f of features) {
                 f.bbox = computeBbox(f.geometry.coordinates);
             }
         }
@@ -1677,9 +1782,95 @@ async function main() {
         // ── Polygon dissolve post-processing ────────────────────────────
         if (isPolygonDissolve) {
             const tolerance = SIMPLIFY_TOLERANCES[category.key] ?? 0.0005;
-            const dissolved = polygonDissolve(features, extractBbox, tolerance);
+            const dissolved = polygonDissolve(
+                polyFeatures,
+                extractBbox,
+                tolerance,
+            );
             features.length = 0;
             features.push(...dissolved);
+
+            // ── Waterway centerline post-processing ─────────────────────
+            if (waterwayLineFeatures.length > 0) {
+                const tLine0 = Date.now();
+
+                // Clean consecutive duplicate coordinates.
+                const dupPairsBefore = countDupPairs(waterwayLineFeatures);
+                for (const f of waterwayLineFeatures) {
+                    const g = f.geometry;
+                    if (g.type === "LineString") {
+                        g.coordinates = cleanCoordsInline(g.coordinates);
+                    }
+                }
+                const dupPairsAfter = countDupPairs(waterwayLineFeatures);
+                const dupMsg =
+                    dupPairsBefore > 0
+                        ? ` (${dupPairsBefore} dup-pairs → ${dupPairsAfter})`
+                        : "";
+
+                // Stitch fragmented OSM ways into continuous rivers via the
+                // exact shared-node graph — same as HSR. Per-segment
+                // min-length cannot punch gaps mid-river.
+                const stitchedRaw = stitchSegments(waterwayLineFeatures);
+                const stitched = stitchedRaw.filter((f) => {
+                    const c = f.geometry.coordinates;
+                    return nodeKey(c[0]) !== nodeKey(c[c.length - 1]);
+                });
+                const loopsDropped = stitchedRaw.length - stitched.length;
+                console.log(
+                    `  [waterway] clean${dupMsg}, ` +
+                        `stitch: ${waterwayLineFeatures.length} → ${stitched.length} features` +
+                        (loopsDropped
+                            ? ` (${loopsDropped} degenerate loops dropped)`
+                            : ""),
+                );
+
+                // Min-length filter per waterway type. River/canal want a
+                // low floor (~100 m); stream wants a high floor to cull the
+                // ~94 k minor streams.
+                const WATERWAY_MIN_LENGTH = {
+                    river: 10000,
+                    canal: 10000,
+                    stream: 500,
+                };
+                const longEnough = stitched.filter((f) => {
+                    const ww = f.properties?.waterway;
+                    const floor = WATERWAY_MIN_LENGTH[ww] ?? 500;
+                    return lineLengthMeters(f.geometry.coordinates) >= floor;
+                });
+                if (longEnough.length < stitched.length) {
+                    const byType = {};
+                    for (const f of stitched) {
+                        if (longEnough.includes(f)) continue;
+                        const ww = f.properties?.waterway ?? "unknown";
+                        byType[ww] = (byType[ww] ?? 0) + 1;
+                    }
+                    const detail = Object.entries(byType)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([k, v]) => `${k}:${v}`)
+                        .join(", ");
+                    console.log(
+                        `  [waterway] minLength: ${stitched.length} → ${longEnough.length} features ` +
+                            `(dropped ${stitched.length - longEnough.length}: ${detail})`,
+                    );
+                }
+
+                // Simplify and recompute bboxes.
+                const simplified = longEnough.map((f) =>
+                    simplifyFeature(f, WATERWAY_LINE_SIMPLIFY),
+                );
+                for (const f of simplified) {
+                    f.bbox = computeBbox(f.geometry.coordinates);
+                }
+
+                console.log(
+                    `  [waterway] simplified ${simplified.length} features ` +
+                        `(tol=${WATERWAY_LINE_SIMPLIFY}°), ` +
+                        `total: ${((Date.now() - tLine0) / 1000).toFixed(1)}s`,
+                );
+
+                features.push(...simplified);
+            }
         }
 
         // ── High-speed-rail post-processing ─────────────────────────────

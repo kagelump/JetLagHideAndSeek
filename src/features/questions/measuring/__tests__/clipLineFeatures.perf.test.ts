@@ -76,8 +76,10 @@ describe("reference-line clip performance (body-of-water / Tokyo)", () => {
         );
 
         expect(clipped.length).toBeGreaterThan(0);
-        // Pre-P6: ~62,000 ms. After A+B: well under 1000 ms.
-        expect(ms).toBeLessThan(1000);
+        // Pre-P6: ~62,000 ms. After A+B+P7 (waterway centerlines): the
+        // bundle grew from 151 features to ~1,200, so the clip has more
+        // work to do. Still bounded.
+        expect(ms).toBeLessThan(3000);
     });
 
     it("warm re-render hits the clip cache", () => {
