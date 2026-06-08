@@ -14,16 +14,24 @@ That work introduced `computeLineCategory` (the single `windowFeatures` source),
 The docs below build on those primitives. (That was audit item "P4"; it is done,
 which is why there is no P4 doc here.)
 
-| Doc                                     | What it does                                                                                                       | Touches                                     |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| [P0](./P0-dissolved-polygon-bundle.md)  | Ship `body-of-water` as **pre-dissolved polygons** instead of 45k line rings. Kills the softlock at the source.    | bundle + extract script + runtime line path |
-| [P1](./P1-runtime-input-budget.md)      | Hard **input budget** + lower buffer fidelity + higher min-length floor before `@turf/buffer`. Runtime safety net. | `lineMeasuringGeometry.ts`                  |
-| [P2](./P2-windowed-spatial-index.md)    | Replace the fixed 50 km brute-force nearest-point scan with a **windowed spatial index**.                          | `lineMeasuringGeometry.ts` (+ index util)   |
-| [P3](./P3-async-derivation.md)          | Move heavy measuring derivation **off the synchronous render `useMemo`** so it can't freeze the UI.                | `questionGeometry.ts`                       |
-| [P5](./P5-unify-line-point-pipeline.md) | Unify the line and point paths behind one **bounded pipeline** so future categories inherit the discipline.        | measuring feature folder                    |
+| Doc                                        | What it does                                                                                                                          | Touches                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [P0](./P0-dissolved-polygon-bundle.md)     | Ship `body-of-water` as **pre-dissolved polygons** instead of 45k line rings. Kills the softlock at the source.                       | bundle + extract script + runtime line path                   |
+| [P1](./P1-runtime-input-budget.md)         | Hard **input budget** + lower buffer fidelity + higher min-length floor before `@turf/buffer`. Runtime safety net.                    | `lineMeasuringGeometry.ts`                                    |
+| [P2](./P2-windowed-spatial-index.md)       | Replace the fixed 50 km brute-force nearest-point scan with a **windowed spatial index**.                                             | `lineMeasuringGeometry.ts` (+ index util)                     |
+| [P3](./P3-async-derivation.md)             | Move heavy measuring derivation **off the synchronous render `useMemo`** so it can't freeze the UI.                                   | `questionGeometry.ts`                                         |
+| [P5](./P5-unify-line-point-pipeline.md)    | Unify the line and point paths behind one **bounded pipeline** so future categories inherit the discipline.                           | measuring feature folder                                      |
+| [P6](./P6-reference-line-clip.md)          | Bound the **reference-line clip** (bbox pre-filter + vertex clip + cache) — the post-P0 62 s `body-of-water` softlock.                | `lineMeasuringGeometry.ts` + call site                        |
+| [P7](./P7-waterway-centerline-coverage.md) | _Correctness:_ capture **waterway centerlines** (river/canal/stream) + retain thin water polygons — fixes the truncated Meguro River. | extract script + bundle regen                                 |
+| [P8](./P8-coastline-in-body-of-water.md)   | _Correctness:_ fold **coastline into Body of Water** at runtime so a near-coast seeker matches the nearest water.                     | `lineBundleLoader.ts` + `lineMeasuringGeometry.ts` (no regen) |
+
+> **P6 is the live softlock now.** After P0 shipped dissolved polygons, the
+> reference-line clip became the dominant cost (~62 s, twice, on the render
+> thread). Ship P6 next — it's localized and low-risk.
 
 ## Recommended order
 
+0. **P6** — current `body-of-water` softlock; bound the reference-line clip.
 1. **P1** first — it's the cheapest fix that makes the softlock impossible, and
    protects every category regardless of bundle shape. Ship it before anything
    else so the app is safe while the rest lands.
