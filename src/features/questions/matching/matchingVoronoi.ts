@@ -10,6 +10,7 @@ import type {
 import type { Bbox } from "@/shared/geojson";
 import { unionPolygons } from "@/shared/geojson";
 import type { OsmFeature } from "@/features/questions/matching/matchingTypes";
+import { MATCHING } from "@/config/appConfig";
 
 export function makeOsmKey(
     osmType: "node" | "way" | "relation",
@@ -18,7 +19,7 @@ export function makeOsmKey(
     return `${osmType}/${osmId}`;
 }
 
-const MAX_VORONOI_CACHE_SIZE = 20;
+const MAX_VORONOI_CACHE_SIZE = MATCHING.maxVoronoiCacheSize;
 const voronoiCache = new Map<
     string,
     FeatureCollection<Polygon, { osmKey: string; nameLength?: number }>

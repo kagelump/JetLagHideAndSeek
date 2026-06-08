@@ -7,6 +7,7 @@ import { Directory, File, Paths, type InfoOptions } from "expo-file-system";
 import type { Bbox } from "@/shared/geojson";
 import type { RawRegion } from "./bundledPois";
 import { registerRegion, unregisterRegion } from "./bundledPois";
+import { MATCHING } from "@/config/appConfig";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export type InstalledPackEntry = {
 // ─── Constants ────────────────────────────────────────────────────────────
 
 const INSTALLED_INDEX_KEY = "installed-poi-packs";
-const MANIFEST_STALE_TIME_MS = 30 * 60 * 1000; // 30 min
+const MANIFEST_STALE_TIME_MS = MATCHING.manifestStaleTimeMs;
 const MD5_INFO_OPTS: InfoOptions = { md5: true };
 
 // Lazy — defers the expo-file-system module access so tests that don't
@@ -191,7 +192,7 @@ async function downloadAndInstallPack(meta: PackMeta): Promise<void> {
 
     // Decompression bomb guard: cap inflated size.
     // A typical pack is ~3–15 MB raw; 100 MB absolute is far beyond any real region.
-    const INFLATE_MAX_BYTES = 100 * 1024 * 1024;
+    const INFLATE_MAX_BYTES = MATCHING.inflateMaxBytes;
     // Also cap at 20× the gzip size — a normal ratio is 3–5×.
     const inflateLimit = Math.min(INFLATE_MAX_BYTES, gzBytes.length * 20);
     const inflated = gunzipSync(gzBytes);

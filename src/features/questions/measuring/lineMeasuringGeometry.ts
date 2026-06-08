@@ -19,6 +19,13 @@ import type {
 } from "geojson";
 import type { MeasuringCategory } from "./measuringTypes";
 import { getLineBundleSources } from "./lineBundleLoader";
+import {
+    APP_CONFIG,
+    MEASURING_LINE,
+    simplifyTolerance,
+    polySimplifyTolerance,
+    minFeatureLength,
+} from "@/config/appConfig";
 
 /** Feature type that includes both line and polygon geometry. */
 type LineOrPolygonFeature = Feature<
@@ -33,11 +40,6 @@ export type NearestPointResult = {
 };
 
 // ─── Central line computation ──────────────────────────────────────────
-
-/** Minimum query window (50 km) even when the seeker is on the line
- *  (distance ≈ 0). Ensures windowFeatures always returns the bundle
- *  features near the play area. */
-const MIN_WINDOW_MARGIN_M = 50_000;
 
 /**
  * Result of one central line-category computation. `windowFeatures` is
@@ -114,9 +116,6 @@ export function selectWindowFeatures(
 /** Increment to invalidate all cached line-category results. */
 const LINE_CATEGORY_CACHE_VERSION = 2;
 
-/** Maximum number of cached line-category results. */
-const LINE_CATEGORY_CACHE_MAX = 50;
-
 const categoryCache = new Map<string, LineCategoryComputation | null>();
 
 function categoryCacheKey(
@@ -168,7 +167,10 @@ export function computeLineCategory(
         return null;
     }
 
-    const marginM = Math.max(distance.distanceMeters, MIN_WINDOW_MARGIN_M);
+    const marginM = Math.max(
+        distance.distanceMeters,
+        MEASURING_LINE.minWindowMarginM,
+    );
     const tWindow0 = performance.now();
     const windowFeatures = selectWindowFeatures(
         category,
@@ -189,7 +191,7 @@ export function computeLineCategory(
     };
 
     // Evict oldest entry when cache exceeds max size.
-    if (categoryCache.size >= LINE_CATEGORY_CACHE_MAX) {
+    if (categoryCache.size >= MEASURING_LINE.categoryCacheMax) {
         const oldest = categoryCache.keys().next().value;
         if (oldest !== undefined) categoryCache.delete(oldest);
     }
@@ -202,9 +204,6 @@ export function computeLineCategory(
 
 /** Increment to invalidate all cached results when the algorithm changes. */
 const LINE_DISTANCE_CACHE_VERSION = 2;
-
-/** Maximum number of cached nearest-point results. */
-const LINE_DISTANCE_CACHE_MAX = 100;
 
 /**
  * LRU cache keyed on (version, category, center). Two questions with the same
@@ -228,11 +227,7 @@ export function clearLineDistanceCache(): void {
 
 // --- Query margin -------------------------------------------------------------
 
-/** 50 km query window covers any plausible seeker distance. */
-const MARGIN_METERS = 50_000;
-
-/** Approximate degrees per meter at mid-latitudes (1 deg ~ 111,320 m). */
-const DEG_PER_METER = 1 / 111_320;
+const { degPerMeter: DEG_PER_METER } = APP_CONFIG.measuring;
 
 /** Convert meters to degrees longitude at a given latitude. */
 function metersToDegLon(meters: number, lat: number): number {
@@ -391,20 +386,12 @@ const LINE_BUFFER_CACHE_VERSION = 5;
 
 // ─── Buffer input budget ─────────────────────────────────────────────────
 
-/** Maximum number of line segments allowed before the escalation loop
- *  drops/simplifies features to stay within budget. */
-const MAX_BUFFER_SEGMENTS = 400;
-
-/** Maximum number of total coordinates allowed before the escalation loop
- *  drops/simplifies features to stay within budget. */
-const MAX_BUFFER_COORDS = 4000;
-
-/** Buffer circle resolution — 4 steps is imperceptible on the mask after
- *  intersection + difference, and ~2× faster than the default (8 or 64). */
-const BUFFER_STEPS = 4;
-
-/** Maximum number of cached buffer results. */
-const LINE_BUFFER_CACHE_MAX = 50;
+const {
+    maxBufferSegments: MAX_BUFFER_SEGMENTS,
+    maxBufferCoords: MAX_BUFFER_COORDS,
+    bufferSteps: BUFFER_STEPS,
+    bufferCacheMax: LINE_BUFFER_CACHE_MAX,
+} = MEASURING_LINE;
 
 /**
  * LRU cache keyed on (version, category, center, radiusMeters). The
@@ -448,9 +435,9 @@ export function applyBufferBudget(
     radiusMeters: number,
 ): Position[][] {
     let working = lines;
-    let tol = Math.max(radiusMeters * 0.05, 10);
+    let tol = simplifyTolerance(radiusMeters);
 
-    for (let round = 0; round < 6; round++) {
+    for (let round = 0; round < MEASURING_LINE.budgetMaxRounds; round++) {
         const segs = working.length;
         const coords = working.reduce((s, l) => s + l.length, 0);
         if (segs <= MAX_BUFFER_SEGMENTS && coords <= MAX_BUFFER_COORDS) {
@@ -534,7 +521,7 @@ export function computeLineBuffer(
 
     if (polyFeatures.length > 0) {
         // Simplify polygons before buffering (same tolerance as line path).
-        const simplifyTol = Math.max(radiusMeters * 0.05, 10);
+        const simplifyTol = simplifyTolerance(radiusMeters);
 
         // Count total coords for budget check.
         let totalPolyCoords = 0;
@@ -552,7 +539,7 @@ export function computeLineBuffer(
         // If polygon coords exceed budget, simplify more aggressively.
         let polyTol = simplifyTol;
         if (totalPolyCoords > MAX_BUFFER_COORDS) {
-            polyTol = Math.max(radiusMeters * 0.2, 50);
+            polyTol = polySimplifyTolerance(radiusMeters);
             console.log(
                 `[lineBuffer] polygon budget: ${totalPolyCoords} coords → ` +
                     `simplify at ${polyTol.toFixed(0)}m`,
@@ -592,7 +579,7 @@ export function computeLineBuffer(
     let lineBufferResult: Feature<Polygon | MultiPolygon> | null = null;
 
     if (lineFeatures.length > 0) {
-        const minFeatureLenM = Math.min(radiusMeters * 0.1, 500);
+        const minFeatureLenM = minFeatureLength(radiusMeters);
 
         const lines: Position[][] = [];
         let droppedShort = 0;
@@ -663,7 +650,7 @@ export function computeLineBuffer(
                     0,
                 );
 
-                const simplifyTol = Math.max(radiusMeters * 0.05, 10);
+                const simplifyTol = simplifyTolerance(radiusMeters);
                 const simplifiedLines = cleanBufLines.map((coords) =>
                     simplifyCoords(coords, simplifyTol),
                 );
@@ -921,7 +908,7 @@ export function computeLineDistance(
         `[lineDistance] bundle load: ${totalFeatures} features in ${tLoadMs.toFixed(0)}ms`,
     );
 
-    const marginDeg = MARGIN_METERS * DEG_PER_METER;
+    const marginDeg = MEASURING_LINE.queryMarginM * DEG_PER_METER;
     const queryBbox: Bbox = [
         center[0] - marginDeg,
         center[1] - marginDeg,
@@ -1012,11 +999,11 @@ export function computeLineDistance(
     }
     const tCleanMs = performance.now() - tClean0;
 
-    // Simplify with 10 m tolerance — fast path for nearestPointOnLine
+    // Simplify with a small tolerance — fast path for nearestPointOnLine
     // without measurably changing the result.
     const tSimplify0 = performance.now();
     const simplifiedLines = cleanLines.map((coords) =>
-        simplifyCoords(coords, 10),
+        simplifyCoords(coords, MEASURING_LINE.nearestPointSimplifyM),
     );
     const tSimplifyMs = performance.now() - tSimplify0;
     const preSimplifyCoords = cleanLines.reduce((s, l) => s + l.length, 0);
@@ -1050,7 +1037,7 @@ export function computeLineDistance(
     const turfMs = performance.now() - t0;
 
     console.log(
-        `[lineDistance] ${preSimplifyCoords} coords → simplify(10m): ` +
+        `[lineDistance] ${preSimplifyCoords} coords → simplify(${MEASURING_LINE.nearestPointSimplifyM}m): ` +
             `${postSimplifyCoords} coords, turf in ${turfMs.toFixed(0)}ms`,
     );
     const nearestPoint = snapped.geometry.coordinates as Position;
@@ -1064,7 +1051,7 @@ export function computeLineDistance(
     const result: NearestPointResult = { nearestPoint, distanceMeters };
 
     // Evict oldest entry when cache exceeds max size.
-    if (distanceCache.size >= LINE_DISTANCE_CACHE_MAX) {
+    if (distanceCache.size >= MEASURING_LINE.distanceCacheMax) {
         const oldest = distanceCache.keys().next().value;
         if (oldest !== undefined) distanceCache.delete(oldest);
     }
@@ -1075,10 +1062,7 @@ export function computeLineDistance(
 
 // ─── ε-dilated clip polygon ────────────────────────────────────────────
 
-/** Small outward dilation (~30 m) for the play-area boundary so that
- *  coincident borders (e.g. a prefecture boundary on the play-area edge)
- *  are strictly inside and always survive the clip. */
-const CLIP_DILATION_M = 30;
+const CLIP_DILATION_M = MEASURING_LINE.clipDilationM;
 
 /**
  * Cache keyed by a stable identity of the boundary features array.
@@ -1155,8 +1139,7 @@ export function clearDilatedBoundaryCache(): void {
 /** Increment to invalidate all cached clipped-line results. */
 const CLIPPED_LINE_CACHE_VERSION = 1;
 
-/** Maximum number of cached clipped-line results. */
-const CLIPPED_LINE_CACHE_MAX = 20;
+const CLIPPED_LINE_CACHE_MAX = MEASURING_LINE.clippedLineCacheMax;
 
 const clippedLineCache = new Map<
     string,

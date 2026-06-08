@@ -1,4 +1,5 @@
 import { colors } from "@/theme/colors";
+import { MAP } from "@/config/appConfig";
 
 import type {
     RouteFeatureCollection,
@@ -12,9 +13,9 @@ import {
     MLShapeSource,
 } from "./mapLibrePrimitives";
 
-const MAX_STATION_COLOR_RINGS = 6;
-const ROUTE_MIN_ZOOM = 9;
-const STATION_MIN_ZOOM = 12;
+const MAX_STATION_COLOR_RINGS = MAP.maxStationColorRings;
+const ROUTE_MIN_ZOOM = MAP.routeMinZoom;
+const STATION_MIN_ZOOM = MAP.stationMinZoom;
 
 type HidingZoneLayersProps = {
     routeFeatures: RouteFeatureCollection;

@@ -19,10 +19,11 @@ import type { Bbox, Position } from "@/shared/geojson";
 
 import type { TentaclesQuestion, TentaclesRenderState } from "./tentaclesTypes";
 import { EMPTY_TENTACLES_RENDER_STATE } from "./tentaclesTypes";
+import { TENTACLES } from "@/config/appConfig";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const MAX_CACHE_SIZE = 20;
+const MAX_CACHE_SIZE = TENTACLES.maxCacheSize;
 
 /** Increment to invalidate all cached state when the algorithm changes. */
 const GEOMETRY_CACHE_VERSION = 1;

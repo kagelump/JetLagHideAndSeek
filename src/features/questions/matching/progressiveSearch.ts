@@ -1,5 +1,6 @@
 import type { Bbox, Position } from "@/shared/geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
+import { MATCHING } from "@/config/appConfig";
 
 import type { AdminDivisionNamePack } from "./adminDivisionConfig";
 import type { FetchDebugInfo } from "./fetchDebug";
@@ -10,17 +11,9 @@ import {
 } from "./osmMatchingCache";
 import type { OsmFeatureWithDistance } from "./osmMatching";
 
-/** Hard safety cap to prevent infinite-radius searches (200 km). */
-const PROGRESSIVE_MAX_RADIUS_METERS = 200_000;
-
-/**
- * Minimum initial search radius to guard against very small / zero station radii.
- */
-const MIN_INITIAL_RADIUS_METERS = 1_200;
-
-/** Soft upper bound for maxCandidates so the progressive loop gets enough
- *  features to evaluate stop conditions reliably. */
-const PROGRESSIVE_CANDIDATE_CAP = 999;
+const PROGRESSIVE_MAX_RADIUS_METERS = MATCHING.progressiveMaxRadiusM;
+const MIN_INITIAL_RADIUS_METERS = MATCHING.minInitialRadiusM;
+const PROGRESSIVE_CANDIDATE_CAP = MATCHING.progressiveCandidateCap;
 
 export type ProgressiveSearchResult = {
     candidates: OsmFeatureWithDistance[];

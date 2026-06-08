@@ -78,24 +78,24 @@ mixed line+polygon bundle. `body-of-water` stays `schemaVersion: 2`.
 
 ### A. Capture waterway centerlines
 
-1. **Filter** (`CATEGORIES`, body-of-water, ~line 41): append the line tags:
+1.  **Filter** (`CATEGORIES`, body-of-water, ~line 41): append the line tags:
 
     ```js
     "w/natural=water r/natural=water w/landuse=basin w/waterway=riverbank " +
         "w/waterway=river w/waterway=canal w/waterway=stream";
     ```
 
-2. **Mixed ingestion** in the streaming loop (the `category.geometry ===
+2.  **Mixed ingestion** in the streaming loop (the `category.geometry ===
 "polygon-dissolve"` branch, ~lines 1513–1588). Today it accepts only
-   Polygon/MultiPolygon and `continue`s on lines. Change it to **also accept
-   LineString/MultiLineString**, splitting MultiLineStrings into LineStrings and
-   pushing them **raw (un-simplified)** — exactly like high-speed-rail defers
-   simplification so the shared-node stitcher sees full-resolution endpoints.
-   Tag each pushed line feature with its waterway type, e.g.
-   `properties: { waterway: feature.properties?.waterway }`, so the size
-   checkpoint can filter per-type if needed.
+    Polygon/MultiPolygon and `continue`s on lines. Change it to **also accept
+    LineString/MultiLineString**, splitting MultiLineStrings into LineStrings and
+    pushing them **raw (un-simplified)** — exactly like high-speed-rail defers
+    simplification so the shared-node stitcher sees full-resolution endpoints.
+    Tag each pushed line feature with its waterway type, e.g.
+    `properties: { waterway: feature.properties?.waterway }`, so the size
+    checkpoint can filter per-type if needed.
 
-    Distinguish the two subsets downstream purely by `geometry.type`.
+                    Distinguish the two subsets downstream purely by `geometry.type`.
 
 ### B + C. Polygon path: collapse-fallback + lower tolerance
 

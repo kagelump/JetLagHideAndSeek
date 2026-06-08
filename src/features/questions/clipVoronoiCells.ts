@@ -6,8 +6,9 @@ import type {
     MultiPolygon,
     Polygon,
 } from "geojson";
+import { VORONOI } from "@/config/appConfig";
 
-const MAX_CACHE_SIZE = 20;
+const MAX_CACHE_SIZE = VORONOI.maxClipCacheSize;
 const cache = new Map<string, FeatureCollection<Polygon | MultiPolygon>>();
 const cellCollectionIds = new WeakMap<object, number>();
 const boundaryIds = new WeakMap<object, number>();

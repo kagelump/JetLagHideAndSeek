@@ -1,10 +1,12 @@
 import { type Position, haversineDistanceMeters } from "@/shared/geojson";
+import { MATCHING } from "@/config/appConfig";
 import type { AdminDivisionNamePack } from "./adminDivisionConfig";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
 import { getCategoryConfig } from "./matchingCategories";
 
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
-export const DEFAULT_SEARCH_RADIUS_METERS = 50_000;
+export const DEFAULT_SEARCH_RADIUS_METERS: number =
+    MATCHING.defaultSearchRadiusM;
 
 type OverpassElement = {
     center?: { lat: number; lon: number };

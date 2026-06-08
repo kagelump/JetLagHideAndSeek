@@ -6,8 +6,9 @@ import { runOnJS } from "react-native-reanimated";
 import type { MapPin } from "./getQuestionPins";
 
 import type { Position } from "./geojsonTypes";
+import { MAP } from "@/config/appConfig";
 
-const PIN_HIT_RADIUS_PX = 50;
+const PIN_HIT_RADIUS_PX = MAP.pinHitRadiusPx;
 
 export type PinDragHandlers = {
     handleDragEnd: () => void;

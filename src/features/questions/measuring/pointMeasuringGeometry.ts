@@ -16,6 +16,11 @@ import type { RawCategory } from "@/features/questions/matching/bundledPois";
 import type { MatchingCategory } from "@/features/questions/matching/matchingTypes";
 import { MEASURING_TO_MATCHING_CATEGORY } from "./measuringCategories";
 import type { MeasuringCategory } from "./measuringTypes";
+import {
+    APP_CONFIG,
+    MEASURING_POINT,
+    gridDedupCellSize,
+} from "@/config/appConfig";
 
 export type NearestPoiResult = {
     /** Nearest POI location (GeoJSON [lon, lat]). */
@@ -30,7 +35,7 @@ export type NearestPoiResult = {
 const POINT_DISTANCE_CACHE_VERSION = 1;
 
 /** Maximum number of cached nearest-distance results. */
-const POINT_DISTANCE_CACHE_MAX = 100;
+const POINT_DISTANCE_CACHE_MAX = MEASURING_POINT.distanceCacheMax;
 
 const distanceCache = new Map<string, NearestPoiResult | null>();
 
@@ -57,7 +62,7 @@ export function clearPointDistanceCache(): void {
 const POINT_BUFFER_CACHE_VERSION = 1;
 
 /** Maximum number of cached buffer results. */
-const POINT_BUFFER_CACHE_MAX = 50;
+const POINT_BUFFER_CACHE_MAX = MEASURING_POINT.bufferCacheMax;
 
 const bufferCache = new Map<string, Feature<Polygon | MultiPolygon> | null>();
 
@@ -82,8 +87,7 @@ export function clearPointBufferCache(): void {
 
 // ─── Degrees/meters conversion ───────────────────────────────────────────────
 
-/** Approximate degrees per meter at mid-latitudes (1 deg ~ 111,320 m). */
-const DEG_PER_METER = 1 / 111_320;
+const { degPerMeter: DEG_PER_METER } = APP_CONFIG.measuring;
 
 /** Convert meters to degrees longitude at a given latitude. */
 function metersToDegLon(meters: number, lat: number): number {
@@ -97,8 +101,7 @@ function metersToDegLat(meters: number): number {
 
 // ─── Bbox pre-filter ─────────────────────────────────────────────────────────
 
-/** Fallback margin (25 km) when no play-area bbox is available. */
-const FALLBACK_MARGIN_DEG = 25_000 * DEG_PER_METER;
+const FALLBACK_MARGIN_DEG = MEASURING_POINT.fallbackMarginM * DEG_PER_METER;
 
 /**
  * Collect indices of points whose (lon, lat) fall inside `queryBbox`.
@@ -319,7 +322,7 @@ export function computePointUnionBuffer(
 
     // -- 3. Grid-dedup -----------------------------------------------------------
 
-    const cellSizeM = Math.max(radiusMeters * 0.05, 10);
+    const cellSizeM = gridDedupCellSize(radiusMeters);
 
     // Extract column subset for dedup.
     const subsetLon = survivingIndices.map((i) => col.lon[i]);

@@ -3,9 +3,9 @@ import simplify from "@turf/simplify";
 
 import type { GeoJsonFeature, GeoJsonFeatureCollection } from "./geojsonTypes";
 import { calculateBbox, calculateCenter, type PlayArea } from "./playArea";
+import { MAP } from "@/config/appConfig";
 
-/** Tolerance for boundary simplification (~30 metres in degrees). */
-const BOUNDARY_SIMPLIFY_TOLERANCE = 0.0003;
+const BOUNDARY_SIMPLIFY_TOLERANCE = MAP.boundarySimplifyTolerance;
 
 export function buildPlayAreaFromOverpass(
     relationId: number,

@@ -16,11 +16,12 @@ import type {
     ThermometerQuestion,
     ThermometerRenderState,
 } from "./thermometerTypes";
+import { THERMOMETER } from "@/config/appConfig";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const MIN_TRAVEL_METERS = 100;
-const MAX_CACHE_SIZE = 20;
+const MIN_TRAVEL_METERS = THERMOMETER.minTravelM;
+const MAX_CACHE_SIZE = THERMOMETER.maxCacheSize;
 
 // ─── LRU cache ───────────────────────────────────────────────────────────────
 

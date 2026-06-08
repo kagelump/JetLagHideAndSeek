@@ -10,6 +10,7 @@ import type {
     Position,
 } from "./geojsonTypes";
 import type { PlayAreaMaskHole } from "./maskBuilder";
+import { MAP } from "@/config/appConfig";
 
 export type DefaultPlayArea = {
     bbox: Bbox;
@@ -29,8 +30,7 @@ export type PlayAreaCacheSource =
     | "memory"
     | "persisted";
 
-/** Tolerance for boundary simplification (~30 metres in degrees). */
-const BOUNDARY_SIMPLIFY_TOLERANCE = 0.0003;
+const BOUNDARY_SIMPLIFY_TOLERANCE = MAP.boundarySimplifyTolerance;
 
 const tokyoBoundary = tokyoBoundaryJson as unknown as GeoJsonFeatureCollection;
 const tokyoMetadata = tokyoMetadataJson as unknown as {

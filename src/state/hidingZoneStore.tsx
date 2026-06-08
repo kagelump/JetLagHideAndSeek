@@ -33,8 +33,9 @@ import type {
 } from "@/features/hidingZone/hidingZoneTypes";
 import { usePlayArea } from "@/state/playAreaStore";
 import { fromMeters, toMeters } from "@/shared/distanceUnits";
+import { HIDING_ZONE } from "@/config/appConfig";
 
-export const DEFAULT_RADIUS_METERS = 600;
+export const DEFAULT_RADIUS_METERS = HIDING_ZONE.defaultRadiusM;
 const ZONE_GEOMETRY_DEBOUNCE_MS = 300;
 
 export type HidingZoneImportState = {
@@ -131,15 +132,16 @@ export function useHidingZoneDerived(): HidingZoneDerivedValue {
 export function HidingZoneProvider({ children }: { children: ReactNode }) {
     const { playArea } = usePlayArea();
     const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
-    const [radiusMeters, setRadiusMeters] = useState(DEFAULT_RADIUS_METERS);
-    const [zoneGeometryRadiusMeters, setZoneGeometryRadiusMeters] = useState(
+    const [radiusMeters, setRadiusMeters] = useState<number>(
         DEFAULT_RADIUS_METERS,
     );
+    const [zoneGeometryRadiusMeters, setZoneGeometryRadiusMeters] =
+        useState<number>(DEFAULT_RADIUS_METERS);
     const [radiusUnit, setRadiusUnitState] = useState<HidingZoneUnit>("m");
     const [radiusDisplayValue, setRadiusDisplayValueState] = useState("600");
     const [isRestored, setIsRestored] = useState(false);
     const [presetsRevision, setPresetsRevision] = useState(0);
-    const radiusMetersRef = useRef(DEFAULT_RADIUS_METERS);
+    const radiusMetersRef = useRef<number>(DEFAULT_RADIUS_METERS);
     const zoneGeometryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
         null,
     );

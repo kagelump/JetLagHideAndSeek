@@ -9,6 +9,7 @@ import {
     fromMeters as fromDistanceMeters,
     toMeters as toDistanceMeters,
 } from "@/shared/distanceUnits";
+import { HIDING_ZONE } from "@/config/appConfig";
 
 import type { Feature, Polygon } from "geojson";
 import type {
@@ -159,13 +160,13 @@ export function buildStationFeatureCollection(
     };
 }
 
-const MAX_ZONE_CACHE_SIZE = 30;
+const MAX_ZONE_CACHE_SIZE = HIDING_ZONE.maxZoneCacheSize;
 const zoneFeatureCache = new Map<string, ZoneFeatureCollection>();
 
 const CIRCLE_ALGORITHM_VERSION = 1;
-const CIRCLE_STEPS = 12;
-const MAX_CIRCLE_CACHE_SIZE = 500;
-const MAX_COMPONENT_CACHE_SIZE = 50;
+const CIRCLE_STEPS = HIDING_ZONE.circleSteps;
+const MAX_CIRCLE_CACHE_SIZE = HIDING_ZONE.maxCircleCacheSize;
+const MAX_COMPONENT_CACHE_SIZE = HIDING_ZONE.maxComponentCacheSize;
 
 interface CachedCircle {
     feature: Feature<Polygon, ZoneFeatureProperties>;

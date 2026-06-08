@@ -1,5 +1,6 @@
 import { difference, intersection, union, type Geom } from "polyclip-ts";
 import type { GeoJsonFeatureCollection, Position } from "./geojsonTypes";
+import { MAP } from "@/config/appConfig";
 
 export const WORLD_MASK_RING: Position[] = [
     [-180, -85],
@@ -102,7 +103,7 @@ export function buildCombinedInsideMask(
     return buildCombinedEligibilityMask(playArea, cutouts);
 }
 
-const MAX_MASK_CACHE_SIZE = 40;
+const MAX_MASK_CACHE_SIZE = MAP.maxMaskCacheSize;
 const maskResultCache = new Map<string, GeoJsonFeatureCollection>();
 const featureCacheIds = new WeakMap<PolygonFeature, number>();
 const featurePolygonCache = new WeakMap<PolygonFeature, Position[][][]>();

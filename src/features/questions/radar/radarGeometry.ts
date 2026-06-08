@@ -4,6 +4,7 @@ import type { Feature, Polygon } from "geojson";
 import type { TransitStation } from "@/features/hidingZone/hidingZoneTypes";
 import { type Position, haversineDistanceMeters } from "@/shared/geojson";
 import type { QuestionState } from "@/features/questions/questionTypes";
+import { RADAR } from "@/config/appConfig";
 export { fromMeters, toMeters } from "@/shared/distanceUnits";
 
 import type {
@@ -20,10 +21,10 @@ import type {
 const RADAR_FRAGMENT_VERSION = 1;
 
 /** Fixed step count for Turf circle generation. */
-const RADAR_CIRCLE_STEPS = 32;
+const RADAR_CIRCLE_STEPS = RADAR.circleSteps;
 
 /** Maximum number of cached circle fragments. */
-const RADAR_CIRCLE_CACHE_MAX = 200;
+const RADAR_CIRCLE_CACHE_MAX = RADAR.circleCacheMax;
 
 /**
  * Per-question circle fragment cache. Keyed by question identity, geometry
