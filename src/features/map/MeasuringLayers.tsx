@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+import type { LineString } from "geojson";
+
 import type { MeasuringRenderState } from "@/features/questions/measuring/measuringTypes";
 import { colors } from "@/theme/colors";
 
@@ -18,6 +21,31 @@ const EMPTY_FEATURES = {
 } as const;
 
 /**
+ * Stable key derived from connector geometry so that the ShapeSource
+ * remounts when a connector endpoint changes — prevents stale GeoJSON
+ * from persisting across map-tap / my-location updates.
+ */
+function useConnectorsKey(
+    features: MeasuringRenderState["nearestPointConnectors"]["features"],
+): string {
+    return useMemo(
+        () =>
+            features
+                .map((f) => {
+                    const coords = (f.geometry as LineString).coordinates;
+                    return [
+                        coords[0][0].toFixed(6),
+                        coords[0][1].toFixed(6),
+                        coords[1][0].toFixed(6),
+                        coords[1][1].toFixed(6),
+                    ].join(",");
+                })
+                .join("|"),
+        [features],
+    );
+}
+
+/**
  * Renders connector lines, nearest-point markers, and the clipped reference
  * line geometry for line-category Measuring questions (e.g. Shinkansen
  * tracks, prefecture borders).
@@ -28,6 +56,16 @@ const EMPTY_FEATURES = {
  */
 export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
     const lineFeatures = visible ? measuring.lineFeatures : EMPTY_FEATURES;
+    const connectorsKey = useConnectorsKey(
+        measuring.nearestPointConnectors.features,
+    );
+    const markersKey = useMemo(
+        () =>
+            measuring.nearestPointMarkers.features
+                .map((f) => f.geometry.coordinates.join(","))
+                .join("|"),
+        [measuring.nearestPointMarkers.features],
+    );
 
     return (
         <>
@@ -46,6 +84,7 @@ export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
             {/* ── Connector: seeker pin → nearest point ──────────────── */}
             <MLShapeSource
                 id="measuring-connectors"
+                key={connectorsKey}
                 shape={measuring.nearestPointConnectors}
             >
                 <MLLineLayer
@@ -62,6 +101,7 @@ export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
             {/* ── Nearest-point marker ────────────────────────────────── */}
             <MLShapeSource
                 id="measuring-markers"
+                key={markersKey}
                 shape={measuring.nearestPointMarkers}
             >
                 <MLCircleLayer

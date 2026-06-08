@@ -1249,12 +1249,17 @@ describe("computeLineBuffer input budget", () => {
             // polygons into a small set of MultiPolygons. A revert to the old
             // polygon-to-ring bundle (45k+ LineStrings) or a broken dissolve
             // (31k un-merged polygons) fails here, loudly and deterministically.
+            //
+            // The bundle also carries waterway centerlines (P7) as LineString
+            // features, so the guard counts the *polygon subset* rather than the
+            // total feature count.
             const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
             expect(bundle.schemaVersion).toBe(2);
-            expect(bundle.features.length).toBeLessThan(2000);
-            expect(bundle.features[0].geometry.type).toMatch(
-                /^(Polygon|MultiPolygon)$/,
+            const polygonFeatures = bundle.features.filter((f) =>
+                /^(Polygon|MultiPolygon)$/.test(f.geometry.type),
             );
+            expect(polygonFeatures.length).toBeGreaterThan(0);
+            expect(polygonFeatures.length).toBeLessThan(2000);
         });
 
         it("buffers the real body-of-water window without softlocking", () => {
