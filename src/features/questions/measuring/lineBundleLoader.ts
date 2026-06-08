@@ -44,6 +44,7 @@ export function __clearLineBundlesForTest(): void {
 export function getLineBundle(category: MeasuringCategory): LineBundle | null {
     if (cache.has(category)) return cache.get(category) ?? null;
 
+    const t0 = performance.now();
     let bundle: LineBundle | null = null;
     switch (category) {
         case "coastline":
@@ -64,6 +65,38 @@ export function getLineBundle(category: MeasuringCategory): LineBundle | null {
         default:
             bundle = null; // point category
     }
+    const tMs = performance.now() - t0;
+    if (bundle) {
+        console.log(
+            `[lineBundle] require(${category}): ${bundle.features.length} features ` +
+                `in ${tMs.toFixed(0)}ms`,
+        );
+    }
     cache.set(category, bundle);
     return bundle;
+}
+
+/** Categories whose measuring calc draws from additional source bundles. */
+const MEASURING_EXTRA_BUNDLES: Partial<
+    Record<MeasuringCategory, MeasuringCategory[]>
+> = {
+    // The ocean is a body of water — fold the coastline shoreline in.
+    "body-of-water": ["coastline"],
+};
+
+/**
+ * Returns every source bundle that feeds `category`'s measuring calculation —
+ * the category's own bundle plus any extras (e.g. coastline for body-of-water).
+ * Nulls (point categories / missing bundles) are filtered out.
+ */
+export function getLineBundleSources(
+    category: MeasuringCategory,
+): LineBundle[] {
+    const keys = [category, ...(MEASURING_EXTRA_BUNDLES[category] ?? [])];
+    const out: LineBundle[] = [];
+    for (const k of keys) {
+        const b = getLineBundle(k);
+        if (b && b.features.length > 0) out.push(b);
+    }
+    return out;
 }

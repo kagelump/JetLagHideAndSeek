@@ -18,7 +18,7 @@ import type {
     MultiPolygon,
 } from "geojson";
 import type { MeasuringCategory } from "./measuringTypes";
-import { getLineBundle } from "./lineBundleLoader";
+import { getLineBundleSources } from "./lineBundleLoader";
 
 /** Feature type that includes both line and polygon geometry. */
 type LineOrPolygonFeature = Feature<
@@ -65,9 +65,9 @@ export function selectWindowFeatures(
     marginM: number,
 ): LineOrPolygonFeature[] {
     const tLoad0 = performance.now();
-    const fc = getLineBundle(category);
+    const bundles = getLineBundleSources(category);
     const tLoadMs = performance.now() - tLoad0;
-    if (!fc || fc.features.length === 0) return [];
+    if (bundles.length === 0) return [];
 
     let queryBbox: Bbox;
 
@@ -91,15 +91,19 @@ export function selectWindowFeatures(
 
     const tIter0 = performance.now();
     const result: LineOrPolygonFeature[] = [];
-    for (const f of fc.features) {
-        if (bboxIntersects(featureBbox(f as Feature), queryBbox)) {
-            result.push(f as LineOrPolygonFeature);
+    let totalFeatures = 0;
+    for (const fc of bundles) {
+        totalFeatures += fc.features.length;
+        for (const f of fc.features) {
+            if (bboxIntersects(featureBbox(f as Feature), queryBbox)) {
+                result.push(f as LineOrPolygonFeature);
+            }
         }
     }
     const tIterMs = performance.now() - tIter0;
     console.log(
         `[selectWindow] bundle load: ${tLoadMs.toFixed(0)}ms, ` +
-            `bbox scan ${fc.features.length} features → ${result.length} hits ` +
+            `bbox scan ${totalFeatures} features → ${result.length} hits ` +
             `in ${tIterMs.toFixed(0)}ms`,
     );
     return result;
@@ -906,14 +910,15 @@ export function computeLineDistance(
     }
 
     const tLoad0 = performance.now();
-    const fc = getLineBundle(category);
+    const bundles = getLineBundleSources(category);
     const tLoadMs = performance.now() - tLoad0;
-    if (!fc || fc.features.length === 0) {
+    if (bundles.length === 0) {
         distanceCache.set(key, null);
         return null;
     }
+    const totalFeatures = bundles.reduce((s, b) => s + b.features.length, 0);
     console.log(
-        `[lineDistance] bundle load: ${fc.features.length} features in ${tLoadMs.toFixed(0)}ms`,
+        `[lineDistance] bundle load: ${totalFeatures} features in ${tLoadMs.toFixed(0)}ms`,
     );
 
     const marginDeg = MARGIN_METERS * DEG_PER_METER;
@@ -931,38 +936,40 @@ export function computeLineDistance(
     const lines: Position[][] = [];
     let bboxHits = 0;
     let bboxMisses = 0;
-    for (const f of fc.features) {
-        if (!bboxIntersects(featureBbox(f), queryBbox)) {
-            bboxMisses++;
-            continue;
-        }
-        bboxHits++;
-        const geom = f.geometry;
-        if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
-            // Check if the seeker is inside the water body.
-            if (
-                booleanPointInPolygon(
-                    center,
-                    f as Feature<Polygon | MultiPolygon>,
-                )
-            ) {
-                const result: NearestPointResult = {
-                    nearestPoint: center,
-                    distanceMeters: 0,
-                };
-                distanceCache.set(key, result);
-                return result;
+    for (const fc of bundles) {
+        for (const f of fc.features) {
+            if (!bboxIntersects(featureBbox(f), queryBbox)) {
+                bboxMisses++;
+                continue;
             }
-            // Outside — extract boundary rings for nearest-point search.
-            for (const ring of featureToRings(f)) {
-                lines.push(ring);
-            }
-        } else if (geom.type === "LineString") {
-            lines.push(geom.coordinates as Position[]);
-        } else {
-            // MultiLineString
-            for (const seg of (geom as MultiLineString).coordinates) {
-                lines.push(seg as Position[]);
+            bboxHits++;
+            const geom = f.geometry;
+            if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
+                // Check if the seeker is inside the water body.
+                if (
+                    booleanPointInPolygon(
+                        center,
+                        f as Feature<Polygon | MultiPolygon>,
+                    )
+                ) {
+                    const result: NearestPointResult = {
+                        nearestPoint: center,
+                        distanceMeters: 0,
+                    };
+                    distanceCache.set(key, result);
+                    return result;
+                }
+                // Outside — extract boundary rings for nearest-point search.
+                for (const ring of featureToRings(f)) {
+                    lines.push(ring);
+                }
+            } else if (geom.type === "LineString") {
+                lines.push(geom.coordinates as Position[]);
+            } else {
+                // MultiLineString
+                for (const seg of (geom as MultiLineString).coordinates) {
+                    lines.push(seg as Position[]);
+                }
             }
         }
     }

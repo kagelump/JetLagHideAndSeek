@@ -23,6 +23,7 @@ import {
     getClippedLineFeaturesCached,
     getDilatedPlayArea,
     makeClippedLineCacheKey,
+    selectWindowFeatures,
 } from "@/features/questions/measuring/lineMeasuringGeometry";
 import {
     __clearLineBundlesForTest,
@@ -1329,6 +1330,9 @@ describe("polygon body-of-water", () => {
         clearLineDistanceCache();
         clearLineBufferCache();
         __clearLineBundlesForTest();
+        // P8: body-of-water now merges coastline. Inject an empty coastline
+        // bundle so the real one isn't loaded during polygon-specific tests.
+        __setLineBundleForTest("coastline", makeBundle([]));
     });
 
     describe("computeLineDistance with polygons", () => {
@@ -1485,6 +1489,9 @@ describe("polygon body-of-water", () => {
                     line as LineBundle["features"][number],
                 ]),
             );
+            // Inject an empty coastline bundle so the real one isn't loaded
+            // (P8 merges coastline into body-of-water).
+            __setLineBundleForTest("coastline", makeBundle([]));
 
             // Center far from both — should not crash.
             const result = computeLineDistance([140.0, 36.0], "body-of-water");
@@ -1695,6 +1702,178 @@ describe("polygon body-of-water", () => {
             const rings = featureToRings(mp);
             // 2 polygons, each with 1 ring.
             expect(rings).toHaveLength(2);
+        });
+    });
+});
+
+// ─── P8 — Coastline in body-of-water ─────────────────────────────────────
+
+describe("P8 — coastline in body-of-water", () => {
+    beforeEach(() => {
+        clearLineDistanceCache();
+        clearLineCategoryCache();
+        clearLineBufferCache();
+        clearClippedLineCache();
+        clearDilatedBoundaryCache();
+        __clearLineBundlesForTest();
+    });
+
+    describe("computeLineDistance merges coastline into body-of-water", () => {
+        it("snaps to a near coastline when body-of-water is far away", () => {
+            // Far inland lake (~100 km north of Tokyo)
+            const farLake = makePolygonFeature([
+                [
+                    [139.5, 36.5],
+                    [139.6, 36.5],
+                    [139.6, 36.6],
+                    [139.5, 36.6],
+                    [139.5, 36.5],
+                ],
+            ]);
+            __setLineBundleForTest(
+                "body-of-water",
+                makePolygonBundle([farLake]),
+            );
+
+            // Coastline line near Tokyo Bay area
+            const coastLine = makeLineFeature([
+                [139.75, 35.62],
+                [139.78, 35.63],
+            ]);
+            __setLineBundleForTest("coastline", makeBundle([coastLine]));
+
+            // Center near the coast (~35.62 lat), far from the lake (~36.5 lat)
+            const result = computeLineDistance(
+                [139.76, 35.63],
+                "body-of-water",
+            );
+            expect(result).not.toBeNull();
+            // Should snap to the coastline (~35.62–35.63), not the lake (~36.5).
+            expect(result!.nearestPoint[1]).toBeCloseTo(35.63, 1);
+            // Distance should be small (< 2 km to the shoreline).
+            expect(result!.distanceMeters).toBeLessThan(2000);
+        });
+
+        it("seeker inside a body-of-water polygon still returns distance 0", () => {
+            // Lake with seeker inside it
+            const lake = makePolygonFeature([
+                [
+                    [139.0, 35.0],
+                    [139.1, 35.0],
+                    [139.1, 35.1],
+                    [139.0, 35.1],
+                    [139.0, 35.0],
+                ],
+            ]);
+            __setLineBundleForTest("body-of-water", makePolygonBundle([lake]));
+
+            // Coastline far away
+            const coastLine = makeLineFeature([
+                [139.8, 35.6],
+                [139.9, 35.6],
+            ]);
+            __setLineBundleForTest("coastline", makeBundle([coastLine]));
+
+            // Center inside the lake
+            const result = computeLineDistance(
+                [139.05, 35.05],
+                "body-of-water",
+            );
+            expect(result).not.toBeNull();
+            // Inside the lake → distance 0 (early return still works).
+            expect(result!.distanceMeters).toBe(0);
+            expect(result!.nearestPoint).toEqual([139.05, 35.05]);
+        });
+    });
+
+    describe("selectWindowFeatures includes coastline", () => {
+        it("window features contain coastline when category is body-of-water", () => {
+            const waterLine = makeLineFeature([
+                [139.05, 35.1],
+                [139.1, 35.1],
+            ]);
+            __setLineBundleForTest(
+                "body-of-water",
+                makePolygonBundle([
+                    waterLine as unknown as LineBundle["features"][number],
+                ]),
+            );
+
+            const coastLine = makeLineFeature([
+                [139.05, 35.15],
+                [139.1, 35.15],
+            ]);
+            __setLineBundleForTest("coastline", makeBundle([coastLine]));
+
+            const features = selectWindowFeatures(
+                "body-of-water",
+                PLAY_AREA_BBOX,
+                [139.075, 35.125],
+                5000,
+            );
+            // Both water and coastline features should be in the window.
+            expect(features.length).toBeGreaterThanOrEqual(2);
+        });
+    });
+
+    describe("other categories unaffected", () => {
+        it("coastline distance is unchanged (only its own bundle)", () => {
+            const coastLine = makeLineFeature([
+                [139.0, 35.0],
+                [139.1, 35.0],
+            ]);
+            __setLineBundleForTest("coastline", makeBundle([coastLine]));
+
+            const result = computeLineDistance([139.05, 35.01], "coastline");
+            expect(result).not.toBeNull();
+            // Should snap to the coastline line (lat ~35.0).
+            expect(result!.nearestPoint[1]).toBeCloseTo(35.0, 2);
+            expect(result!.distanceMeters).toBeLessThan(2000);
+        });
+
+        it("admin-1st-border only uses its own bundle", () => {
+            const borderLine = makeLineFeature([
+                [139.0, 35.0],
+                [139.1, 35.0],
+            ]);
+            __setLineBundleForTest(
+                "admin-1st-border",
+                makeBundle([borderLine]),
+            );
+
+            // Also inject a coastline bundle — should be ignored for admin-1st-border.
+            const coastLine = makeLineFeature([
+                [137.0, 34.0],
+                [137.1, 34.0],
+            ]);
+            __setLineBundleForTest("coastline", makeBundle([coastLine]));
+
+            const result = computeLineDistance(
+                [139.05, 35.01],
+                "admin-1st-border",
+            );
+            expect(result).not.toBeNull();
+            // Should snap to the border line (lat ~35.0), not the coastline.
+            expect(result!.nearestPoint[1]).toBeCloseTo(35.0, 2);
+        });
+    });
+
+    describe("real bundle — Tokyo Bay", () => {
+        it("body-of-water distance is small at a Tokyo Bay shoreline point", () => {
+            const bowBundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
+            __setLineBundleForTest("body-of-water", bowBundle);
+
+            const coastBundle: LineBundle = require("../../../../../assets/measuring/coastline.json");
+            __setLineBundleForTest("coastline", coastBundle);
+
+            // A point on the Tokyo Bay shoreline (Odaiba area).
+            const result = computeLineDistance(
+                [139.775, 35.627],
+                "body-of-water",
+            );
+            expect(result).not.toBeNull();
+            // Near the coast → small distance (dominated by coastline).
+            expect(result!.distanceMeters).toBeLessThan(2000);
         });
     });
 });
