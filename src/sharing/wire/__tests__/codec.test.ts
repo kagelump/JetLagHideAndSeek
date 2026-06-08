@@ -266,25 +266,12 @@ describe("sharing wire codec", () => {
                 questions: [
                     {
                         answer: "positive" as const,
-                        candidates: [
-                            {
-                                lat: 35.68,
-                                lon: 139.76,
-                                name: "Tokyo Station",
-                                osmId: 1,
-                                osmType: "node" as const,
-                                tags: {},
-                            },
-                        ],
                         category: "rail-station" as const,
                         center: [139.7, 35.68] as [number, number],
                         createdAt: "2026-06-01T00:00:00.000Z",
                         id: "measuring-1",
                         isLocked: false,
-                        seekerDistanceMeters: 500,
-                        seekerDistanceUnit: "m" as const,
-                        selectedOsmId: 1,
-                        selectedOsmType: "node" as const,
+                        seekerDistanceUnit: "km" as const,
                         type: "measuring" as const,
                         updatedAt: "2026-06-01T00:00:00.000Z",
                     },
@@ -300,10 +287,7 @@ describe("sharing wire codec", () => {
             expect(q).toMatchObject({
                 answer: "positive",
                 category: "rail-station",
-                seekerDistanceMeters: 500,
-                seekerDistanceUnit: "m",
-                selectedOsmId: 1,
-                selectedOsmType: "node",
+                seekerDistanceUnit: "km",
                 type: "measuring",
             });
         }

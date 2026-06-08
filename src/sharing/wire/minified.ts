@@ -152,23 +152,11 @@ const matchingQuestionMinifiedSchema = z.object({
 
 const measuringQuestionMinifiedSchema = z.object({
     [FIELD_MAP.answer]: z.enum(["p", "n"]).optional(),
-    [FIELD_MAP.candidates]: z.array(compactCandidateSchema).optional(),
     [FIELD_MAP.category]: z.string().min(1),
     [FIELD_MAP.center]: compactCoordSchema,
     [FIELD_MAP.distanceUnit]: z.enum(["m", "km", "mi"]).optional(),
     [FIELD_MAP.id]: z.string().min(1).optional(),
     [FIELD_MAP.questionType]: z.literal("g"),
-    [FIELD_MAP.radiusMeters]: z.number().nullable().optional(),
-    [FIELD_MAP.selectedOsmId]: z
-        .number()
-        .int()
-        .positive()
-        .nullable()
-        .optional(),
-    [FIELD_MAP.selectedOsmType]: z
-        .enum(["node", "way", "relation"])
-        .nullable()
-        .optional(),
 });
 
 // ── Thermometer ──────────────────────────────────────────────────────────
@@ -406,25 +394,8 @@ function minifyQuestion(question: QuestionWireV1): Record<string, unknown> {
             result[FIELD_MAP.answer] = ANSWER_TO_MINIFIED[question.answer];
         }
 
-        if (question.candidates.length > 0) {
-            result[FIELD_MAP.candidates] =
-                question.candidates.map(compactCandidate);
-        }
-
-        if (question.seekerDistanceMeters !== null) {
-            result[FIELD_MAP.radiusMeters] = question.seekerDistanceMeters;
-        }
-
         if (question.seekerDistanceUnit !== "m") {
             result[FIELD_MAP.distanceUnit] = question.seekerDistanceUnit;
-        }
-
-        if (question.selectedOsmId !== null) {
-            result[FIELD_MAP.selectedOsmId] = question.selectedOsmId;
-        }
-
-        if (question.selectedOsmType !== null) {
-            result[FIELD_MAP.selectedOsmType] = question.selectedOsmType;
         }
 
         return result;
@@ -683,12 +654,8 @@ function unminifyQuestion(
         const compactCenter = q[FIELD_MAP.center] as
             | [number, number]
             | undefined;
-        const compactCandidates = q[FIELD_MAP.candidates] as
-            | z.infer<typeof compactCandidateSchema>[]
-            | undefined;
         return {
             answer: resolvedAnswer,
-            candidates: compactCandidates?.map(uncompactCandidate) ?? [],
             category: ((q[FIELD_MAP.category] as string | undefined) ??
                 "rail-station") as MeasuringCategory,
             center: compactCenter
@@ -698,22 +665,9 @@ function unminifyQuestion(
             id:
                 (q[FIELD_MAP.id] as string | undefined) ??
                 `q-imported-${index + 1}`,
-            seekerDistanceMeters:
-                (q[FIELD_MAP.radiusMeters] as number | null | undefined) ??
-                null,
             seekerDistanceUnit:
                 (q[FIELD_MAP.distanceUnit] as "m" | "km" | "mi" | undefined) ??
                 "m",
-            selectedOsmId:
-                (q[FIELD_MAP.selectedOsmId] as number | null | undefined) ??
-                null,
-            selectedOsmType:
-                (q[FIELD_MAP.selectedOsmType] as
-                    | "node"
-                    | "way"
-                    | "relation"
-                    | null
-                    | undefined) ?? null,
             isLocked: false,
             type: "measuring",
             updatedAt: createdAt,

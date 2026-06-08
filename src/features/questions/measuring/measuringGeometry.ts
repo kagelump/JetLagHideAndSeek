@@ -1,4 +1,3 @@
-import circle from "@turf/circle";
 import type {
     Feature,
     LineString,
@@ -16,81 +15,12 @@ import {
     computeLineBuffer,
     computeLineDistance,
 } from "./lineMeasuringGeometry";
+import {
+    computeNearestPoiDistance,
+    computePointUnionBuffer,
+} from "./pointMeasuringGeometry";
 import { getLineBundle } from "./lineBundleLoader";
 import type { MeasuringRenderState } from "./measuringTypes";
-
-// ─── Circle fragment cache ──────────────────────────────────────────────────
-
-/** Increment to invalidate all cached circles when the algorithm changes. */
-const MEASURING_FRAGMENT_VERSION = 1;
-
-/** Fixed step count for Turf circle generation. */
-const MEASURING_CIRCLE_STEPS = 32;
-
-/** Maximum number of cached circle fragments. */
-const MEASURING_CIRCLE_CACHE_MAX = 200;
-
-/**
- * Per-question circle fragment cache. Keyed by geometry parameters so that
- * the same circle can be reused across questions with identical target POI
- * and distance.
- *
- * Map insertion order is used as an LRU: re-inserted entries are promoted
- * to most-recently-used, and the oldest entry is evicted when the cache
- * exceeds MEASURING_CIRCLE_CACHE_MAX.
- */
-const circleCache = new Map<string, Feature<Polygon | MultiPolygon>>();
-
-function measuringCircleKey(
-    osmId: number,
-    osmType: string,
-    seekerDistanceMeters: number,
-): string {
-    return [
-        MEASURING_FRAGMENT_VERSION,
-        osmId,
-        osmType,
-        seekerDistanceMeters,
-        MEASURING_CIRCLE_STEPS,
-    ].join(":");
-}
-
-function getMeasuringCircle(
-    osmId: number,
-    osmType: string,
-    lon: number,
-    lat: number,
-    seekerDistanceMeters: number,
-): Feature<Polygon | MultiPolygon> {
-    const key = measuringCircleKey(osmId, osmType, seekerDistanceMeters);
-    const cached = circleCache.get(key);
-    if (cached) {
-        // Promote to most-recently-used.
-        circleCache.delete(key);
-        circleCache.set(key, cached);
-        return cached;
-    }
-
-    const radiusKm = seekerDistanceMeters / 1000;
-    const feature = circle([lon, lat], radiusKm, {
-        steps: MEASURING_CIRCLE_STEPS,
-        units: "kilometers",
-    });
-
-    // Evict oldest entry when cache exceeds max size.
-    if (circleCache.size >= MEASURING_CIRCLE_CACHE_MAX) {
-        const oldest = circleCache.keys().next().value;
-        if (oldest !== undefined) circleCache.delete(oldest);
-    }
-    circleCache.set(key, feature);
-
-    return feature;
-}
-
-/** Clears the in-memory measuring circle fragment cache. Call in tests to reset state. */
-export function clearMeasuringCircleCache(): void {
-    circleCache.clear();
-}
 
 // ─── Relation-id lookup ──────────────────────────────────────────────────────
 
@@ -247,9 +177,6 @@ export function buildMeasuringRenderState(
             // all points within range of ANY point on the line, not just
             // the single nearest point.
             if (q.answer === "positive" || q.answer === "negative") {
-                console.log(
-                    `[measuringGeometry] computing line buffer for ${q.category} answer=${q.answer} dist=${result.distanceMeters}m`,
-                );
                 let buf: Feature<Polygon | MultiPolygon> | null;
                 try {
                     buf = computeLineBuffer(
@@ -266,46 +193,71 @@ export function buildMeasuringRenderState(
                     continue;
                 }
                 if (buf) {
-                    console.log(
-                        `[measuringGeometry] line buffer ready — ${buf.geometry.type}`,
-                    );
                     (q.answer === "positive" ? hitFeatures : missFeatures).push(
                         buf,
-                    );
-                } else {
-                    console.log(
-                        `[measuringGeometry] line buffer returned null`,
                     );
                 }
             }
             continue;
         } else {
-            // Point category: selected POI + stored distance.
-            if (
-                q.selectedOsmId === null ||
-                !q.seekerDistanceMeters ||
-                q.seekerDistanceMeters <= 0
-            )
+            // Point category: auto-compute nearest POI distance and buffer
+            // the union of d-circles around every POI of the category.
+            let dist: {
+                nearestPoint: [number, number];
+                distanceMeters: number;
+            } | null;
+            try {
+                dist = computeNearestPoiDistance(q.center, q.category);
+            } catch (err) {
+                console.warn(
+                    `[measuringGeometry] computeNearestPoiDistance failed for category=${q.category} center=${q.center}:`,
+                    err,
+                );
                 continue;
-            const target = q.candidates.find(
-                (c) =>
-                    c.osmId === q.selectedOsmId &&
-                    c.osmType === q.selectedOsmType,
-            );
-            if (!target) continue;
+            }
+            if (!dist || dist.distanceMeters <= 0) continue;
 
-            // Use LRU-cached circle for point-category questions.
-            const circ = getMeasuringCircle(
-                target.osmId,
-                target.osmType,
-                target.lon,
-                target.lat,
-                q.seekerDistanceMeters,
-            );
-            if (q.answer === "positive") {
-                hitFeatures.push(circ);
-            } else if (q.answer === "negative") {
-                missFeatures.push(circ);
+            // Show connector + marker to the nearest POI (same affordance as
+            // line categories).
+            connectors.push({
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "LineString",
+                    coordinates: [q.center, dist.nearestPoint],
+                },
+            });
+            markers.push({
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "Point",
+                    coordinates: dist.nearestPoint,
+                },
+            });
+
+            // Buffer the union of circles around every POI in range.
+            if (q.answer === "positive" || q.answer === "negative") {
+                let buf: Feature<Polygon | MultiPolygon> | null;
+                try {
+                    buf = computePointUnionBuffer(
+                        q.center,
+                        q.category,
+                        dist.distanceMeters,
+                        playAreaBbox,
+                    );
+                } catch (err) {
+                    console.warn(
+                        `[measuringGeometry] computePointUnionBuffer failed for category=${q.category}:`,
+                        err,
+                    );
+                    continue;
+                }
+                if (buf) {
+                    (q.answer === "positive" ? hitFeatures : missFeatures).push(
+                        buf,
+                    );
+                }
             }
             continue;
         }

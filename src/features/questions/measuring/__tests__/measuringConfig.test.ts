@@ -4,16 +4,12 @@ import type { QuestionState } from "@/features/questions/questionTypes";
 function makeMeasuringStub(): QuestionState {
     return {
         answer: "unanswered",
-        candidates: [],
         category: "rail-station",
         center: [139.7, 35.66],
         createdAt: "2026-01-01T00:00:00.000Z",
         id: "q-test",
         isLocked: false,
-        seekerDistanceMeters: null,
         seekerDistanceUnit: "m",
-        selectedOsmId: null,
-        selectedOsmType: null,
         type: "measuring",
         updatedAt: "2026-01-01T00:00:00.000Z",
     };

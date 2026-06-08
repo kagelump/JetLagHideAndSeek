@@ -93,26 +93,6 @@ function Probe() {
                     ? activeQuestion.category
                     : "none"}
             </Text>
-            <Text testID="probe-measuring-candidates">
-                {activeQuestion?.type === "measuring"
-                    ? JSON.stringify(activeQuestion.candidates)
-                    : "none"}
-            </Text>
-            <Text testID="probe-measuring-selected-osm-id">
-                {activeQuestion?.type === "measuring"
-                    ? JSON.stringify(activeQuestion.selectedOsmId)
-                    : "none"}
-            </Text>
-            <Text testID="probe-measuring-selected-osm-type">
-                {activeQuestion?.type === "measuring"
-                    ? JSON.stringify(activeQuestion.selectedOsmType)
-                    : "none"}
-            </Text>
-            <Text testID="probe-measuring-seeker-distance">
-                {activeQuestion?.type === "measuring"
-                    ? JSON.stringify(activeQuestion.seekerDistanceMeters)
-                    : "none"}
-            </Text>
             <Text testID="probe-measuring-answer">
                 {activeQuestion?.type === "measuring"
                     ? activeQuestion.answer
@@ -797,18 +777,6 @@ describe("QuestionProvider – new question types", () => {
         expect(screen.getByTestId("probe-measuring-answer")).toHaveTextContent(
             "unanswered",
         );
-        expect(
-            screen.getByTestId("probe-measuring-candidates"),
-        ).toHaveTextContent("[]");
-        expect(
-            screen.getByTestId("probe-measuring-selected-osm-id"),
-        ).toHaveTextContent("null");
-        expect(
-            screen.getByTestId("probe-measuring-selected-osm-type"),
-        ).toHaveTextContent("null");
-        expect(
-            screen.getByTestId("probe-measuring-seeker-distance"),
-        ).toHaveTextContent("null");
         expect(
             screen.getByTestId("probe-measuring-category"),
         ).toHaveTextContent("rail-station");

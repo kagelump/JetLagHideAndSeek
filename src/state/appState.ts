@@ -172,30 +172,12 @@ const measuringCategorySchema = z.enum([
 
 const appStateMeasuringQuestionSchema = z.object({
     answer: questionAnswerSchema,
-    candidates: z
-        .array(
-            z.object({
-                lat: z.number(),
-                lon: z.number(),
-                name: z.string(),
-                osmId: z.number(),
-                osmType: z.enum(["node", "way", "relation"]),
-                tags: z.record(z.string()),
-            }),
-        )
-        .default([]),
     category: measuringCategorySchema,
     center: positionSchema,
     createdAt: z.string().min(1),
     id: z.string().min(1),
     isLocked: z.boolean().default(false),
-    seekerDistanceMeters: z.number().nullable().default(null),
     seekerDistanceUnit: z.enum(["m", "km", "mi"]).default("m"),
-    selectedOsmId: z.number().int().positive().nullable().default(null),
-    selectedOsmType: z
-        .enum(["node", "way", "relation"])
-        .nullable()
-        .default(null),
     type: z.literal("measuring"),
     updatedAt: z.string().min(1),
 });

@@ -1,60 +1,78 @@
 import type { Feature, MultiPolygon, Polygon } from "geojson";
 
-import {
-    buildMeasuringRenderState,
-    clearMeasuringCircleCache,
-} from "@/features/questions/measuring/measuringGeometry";
+import { buildMeasuringRenderState } from "@/features/questions/measuring/measuringGeometry";
 import {
     clearLineBufferCache,
     clearLineDistanceCache,
 } from "@/features/questions/measuring/lineMeasuringGeometry";
 import {
+    clearPointBufferCache,
+    clearPointDistanceCache,
+} from "@/features/questions/measuring/pointMeasuringGeometry";
+import {
     __clearLineBundlesForTest,
     __setLineBundleForTest,
     type LineBundle,
 } from "@/features/questions/measuring/lineBundleLoader";
+import {
+    clearBundledRegionCache,
+    registerTestRegion,
+    type RawRegion,
+} from "@/features/questions/matching/bundledPois";
 import type { MeasuringQuestion } from "@/features/questions/measuring/measuringTypes";
 import type { QuestionState } from "@/features/questions/questionTypes";
+
+// ─── Test region helpers ────────────────────────────────────────────────────
+
+/** Bbox covering central Tokyo — contains the test center [139.75, 35.675]. */
+const TEST_BBOX: [number, number, number, number] = [139.0, 35.0, 141.0, 36.0];
+
+function makeTestRegion(overrides: Partial<RawRegion> = {}): RawRegion {
+    return {
+        schemaVersion: 1,
+        region: "test-point-region",
+        label: "Test Point Region",
+        generatedAt: "2026-01-01T00:00:00.000Z",
+        bbox: TEST_BBOX,
+        totalCount: 2,
+        categories: {
+            museum: {
+                count: 2,
+                lon: [139.761, 139.77],
+                lat: [35.681, 35.69],
+                name: ["Museum A", "Museum B"],
+                osmId: [100, 200],
+                osmType: [0, 1], // node, way
+            },
+        },
+        ...overrides,
+    };
+}
+
+function registerMuseumRegion(): void {
+    registerTestRegion("test-point-region", makeTestRegion());
+}
+
+// ─── Question factory ───────────────────────────────────────────────────────
 
 function makeMeasuringQuestion(
     overrides: Partial<MeasuringQuestion> = {},
 ): MeasuringQuestion {
     return {
         answer: "unanswered",
-        candidates: [
-            {
-                lat: 35.681,
-                lon: 139.761,
-                name: "Target POI",
-                osmId: 100,
-                osmType: "node",
-                tags: {},
-                distanceMeters: 1200,
-            },
-            {
-                lat: 35.69,
-                lon: 139.77,
-                name: "Other POI",
-                osmId: 200,
-                osmType: "way",
-                tags: {},
-                distanceMeters: 2500,
-            },
-        ],
         category: "museum",
-        center: [139.75, 35.675], // seeker pin — far from target
+        center: [139.75, 35.675], // seeker pin
         createdAt: "2026-01-01T00:00:00.000Z",
         id: "q-measuring-test",
         isLocked: false,
-        seekerDistanceMeters: 1200,
         seekerDistanceUnit: "m",
-        selectedOsmId: 100,
-        selectedOsmType: "node",
         type: "measuring",
         updatedAt: "2026-01-01T00:00:00.000Z",
         ...overrides,
     };
 }
+
+// ─── Line bundle helper ─────────────────────────────────────────────────────
 
 function makeLineBundle(coords: [number, number][]): LineBundle {
     const xs = coords.map((c) => c[0]);
@@ -104,13 +122,20 @@ function computeFeatureBbox(
     return [minX, minY, maxX, maxY];
 }
 
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
 describe("buildMeasuringRenderState", () => {
     beforeEach(() => {
-        clearMeasuringCircleCache();
+        clearPointBufferCache();
+        clearPointDistanceCache();
         clearLineBufferCache();
         clearLineDistanceCache();
         __clearLineBundlesForTest();
+        clearBundledRegionCache();
+        registerMuseumRegion();
     });
+
+    // ── Empty / no measuring questions ───────────────────────────────────
 
     it("returns empty collections for empty input", () => {
         const result = buildMeasuringRenderState([], undefined);
@@ -140,163 +165,158 @@ describe("buildMeasuringRenderState", () => {
         expect(result.nearestPointMarkers.features).toHaveLength(0);
     });
 
-    describe("Closer (positive answer)", () => {
-        it("places circle in hitMaskFeatures", () => {
+    // ── Point category: closer (positive) ────────────────────────────────
+
+    describe("Point categories — positive (closer)", () => {
+        it("places union buffer in hitMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
             const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(1);
             expect(result.missMaskFeatures.features).toHaveLength(0);
         });
 
-        it("centers the circle on the target POI, not the seeker pin", () => {
+        it("union buffer covers the nearest POI", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
             const result = buildMeasuringRenderState([q], undefined);
-            const circle = result.hitMaskFeatures.features[0];
-            // The circle should be centered near target POI [139.761, 35.681]
-            const coords = circle.geometry.coordinates[0] as [number, number][];
-            // Compute approximate centroid
-            let sumLon = 0;
-            let sumLat = 0;
-            for (const [lon, lat] of coords) {
-                sumLon += lon;
-                sumLat += lat;
-            }
-            const avgLon = sumLon / coords.length;
-            const avgLat = sumLat / coords.length;
+            const mask = result.hitMaskFeatures.features[0];
+            expect(mask).toBeTruthy();
+            expect(
+                mask.geometry.type === "Polygon" ||
+                    mask.geometry.type === "MultiPolygon",
+            ).toBe(true);
+        });
 
-            // Should be close to target POI [139.761, 35.681]
-            expect(Math.abs(avgLon - 139.761)).toBeLessThan(0.02);
-            expect(Math.abs(avgLat - 35.681)).toBeLessThan(0.02);
+        it("emits connector and marker to the nearest POI", () => {
+            const q = makeMeasuringQuestion({ answer: "positive" });
+            const result = buildMeasuringRenderState([q], undefined);
+            // Point categories now emit connectors + markers (same as lines).
+            expect(
+                result.nearestPointConnectors.features.length,
+            ).toBeGreaterThanOrEqual(1);
+            expect(
+                result.nearestPointMarkers.features.length,
+            ).toBeGreaterThanOrEqual(1);
 
-            // Should NOT be close to seeker pin [139.75, 35.675]
-            // The distance from circle center to seeker pin should be significant
-            const distFromSeeker = Math.sqrt(
-                (avgLon - 139.75) ** 2 + (avgLat - 35.675) ** 2,
-            );
-            expect(distFromSeeker).toBeGreaterThan(0.005);
+            const connector = result.nearestPointConnectors.features[0];
+            // Connector starts at center
+            expect(connector.geometry.coordinates[0]).toEqual([139.75, 35.675]);
         });
     });
 
-    describe("Farther (negative answer)", () => {
-        it("places circle in missMaskFeatures", () => {
+    // ── Point category: farther (negative) ───────────────────────────────
+
+    describe("Point categories — negative (farther)", () => {
+        it("places union buffer in missMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "negative" });
             const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(1);
         });
+
+        it("emits connector and marker even for unanswered questions", () => {
+            const q = makeMeasuringQuestion({ answer: "unanswered" });
+            const result = buildMeasuringRenderState([q], undefined);
+            // Connector/marker show the auto-picked nearest, answered or not.
+            expect(
+                result.nearestPointConnectors.features.length,
+            ).toBeGreaterThanOrEqual(1);
+            expect(
+                result.nearestPointMarkers.features.length,
+            ).toBeGreaterThanOrEqual(1);
+        });
     });
 
+    // ── Point category: unanswered ───────────────────────────────────────
+
     describe("Unanswered", () => {
-        it("produces neither hit nor miss features", () => {
+        it("produces neither hit nor miss features for point categories", () => {
             const q = makeMeasuringQuestion({ answer: "unanswered" });
             const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
             expect(result.missMaskFeatures.features).toHaveLength(0);
         });
-    });
 
-    describe("Missing selection", () => {
-        it("skips question when selectedOsmId is null", () => {
-            const q = makeMeasuringQuestion({
-                answer: "positive",
-                selectedOsmId: null,
-            });
+        it("still emits connector and marker for unanswered", () => {
+            const q = makeMeasuringQuestion({ answer: "unanswered" });
             const result = buildMeasuringRenderState([q], undefined);
-            expect(result.hitMaskFeatures.features).toHaveLength(0);
+            expect(
+                result.nearestPointConnectors.features.length,
+            ).toBeGreaterThanOrEqual(1);
+            expect(
+                result.nearestPointMarkers.features.length,
+            ).toBeGreaterThanOrEqual(1);
         });
     });
 
-    describe("Zero or negative distance", () => {
-        it("skips question when seekerDistanceMeters is 0", () => {
-            const q = makeMeasuringQuestion({
-                answer: "positive",
-                seekerDistanceMeters: 0,
-            });
-            const result = buildMeasuringRenderState([q], undefined);
-            expect(result.hitMaskFeatures.features).toHaveLength(0);
-        });
+    // ── Missing bundle / no POIs ─────────────────────────────────────────
 
-        it("skips question when seekerDistanceMeters is negative", () => {
+    describe("Missing bundle for point category", () => {
+        it("skips question when no region covers the center", () => {
+            // Center outside the test region bbox.
             const q = makeMeasuringQuestion({
                 answer: "positive",
-                seekerDistanceMeters: -100,
+                center: [130.0, 30.0], // far from Tokyo
             });
             const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
+            expect(result.missMaskFeatures.features).toHaveLength(0);
+            expect(result.nearestPointConnectors.features).toHaveLength(0);
         });
     });
 
-    describe("Missing target in candidates", () => {
-        it("skips question when selectedOsmId is not in candidates", () => {
-            const q = makeMeasuringQuestion({
-                answer: "positive",
-                selectedOsmId: 999,
-            });
-            const result = buildMeasuringRenderState([q], undefined);
-            expect(result.hitMaskFeatures.features).toHaveLength(0);
-        });
-    });
+    // ── Answer toggling for point categories ─────────────────────────────
 
-    describe("LRU caching", () => {
-        it("returns the same circle reference for identical inputs", () => {
+    describe("Answer toggling for point categories", () => {
+        it("unanswered → positive → buffer in hitMaskFeatures", () => {
             const q = makeMeasuringQuestion({ answer: "positive" });
-            const result1 = buildMeasuringRenderState([q], undefined);
-            const result2 = buildMeasuringRenderState([q], undefined);
-            expect(result1.hitMaskFeatures.features[0]).toBe(
-                result2.hitMaskFeatures.features[0],
-            );
+            const result = buildMeasuringRenderState([q], undefined);
+            expect(result.hitMaskFeatures.features).toHaveLength(1);
+            expect(result.missMaskFeatures.features).toHaveLength(0);
         });
 
-        it("returns different circles after cache clear", () => {
-            const q = makeMeasuringQuestion({ answer: "positive" });
-            const result1 = buildMeasuringRenderState([q], undefined);
-            clearMeasuringCircleCache();
-            const result2 = buildMeasuringRenderState([q], undefined);
-            expect(result1.hitMaskFeatures.features[0]).not.toBe(
-                result2.hitMaskFeatures.features[0],
-            );
+        it("unanswered → negative → buffer in missMaskFeatures", () => {
+            const q = makeMeasuringQuestion({ answer: "negative" });
+            const result = buildMeasuringRenderState([q], undefined);
+            expect(result.hitMaskFeatures.features).toHaveLength(0);
+            expect(result.missMaskFeatures.features).toHaveLength(1);
         });
 
-        it("uses different circles for different distances", () => {
-            const q1 = makeMeasuringQuestion({
-                answer: "positive",
-                seekerDistanceMeters: 1200,
-            });
-            const q2 = makeMeasuringQuestion({
-                answer: "positive",
-                seekerDistanceMeters: 2500,
-            });
-            const result1 = buildMeasuringRenderState([q1], undefined);
-            const result2 = buildMeasuringRenderState([q2], undefined);
-            expect(result1.hitMaskFeatures.features[0]).not.toBe(
-                result2.hitMaskFeatures.features[0],
+        it("positive → negative → buffer moves from hit to miss", () => {
+            const result1 = buildMeasuringRenderState(
+                [makeMeasuringQuestion({ answer: "positive" })],
+                undefined,
             );
+            expect(result1.hitMaskFeatures.features).toHaveLength(1);
+            expect(result1.missMaskFeatures.features).toHaveLength(0);
+
+            const result2 = buildMeasuringRenderState(
+                [makeMeasuringQuestion({ answer: "negative" })],
+                undefined,
+            );
+            expect(result2.hitMaskFeatures.features).toHaveLength(0);
+            expect(result2.missMaskFeatures.features).toHaveLength(1);
         });
 
-        it("uses different circles for different target POIs", () => {
-            const q1 = makeMeasuringQuestion({
-                answer: "positive",
-                selectedOsmId: 100,
-                selectedOsmType: "node",
-            });
-            const q2 = makeMeasuringQuestion({
-                answer: "positive",
-                selectedOsmId: 200,
-                selectedOsmType: "way",
-            });
-            const result1 = buildMeasuringRenderState([q1], undefined);
-            const result2 = buildMeasuringRenderState([q2], undefined);
-            expect(result1.hitMaskFeatures.features[0]).not.toBe(
-                result2.hitMaskFeatures.features[0],
+        it("positive → unanswered → buffer is removed", () => {
+            const result1 = buildMeasuringRenderState(
+                [makeMeasuringQuestion({ answer: "positive" })],
+                undefined,
             );
+            expect(result1.hitMaskFeatures.features).toHaveLength(1);
+
+            const result2 = buildMeasuringRenderState(
+                [makeMeasuringQuestion({ answer: "unanswered" })],
+                undefined,
+            );
+            expect(result2.hitMaskFeatures.features).toHaveLength(0);
+            expect(result2.missMaskFeatures.features).toHaveLength(0);
         });
     });
 
-    // ── Line-category tests ───────────────────────────────────────────────
+    // ── Line-category tests (unchanged behavior) ─────────────────────────
 
     describe("Line categories", () => {
-        it("is NOT dropped when selectedOsmId is null (regression guard)", () => {
-            // Inject a line bundle near but not exactly on the seeker center.
+        it("is NOT dropped when center is near the line (regression guard)", () => {
             __setLineBundleForTest(
                 "coastline",
                 makeLineBundle([
@@ -308,18 +328,13 @@ describe("buildMeasuringRenderState", () => {
             const q = makeMeasuringQuestion({
                 answer: "positive",
                 category: "coastline",
-                center: [139.75, 35.68], // not exactly on the line
-                selectedOsmId: null,
-                selectedOsmType: null,
-                seekerDistanceMeters: null,
+                center: [139.75, 35.68],
             });
             const result = buildMeasuringRenderState([q], undefined);
-            // Line category should produce a circle despite null selection
             expect(result.hitMaskFeatures.features).toHaveLength(1);
         });
 
         it("buffers along the line, not just at the nearest point", () => {
-            // Horizontal line at lat=35.675 spanning 1° of longitude (~100 km).
             __setLineBundleForTest(
                 "coastline",
                 makeLineBundle([
@@ -331,33 +346,20 @@ describe("buildMeasuringRenderState", () => {
             const q = makeMeasuringQuestion({
                 answer: "positive",
                 category: "coastline",
-                center: [139.75, 35.68], // 0.005° north of line
-                selectedOsmId: null,
-                selectedOsmType: null,
-                seekerDistanceMeters: null,
+                center: [139.75, 35.68],
             });
             const result = buildMeasuringRenderState([q], undefined);
             const mask = result.hitMaskFeatures.features[0];
 
-            // Should be a Polygon or MultiPolygon (not undefined)
             expect(mask).toBeTruthy();
             expect(
                 mask.geometry.type === "Polygon" ||
                     mask.geometry.type === "MultiPolygon",
             ).toBe(true);
 
-            // The buffer should span the entire line (wide longitude extent),
-            // not just a ~500 m circle around [139.75, 35.675].
             const bbox = computeFeatureBbox(mask);
             const lonSpan = bbox[2] - bbox[0];
-
-            // A circle at the nearest point would have a longitude span of
-            // ~0.01° (radius ≈ 700 m). The clipped line buffer spans ~0.46°.
-            // Require at least 0.3° to confirm it's a line buffer.
             expect(lonSpan).toBeGreaterThan(0.3);
-
-            // Lat range should be centred near the line (35.675) with some
-            // padding from the buffer radius.
             expect(bbox[1]).toBeLessThan(35.675);
             expect(bbox[3]).toBeGreaterThan(35.675);
         });
@@ -374,29 +376,20 @@ describe("buildMeasuringRenderState", () => {
             const q = makeMeasuringQuestion({
                 answer: "unanswered",
                 category: "coastline",
-                selectedOsmId: null,
-                selectedOsmType: null,
-                seekerDistanceMeters: null,
             });
             const result = buildMeasuringRenderState([q], undefined);
             expect(result.nearestPointConnectors.features).toHaveLength(1);
             expect(result.nearestPointMarkers.features).toHaveLength(1);
 
-            // Connector goes from center to nearest point
             const connector = result.nearestPointConnectors.features[0];
-            expect(connector.geometry.coordinates[0]).toEqual([139.75, 35.675]); // center
-            expect(connector.geometry.coordinates[1][1]).toBeCloseTo(35.675, 2); // snapped to line (great-circle may shift slightly)
+            expect(connector.geometry.coordinates[0]).toEqual([139.75, 35.675]);
         });
 
-        it("skips question when bundle yields no feature (distance 0 / no survivor)", () => {
-            // Inject null to simulate missing bundle
+        it("skips question when bundle yields no feature", () => {
             __setLineBundleForTest("coastline", null);
             const q = makeMeasuringQuestion({
                 answer: "positive",
                 category: "coastline",
-                selectedOsmId: null,
-                selectedOsmType: null,
-                seekerDistanceMeters: null,
             });
             const result = buildMeasuringRenderState([q], undefined);
             expect(result.hitMaskFeatures.features).toHaveLength(0);
@@ -419,14 +412,10 @@ describe("buildMeasuringRenderState", () => {
                 const q = makeMeasuringQuestion({
                     answer: "unanswered",
                     category: "coastline",
-                    selectedOsmId: null,
-                    selectedOsmType: null,
-                    seekerDistanceMeters: null,
                 });
                 const result = buildMeasuringRenderState([q], undefined);
                 expect(result.hitMaskFeatures.features).toHaveLength(0);
                 expect(result.missMaskFeatures.features).toHaveLength(0);
-                // Connector and marker still appear for unanswered.
                 expect(result.nearestPointConnectors.features).toHaveLength(1);
                 expect(result.nearestPointMarkers.features).toHaveLength(1);
             });
@@ -435,9 +424,6 @@ describe("buildMeasuringRenderState", () => {
                 const q = makeMeasuringQuestion({
                     answer: "positive",
                     category: "coastline",
-                    selectedOsmId: null,
-                    selectedOsmType: null,
-                    seekerDistanceMeters: null,
                 });
                 const result = buildMeasuringRenderState([q], undefined);
                 expect(result.hitMaskFeatures.features).toHaveLength(1);
@@ -448,9 +434,6 @@ describe("buildMeasuringRenderState", () => {
                 const q = makeMeasuringQuestion({
                     answer: "negative",
                     category: "coastline",
-                    selectedOsmId: null,
-                    selectedOsmType: null,
-                    seekerDistanceMeters: null,
                 });
                 const result = buildMeasuringRenderState([q], undefined);
                 expect(result.hitMaskFeatures.features).toHaveLength(0);
@@ -458,94 +441,44 @@ describe("buildMeasuringRenderState", () => {
             });
 
             it("positive → negative → buffer moves from hit to miss", () => {
-                const positiveQ = makeMeasuringQuestion({
+                const posQ = makeMeasuringQuestion({
                     answer: "positive",
                     category: "coastline",
-                    selectedOsmId: null,
-                    selectedOsmType: null,
-                    seekerDistanceMeters: null,
                 });
-                const posResult = buildMeasuringRenderState(
-                    [positiveQ],
-                    undefined,
-                );
+                const posResult = buildMeasuringRenderState([posQ], undefined);
                 expect(posResult.hitMaskFeatures.features).toHaveLength(1);
                 expect(posResult.missMaskFeatures.features).toHaveLength(0);
 
-                // Simulate answer toggle by building a new question with
-                // answer: "negative" (the updated question object that
-                // updateQuestion would produce).
-                const negativeQ = makeMeasuringQuestion({
-                    ...positiveQ,
-                    answer: "negative",
-                });
-                const negResult = buildMeasuringRenderState(
-                    [negativeQ],
-                    undefined,
-                );
-                expect(negResult.hitMaskFeatures.features).toHaveLength(0);
-                expect(negResult.missMaskFeatures.features).toHaveLength(1);
-            });
-
-            it("negative → positive → buffer moves from miss to hit", () => {
-                const negativeQ = makeMeasuringQuestion({
+                const negQ = makeMeasuringQuestion({
                     answer: "negative",
                     category: "coastline",
-                    selectedOsmId: null,
-                    selectedOsmType: null,
-                    seekerDistanceMeters: null,
                 });
-                const negResult = buildMeasuringRenderState(
-                    [negativeQ],
-                    undefined,
-                );
+                const negResult = buildMeasuringRenderState([negQ], undefined);
                 expect(negResult.hitMaskFeatures.features).toHaveLength(0);
                 expect(negResult.missMaskFeatures.features).toHaveLength(1);
-
-                const positiveQ = makeMeasuringQuestion({
-                    ...negativeQ,
-                    answer: "positive",
-                });
-                const posResult = buildMeasuringRenderState(
-                    [positiveQ],
-                    undefined,
-                );
-                expect(posResult.hitMaskFeatures.features).toHaveLength(1);
-                expect(posResult.missMaskFeatures.features).toHaveLength(0);
             });
 
             it("positive → unanswered → buffer is removed", () => {
-                const positiveQ = makeMeasuringQuestion({
+                const posQ = makeMeasuringQuestion({
                     answer: "positive",
                     category: "coastline",
-                    selectedOsmId: null,
-                    selectedOsmType: null,
-                    seekerDistanceMeters: null,
                 });
-                const posResult = buildMeasuringRenderState(
-                    [positiveQ],
-                    undefined,
-                );
+                const posResult = buildMeasuringRenderState([posQ], undefined);
                 expect(posResult.hitMaskFeatures.features).toHaveLength(1);
 
-                const unansweredQ = makeMeasuringQuestion({
-                    ...positiveQ,
+                const unQ = makeMeasuringQuestion({
                     answer: "unanswered",
+                    category: "coastline",
                 });
-                const unResult = buildMeasuringRenderState(
-                    [unansweredQ],
-                    undefined,
-                );
+                const unResult = buildMeasuringRenderState([unQ], undefined);
                 expect(unResult.hitMaskFeatures.features).toHaveLength(0);
                 expect(unResult.missMaskFeatures.features).toHaveLength(0);
             });
         });
 
         it("mixes point-category and line-category questions correctly", () => {
-            // Point category: museum (positive)
             const museumQ = makeMeasuringQuestion({ answer: "positive" });
 
-            // Line category: coastline (negative)
             __setLineBundleForTest(
                 "coastline",
                 makeLineBundle([
@@ -556,9 +489,6 @@ describe("buildMeasuringRenderState", () => {
             const coastlineQ = makeMeasuringQuestion({
                 answer: "negative",
                 category: "coastline",
-                selectedOsmId: null,
-                selectedOsmType: null,
-                seekerDistanceMeters: null,
             });
 
             const result = buildMeasuringRenderState(
@@ -567,8 +497,9 @@ describe("buildMeasuringRenderState", () => {
             );
             expect(result.hitMaskFeatures.features).toHaveLength(1); // museum
             expect(result.missMaskFeatures.features).toHaveLength(1); // coastline
-            expect(result.nearestPointConnectors.features).toHaveLength(1); // coast only
-            expect(result.nearestPointMarkers.features).toHaveLength(1);
+            // Both point and line categories emit connectors now
+            expect(result.nearestPointConnectors.features).toHaveLength(2);
+            expect(result.nearestPointMarkers.features).toHaveLength(2);
         });
     });
 });

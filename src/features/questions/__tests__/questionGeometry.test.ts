@@ -6,6 +6,14 @@ import { buildQuestionMapRenderState } from "@/features/questions/questionGeomet
 import type { MatchingQuestion } from "@/features/questions/matching/matchingTypes";
 import type { MeasuringQuestion } from "@/features/questions/measuring/measuringTypes";
 import {
+    clearPointBufferCache,
+    clearPointDistanceCache,
+} from "@/features/questions/measuring/pointMeasuringGeometry";
+import {
+    clearBundledRegionCache,
+    registerTestRegion,
+} from "@/features/questions/matching/bundledPois";
+import {
     getTransitLineOptions,
     reconcileTransitLineQuestionSelection,
 } from "@/features/questions/transitLine/transitLineQuestion";
@@ -208,39 +216,46 @@ describe("buildQuestionMapRenderState OSM matching", () => {
 });
 
 describe("buildQuestionMapRenderState measuring", () => {
+    beforeEach(() => {
+        clearPointBufferCache();
+        clearPointDistanceCache();
+        clearBundledRegionCache();
+        registerTestRegion("test-point-region", {
+            schemaVersion: 1,
+            region: "test-point-region",
+            label: "Test Point Region",
+            generatedAt: "2026-01-01T00:00:00.000Z",
+            bbox: [139.0, 35.0, 141.0, 36.0],
+            totalCount: 2,
+            categories: {
+                museum: {
+                    count: 2,
+                    lon: [139.761, 139.77],
+                    lat: [35.681, 35.69],
+                    name: ["Museum A", "Museum B"],
+                    osmId: [100, 200],
+                    osmType: [0, 1],
+                },
+            },
+        });
+    });
+
     const measuringQuestion: MeasuringQuestion = {
         answer: "unanswered",
-        candidates: [
-            {
-                lat: 35.681,
-                lon: 139.761,
-                name: "Test Museum",
-                osmId: 100,
-                osmType: "node",
-                tags: {},
-                distanceMeters: 1200,
-            },
-        ],
         category: "museum",
         center: [139.75, 35.675],
         createdAt: "2026-06-07T00:00:00.000Z",
         id: "measuring-1",
         isLocked: false,
-        seekerDistanceMeters: null,
         seekerDistanceUnit: "m",
-        selectedOsmId: null,
-        selectedOsmType: null,
         type: "measuring",
         updatedAt: "2026-06-07T00:00:00.000Z",
     };
 
-    it("populates measuring.hitMaskFeatures when answer is positive with selected POI", () => {
+    it("populates measuring.hitMaskFeatures when answer is positive", () => {
         const q: MeasuringQuestion = {
             ...measuringQuestion,
             answer: "positive",
-            selectedOsmId: 100,
-            selectedOsmType: "node",
-            seekerDistanceMeters: 1200,
         };
         const renderState = buildQuestionMapRenderState(
             [q],
@@ -254,13 +269,10 @@ describe("buildQuestionMapRenderState measuring", () => {
         expect(renderState.measuring.missMaskFeatures.features).toHaveLength(0);
     });
 
-    it("populates measuring.missMaskFeatures when answer is negative with selected POI", () => {
+    it("populates measuring.missMaskFeatures when answer is negative", () => {
         const q: MeasuringQuestion = {
             ...measuringQuestion,
             answer: "negative",
-            selectedOsmId: 100,
-            selectedOsmType: "node",
-            seekerDistanceMeters: 1200,
         };
         const renderState = buildQuestionMapRenderState(
             [q],

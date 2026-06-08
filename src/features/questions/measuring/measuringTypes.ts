@@ -11,7 +11,6 @@ import type {
     BaseQuestion,
     QuestionAnswer,
 } from "@/features/questions/coreTypes";
-import type { OsmFeature } from "@/features/questions/matching/matchingTypes";
 import type { DistanceUnit } from "@/shared/distanceUnits";
 import type { Position } from "@/shared/geojson";
 
@@ -46,14 +45,8 @@ export type MeasuringQuestion = BaseQuestion & {
     category: MeasuringCategory;
     /** Seeker's position – used as the search anchor to find nearby POIs. */
     center: Position;
-    candidates: (OsmFeature & { distanceMeters?: number })[];
-    selectedOsmId: number | null;
-    selectedOsmType: "node" | "way" | "relation" | null;
-    /**
-     * Seeker's auto-computed distance from center to the selected POI.
-     * null when no POI is selected yet.
-     */
-    seekerDistanceMeters: number | null;
+    /** Display unit preference. Distance is derived-on-render from the
+     *  bundled POI data — it is not stored in the question. */
     seekerDistanceUnit: DistanceUnit;
 };
 

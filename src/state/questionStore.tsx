@@ -782,16 +782,12 @@ function createDefaultQuestion(
         case "measuring":
             return {
                 answer: "unanswered",
-                candidates: [],
                 category: (category as MeasuringCategory) ?? "rail-station",
                 center,
                 createdAt: now,
                 id: createQuestionId(),
                 isLocked: false,
-                seekerDistanceMeters: null,
                 seekerDistanceUnit: "m",
-                selectedOsmId: null,
-                selectedOsmType: null,
                 type: "measuring",
                 updatedAt: now,
             };

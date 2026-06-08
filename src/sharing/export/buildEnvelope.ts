@@ -77,9 +77,7 @@ export function buildQuestionRequestEnvelope({
         payload: {
             createdAt: now.toISOString(),
             question:
-                question.type === "matching" ||
-                question.type === "measuring" ||
-                question.type === "tentacles"
+                question.type === "matching" || question.type === "tentacles"
                     ? { ...question, candidates: [] }
                     : question,
             requestId: createRequestId(),

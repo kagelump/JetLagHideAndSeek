@@ -769,25 +769,12 @@ describe("minify → unminify round-trip for new question types", () => {
             questions: [
                 {
                     answer: "positive" as const,
-                    candidates: [
-                        {
-                            lat: 35.68,
-                            lon: 139.76,
-                            name: "Tokyo Station",
-                            osmId: 1,
-                            osmType: "node" as const,
-                            tags: {},
-                        },
-                    ],
                     category: "rail-station" as const,
                     center: [139.7, 35.68] as [number, number],
                     createdAt: "2026-06-01T00:00:00.000Z",
                     id: "measuring-1",
                     isLocked: false,
-                    seekerDistanceMeters: 500,
-                    seekerDistanceUnit: "m" as const,
-                    selectedOsmId: 1,
-                    selectedOsmType: "node" as const,
+                    seekerDistanceUnit: "km" as const,
                     type: "measuring" as const,
                     updatedAt: "2026-06-01T00:00:00.000Z",
                 },
@@ -798,14 +785,10 @@ describe("minify → unminify round-trip for new question types", () => {
         expect(question).toMatchObject({
             answer: "positive",
             category: "rail-station",
-            seekerDistanceMeters: 500,
-            seekerDistanceUnit: "m",
-            selectedOsmId: 1,
-            selectedOsmType: "node",
+            seekerDistanceUnit: "km",
             type: "measuring",
         });
         if (question && question.type === "measuring") {
-            expect(question.candidates).toHaveLength(1);
             expect(question.center[0]).toBeCloseTo(139.7, 4);
             expect(question.center[1]).toBeCloseTo(35.68, 4);
         }
@@ -816,16 +799,12 @@ describe("minify → unminify round-trip for new question types", () => {
             questions: [
                 {
                     answer: "unanswered" as const,
-                    candidates: [],
                     category: "park" as const,
                     center: [139.7, 35.7] as [number, number],
                     createdAt: "2026-06-01T00:00:00.000Z",
                     id: "measuring-2",
                     isLocked: false,
-                    seekerDistanceMeters: null,
                     seekerDistanceUnit: "m" as const,
-                    selectedOsmId: null,
-                    selectedOsmType: null,
                     type: "measuring" as const,
                     updatedAt: "2026-06-01T00:00:00.000Z",
                 },
@@ -836,7 +815,6 @@ describe("minify → unminify round-trip for new question types", () => {
         expect(question).toMatchObject({
             answer: "unanswered",
             category: "park",
-            seekerDistanceMeters: null,
             seekerDistanceUnit: "m",
             type: "measuring",
         });
@@ -1014,16 +992,12 @@ describe("minify → unminify round-trip for new question types", () => {
                 },
                 {
                     answer: "positive" as const,
-                    candidates: [],
                     category: "rail-station" as const,
                     center: [139.7, 35.7] as [number, number],
                     createdAt: "2026-06-01T00:00:00.000Z",
                     id: "measuring-1",
                     isLocked: false,
-                    seekerDistanceMeters: 300,
                     seekerDistanceUnit: "m" as const,
-                    selectedOsmId: null,
-                    selectedOsmType: null,
                     type: "measuring" as const,
                     updatedAt: "2026-06-01T00:00:00.000Z",
                 },

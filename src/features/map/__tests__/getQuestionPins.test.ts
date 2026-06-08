@@ -42,16 +42,12 @@ function matchingQuestion(): Extract<QuestionState, { type: "matching" }> {
 function measuringQuestion(): Extract<QuestionState, { type: "measuring" }> {
     return {
         answer: "unanswered",
-        candidates: [],
         category: "rail-station",
         center,
         createdAt: "2026-06-01T00:00:00.000Z",
         id: "q-measuring",
         isLocked: false,
-        seekerDistanceMeters: null,
         seekerDistanceUnit: "m",
-        selectedOsmId: null,
-        selectedOsmType: null,
         type: "measuring",
         updatedAt: "2026-06-01T00:00:00.000Z",
     };
