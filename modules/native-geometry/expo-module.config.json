@@ -1,0 +1,10 @@
+{
+    "platforms": ["ios", "android"],
+    "apple": {
+        "modules": ["NativeGeometryModule"],
+        "podspecPath": "ios/NativeGeometry.podspec"
+    },
+    "android": {
+        "modules": ["expo.modules.nativegeometry.NativeGeometryModule"]
+    }
+}

@@ -1,0 +1,9 @@
+// module.modulemap — exposes the GEOS C API to Swift.
+//
+// The xcframework ships geos_c.h (generated C API) and export.h
+// (platform macros) in its Headers/ directory. This module map
+// wraps them so Swift can `import GEOS`.
+module GEOS {
+    header "geos_bridge.h"
+    export *
+}
