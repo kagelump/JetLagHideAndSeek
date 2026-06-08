@@ -1,4 +1,3 @@
-import buffer from "@turf/buffer";
 import { multiPoint } from "@turf/helpers";
 import type { Feature, MultiPolygon, Polygon } from "geojson";
 
@@ -7,6 +6,7 @@ import {
     type Bbox,
     type Position,
 } from "@/shared/geojson";
+import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
 import {
     getBundledCategoryColumns,
     regionCoveringBbox,
@@ -386,10 +386,11 @@ export function computePointUnionBuffer(
     const t0 = performance.now();
     let result;
     try {
-        result = buffer(mp, radiusMeters, {
-            units: "meters",
-            steps: 8, // Low circle resolution; union smooths the result.
-        }) as Feature<Polygon | MultiPolygon>;
+        result = getGeometryBackend().bufferMeters(
+            mp,
+            radiusMeters,
+            8, // Low circle resolution; union smooths the result.
+        );
     } catch (err) {
         console.warn(`[pointBuffer] buffer failed:`, err);
         bufferCache.set(key, null);

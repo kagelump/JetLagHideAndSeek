@@ -1,5 +1,4 @@
 import nearestPointOnLine from "@turf/nearest-point-on-line";
-import buffer from "@turf/buffer";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { multiLineString, point } from "@turf/helpers";
 
@@ -9,6 +8,7 @@ import {
     type Bbox,
     type Position,
 } from "@/shared/geojson";
+import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
 import type {
     Feature,
     FeatureCollection,
@@ -557,11 +557,11 @@ export function computeLineBuffer(
 
             // Buffer the dissolved polygon directly.
             try {
-                const buf = buffer(
+                const buf = getGeometryBackend().bufferMeters(
                     { type: "Feature", properties: {}, geometry: geom },
                     radiusMeters,
-                    { units: "meters", steps: BUFFER_STEPS },
-                ) as Feature<Polygon | MultiPolygon> | undefined;
+                    BUFFER_STEPS,
+                );
                 if (buf) polygonBuffers.push(buf);
             } catch (err) {
                 console.warn(`[lineBuffer] polygon buffer failed:`, err);
@@ -684,10 +684,12 @@ export function computeLineBuffer(
                     if (merged) {
                         const t0 = performance.now();
                         try {
-                            lineBufferResult = buffer(merged, radiusMeters, {
-                                units: "meters",
-                                steps: BUFFER_STEPS,
-                            }) as Feature<Polygon | MultiPolygon>;
+                            lineBufferResult =
+                                getGeometryBackend().bufferMeters(
+                                    merged,
+                                    radiusMeters,
+                                    BUFFER_STEPS,
+                                );
                         } catch (err) {
                             console.warn(`[lineBuffer] buffer failed:`, err);
                         }
@@ -720,20 +722,19 @@ export function computeLineBuffer(
     // No union needed for a single result.
     if (allBuffers.length === 1) return allBuffers[0];
 
-    // Use @turf/buffer with 0 radius as a cheap union (buffers the union of
-    // the FeatureCollection).
+    // Buffer with 0 radius as a cheap union (buffers the union of the
+    // FeatureCollection via the geometry backend).
     const combined: FeatureCollection<Polygon | MultiPolygon> = {
         type: "FeatureCollection",
         features: allBuffers,
     };
     try {
-        const unioned = buffer(combined, 0, {
-            units: "meters",
-            steps: BUFFER_STEPS,
-        }) as FeatureCollection<Polygon | MultiPolygon> | undefined;
-        if (unioned?.features?.[0]) {
-            return unioned.features[0] as Feature<Polygon | MultiPolygon>;
-        }
+        const unioned = getGeometryBackend().bufferMeters(
+            combined,
+            0,
+            BUFFER_STEPS,
+        );
+        if (unioned) return unioned;
     } catch {
         // Fallback: return the first buffer.
     }
@@ -1086,18 +1087,15 @@ export function getDilatedPlayArea(
     const cached = dilatedBoundaryCache.get(features);
     if (cached) return cached;
 
-    // @turf/buffer v7 overloads: Feature→Feature or FeatureCollection→FeatureCollection.
     // Buffer the boundary FeatureCollection to get an ε-dilated polygon.
-    // The `as FeatureCollection` cast picks the FeatureCollection overload,
-    // which returns a FeatureCollection result with .features.
-    const dilatedFc = buffer(
-        boundary as FeatureCollection<Polygon | MultiPolygon>,
-        CLIP_DILATION_M,
-        { units: "meters" },
-    );
+    // 8 quadrantSegments matches @turf/buffer's default steps (turf defaults
+    // to 8, which is fine for a tiny 30 m dilation).
     const dilated: Feature<Polygon | MultiPolygon> =
-        (dilatedFc?.features?.[0] as Feature<Polygon | MultiPolygon>) ??
-        boundary.features[0];
+        getGeometryBackend().bufferMeters(
+            boundary as FeatureCollection<Polygon | MultiPolygon>,
+            CLIP_DILATION_M,
+            8,
+        ) ?? boundary.features[0];
 
     if (!dilated || !dilated.geometry) {
         // Fallback: return the first feature as-is (should never happen).

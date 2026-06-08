@@ -150,6 +150,21 @@ export const APP_CONFIG = {
         /** Maximum Voronoi clip cache size (LRU). */
         maxClipCacheSize: 20,
     },
+
+    geometry: {
+        /**
+         * Geometry-operation backend selection.
+         *
+         * - `"auto"` — native GEOS if available, else pure JS (default).
+         * - `"js"`   — force pure-JS backend (kill switch / Jest).
+         * - `"geos"` — force native GEOS; falls back to JS if unavailable.
+         *
+         * Only affects `bufferMeters` in G0–G4. Future phases may route
+         * overlay ops (union / difference / intersection) through the same
+         * backend.
+         */
+        backend: "auto" as "auto" | "js" | "geos",
+    },
 } as const;
 
 // ─── Convenience re-exports ──────────────────────────────────────────
@@ -163,6 +178,7 @@ export const THERMOMETER = APP_CONFIG.thermometer;
 export const TENTACLES = APP_CONFIG.tentacles;
 export const RADAR = APP_CONFIG.radar;
 export const VORONOI = APP_CONFIG.voronoi;
+export const GEOMETRY = APP_CONFIG.geometry;
 
 // ─── Derived-value helpers ───────────────────────────────────────────
 
