@@ -155,8 +155,7 @@ describe("measuring bundle structural validator", () => {
 
             it("every feature has valid properties", () => {
                 const isAdminBorder =
-                    key === "admin-1st-border" ||
-                    key === "admin-2nd-border";
+                    key === "admin-1st-border" || key === "admin-2nd-border";
                 for (const f of bundle.features) {
                     if (isAdminBorder) {
                         // Admin border features carry relationId (required)
@@ -185,8 +184,7 @@ describe("measuring bundle structural validator", () => {
                         }
                         if (keys.includes("name:en")) {
                             assert.ok(
-                                typeof f.properties["name:en"] ===
-                                    "string",
+                                typeof f.properties["name:en"] === "string",
                                 "name:en must be a string",
                             );
                         }
@@ -373,11 +371,7 @@ describe("stitchSegments shared-node assembly", () => {
     });
 
     it("merges regardless of individual way digitization direction", () => {
-        const out = stitchSegments([
-            line(a),
-            line([...b].reverse()),
-            line(c),
-        ]);
+        const out = stitchSegments([line(a), line([...b].reverse()), line(c)]);
         assert.strictEqual(out.length, 1);
     });
 
@@ -409,10 +403,7 @@ describe("high-speed-rail continuity", () => {
     it("passes the shared-node continuity validator (no fragmentation)", () => {
         const bundle = JSON.parse(readFileSync(bundlePath, "utf8"));
         // Throws if the assembled line is fragmented or full of collinear holes.
-        const metrics = validateLineContinuity(
-            bundle.features,
-            EXTRACT_BBOX,
-        );
+        const metrics = validateLineContinuity(bundle.features, EXTRACT_BBOX);
         assert.ok(
             metrics.components <= 40,
             `too many connected components: ${metrics.components}`,

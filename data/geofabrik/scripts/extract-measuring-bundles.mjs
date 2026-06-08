@@ -1,7 +1,12 @@
 /* global console, process, fetch */
 
 import { execFileSync, execSync } from "node:child_process";
-import { createReadStream, existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+    createReadStream,
+    existsSync,
+    readFileSync,
+    writeFileSync,
+} from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { dirname, join, resolve } from "node:path";
@@ -123,32 +128,6 @@ function countDupPairs(features) {
     return count;
 }
 
-/**
- * Stitches features grouped by `relationId`. Features with the same
- * relationId share exact OSM node coordinates (they're segments of the
- * same prefecture boundary). Features with different relationIds are
- * NOT merged — they represent different prefectures' borders.
- */
-function stitchByRelationId(features) {
-    const groups = new Map();
-    const orphans = [];
-    for (const f of features) {
-        const rid = f.properties?.relationId;
-        if (rid != null) {
-            let group = groups.get(rid);
-            if (!group) groups.set(rid, (group = []));
-            group.push(f);
-        } else {
-            orphans.push(f);
-        }
-    }
-    const result = [...orphans];
-    for (const group of groups.values()) {
-        result.push(...stitchSegments(group));
-    }
-    return result;
-}
-
 // ─── Post-filter predicates ───────────────────────────────────────────────────
 
 function highSpeedPostFilter(tags) {
@@ -162,8 +141,7 @@ function highSpeedPostFilter(tags) {
 
 function adminLevelPostFilter(tags, level) {
     return (
-        tags.boundary === "administrative" &&
-        tags.admin_level === String(level)
+        tags.boundary === "administrative" && tags.admin_level === String(level)
     );
 }
 
@@ -194,8 +172,7 @@ function featureToLineStrings(feature) {
             ? Number(feature.properties["@id"])
             : undefined;
 
-    const props =
-        relationId !== undefined ? { relationId } : {};
+    const props = relationId !== undefined ? { relationId } : {};
 
     const lines = [];
     const pushRing = (ring) => {
@@ -598,7 +575,9 @@ function dedupeParallelTracks(features) {
             if (dropped[j]) continue;
             if (!bboxesOverlap(bbox[i], bbox[j])) continue;
             // Same axis (parallel tracks may be digitized either way).
-            if (Math.abs(cosineSimilarity(dir[i], dir[j])) < PARALLEL_MIN_COSINE) {
+            if (
+                Math.abs(cosineSimilarity(dir[i], dir[j])) < PARALLEL_MIN_COSINE
+            ) {
                 continue;
             }
             if (
@@ -687,7 +666,9 @@ function bridgeCollinearGaps(features) {
 /** Unit vector a→b in local meters (for short gaps). */
 function localUnit(a, b) {
     const dx =
-        (b[0] - a[0]) * 111320 * Math.cos((((a[1] + b[1]) / 2) * Math.PI) / 180);
+        (b[0] - a[0]) *
+        111320 *
+        Math.cos((((a[1] + b[1]) / 2) * Math.PI) / 180);
     const dy = (b[1] - a[1]) * 111320;
     const mag = Math.hypot(dx, dy);
     return mag === 0 ? [0, 0] : [dx / mag, dy / mag];
@@ -816,7 +797,9 @@ function validateLineContinuity(features, extractBbox, opts = {}) {
 
     const problems = [];
     if (components > maxComponents) {
-        problems.push(`${components} connected components (max ${maxComponents})`);
+        problems.push(
+            `${components} connected components (max ${maxComponents})`,
+        );
     }
     if (holes.length > maxHoles) {
         problems.push(
@@ -976,10 +959,9 @@ async function main() {
 
                 console.log(`  [shared] Extracting relation IDs...`);
                 const idsPath = join(adminTmpDir, "admin-rel-ids.txt");
-                const opl = execSync(
-                    `osmium cat "${adminRelsPbf}" -f opl`,
-                    { maxBuffer: 512 * 1024 * 1024 },
-                ).toString();
+                const opl = execSync(`osmium cat "${adminRelsPbf}" -f opl`, {
+                    maxBuffer: 512 * 1024 * 1024,
+                }).toString();
                 const ids = [];
                 for (const line of opl.split("\n")) {
                     if (!line.startsWith("r")) continue;
@@ -987,9 +969,7 @@ async function main() {
                     ids.push(line.split(" ")[0]);
                 }
                 writeFileSync(idsPath, ids.join("\n") + "\n");
-                console.log(
-                    `  [shared] Found ${ids.length} relation IDs`,
-                );
+                console.log(`  [shared] Found ${ids.length} relation IDs`);
 
                 console.log(
                     `  [shared] Pulling in member ways with getid -r...`,
@@ -1205,44 +1185,44 @@ async function main() {
                     }
                 }
 
-                    for (const lf of lineFeatures) {
-                        // Split MultiLineStrings into individual LineStrings.
-                        const lineStrings =
-                            lf.geometry.type === "MultiLineString"
-                                ? lf.geometry.coordinates.map((coords) => ({
-                                      type: "Feature",
-                                      geometry: {
-                                          type: "LineString",
-                                          coordinates: coords,
-                                      },
-                                      properties: lf.properties ?? {},
-                                  }))
-                                : [lf];
+                for (const lf of lineFeatures) {
+                    // Split MultiLineStrings into individual LineStrings.
+                    const lineStrings =
+                        lf.geometry.type === "MultiLineString"
+                            ? lf.geometry.coordinates.map((coords) => ({
+                                  type: "Feature",
+                                  geometry: {
+                                      type: "LineString",
+                                      coordinates: coords,
+                                  },
+                                  properties: lf.properties ?? {},
+                              }))
+                            : [lf];
 
-                        for (const ls of lineStrings) {
-                            // High-speed-rail is simplified *after* stitching
-                            // so the shared-node assembler sees full-resolution
-                            // endpoints; every other category simplifies here.
-                            const tolerance =
-                                SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
-                            const simplified =
-                                category.key === "high-speed-rail"
-                                    ? ls
-                                    : simplifyFeature(ls, tolerance);
-                            const bbox = computeBbox(
-                                simplified.geometry.coordinates,
-                            );
+                    for (const ls of lineStrings) {
+                        // High-speed-rail is simplified *after* stitching
+                        // so the shared-node assembler sees full-resolution
+                        // endpoints; every other category simplifies here.
+                        const tolerance =
+                            SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
+                        const simplified =
+                            category.key === "high-speed-rail"
+                                ? ls
+                                : simplifyFeature(ls, tolerance);
+                        const bbox = computeBbox(
+                            simplified.geometry.coordinates,
+                        );
 
-                            features.push({
-                                type: "Feature",
-                                bbox,
-                                geometry: simplified.geometry,
-                                properties: {},
-                            });
-                        }
+                        features.push({
+                            type: "Feature",
+                            bbox,
+                            geometry: simplified.geometry,
+                            properties: {},
+                        });
                     }
                 }
             }
+        }
 
         console.log(`  Collected ${features.length.toLocaleString()} features`);
 
@@ -1313,7 +1293,9 @@ async function main() {
             const loopsDropped = stitchedRaw.length - stitched.length;
             console.log(
                 `  Stitched: ${features.length} → ${stitched.length} features` +
-                    (loopsDropped ? ` (${loopsDropped} degenerate loops dropped)` : "") +
+                    (loopsDropped
+                        ? ` (${loopsDropped} degenerate loops dropped)`
+                        : "") +
                     ` (${((Date.now() - t0) / 1000).toFixed(1)}s)`,
             );
 
