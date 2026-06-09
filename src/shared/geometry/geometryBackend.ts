@@ -72,6 +72,68 @@ export interface GeometryBackend {
         quadrantSegments: number,
         units?: "meters",
     ): Feature<Polygon | MultiPolygon> | null;
+
+    /**
+     * Topological difference `a - b`.
+     *
+     * Returns a Polygon or MultiPolygon Feature, or `null` when the result is
+     * empty (a is wholly contained in b). Operates in the input coordinate
+     * space — no projection is applied.
+     *
+     * Backed by {@link https://libgeos.org/doxygen/geos__c_8h.html GEOSDifference_r}
+     * (GEOS) or polyclip-ts Greiner-Hormann (JS).
+     */
+    difference(
+        a: Feature<Polygon | MultiPolygon>,
+        b: Feature<Polygon | MultiPolygon>,
+    ): Feature<Polygon | MultiPolygon> | null;
+
+    /**
+     * Topological union `a ∪ b`.
+     *
+     * Returns a Polygon or MultiPolygon Feature, or `null` when both inputs
+     * are empty / cancel out.
+     *
+     * Backed by {@link https://libgeos.org/doxygen/geos__c_8h.html GEOSUnion_r}
+     * (GEOS) or polyclip-ts Greiner-Hormann (JS).
+     */
+    union(
+        a: Feature<Polygon | MultiPolygon>,
+        b: Feature<Polygon | MultiPolygon>,
+    ): Feature<Polygon | MultiPolygon> | null;
+
+    /**
+     * Topological intersection `a ∩ b`.
+     *
+     * Returns a Polygon or MultiPolygon Feature, or `null` when the result is
+     * empty (a and b are disjoint).
+     *
+     * Backed by {@link https://libgeos.org/doxygen/geos__c_8h.html GEOSIntersection_r}
+     * (GEOS) or polyclip-ts Greiner-Hormann (JS).
+     */
+    intersection(
+        a: Feature<Polygon | MultiPolygon>,
+        b: Feature<Polygon | MultiPolygon>,
+    ): Feature<Polygon | MultiPolygon> | null;
+
+    /**
+     * Unary union (self-dissolve) of a single geometry.
+     *
+     * For a MultiPolygon whose members overlap, this dissolves the overlaps
+     * into a clean non-overlapping Polygon or MultiPolygon. For a simple
+     * Polygon with no self-overlap, returns it as-is. Returns `null` when the
+     * input is empty or the union produces an empty result.
+     *
+     * This is the correct semantic for "dissolve this MultiPolygon into clean
+     * geometry" — unlike `bufferMeters(geom, 0)`, which is a bug-for-bug
+     * per-feature buffer and does NOT union at distance 0.
+     *
+     * Backed by {@link https://libgeos.org/doxygen/geos__c_8h.html GEOSUnaryUnion_r}
+     * (GEOS) or polyclip-ts N-ary union over member polygons (JS).
+     */
+    unaryUnion(
+        a: Feature<Polygon | MultiPolygon>,
+    ): Feature<Polygon | MultiPolygon> | null;
 }
 
 // ─── Selection ───────────────────────────────────────────────────────────
@@ -101,14 +163,18 @@ export function getGeometryBackend(): GeometryBackend {
 
     // ── Probe native module ─────────────────────────────────────
     let nativeAvailable = false;
+    let nativeAbi = 0;
     try {
         // Dynamic require — the native-geometry module doesn't exist
         // until G2. Metro resolves this at bundle time; when the
         // module is absent the require throws and we fall back to JS.
-        const mod = require("native-geometry") as
-            | { isAvailable?: () => boolean }
-            | undefined;
-        nativeAvailable = mod?.isAvailable?.() ?? true;
+        const mod = require("native-geometry") as {
+            isAvailable?: () => boolean;
+            nativeAbiVersion?: () => number;
+            EXPECTED_NATIVE_ABI?: number;
+        };
+        nativeAvailable = mod?.isAvailable?.() ?? false;
+        nativeAbi = mod?.nativeAbiVersion?.() ?? 0;
     } catch {
         nativeAvailable = false;
     }
@@ -120,10 +186,12 @@ export function getGeometryBackend(): GeometryBackend {
             console.log(
                 '[geometryBackend] backend=geos reason=config (backend forced to "geos" in APP_CONFIG)',
             );
+            _checkAbiMismatch(nativeAbi);
             return _backend;
         }
-        console.log(
-            "[geometryBackend] backend=js reason=fallback (native-geometry module not found)",
+        console.warn(
+            "[geometryBackend] backend=js reason=fallback — native-geometry module not found. " +
+                "Rebuild the dev client (expo prebuild + run:ios/android) to enable GEOS.",
         );
         _backend = jsGeometryBackend;
         return _backend;
@@ -135,6 +203,7 @@ export function getGeometryBackend(): GeometryBackend {
         console.log(
             "[geometryBackend] backend=geos reason=auto (native-geometry module available)",
         );
+        _checkAbiMismatch(nativeAbi);
         return _backend;
     }
 
@@ -143,6 +212,29 @@ export function getGeometryBackend(): GeometryBackend {
     );
     _backend = jsGeometryBackend;
     return _backend;
+}
+
+// ─── ABI handshake (G5 follow-up) ──────────────────────────────────────────
+
+let _abiWarned = false;
+
+function _checkAbiMismatch(nativeAbi: number): void {
+    if (_abiWarned) return;
+
+    // Lazy-require so Jest can mock the module.
+    const mod = require("native-geometry") as {
+        EXPECTED_NATIVE_ABI?: number;
+    };
+    const expected = mod?.EXPECTED_NATIVE_ABI ?? 0;
+
+    if (nativeAbi < expected) {
+        _abiWarned = true;
+        console.warn(
+            `[geometryBackend] native-geometry binary is stale (abi ${nativeAbi} < expected ${expected}) — ` +
+                "rebuild the dev client (expo prebuild + run:ios/android) to enable all GEOS ops. " +
+                "Buffer is still native; overlay ops will fall back to JS per op.",
+        );
+    }
 }
 
 // ─── Test seam ───────────────────────────────────────────────────────────

@@ -26,7 +26,11 @@ import type {
 } from "geojson";
 import type { GeoProjection } from "d3-geo";
 
-import { EARTH_RADIUS_METERS } from "@/shared/geojson";
+// Import from the dependency-free leaf, NOT "@/shared/geojson" — importing it
+// from geojson closes a require cycle (geojson → geometryBackend →
+// geosGeometryBackend → bufferProjection → geojson) that left EARTH_RADIUS
+// undefined under Hermes, producing all-NaN projections. See earthRadius.ts.
+import { EARTH_RADIUS_METERS } from "@/shared/geometry/earthRadius";
 
 // ---- Constants -------------------------------------------------------------
 
