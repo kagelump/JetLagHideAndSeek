@@ -22,6 +22,7 @@ import type { Feature, MultiPolygon, Polygon } from "geojson";
 import {
     initGeosWasm,
     bufferWKB as geosWasmBufferWKB,
+    unaryUnionWKB as geosWasmUnaryUnionWKB,
 } from "@/shared/geometry/__tests__/helpers/geosWasmShim";
 import { geosGeometryBackend } from "@/shared/geometry/geosGeometryBackend";
 import { __setGeometryBackendForTest } from "@/shared/geometry/geometryBackend";
@@ -42,9 +43,11 @@ describe("body-of-water buffer dissolve under GEOS (geos-wasm)", () => {
     beforeAll(async () => {
         await initGeosWasm();
         // Point the native dependency at the wasm shim and force the real
-        // GEOS backend (same bufferWKB(wkb, dist, qs) contract as the device).
+        // GEOS backend. The dissolve path now uses unaryUnionWKB (G5);
+        // bufferWKB is still needed for the polygon/line buffering path.
         const native = require("native-geometry");
         native.bufferWKB = geosWasmBufferWKB;
+        native.unaryUnionWKB = geosWasmUnaryUnionWKB;
         __setGeometryBackendForTest(geosGeometryBackend);
     });
 

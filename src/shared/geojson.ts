@@ -1,10 +1,12 @@
-import { union as polyUnion, type Geom } from "polyclip-ts";
 import type {
     Feature,
     GeoJsonProperties,
     MultiPolygon,
     Polygon,
 } from "geojson";
+
+import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
+import { EARTH_RADIUS_METERS } from "@/shared/geometry/earthRadius";
 
 export type Position = [number, number];
 
@@ -15,11 +17,7 @@ export type Bbox = [number, number, number, number];
 // ---------------------------------------------------------------------------
 
 /**
- * Union an array of Polygon features using polyclip-ts directly.
- *
- * This replaces the pattern of constructing a temporary FeatureCollection and
- * calling @turf/union (which internally just extracts coordinates, calls
- * polyclip-ts, and wraps the result back into GeoJSON).
+ * Union an array of Polygon features using the active geometry backend.
  *
  * Returns null when the union produces an empty result (e.g. identical input
  * polygons that cancel out).
@@ -28,21 +26,27 @@ export function unionPolygons<P extends GeoJsonProperties = GeoJsonProperties>(
     polygons: Feature<Polygon, P>[],
     properties?: P,
 ): Feature<Polygon | MultiPolygon, P> | null {
-    const coords: Geom[] = polygons.map((p) => p.geometry.coordinates as Geom);
-    const result = polyUnion(coords[0], ...coords.slice(1));
-    if (result.length === 0) return null;
-    if (result.length === 1) {
-        return {
-            type: "Feature",
-            properties: (properties ?? {}) as P,
-            geometry: { type: "Polygon", coordinates: result[0] },
-        };
+    if (polygons.length === 0) return null;
+
+    const backend = getGeometryBackend();
+
+    // Reduce: union(a, union(b, union(c, ...)))
+    let result = polygons[0] as Feature<Polygon | MultiPolygon, P>;
+    for (let i = 1; i < polygons.length; i++) {
+        const next = backend.union(
+            result as Feature<Polygon | MultiPolygon>,
+            polygons[i] as Feature<Polygon | MultiPolygon>,
+        );
+        if (!next) return null; // empty result midway
+        result = next as Feature<Polygon | MultiPolygon, P>;
     }
-    return {
-        type: "Feature",
-        properties: (properties ?? {}) as P,
-        geometry: { type: "MultiPolygon", coordinates: result },
-    };
+
+    // Apply caller's properties (preserving the geometry from the union).
+    if (properties !== undefined) {
+        result = { ...result, properties: { ...properties } as P };
+    }
+
+    return result;
 }
 
 export function bboxIntersects(a: Bbox, b: Bbox): boolean {
@@ -60,8 +64,13 @@ export function bboxIntersects(a: Bbox, b: Bbox): boolean {
 // Distance
 // ---------------------------------------------------------------------------
 
-/** Mean Earth radius in meters (WGS-84 / IUGG). */
-export const EARTH_RADIUS_METERS = 6_371_008.8;
+/**
+ * Mean Earth radius in meters (WGS-84 / IUGG). Defined in a leaf module and
+ * re-exported here so existing `@/shared/geojson` importers are unaffected,
+ * while `bufferProjection` imports it from the leaf to avoid a require cycle
+ * (see `earthRadius.ts`).
+ */
+export { EARTH_RADIUS_METERS };
 
 /**
  * Haversine great-circle distance between two lat/lon points (in meters).

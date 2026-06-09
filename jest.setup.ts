@@ -339,4 +339,8 @@ jest.mock("native-geometry", () => ({
     isAvailable: () => false,
     geosVersion: () => "mock",
     bufferWKB: () => null,
+    differenceWKB: () => null,
+    unionWKB: () => null,
+    intersectionWKB: () => null,
+    unaryUnionWKB: () => null,
 }));
