@@ -18,6 +18,7 @@ module.exports = {
     testMatch: [
         "**/__tests__/**/geosWasmSmoke.test.{ts,tsx}",
         "**/__tests__/**/geosParity.test.{ts,tsx}",
+        "**/__tests__/**/*.geos.test.{ts,tsx}",
     ],
     testPathIgnorePatterns: ["/node_modules/", "<rootDir>/.claude/"],
 };

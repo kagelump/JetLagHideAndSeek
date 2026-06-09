@@ -20,6 +20,7 @@ module.exports = {
         "<rootDir>/.claude/",
         "geosWasmSmoke\\.test\\.",
         "geosParity\\.test\\.",
+        "\\.geos\\.test\\.",
     ],
     modulePathIgnorePatterns: ["<rootDir>/.claude/"],
     transformIgnorePatterns: [
