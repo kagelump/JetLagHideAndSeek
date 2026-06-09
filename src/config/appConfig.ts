@@ -38,15 +38,15 @@ export const APP_CONFIG = {
             /** Maximum line segments allowed before budget escalation. */
             maxBufferSegments: 400,
             /** Maximum coordinates allowed before budget escalation. */
-            maxBufferCoords: 4_000,
+            maxBufferCoords: 20_000,
             /** Buffer circle resolution (Turf steps). */
-            bufferSteps: 4,
+            bufferSteps: 8,
             /** Maximum escalation rounds for buffer budget enforcement. */
             budgetMaxRounds: 6,
 
             // ── Simplify parameters ────────────────────────────
             /** Simplify tolerance: fraction of buffer radius. */
-            simplifyFraction: 0.05,
+            simplifyFraction: 0.02,
             /** Simplify tolerance: floor in meters. */
             simplifyMinM: 10,
             /** Minimum feature length: fraction of buffer radius. */
