@@ -21,8 +21,29 @@ class NativeGeometryModule : Module() {
             nativeGeosVersion()
         }
 
+        // -- ABI version handshake (G5 follow-up) ------------------------------
+        Function("nativeAbiVersion") { 2 }
+
         Function("bufferWKB") { wkb: ByteArray, distance: Double, quadrantSegments: Int ->
             nativeBufferWKB(wkb, distance, quadrantSegments)
+        }
+
+        // -- Overlay ops: binary --------------------------------------------
+        Function("differenceWKB") { wkbA: ByteArray, wkbB: ByteArray ->
+            nativeDifferenceWKB(wkbA, wkbB)
+        }
+
+        Function("unionWKB") { wkbA: ByteArray, wkbB: ByteArray ->
+            nativeUnionWKB(wkbA, wkbB)
+        }
+
+        Function("intersectionWKB") { wkbA: ByteArray, wkbB: ByteArray ->
+            nativeIntersectionWKB(wkbA, wkbB)
+        }
+
+        // -- Overlay op: unary union ----------------------------------------
+        Function("unaryUnionWKB") { wkb: ByteArray ->
+            nativeUnaryUnionWKB(wkb)
         }
     }
 
@@ -33,5 +54,25 @@ class NativeGeometryModule : Module() {
         wkb: ByteArray,
         distance: Double,
         quadrantSegments: Int
+    ): ByteArray?
+
+    // -- Overlay ops --------------------------------------------------------
+    private external fun nativeDifferenceWKB(
+        wkbA: ByteArray,
+        wkbB: ByteArray
+    ): ByteArray?
+
+    private external fun nativeUnionWKB(
+        wkbA: ByteArray,
+        wkbB: ByteArray
+    ): ByteArray?
+
+    private external fun nativeIntersectionWKB(
+        wkbA: ByteArray,
+        wkbB: ByteArray
+    ): ByteArray?
+
+    private external fun nativeUnaryUnionWKB(
+        wkb: ByteArray
     ): ByteArray?
 }

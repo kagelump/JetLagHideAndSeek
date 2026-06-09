@@ -84,6 +84,188 @@ private func _bufferAndWrite(
     return Data(bytes: wkbPtr, count: wkbSize)
 }
 
+/// Binary overlay op helper: parse → validate → op → write → free.
+///
+/// Memory ownership is the riskiest part of native overlay code — two input
+/// geometries, each possibly reassigned on MakeValid, plus the result. Every
+/// pointer is destroyed exactly once via defer (LIFO cleanup).
+///
+/// - Parameters:
+///   - wkbA, wkbB: Input WKB data.
+///   - op: GEOS binary operation (e.g. `GEOSDifference_r`).
+///   - opName: Human-readable name for debug logging.
+private func _binaryOpAndWrite(
+    ctx: GEOSContextHandle_t,
+    wkbA: Data,
+    wkbB: Data,
+    op: (OpaquePointer, OpaquePointer) -> OpaquePointer?,
+    opName: String
+) -> Data? {
+    #if DEBUG
+    let tTotal0 = CFAbsoluteTimeGetCurrent()
+    #endif
+
+    // ── Parse A ──────────────────────────────────────────────────────────
+    #if DEBUG
+    let tParseA0 = CFAbsoluteTimeGetCurrent()
+    #endif
+    guard let rawGeomA = wkbA.withUnsafeBytes({ (ptr: UnsafeRawBufferPointer) -> OpaquePointer? in
+        guard let base = ptr.baseAddress else { return nil }
+        return GEOSGeomFromWKB_buf_r(ctx, base, ptr.count)
+    }) else {
+        NSLog("[NativeGeometry] %@: failed to parse WKB A", opName)
+        return nil
+    }
+    #if DEBUG
+    let tParseAMs = (CFAbsoluteTimeGetCurrent() - tParseA0) * 1000
+    #endif
+    var geomA: OpaquePointer? = rawGeomA
+    defer {
+        if let g = geomA { GEOSGeom_destroy_r(ctx, g) }
+    }
+
+    // ── Parse B ──────────────────────────────────────────────────────────
+    #if DEBUG
+    let tParseB0 = CFAbsoluteTimeGetCurrent()
+    #endif
+    guard let rawGeomB = wkbB.withUnsafeBytes({ (ptr: UnsafeRawBufferPointer) -> OpaquePointer? in
+        guard let base = ptr.baseAddress else { return nil }
+        return GEOSGeomFromWKB_buf_r(ctx, base, ptr.count)
+    }) else {
+        NSLog("[NativeGeometry] %@: failed to parse WKB B", opName)
+        return nil
+    }
+    #if DEBUG
+    let tParseBMs = (CFAbsoluteTimeGetCurrent() - tParseB0) * 1000
+    let tParseMs = tParseAMs + tParseBMs
+    #endif
+    var geomB: OpaquePointer? = rawGeomB
+    defer {
+        if let g = geomB { GEOSGeom_destroy_r(ctx, g) }
+    }
+
+    // ── Validate A ───────────────────────────────────────────────────────
+    #if DEBUG
+    let tValid0 = CFAbsoluteTimeGetCurrent()
+    var tMakeValidMs: Double = 0
+    #endif
+    let validA = GEOSisValid_r(ctx, geomA!)
+    if validA != 1 {
+        NSLog("[NativeGeometry] %@: input A invalid — attempting MakeValid", opName)
+        guard let fixed = GEOSMakeValid_r(ctx, geomA!) else {
+            return nil
+        }
+        GEOSGeom_destroy_r(ctx, geomA!)
+        geomA = fixed
+    }
+
+    // ── Validate B ───────────────────────────────────────────────────────
+    let validB = GEOSisValid_r(ctx, geomB!)
+    if validB != 1 {
+        NSLog("[NativeGeometry] %@: input B invalid — attempting MakeValid", opName)
+        guard let fixed = GEOSMakeValid_r(ctx, geomB!) else {
+            return nil
+        }
+        GEOSGeom_destroy_r(ctx, geomB!)
+        geomB = fixed
+    }
+    #if DEBUG
+    let tValidMs = (CFAbsoluteTimeGetCurrent() - tValid0) * 1000
+    #endif
+
+    // ── GEOS binary op ───────────────────────────────────────────────────
+    #if DEBUG
+    let tOp0 = CFAbsoluteTimeGetCurrent()
+    #endif
+    guard let resultGeom = op(geomA!, geomB!) else {
+        NSLog("[NativeGeometry] %@: GEOS op returned null (empty result)", opName)
+        return nil
+    }
+    defer { GEOSGeom_destroy_r(ctx, resultGeom) }
+    #if DEBUG
+    let tOpMs = (CFAbsoluteTimeGetCurrent() - tOp0) * 1000
+    #endif
+
+    // ── Write WKB ────────────────────────────────────────────────────────
+    var wkbSize: Int = 0
+    guard let wkbPtr = GEOSGeomToWKB_buf_r(ctx, resultGeom, &wkbSize) else {
+        NSLog("[NativeGeometry] %@: failed to write output WKB", opName)
+        return nil
+    }
+    defer { GEOSFree_r(ctx, wkbPtr) }
+
+    #if DEBUG
+    let tTotalMs = (CFAbsoluteTimeGetCurrent() - tTotal0) * 1000
+    NSLog("[NativeGeometry] %@ parse=%.2fms valid=%.2fms makeValid=%.2fms op=%.2fms total=%.2fms (wkbA=%ld bytes, wkbB=%ld bytes)",
+          opName, tParseMs, tValidMs, tMakeValidMs, tOpMs, tTotalMs,
+          wkbA.count, wkbB.count)
+    #endif
+
+    return Data(bytes: wkbPtr, count: wkbSize)
+}
+
+/// Unary overlay op helper: parse → validate → op → write → free.
+///
+/// Same pattern as `_bufferAndWrite` but for GEOS unary operations
+/// (e.g. `GEOSUnaryUnion_r`).
+private func _unaryOpAndWrite(
+    ctx: GEOSContextHandle_t,
+    wkb: Data,
+    op: (OpaquePointer) -> OpaquePointer?,
+    opName: String
+) -> Data? {
+    #if DEBUG
+    let tTotal0 = CFAbsoluteTimeGetCurrent()
+    #endif
+
+    // ── Parse ────────────────────────────────────────────────────────────
+    guard let rawGeom = wkb.withUnsafeBytes({ (ptr: UnsafeRawBufferPointer) -> OpaquePointer? in
+        guard let base = ptr.baseAddress else { return nil }
+        return GEOSGeomFromWKB_buf_r(ctx, base, ptr.count)
+    }) else {
+        NSLog("[NativeGeometry] %@: failed to parse WKB", opName)
+        return nil
+    }
+    var geom: OpaquePointer? = rawGeom
+    defer {
+        if let g = geom { GEOSGeom_destroy_r(ctx, g) }
+    }
+
+    // ── Validate ─────────────────────────────────────────────────────────
+    let valid = GEOSisValid_r(ctx, geom!)
+    if valid != 1 {
+        NSLog("[NativeGeometry] %@: geometry invalid — attempting MakeValid", opName)
+        guard let fixed = GEOSMakeValid_r(ctx, geom!) else {
+            return nil
+        }
+        GEOSGeom_destroy_r(ctx, geom!)
+        geom = fixed
+    }
+
+    // ── GEOS unary op ────────────────────────────────────────────────────
+    guard let resultGeom = op(geom!) else {
+        NSLog("[NativeGeometry] %@: GEOS op returned null (empty result)", opName)
+        return nil
+    }
+    defer { GEOSGeom_destroy_r(ctx, resultGeom) }
+
+    // ── Write WKB ────────────────────────────────────────────────────────
+    var wkbSize: Int = 0
+    guard let wkbPtr = GEOSGeomToWKB_buf_r(ctx, resultGeom, &wkbSize) else {
+        NSLog("[NativeGeometry] %@: failed to write output WKB", opName)
+        return nil
+    }
+    defer { GEOSFree_r(ctx, wkbPtr) }
+
+    #if DEBUG
+    let tTotalMs = (CFAbsoluteTimeGetCurrent() - tTotal0) * 1000
+    NSLog("[NativeGeometry] %@ total=%.2fms (wkb=%ld bytes)",
+          opName, tTotalMs, wkb.count)
+    #endif
+
+    return Data(bytes: wkbPtr, count: wkbSize)
+}
+
 public class NativeGeometryModule: Module {
     public func definition() -> ModuleDefinition {
         Name("NativeGeometry")
@@ -94,6 +276,13 @@ public class NativeGeometryModule: Module {
                 return "unknown"
             }
             return String(cString: version)
+        }
+
+        // -- ABI version handshake (G5 follow-up) ------------------------------
+        // Bump whenever the WKB function surface changes (e.g. new overlay ops).
+        // JS side has EXPECTED_NATIVE_ABI; mismatch → loud rebuild warning.
+        Function("nativeAbiVersion") { () -> Int in
+            return 2 // G5 overlay ops
         }
 
         // -- Production: buffer WKB geometry ----------------------------------
@@ -178,6 +367,55 @@ public class NativeGeometryModule: Module {
             #endif
 
             return result
+        }
+
+        // -- Overlay ops: binary (difference, union, intersection) -----------
+        Function("differenceWKB") {
+            (wkbA: Data, wkbB: Data) -> Data? in
+            let ctx = geosContext()
+            return _binaryOpAndWrite(
+                ctx: ctx,
+                wkbA: wkbA,
+                wkbB: wkbB,
+                op: { GEOSDifference_r(ctx, $0, $1) },
+                opName: "differenceWKB"
+            )
+        }
+
+        Function("unionWKB") {
+            (wkbA: Data, wkbB: Data) -> Data? in
+            let ctx = geosContext()
+            return _binaryOpAndWrite(
+                ctx: ctx,
+                wkbA: wkbA,
+                wkbB: wkbB,
+                op: { GEOSUnion_r(ctx, $0, $1) },
+                opName: "unionWKB"
+            )
+        }
+
+        Function("intersectionWKB") {
+            (wkbA: Data, wkbB: Data) -> Data? in
+            let ctx = geosContext()
+            return _binaryOpAndWrite(
+                ctx: ctx,
+                wkbA: wkbA,
+                wkbB: wkbB,
+                op: { GEOSIntersection_r(ctx, $0, $1) },
+                opName: "intersectionWKB"
+            )
+        }
+
+        // -- Overlay op: unary union -----------------------------------------
+        Function("unaryUnionWKB") {
+            (wkb: Data) -> Data? in
+            let ctx = geosContext()
+            return _unaryOpAndWrite(
+                ctx: ctx,
+                wkb: wkb,
+                op: { GEOSUnaryUnion_r(ctx, $0) },
+                opName: "unaryUnionWKB"
+            )
         }
     }
 }

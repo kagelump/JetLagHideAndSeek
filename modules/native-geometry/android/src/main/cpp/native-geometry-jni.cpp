@@ -95,6 +95,198 @@ static jbyteArray bufferAndWrite(JNIEnv* env, GEOSContextHandle_t ctx,
     return result;
 }
 
+// ─── Shared: binary overlay op (difference, union, intersection) ────────────
+
+static jbyteArray binaryOpAndWrite(JNIEnv* env, GEOSContextHandle_t ctx,
+    jbyteArray wkbA, jbyteArray wkbB,
+    GEOSGeometry* (*op)(GEOSContextHandle_t, const GEOSGeometry*, const GEOSGeometry*),
+    const char* opName) {
+
+    // --- Read input WKB A --------------------------------------------------
+    jsize lenA = env->GetArrayLength(wkbA);
+    if (lenA == 0) {
+        LOGE("%s: empty WKB A", opName);
+        return nullptr;
+    }
+    jbyte* bytesA = env->GetByteArrayElements(wkbA, nullptr);
+    if (!bytesA) {
+        LOGE("%s: failed to get WKB A bytes", opName);
+        return nullptr;
+    }
+    auto* geomA = GEOSGeomFromWKB_buf_r(ctx,
+        reinterpret_cast<const unsigned char*>(bytesA),
+        static_cast<size_t>(lenA));
+    env->ReleaseByteArrayElements(wkbA, bytesA, JNI_ABORT);
+    if (!geomA) {
+        LOGE("%s: failed to parse WKB A", opName);
+        return nullptr;
+    }
+
+    // --- Read input WKB B --------------------------------------------------
+    jsize lenB = env->GetArrayLength(wkbB);
+    if (lenB == 0) {
+        LOGE("%s: empty WKB B", opName);
+        GEOSGeom_destroy_r(ctx, geomA);
+        return nullptr;
+    }
+    jbyte* bytesB = env->GetByteArrayElements(wkbB, nullptr);
+    if (!bytesB) {
+        LOGE("%s: failed to get WKB B bytes", opName);
+        GEOSGeom_destroy_r(ctx, geomA);
+        return nullptr;
+    }
+    auto* geomB = GEOSGeomFromWKB_buf_r(ctx,
+        reinterpret_cast<const unsigned char*>(bytesB),
+        static_cast<size_t>(lenB));
+    env->ReleaseByteArrayElements(wkbB, bytesB, JNI_ABORT);
+    if (!geomB) {
+        LOGE("%s: failed to parse WKB B", opName);
+        GEOSGeom_destroy_r(ctx, geomA);
+        return nullptr;
+    }
+
+    // --- Validate / fix A --------------------------------------------------
+    char isValidA = 0;
+    GEOSisValid_r(ctx, geomA, &isValidA);
+    if (isValidA != 1) {
+        LOGD("%s: geometry A invalid — attempting MakeValid", opName);
+        auto* fixedA = GEOSMakeValid_r(ctx, geomA);
+        GEOSGeom_destroy_r(ctx, geomA);
+        if (!fixedA) {
+            LOGE("%s: MakeValid A failed", opName);
+            GEOSGeom_destroy_r(ctx, geomB);
+            return nullptr;
+        }
+        geomA = fixedA;
+    }
+
+    // --- Validate / fix B --------------------------------------------------
+    char isValidB = 0;
+    GEOSisValid_r(ctx, geomB, &isValidB);
+    if (isValidB != 1) {
+        LOGD("%s: geometry B invalid — attempting MakeValid", opName);
+        auto* fixedB = GEOSMakeValid_r(ctx, geomB);
+        GEOSGeom_destroy_r(ctx, geomB);
+        if (!fixedB) {
+            LOGE("%s: MakeValid B failed", opName);
+            GEOSGeom_destroy_r(ctx, geomA);
+            return nullptr;
+        }
+        geomB = fixedB;
+    }
+
+    // --- Call GEOS binary op -----------------------------------------------
+    auto* resultGeom = op(ctx, geomA, geomB);
+    GEOSGeom_destroy_r(ctx, geomA);
+    GEOSGeom_destroy_r(ctx, geomB);
+
+    if (!resultGeom) {
+        LOGD("%s: GEOS op returned null (empty result)", opName);
+        return nullptr;
+    }
+
+    // --- Write output WKB --------------------------------------------------
+    size_t wkbOutSize = 0;
+    auto* wkbOut = GEOSGeomToWKB_buf_r(ctx, resultGeom, &wkbOutSize);
+    GEOSGeom_destroy_r(ctx, resultGeom);
+
+    if (!wkbOut || wkbOutSize == 0) {
+        LOGE("%s: failed to write output WKB", opName);
+        return nullptr;
+    }
+
+    jbyteArray result = env->NewByteArray(static_cast<jsize>(wkbOutSize));
+    if (result) {
+        env->SetByteArrayRegion(result, 0, static_cast<jsize>(wkbOutSize),
+            reinterpret_cast<const jbyte*>(wkbOut));
+    }
+    GEOSFree_r(ctx, wkbOut);
+
+    if (!result) {
+        LOGE("%s: failed to allocate output byte array", opName);
+        return nullptr;
+    }
+
+    LOGD("%s: success, output WKB size=%zu", opName, wkbOutSize);
+    return result;
+}
+
+// ─── Shared: unary overlay op (unaryUnion) ──────────────────────────────────
+
+static jbyteArray unaryOpAndWrite(JNIEnv* env, GEOSContextHandle_t ctx,
+    jbyteArray wkb,
+    GEOSGeometry* (*op)(GEOSContextHandle_t, const GEOSGeometry*),
+    const char* opName) {
+
+    // --- Read input WKB ----------------------------------------------------
+    jsize wkbLen = env->GetArrayLength(wkb);
+    if (wkbLen == 0) {
+        LOGE("%s: empty WKB input", opName);
+        return nullptr;
+    }
+    jbyte* wkbBytes = env->GetByteArrayElements(wkb, nullptr);
+    if (!wkbBytes) {
+        LOGE("%s: failed to get WKB bytes", opName);
+        return nullptr;
+    }
+    auto* geom = GEOSGeomFromWKB_buf_r(ctx,
+        reinterpret_cast<const unsigned char*>(wkbBytes),
+        static_cast<size_t>(wkbLen));
+    env->ReleaseByteArrayElements(wkb, wkbBytes, JNI_ABORT);
+    if (!geom) {
+        LOGE("%s: failed to parse WKB", opName);
+        return nullptr;
+    }
+
+    // --- Validate / fix ----------------------------------------------------
+    char isValid = 0;
+    GEOSisValid_r(ctx, geom, &isValid);
+    if (isValid != 1) {
+        LOGD("%s: geometry invalid — attempting MakeValid", opName);
+        auto* fixed = GEOSMakeValid_r(ctx, geom);
+        GEOSGeom_destroy_r(ctx, geom);
+        if (!fixed) {
+            LOGE("%s: MakeValid failed", opName);
+            return nullptr;
+        }
+        geom = fixed;
+    }
+
+    // --- Call GEOS unary op ------------------------------------------------
+    auto* resultGeom = op(ctx, geom);
+    GEOSGeom_destroy_r(ctx, geom);
+
+    if (!resultGeom) {
+        LOGD("%s: GEOS op returned null (empty result)", opName);
+        return nullptr;
+    }
+
+    // --- Write output WKB --------------------------------------------------
+    size_t wkbOutSize = 0;
+    auto* wkbOut = GEOSGeomToWKB_buf_r(ctx, resultGeom, &wkbOutSize);
+    GEOSGeom_destroy_r(ctx, resultGeom);
+
+    if (!wkbOut || wkbOutSize == 0) {
+        LOGE("%s: failed to write output WKB", opName);
+        return nullptr;
+    }
+
+    jbyteArray result = env->NewByteArray(static_cast<jsize>(wkbOutSize));
+    if (result) {
+        env->SetByteArrayRegion(result, 0, static_cast<jsize>(wkbOutSize),
+            reinterpret_cast<const jbyte*>(wkbOut));
+    }
+    GEOSFree_r(ctx, wkbOut);
+
+    if (!result) {
+        LOGE("%s: failed to allocate output byte array", opName);
+        return nullptr;
+    }
+
+    LOGD("%s: success, output WKB size=%zu", opName, wkbOutSize);
+    return result;
+}
+
 // ─── JNI exports ───────────────────────────────────────────────────────────
 
 extern "C" {
@@ -159,6 +351,38 @@ Java_expo_modules_nativegeometry_NativeGeometryModule_nativeBufferWKB(
     GEOSGeom_destroy_r(ctx, inGeom);
 
     return result;
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_expo_modules_nativegeometry_NativeGeometryModule_nativeDifferenceWKB(
+    JNIEnv* env, jobject /* thiz */, jbyteArray wkbA, jbyteArray wkbB) {
+
+    auto* ctx = getOrCreateContext();
+    return binaryOpAndWrite(env, ctx, wkbA, wkbB, GEOSDifference_r, "differenceWKB");
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_expo_modules_nativegeometry_NativeGeometryModule_nativeUnionWKB(
+    JNIEnv* env, jobject /* thiz */, jbyteArray wkbA, jbyteArray wkbB) {
+
+    auto* ctx = getOrCreateContext();
+    return binaryOpAndWrite(env, ctx, wkbA, wkbB, GEOSUnion_r, "unionWKB");
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_expo_modules_nativegeometry_NativeGeometryModule_nativeIntersectionWKB(
+    JNIEnv* env, jobject /* thiz */, jbyteArray wkbA, jbyteArray wkbB) {
+
+    auto* ctx = getOrCreateContext();
+    return binaryOpAndWrite(env, ctx, wkbA, wkbB, GEOSIntersection_r, "intersectionWKB");
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_expo_modules_nativegeometry_NativeGeometryModule_nativeUnaryUnionWKB(
+    JNIEnv* env, jobject /* thiz */, jbyteArray wkb) {
+
+    auto* ctx = getOrCreateContext();
+    return unaryOpAndWrite(env, ctx, wkb, GEOSUnaryUnion_r, "unaryUnionWKB");
 }
 
 } // extern "C"
