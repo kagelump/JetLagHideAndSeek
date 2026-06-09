@@ -163,7 +163,9 @@ export const APP_CONFIG = {
          * overlay ops (union / difference / intersection) through the same
          * backend.
          */
-        backend: "auto" as "auto" | "js" | "geos",
+        backend: (process.env.EXPO_PUBLIC_GEOMETRY_BACKEND === "geos"
+            ? "geos"
+            : "auto") as "auto" | "js" | "geos",
     },
 } as const;
 

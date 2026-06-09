@@ -192,12 +192,27 @@ Store thinning ships one arch per device, so the per-device cost is one slice.
 against the `@turf/buffer` oracle in Jest — no device required. See the runbook
 below.
 
-**On-device (Layers 5–8):** not yet done — see `g2-plan.md` Testing & validation.
-The crash/perf validation and Maestro E2E flow require a device/simulator with a
-dev build. Note the buffer _math_ is now covered on-host (geos-wasm), so the
-device harness's remaining unique job is the **native glue** (Swift/JNI memory
-lifetime, the expo-modules-core `Data`/`ByteArray`↔`Uint8Array` marshalling),
-**on-device perf**, and the **exact vendored 3.14.1** build.
+**On-device (G3 — parity validation):** done (2026-06-09). See [g3-plan.md](./native-geometry/g3-plan.md) for the full plan. Summary:
+
+- On-device parity harness: PARITY PASS on iOS (iPhone 12 Pro, iOS 18.7.8) —
+  46 curated cases across all 5 line categories, area ratio and bbox delta
+  within gates.
+- Crash fuzz: 7 degenerate WKB inputs × 1,000 iterations → all returned null,
+  no crash. CRASH FUZZ PASS.
+- Memory (ASan): Address Sanitizer enabled via Xcode scheme → crash fuzz +
+  memory stress test (500 buffer iterations over body-of-water) — clean, no
+  double-free or use-after-free. ASan catches lifetime bugs deterministically on
+  the first offending call, so this is the primary W3 signal.
+- Memory (Instruments → Allocations): 500 body-of-water buffer iterations under
+  the Allocations profiler — allocation count returned to baseline after the
+  batch, no monotonic drift. Confirms no leaked GEOS geometries or WKB buffers.
+- Perf: `[geosPerf]` instrumentation in `geosGeometryBackend.ts` splits encode /
+  native / decode times. Native `bufferWKB` times on iPhone 12 Pro: ~16–240 ms
+  depending on geometry density and radius. Encode+decode marshalling: < 1 ms
+  total for typical geometries.
+- Maestro E2E: `e2e/geos-measuring-smoke.yaml` and `e2e/geos-crash-fuzz.yaml`
+  flows ready for CI (requires `EXPO_PUBLIC_GEOMETRY_BACKEND=geos` at build
+  time).
 
 ### On-host GEOS parity gate (geos-wasm)
 
@@ -250,3 +265,58 @@ pnpm test:geos     # NODE_OPTIONS=--experimental-vm-modules, jest.config.geos.js
 5. Verify admin-1st-border buffer < 16 ms (from >10 s baseline).
 6. Run Maestro flow (`platform=all`) that exercises the GEOS backend and
    asserts app responsiveness.
+
+### Memory validation procedure (W3)
+
+For any future GEOS upgrade or native-code change, re-run the memory validation
+pass on both platforms. The dev-only "Geometry Parity" screen (Settings →
+"Run GEOS Parity Harness" in `__DEV__` builds) exposes four actions.
+
+#### iOS — Address Sanitizer
+
+1. `npx expo run:ios --device` (build + install + launch through Expo first —
+   populates DerivedData so Xcode doesn't miss module maps).
+2. Open `ios/HideSeekMapperv2.xcworkspace` in Xcode.
+3. Product → Scheme → Edit Scheme → Run → Diagnostics → check **Address
+   Sanitizer**.
+4. Product → Run (Cmd+R). Xcode does an incremental build.
+5. In the app: Settings → Run GEOS Parity Harness.
+6. Tap **Run Crash Fuzz** (lightweight — 7 cases × 1k iterations). If ASan
+   detects a double-free or use-after-free, it stops execution with a bright red
+   report. Confirm the console is clean and the screen shows `CRASH FUZZ PASS`.
+7. Tap **Run Memory Stress Test** (50k buffer iterations over body-of-water at
+   2 km). Confirm ASan remains clean throughout.
+8. **Important:** the full parity harness (46 JS-oracle cases) will OOM under
+   ASan on a 4 GB device — skip it. ASan adds guard pages and redzones to every
+   allocation; the JS oracle (JSTS) allocates heavily. The crash fuzz + stress
+   test are the right ASan workloads — they exercise every GEOS allocation path
+   and ASan catches lifetime bugs on the first offending call.
+
+#### iOS — Instruments → Allocations
+
+1. Turn off ASan (Edit Scheme → Run → Diagnostics → uncheck).
+2. Product → Profile (Cmd+I) → choose the **Allocations** template.
+3. When the app launches, navigate to Settings → Run GEOS Parity Harness.
+4. Tap **Run Memory Stress Test** (50k iterations).
+5. In Instruments, watch the **Persistent Bytes** or **# Persistent** column
+   for the HideSeekMapperv2 process. After the test completes, the live
+   allocation count should return to baseline — indicating no leaked GEOS
+   geometries or WKB buffers.
+6. Take a screenshot of the Allocations trace for the upgrade record.
+
+#### Android — Address Sanitizer
+
+1. Build with the ASan Gradle property:
+    ```bash
+    cd android && ./gradlew assembleDebug -PenableAddressSanitizer=true
+    ```
+2. Run the same Crash Fuzz and Memory Stress Test actions from the parity
+   harness screen.
+3. Confirm ASan reports clean via `adb logcat | grep -i asan`.
+
+#### Android — Memory Profiler
+
+1. Build without ASan.
+2. Android Studio → Profile → Memory Profiler → attach to the running process.
+3. Run the Memory Stress Test (50k iterations).
+4. Confirm the live allocation count returns to baseline after the batch.

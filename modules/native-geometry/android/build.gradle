@@ -20,7 +20,15 @@ android {
                 cppFlags "-std=c++17 -frtti -fexceptions"
                 // Pre-built GEOS libs are committed per ABI; we point CMake
                 // at the right ABI subdirectory via a variable.
-                arguments "-DANDROID_STL=c++_shared"
+                def cmakeArgs = ["-DANDROID_STL=c++_shared"]
+                // Enable Address Sanitizer when the Gradle property is set:
+                //   ./gradlew ... -PenableAddressSanitizer=true
+                // Off by default; safe to keep in version control.
+                if (project.hasProperty("enableAddressSanitizer") &&
+                    project.property("enableAddressSanitizer") == "true") {
+                    cmakeArgs.add("-DENABLE_ASAN=ON")
+                }
+                arguments cmakeArgs
             }
         }
 

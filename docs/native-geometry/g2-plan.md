@@ -1,7 +1,7 @@
 # G2 Plan — Local Expo Module + WKB codec + native GEOS backend
 
 _2026-06-09. Part of the [native-geometry implementation plan](./implementation-plan.md). Follows [G1](./g1-plan.md)._
-_Status: **implemented (W1–W6 + Layers 1–4 done).** Layers 5–8 (on-device parity harness, crash/perf validation, Maestro E2E) remain — see Testing & validation below._
+_Status: **fully implemented (2026-06-09).** W1–W6 + Layers 1–8 done. G3 completed the on-device parity harness, crash fuzz (CRASH FUZZ PASS), memory validation (ASan clean), perf instrumentation, and Maestro E2E flows. See [g3-plan.md](./g3-plan.md)._
 
 ## Goal
 

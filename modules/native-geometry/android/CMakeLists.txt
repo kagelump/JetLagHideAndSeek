@@ -27,3 +27,19 @@ target_link_libraries(native-geometry-jni
     c++_shared
     log
 )
+
+# ── Address Sanitizer (dev-only, off by default) ─────────────────────────
+# Enable with: ./gradlew ... -PenableAddressSanitizer=true
+# The Gradle build.gradle passes -DENABLE_ASAN=ON when the property is set.
+if(ENABLE_ASAN)
+    target_compile_options(native-geometry-jni PRIVATE
+        -fsanitize=address -fno-omit-frame-pointer
+    )
+    target_link_options(native-geometry-jni PRIVATE
+        -fsanitize=address
+    )
+    # The imported GEOS library isn't compiled with ASan, so we can't
+    # catch errors inside GEOS itself — but we can catch double-frees
+    # and use-after-free on the JNI side (the GEOS handle management).
+    message(STATUS "native-geometry: Address Sanitizer enabled")
+endif()
