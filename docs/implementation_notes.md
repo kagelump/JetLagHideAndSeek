@@ -207,12 +207,44 @@ below.
   the Allocations profiler — allocation count returned to baseline after the
   batch, no monotonic drift. Confirms no leaked GEOS geometries or WKB buffers.
 - Perf: `[geosPerf]` instrumentation in `geosGeometryBackend.ts` splits encode /
-  native / decode times. Native `bufferWKB` times on iPhone 12 Pro: ~16–240 ms
-  depending on geometry density and radius. Encode+decode marshalling: < 1 ms
-  total for typical geometries.
+  native / decode times. `[NativeGeometry]` NSLog instrumentation in
+  `NativeGeometryModule.swift` further splits the native call into parse / valid /
+  makeValid / buffer+write (added during G4 tuning). Encode+decode marshalling:
+  < 5 ms total. GEOS buffer itself is the dominant cost; see G4.
 - Maestro E2E: `e2e/geos-measuring-smoke.yaml` and `e2e/geos-crash-fuzz.yaml`
   flows ready for CI (requires `EXPO_PUBLIC_GEOMETRY_BACKEND=geos` at build
   time).
+
+**G4 — Simplification retuning:** done (2026-06-09). The goal was to lower
+`simplifyFraction` from 0.05 to ~0.01 for tighter masks, since GEOS native
+buffering was expected to be fast enough to afford it. On-device measurement
+revealed that `GEOSBufferWithParams_r` scales non-linearly with input coordinate
+count — the cost is dominated by the union step over the buffered output, not
+input parsing or the buffer offset itself. Key findings on iPhone 16 Pro (iOS):
+
+| `simplifyFraction`  | Tol @ 5.2km | Input coords | GEOS `buffer+write` |
+| ------------------- | ----------- | ------------ | ------------------- |
+| 0.01                | 52m         | ~6,000       | ~1,120ms            |
+| 0.02                | 104m        | ~3,000       | ~172ms              |
+| 0.04                | 208m        | ~1,500       | ~141ms              |
+| 0.05 (old baseline) | 260m        | —            | —                   |
+
+The GEOS cost has an output-dependent floor: admin borders span 30–50km across
+Tokyo, so the buffer output at 5–8km radius is always a large polygon regardless
+of input simplification. The landed config (`simplifyFraction: 0.02`,
+`maxBufferCoords: 20_000`, `bufferSteps: 8`) gives 2.5× tighter masks (104m vs
+260m tolerance at 5.2km) and 2× arc resolution vs the old JS baseline, at ~172ms
+native time — a 62× improvement over the 10.7s `@turf/buffer` JS baseline. The
+remaining frame-budget gap is a candidate for G6 (async dispatch safety net).
+
+Config values live in `src/config/appConfig.ts` under `APP_CONFIG.measuring.line`.
+Each change is a Metro hot reload away; verify with the `[geosPerf]` Metro log
+and the `[NativeGeometry]` NSLog in the Xcode console.
+
+A dedicated native-side `os_log`/`NSLog` instrument in `NativeGeometryModule.swift`
+splits each `bufferWKB` call into parse / valid / makeValid / buffer+write steps.
+This was essential for diagnosing that `GEOSBufferWithParams_r` (not WKB parse or
+MakeValid) is the bottleneck at high input complexity.
 
 ### On-host GEOS parity gate (geos-wasm)
 
@@ -247,24 +279,41 @@ pnpm test:geos     # NODE_OPTIONS=--experimental-vm-modules, jest.config.geos.js
 - **CI:** runs as a standalone step on a plain Linux Node runner (no native
   toolchain) — `pnpm test:geos`. Complements the heavier Maestro/emulator job.
 
-### Parity-harness runbook (TBD — placeholder for Layers 5–8)
+### On-device parity harness (G3 — shipped 2026-06-09)
 
-1. Build and install a dev client with `APP_CONFIG.geometry.backend = "geos"`
-   (or force via dev toggle).
-2. In the Admin/Offline-data settings area, trigger the parity harness action
-   (gated by `__DEV__`).
-3. The harness runs two passes:
-    - **Parity pass (JS vs GEOS):** ~30–50 curated cases per category × 3–4 radii.
-      Compares symmetric-difference area ratio, Hausdorff distance, and area ratio.
-    - **Crash/perf sweep (GEOS only):** 2 km grid over play-area bbox. Monitors
-      per-call timing and any native crashes.
-4. Assert `PARITY PASS` on both iOS and Android. Metrics gates:
-    - Symmetric-difference area ratio < 1% (target < 0.3%)
-    - Hausdorff < radius · (1 − cos(π / (2·QS)))
-    - Area ratio ∈ [0.99, 1.01]
-5. Verify admin-1st-border buffer < 16 ms (from >10 s baseline).
-6. Run Maestro flow (`platform=all`) that exercises the GEOS backend and
-   asserts app responsiveness.
+The dev-only "Geometry Parity" screen (Settings → "Run GEOS Parity Harness" in
+`__DEV__` builds) exposes three actions plus the crash-fuzz action:
+
+1. **Run Parity Harness** — 46 curated cases across all 5 line categories
+   (`admin-1st-border`, `admin-2nd-border`, `body-of-water`, `coastline`,
+   `high-speed-rail`) × 3 radii (500m, 2km, 5km) plus a 10km body-of-water
+   case. Each case feeds identical windowed/simplified geometry to both the
+   GEOS native backend and the `@turf/buffer` JS oracle, then compares area
+   ratio (polyclip-ts symmetric-difference) and bbox delta. Asserts `PARITY PASS`
+   if all cases are within gates (symDiff < 1%, bbox Δ < radius·0.02+5m).
+
+2. **Run Crash/Perf Sweep** — ~450 GEOS-only cases (225 grid points × 2 radii,
+   category rotated by grid point) over the Tokyo play-area bbox. Validates
+   that real bundled geometries don't crash the native path and reports timing.
+
+3. **Run Crash Fuzz** — 7 degenerate WKB inputs × 1,000 iterations each (empty,
+   truncated, 1-point, zero-length segment, bowtie polygon, large coords 1e9,
+   NaN/Inf coords). Asserts `CRASH FUZZ PASS` if all return `null` without
+   crashing.
+
+4. **Run Memory Stress Test** — 50k buffer iterations over body-of-water at 2km.
+   Used with ASan and Instruments/Allocations to validate no leaks.
+
+**Parity metrics gates** (from `src/shared/geometry/parityMetrics.ts`):
+
+- Symmetric-difference area ratio < 1% (< 0.01)
+- Bbox edge delta < `radius * 0.02 + 5` meters
+- One backend returns polygon and the other returns null → hard failure
+- Both return null → vacuous agreement (flag for dead-fixture correction)
+
+**Result (2026-06-09):** PARITY PASS on iOS (iPhone 16 Pro, iOS 18.3). All 46
+cases within gates across all 5 categories. CRASH FUZZ PASS. ASan clean.
+Instruments allocations stable.
 
 ### Memory validation procedure (W3)
 
