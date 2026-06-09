@@ -129,3 +129,146 @@ get the first-paint buffer under ~1–2s.** Exhaust the cheap levers first:
 
 Native GEOS is a multi-day effort with a permanent maintenance surface; only
 pull this lever once 1–3 above are proven insufficient.
+
+---
+
+## GEOS-native boolean ops — `difference` / `union` / `intersection`
+
+_2026-06-09. Status: **idea / not scheduled.**_
+_Sibling investigation: `docs/measuring-perf/` and the body-of-water re-mask
+trace below._
+
+### TL;DR
+
+The GEOS `bufferMeters` backend shipped (G2) and moved the buffer hot-path out
+of Hermes. But the mask builder in `src/features/map/maskBuilder.ts` still uses
+**polyclip-ts** (pure-JS Greiner-Hormann / Martinez-Rueda) for
+`difference`/`union`/`intersection`. On complex dissolved geometries (e.g. the
+body-of-water buffer — 40+ water polygons + rivers unioned across a 50 km
+window), polyclip-ts's sweepline cost explodes. Measured on a real device:
+**22.3 seconds** for a single `difference(eligibleArea, excludedArea)`.
+
+The `geometryBackend` interface (`src/shared/geometry/geometryBackend.ts`)
+currently only exposes `bufferMeters`. Adding `difference`, `union`, and
+`intersection` would move the mask builder's hot path to GEOS, eliminating the
+last JS-based geometry bottleneck.
+
+### Measured breakdown (device log, body-of-water, "positive", after move)
+
+| Step                                                       | Cost          | Backend     | Notes                                     |
+| ---------------------------------------------------------- | ------------- | ----------- | ----------------------------------------- |
+| 39× `bufferMeters` polygon pieces                          | ~441 ms       | GEOS WASM   | 3–31 ms each, 103k coords total           |
+| `bufferMeters` dissolve (r=0, merged 40+ pieces)           | 1,824 ms      | GEOS WASM   | union of overlapping buffer ribbons       |
+| `lineDistance` `@turf/nearest-point-on-line`               | 789 ms        | pure JS     | 63,914 coords, cached on re-render        |
+| **`polyclip-ts` `difference(eligibleArea, excludedArea)`** | **22,310 ms** | **pure JS** | 🔴 **dominant bottleneck — 85% of total** |
+| `polyclip-ts` `difference(playArea, eligibleArea)`         | 1,446 ms      | pure JS     | simple play-area boundary → cheaper       |
+| **Total re-mask**                                          | **~26.3 s**   |             |                                           |
+
+Relevant code:
+
+- `src/features/map/maskBuilder.ts` — `buildCombinedEligibilityMask()`, the sole
+  consumer of `polyclip-ts` `difference`/`union`/`intersection`.
+- `src/shared/geometry/geometryBackend.ts` — the `GeometryBackend` interface
+  (only `bufferMeters` today).
+- `src/features/questions/measuring/lineMeasuringGeometry.ts:732-753` — the
+  dissolve comment explaining why the merged buffer _must_ be dissolved before
+  reaching polyclip.
+
+### Why the dissolve doesn't fix this
+
+The GEOS dissolve (r=0 buffer, 1.8s) **successfully** unions the 40+ overlapping
+buffer ribbons into one clean MultiPolygon — without it, polyclip hard-locks
+entirely (the test at `measuringDissolve.geos.test.ts` guards this). But the
+_dissolved result_ is still an extremely complex geometry: Tokyo Bay + rivers +
+lakes across a 50 km window, with thousands of vertices along natural
+shorelines. Polyclip-ts's sweepline cost is O((n+m) log(n+m)) in the best case
+but degrades badly with:
+
+- Many rings (outer boundaries + island holes)
+- Near-coincident edges (numerical robustness overhead)
+- Complex topology (lakes with islands, river deltas, coastal indentations)
+
+The second difference (`playArea ∖ eligibleArea`, 1.4s) is fast because the
+_play-area boundary_ (Tokyo 23 wards) is a simple polygon — the first argument
+dominates polyclip's cost, and the water buffer is the complex one.
+
+### What to add to the backend interface
+
+```ts
+export interface GeometryBackend {
+    readonly name: "js" | "geos";
+    bufferMeters(…): …; // existing
+
+    /** Subtract `b` from `a` (a ∖ b). Both are Polygon/MultiPolygon Features. */
+    difference(
+        a: Feature<Polygon | MultiPolygon>,
+        b: Feature<Polygon | MultiPolygon>,
+    ): Feature<Polygon | MultiPolygon> | null;
+
+    /** Union two Polygon/MultiPolygon Features. */
+    union(
+        a: Feature<Polygon | MultiPolygon>,
+        b: Feature<Polygon | MultiPolygon>,
+    ): Feature<Polygon | MultiPolygon> | null;
+
+    /** Intersection of two Polygon/MultiPolygon Features. */
+    intersection(
+        a: Feature<Polygon | MultiPolygon>,
+        b: Feature<Polygon | MultiPolygon>,
+    ): Feature<Polygon | MultiPolygon> | null;
+}
+```
+
+Each method maps directly to the GEOS C API:
+
+- `GEOSDifference_r(handle, a, b)` → `GEOSDifferencePrepared_r` for repeated use
+- `GEOSUnion_r(handle, a, b)` → `GEOSUnaryUnion_r` for multi-piece flattening
+- `GEOSIntersection_r(handle, a, b)`
+
+The existing WKB encode/decode + AEQD projection pipeline from
+`geosGeometryBackend.ts` is reusable — these are the same
+project→encode→call-native→decode→unproject steps.
+
+### What changes in maskBuilder.ts
+
+The `buildCombinedEligibilityMask` function currently uses polyclip-ts directly:
+
+- `intersection(requiredGeoms[0], ...requiredGeoms.slice(1))` → GEOS
+  `intersection` in a reduce loop
+- `union(excludedGeoms[0], ...excludedGeoms.slice(1))` → GEOS `union` in a
+  reduce loop
+- `difference(eligibleArea, excludedArea)` → GEOS `difference`
+- `difference(playAreaPolygons, eligibleArea)` → GEOS `difference`
+
+Each polyclip-ts call site is a drop-in replacement — same input types, same
+output type. The JS backend would keep the polyclip-ts implementations for Jest
+compatibility; the GEOS backend adds the native fast path.
+
+### Estimated impact
+
+| Operation                             | polyclip-ts (device) | GEOS native (est.) |
+| ------------------------------------- | -------------------- | ------------------ |
+| `difference(water-buffer, excluded)`  | 22,310 ms            | ~1–10 ms           |
+| `difference(play-area, water-buffer)` | 1,446 ms             | ~1–5 ms            |
+| `intersection` / `union` (N geoms)    | 10–100 ms            | ~1–5 ms            |
+| **Total re-mask**                     | **~26.3 s**          | **~2.5 s**         |
+
+The ~2.5s residual is the GEOS dissolve (1.8s) + individual polygon buffers
+(0.4s) + turf nearest-point-on-line (0.8s, cached). Further dissolve perf can
+be explored separately (e.g. `GEOSUnaryUnion_r` instead of the r=0 buffer
+trick).
+
+### Design notes
+
+- **Prepared geometries**: use `GEOSPrepare_r` / `GEOSPreparedDifference_r` when
+  the same geometry (e.g. the dissolved water buffer) is differenced against
+  multiple exclude features — amortizes the spatial index build.
+- **N-ary operations**: unlike `bufferMeters` (which handles one Feature at a
+  time), `difference`/`union`/`intersection` are binary. Multi-operand cases
+  (e.g. `intersection(A, B, C, D)`) should use a reduce pattern: GEOS
+  `intersection(A, B)` → `intersection(result, C)` → `intersection(result, D)`.
+- **Empty results**: GEOS can return `POLYGON EMPTY` — the backend should return
+  `null` for empty results (same as `bufferMeters` today) so `hasGeomArea`
+  checks in maskBuilder continue to work.
+- **JS fallback**: the `jsGeometryBackend` implementations use the current
+  polyclip-ts calls, keeping Jest tests deterministic and CI-safe.
