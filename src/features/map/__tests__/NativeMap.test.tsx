@@ -451,3 +451,52 @@ describe("movable pin regression", () => {
         }
     });
 });
+
+describe("nil-subview crash regression", () => {
+    const { readFileSync, readdirSync } = require("fs");
+    const { resolve, join } = require("path");
+
+    const mapDir = resolve(process.cwd(), "src", "features", "map");
+
+    it("contains no : null} conditional child in NativeMap", () => {
+        const source = readFileSync(join(mapDir, "NativeMap.tsx"), "utf-8");
+        // A `: null}` on a JSX line inside the MapView tree indicates a
+        // conditional mount/unmount of a native child — the exact pattern that
+        // triggers the nil-subview crash in
+        // -[MLRNMapView insertReactSubview:atIndex:].
+        // The invariant is: never conditionally mount/unmount a native child of
+        // MLMapView. Keep every child permanently mounted and toggle it via an
+        // empty FeatureCollection shape or a visible flag.
+        expect(source).not.toContain(": null}");
+    });
+
+    it("contains no dynamic key on ML* primitives in map layer files", () => {
+        const tsxFiles = readdirSync(mapDir, { recursive: true }).filter(
+            (f: string) => f.endsWith(".tsx") && !f.includes("__tests__"),
+        );
+
+        const violations: string[] = [];
+        for (const relPath of tsxFiles) {
+            const source = readFileSync(join(mapDir, relPath), "utf-8");
+            const lines = source.split("\n");
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                // A dynamic key (containing template interpolation) on an ML*
+                // primitive causes React to unmount and remount the native
+                // child when the interpolated value changes — a remove+insert
+                // in the same transaction, triggering the same nil-subview
+                // crash path. Geometry updates should flow through the shape
+                // prop, not through remounting the native child.
+                if (
+                    /<ML\w+/.test(line) &&
+                    /key=\{/.test(line) &&
+                    /\$\{/.test(line)
+                ) {
+                    violations.push(`${relPath}:${i + 1}: ${line.trim()}`);
+                }
+            }
+        }
+
+        expect(violations).toEqual([]);
+    });
+});
