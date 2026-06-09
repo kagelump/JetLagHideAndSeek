@@ -1,7 +1,7 @@
 # G2 Plan — Local Expo Module + WKB codec + native GEOS backend
 
 _2026-06-09. Part of the [native-geometry implementation plan](./implementation-plan.md). Follows [G1](./g1-plan.md)._
-_Status: **planned, not started.**_
+_Status: **implemented (W1–W6 + Layers 1–4 done).** Layers 5–8 (on-device parity harness, crash/perf validation, Maestro E2E) remain — see Testing & validation below._
 
 ## Goal
 
@@ -33,40 +33,6 @@ later, deliberately, in G4.
   through `getGeometryBackend().bufferMeters(...)` (line buffer, polygon buffer,
   union-via-`buffer(fc,0)`, `getDilatedPlayArea`, and the point MultiPoint
   buffer). Jest force-mocks the module to `isAvailable: () => false`.
-
-## P0 prerequisite — fix the `.gitignore` footgun (blocks everything)
-
-The root `.gitignore` ignores `ios/` and `android/` **unanchored**, so they also
-match `modules/native-geometry/ios/` and `.../android/`. Today **none of G1 is
-trackable** — the Swift/Kotlin source, podspec, CMakeLists, JNI, and the
-committed `libgeos.xcframework` + per-ABI `libgeos.a` are all silently excluded.
-`git add -n modules/native-geometry` adds nothing under those dirs.
-
-Fix before any G2 work, or EAS/CI will build without the module:
-
-```diff
--ios/
--android/
-+/ios/
-+/android/
-```
-
-Anchoring to the repo root keeps the CNG-generated top-level `ios/`/`android/`
-ignored while letting the module's platform dirs commit. The existing explicit
-ignores already cover the build intermediates:
-
-```
-modules/native-geometry/ios/build/
-modules/native-geometry/android/build/
-modules/native-geometry/vendor/geos/
-```
-
-After fixing, verify the artifacts are tracked and note their size in the PR
-(iOS arm64 `.a` ≈ 8 MB; Android `.a` ≈ 14 MB/ABI — these are pre-link static
-archives; the linker dead-strips unused GEOS symbols so the **app-size** delta is
-far smaller than the archive. Still ~44 MB of binaries enter history; decide
-git-LFS vs plain commit consciously and record it in
-`docs/implementation_notes.md`).
 
 ## The projection decision — resolved (this is the correctness crux)
 
@@ -120,7 +86,11 @@ provably identical, not an approximation.
 ### W1 — Native `bufferWKB` (both platforms)
 
 Generalize the G1 smoke path into the real entry point. Keep `geosVersion()` for
-diagnostics; replace `smokeTest` with:
+diagnostics; **delete `smokeTest` entirely** — once `bufferWKB` accepts `distance`
+
+- `quadrantSegments` as parameters, the hardcoded-0.01°/QS=8 `smokeTest` is
+  strictly redundant (and carries the double-free bug called out below, which must
+  not be copied forward). The new function:
 
 ```
 bufferWKB(wkb: Uint8Array, distance: Double, quadrantSegments: Int) -> Uint8Array?
@@ -133,11 +103,19 @@ bufferWKB(wkb: Uint8Array, distance: Double, quadrantSegments: Int) -> Uint8Arra
   `quadrantSegments = quadrantSegments`, `endCapStyle = GEOSBUF_CAP_ROUND`,
   `joinStyle = GEOSBUF_JOIN_ROUND`, leave mitre limit at default. (JSTS
   `BufferOp.bufferOp(geom, distance, qs)` uses round cap + round join.)
-- **Memory discipline (audit every path, including error returns):** destroy the
-  input geom, the (possibly MakeValid'd) geom, the buffer params, the output
-  geom, and `GEOSFree_r` the WKB buffer. A leaked free here compounds per
-  closer/farther tap. Mirror the deferred-destroy pattern already in the smoke
-  code.
+- **Memory discipline — and do NOT copy the G1 smoke code's bug.** The iOS
+  `smokeTest` has a **double-free**: it declares `defer { GEOSGeom_destroy_r(ctx, inGeom) }`
+  _and also_ calls `GEOSGeom_destroy_r(ctx, inGeom)` explicitly on the MakeValid
+  branch, so the `defer` frees `inGeom` a second time when the function exits (and
+  separately **leaks `fixed`**, which nothing destroys). The Android JNI path is
+  correct — it reassigns `inGeom = fixed` and destroys once. For `bufferWKB`,
+  follow the Android pattern: a single owning pointer, reassigned on MakeValid, one
+  destroy — **not** Swift `defer` + an explicit destroy on a branch (Swift `let`
+  can't be reassigned, which is what forced the buggy early-return shape). Then
+  audit every path incl. error returns: destroy the input geom, the (possibly
+  MakeValid'd) geom, the buffer params, and the output geom, and `GEOSFree_r` the
+  WKB buffer. A leaked free here compounds per closer/farther tap; the double-free
+  is an outright crash (caught deterministically by ASan in T6.2).
 - Keep it **synchronous** (`Function`, not `AsyncFunction`) — ~1–5 ms keeps
   `buildMeasuringRenderState` synchronous (decision #3 in the parent plan).
 
@@ -166,11 +144,34 @@ export function bufferWKB(
     quadrantSegments: number,
 ): Uint8Array | null {
     const out = Native.bufferWKB(wkb, distance, quadrantSegments);
-    return out ? new Uint8Array(out) : null;
+    if (!out) return null;
+    // Already a Uint8Array on the New Arch (see note); guard so we neither
+    // re-copy a Uint8Array nor mis-handle an ArrayBuffer.
+    return out instanceof Uint8Array ? out : new Uint8Array(out);
 }
 ```
 
 `isAvailable()` is exactly what the G0 seam probes — keep the name aligned.
+
+- **Verify the binary return type on the first device run.** expo-modules-core
+  3.0.30 exposes a `TypedArray` union (`TypedArrays.types.d.ts`) and maps a native
+  `Data` (iOS) / `ByteArray` (Android) return to a JS **`Uint8Array`** — so `out`
+  is expected to already be a `Uint8Array` and `new Uint8Array(out)` would copy
+  needlessly. Confirm with `out?.constructor?.name` once, type the binding's
+  return as `Uint8Array`, and keep the `instanceof` guard for safety. (Argument
+  direction is fine: passing a JS `Uint8Array` to a `Data`/`ByteArray` param is the
+  supported path.)
+- **Jest resolution — handle when `src/index.ts` lands.** `node_modules/native-geometry`
+  is **already a symlink** to `modules/native-geometry`, so the moment `src/index.ts`
+  exists Jest _can_ resolve the real module — which would run `requireNativeModule(...)`
+  at import (throwing, no native runtime) and try to transform a TS file outside
+  `transformIgnorePatterns`. The `jest.setup.ts` `jest.mock("native-geometry", …)`
+  factory must keep intercepting it: (a) **drop `{ virtual: true }`** (the module
+  now resolves, so "virtual" is contradictory), and (b) **expand the mock to export
+  the full shape** (`isAvailable: () => false`, `geosVersion`, `bufferWKB`) so the
+  name-imports in `geosGeometryBackend` don't resolve to `undefined`. Run
+  `pnpm test` right after creating the module to confirm the mock still wins and no
+  suite attempts to load/transform the real entry.
 
 ### W3 — WKB codec `src/shared/geometry/wkb.ts` (pure JS, no deps)
 
@@ -207,8 +208,23 @@ export function projectGeometry(geom, proj): Geometry;          // wgs84 → pla
 export function unprojectGeometry(geom, proj): Geometry;        // planar meters → wgs84
 ```
 
-Add `d3-geo` and `@turf/center` to `package.json` dependencies (already
-transitive; pin to the versions `@turf/buffer` resolves).
+**Declare both as direct dependencies — do not rely on the transitive copies.**
+Run `pnpm ls d3-geo @turf/center` first: today they resolve only because
+`@turf/buffer` pulls them in (`d3-geo@1.7.1`, `@turf/center@7.3.5`), and under
+pnpm's non-flat `node_modules` importing an undeclared ("phantom") dependency is
+fragile and can break on reinstall. Add them explicitly and **pin to the exact
+versions turf resolves**: `d3-geo@1.7.1` and `@turf/center@7.3.5`. ⚠️ **`d3-geo`
+must stay on v1** — `geoAzimuthalEquidistant`'s API/behavior differs in d3-geo v3,
+and turf is built against v1; a naive `pnpm add d3-geo` would pull v3 and silently
+diverge the projection. Pin `d3-geo@~1.7.1`, then re-confirm with
+`pnpm why d3-geo` that turf and our code share one version.
+
+**Also add `@types/d3-geo@^1.12.0` as a devDependency.** `d3-geo@1.7.1` ships no
+bundled types (no `types` field, no `.d.ts`), and the repo's tsconfig is
+`strict: true` (extends `expo/tsconfig.base`), so `import { geoAzimuthalEquidistant } from "d3-geo"`
+fails with TS7016 ("could not find a declaration file") until the `@types` package
+is present. Keep the `@types` major aligned with d3-geo v1 — **not** the v3 line.
+`@turf/center` is already typed, so it needs no separate `@types`.
 
 ### W5 — `src/shared/geometry/geosGeometryBackend.ts`
 
@@ -254,10 +270,12 @@ export const geosGeometryBackend: GeometryBackend = {
 
 ### W6 — Wire the seam (`geometryBackend.ts`)
 
-Replace the three `TODO(G2)` blocks: when native is available and
-`backend !== "js"`, set `_backend = geosGeometryBackend` and log
-`backend=geos reason=…`. Leave the `"js"` force path and the Jest virtual mock
-untouched. No call-site changes — they already go through the seam.
+Replace the **two** `TODO(G2)` blocks — the `configBackend === "geos"` branch and
+the `"auto"` branch (the `"js"` force path has no TODO and stays as-is). When
+native is available and `backend !== "js"`, set `_backend = geosGeometryBackend`
+and log `backend=geos reason=…`. No call-site changes — they already go through
+the seam. (For the Jest mock, see the W2 note: it needs expanding + dropping
+`virtual: true` once the real module resolves.)
 
 ## Testing & validation (the core of G2)
 
@@ -276,8 +294,17 @@ math itself. Each check below is numbered for the PR checklist.
   Polygon; assert `encodeWkb` produces the exact expected byte array (byte order
   `01`, correct type code, little-endian counts, IEEE-754 doubles). This is what
   catches endianness/offset/type-code bugs **without a device**.
-- **T1.3 Decode GEOS-shaped output.** Decode a captured real buffer-output WKB
-  (a Polygon-with-hole and a MultiPolygon) into the expected GeoJSON.
+- **T1.3 Decode independently-produced output.** Don't bootstrap decode fixtures
+  from our own `encodeWkb` (that's circular with T1.1) **or** block on a device.
+  Generate canonical Polygon-with-hole + MultiPolygon WKB from an **independent**
+  producer — a committed Node dev-script using an established WKB lib (e.g. `wkx`)
+  or `ogr2ogr`/shapely run offline — hand-verify the bytes once, and commit them
+  under `__fixtures__/`. Assert `decodeWkb` yields the expected GeoJSON.
+  _Separately and later_ (after W1 works on a device): capture one real
+  `bufferWKB` output, spot-check it once, and commit it as a **GEOS-shaped
+  regression fixture** to guard against GEOS structural quirks (ring orientation,
+  byte order). The codec suite is **not** blocked on the device — only this
+  optional regression fixture is, and it comes after W1.
 - **T1.4 Malformed input.** Truncated buffer, unknown type code, zero rings,
   zero points → `WkbError`, never an OOB read or `NaN` leak.
 - **T1.5 Property test.** Random valid geometries (seeded) round-trip; fuzz byte
@@ -319,8 +346,9 @@ GEOS can't run in Jest, but the _adapter_ can: mock `native-geometry`'s
 
 - **T4.1** `lineMeasuringGeometry.test.ts`, `clipLineFeatures.perf.test.ts`, and
   the point-measuring tests pass **unchanged** — Jest still forces the JS backend
-  (virtual mock `isAvailable: () => false`), proving G2 doesn't regress the JS
-  path. Add one assertion that `getGeometryBackend().name === "js"` in Jest.
+  (the `native-geometry` mock returns `isAvailable: () => false`; no longer
+  `virtual` once the real module resolves — see W2), proving G2 doesn't regress
+  the JS path. Add one assertion that `getGeometryBackend().name === "js"` in Jest.
 - **T4.2** `pnpm check && pnpm test` green (lint + format + typecheck +
   perf-typecheck + POI drift + jest).
 
@@ -330,11 +358,23 @@ The only way to validate GEOS math. Build it as a **dev-only action** (gated by
 `__DEV__`, surfaced in the Admin/Offline-data settings area) plus a shared,
 backend-agnostic comparison function so it can also run from a Maestro flow.
 
-- **T5.1 Harness.** Over the bundled Tokyo **and** Osaka fixtures, for every
-  line + point category, sweep a deterministic grid of seeker centers across the
-  play area × a representative radius set (`500 m, 2 km, 5 km, 15 km, 40 km`).
-  For each case compute the buffer with **both** backends (force via
-  `__setGeometryBackendForTest(jsGeometryBackend)` then `geosGeometryBackend`).
+- **T5.1 Two distinct passes — the JS oracle is the binding constraint.** A
+  uniform fine grid is infeasible: the parity pass runs **both** backends, and the
+  JS backend is the ~10 s/call path at large radii — a 30×30 km play area at 1 km
+  spacing (~900 pts) × 5 radii × ~6 categories would be hours. Split it:
+    - **Parity pass (JS vs GEOS): a small, curated set, not a grid.** Per category
+      pick **~8–12 centers chosen by geometric role** — on/near the feature, far
+      from it, inside a water body, on the play-area edge, and on each of multiple
+      corridors (e.g. Tōkaidō **and** Tōhoku rail) — × **3–4 radii**, so ~30–50
+      cases/category. **Cap large-radius (≥15 km) cases to a handful** since those
+      are the slow JS-oracle runs; target total JS-oracle wall-time **< ~5 min**.
+      Force each backend via `__setGeometryBackendForTest(jsGeometryBackend)` then
+      `geosGeometryBackend`. Seed the center selection deterministically so runs
+      are reproducible.
+    - **Crash/perf sweep (GEOS only): a denser grid is fine.** GEOS is ~5 ms, so a
+      uniform grid (e.g. **2 km spacing**, ~225 pts over the play-area bbox) ×
+      radius set per category is cheap and gives broad coverage for T6/T7 without
+      paying the JS oracle.
 - **T5.2 Metrics per case** (computed in JS so both backends are comparable):
     - **Symmetric-difference area ratio** = `area(A△B) / area(A∪B)`. **Gate
       < 1%** (target < 0.3%).
@@ -360,10 +400,20 @@ backend-agnostic comparison function so it can also run from a Maestro flow.
   and a self-intersecting polygon (exercises `GEOSMakeValid_r`). Each returns
   `null`; the app does not crash. (The truncated/garbage cases also have Jest
   coverage at the codec layer in T1.4.)
-- **T6.2 Memory.** Run `bufferWKB` ~200× in a tight loop (simulating
-  closer/farther taps over body-of-water) from a dev "stress" button; capture RSS
-  with Instruments (iOS) / Android Studio profiler and assert no monotonic growth
-  — catches a missed `GEOSFree_r`/`destroy` on any path.
+- **T6.2 Memory / lifetime — instrument, don't eyeball RSS.** A single leaked
+  `GEOSGeometry` is a few hundred bytes; ×200 iterations ≈ 40 KB, i.e. RSS noise.
+  So make the **native tooling the primary signal**, not a loop + RSS:
+    - **AddressSanitizer** (iOS scheme "Address Sanitizer"; Android
+      `-fsanitize=address`) — catches the double-free / use-after-free class
+      (incl. the W1 iOS smoke bug) **deterministically on the first offending
+      call**. This is the most important check here.
+    - **Instruments → Allocations** (iOS) / **Android Studio Memory Profiler** —
+      confirm the count of **live GEOS allocations returns to baseline** after a
+      batch (watch allocation count, not RSS), exposing a missed
+      `GEOSGeom_destroy_r`/`GEOSFree_r` on any path.
+    - The loop is only an _amplifier_, and if used should be **tens of thousands**
+      (e.g. 50k over body-of-water), not 200 — and it's secondary to ASan + the
+      allocations profiler.
 
 ### Layer 7 — Performance validation (on-device)
 
@@ -391,7 +441,9 @@ backend-agnostic comparison function so it can also run from a Maestro flow.
 3. WKB codec + projection + adapter Jest suites pass (Layers 1–3).
 4. On a device with `backend: "geos"`: parity harness prints `PARITY PASS` on
    **both** platforms within the Layer 5 gates, including body-of-water.
-5. No crash across the Layer 6 degenerate inputs; no memory growth over 200 taps.
+5. No crash across the Layer 6 degenerate inputs; AddressSanitizer clean and the
+   live-GEOS-allocation count returns to baseline after a 50k-iteration batch
+   (T6.2) — not an eyeballed RSS check.
 6. The 5.4 km admin-border buffer is < 16 ms (Layer 7); Maestro `platform=all`
    green with the GEOS backend active (Layer 8).
 7. `docs/implementation_notes.md` updated: how to rebuild the module, the

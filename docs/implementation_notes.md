@@ -162,3 +162,51 @@ Committed artifacts:
 | Android  | x86_64            | ~14 MB          |
 
 Store thinning ships one arch per device, so the per-device cost is one slice.
+
+### G2 status (2026-06-09)
+
+**JS side (W2–W6 + Layers 1–4):** done.
+
+- WKB codec (`src/shared/geometry/wkb.ts`) — pure JS, little-endian ISO/OGC,
+  encode LineString/MultiLineString/Polygon/MultiPolygon/MultiPoint, decode
+  Polygon/MultiPolygon (with EMPTY → null).
+- AEQD projection adapter (`src/shared/geometry/bufferProjection.ts`) —
+  replicates `@turf/buffer`'s per-feature projection exactly, reuses
+  `EARTH_RADIUS_METERS` from `src/shared/geojson.ts`.
+- GEOS backend (`src/shared/geometry/geosGeometryBackend.ts`) — project →
+  encode → native `bufferWKB` → decode → unproject, bug-for-bug parity
+  with `jsGeometryBackend` (FeatureCollection → features[0], etc.).
+- Seam wired (`src/shared/geometry/geometryBackend.ts`) — `APP_CONFIG.geometry.backend = "auto"` (default) or `"geos"` routes to GEOS when
+  the native module is available; `"js"` forces pure JS.
+- Jest: 3 new suites (WKB codec, projection, backend adapter), 37 tests.
+
+**Native side (W1):** done.
+
+- iOS (`NativeGeometryModule.swift`): `bufferWKB(wkb, distance, quadrantSegments)`,
+  thread-safe context init (NSLock + double-check), JSTS-matching buffer params
+  (round cap, round join), single-owner geometry pointer (no double-free).
+- Android (`NativeGeometryModule.kt` + `native-geometry-jni.cpp`): same
+  semantics, thread-safe context init (`std::call_once`).
+
+**On-device (Layers 5–8):** not yet done — see `g2-plan.md` Testing & validation.
+The parity harness, crash/perf validation, and Maestro E2E flow require a
+device/simulator with a dev build.
+
+### Parity-harness runbook (TBD — placeholder for Layers 5–8)
+
+1. Build and install a dev client with `APP_CONFIG.geometry.backend = "geos"`
+   (or force via dev toggle).
+2. In the Admin/Offline-data settings area, trigger the parity harness action
+   (gated by `__DEV__`).
+3. The harness runs two passes:
+    - **Parity pass (JS vs GEOS):** ~30–50 curated cases per category × 3–4 radii.
+      Compares symmetric-difference area ratio, Hausdorff distance, and area ratio.
+    - **Crash/perf sweep (GEOS only):** 2 km grid over play-area bbox. Monitors
+      per-call timing and any native crashes.
+4. Assert `PARITY PASS` on both iOS and Android. Metrics gates:
+    - Symmetric-difference area ratio < 1% (target < 0.3%)
+    - Hausdorff < radius · (1 − cos(π / (2·QS)))
+    - Area ratio ∈ [0.99, 1.01]
+5. Verify admin-1st-border buffer < 16 ms (from >10 s baseline).
+6. Run Maestro flow (`platform=all`) that exercises the GEOS backend and
+   asserts app responsiveness.

@@ -330,15 +330,13 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
 
 // Mock the native-geometry Expo Module so Jest always falls back to the JS
 // geometry backend (G0 seam). The native GEOS module cannot run in Jest.
-// Use a virtual mock (no matching module on disk) because the module lives
-// under modules/ and isn't in Jest's standard module resolution path.
-jest.mock(
-    "native-geometry",
-    () => ({
-        __esModule: true,
-        default: {},
-        // The G0 seam probes isAvailable(); returning false forces the JS backend.
-        isAvailable: () => false,
-    }),
-    { virtual: true },
-);
+// The module resolves on disk (modules/native-geometry/src/index.ts) via
+// the pnpm workspace / symlink — without this mock, importing it would
+// call requireNativeModule (no native runtime) and try to transform TS
+// outside transformIgnorePatterns.
+jest.mock("native-geometry", () => ({
+    __esModule: true,
+    isAvailable: () => false,
+    geosVersion: () => "mock",
+    bufferWKB: () => null,
+}));

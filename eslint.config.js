@@ -14,6 +14,10 @@ module.exports = [
             "data/odpt/cache/**",
             "data/odpt/odpt_api.htm",
             "data/odpt/odpt_api_files/**",
+            // GEOS native build outputs include CMake compiler_depend.ts files
+            // that are binary/generated, not TypeScript source.
+            "modules/native-geometry/android/build/**",
+            "modules/native-geometry/ios/build/**",
         ],
     },
     {

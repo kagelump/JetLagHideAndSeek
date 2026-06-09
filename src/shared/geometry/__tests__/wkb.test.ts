@@ -1,0 +1,567 @@
+/**
+ * Layer 1 — WKB codec tests (Jest, deterministic).
+ *
+ * Tests the little-endian ISO/OGC WKB codec: round-trips, golden bytes,
+ * malformed input, and property tests.
+ */
+
+import type {
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Polygon,
+} from "geojson";
+
+import { encodeWkb, decodeWkb, WkbError } from "../wkb";
+
+// ---- Helpers ---------------------------------------------------------------
+
+/** Seeded PRNG for reproducible property tests. */
+function mulberry32(seed: number): () => number {
+    return () => {
+        seed |= 0;
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function coordEqual(a: [number, number], b: [number, number]): boolean {
+    return a[0] === b[0] && a[1] === b[1];
+}
+
+function ringsEqual(a: [number, number][], b: [number, number][]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((c, i) => coordEqual(c, b[i]));
+}
+
+// ---- T1.1 Round-trip equality ----------------------------------------------
+
+describe("WKB round-trip (T1.1)", () => {
+    test("LineString encode produces valid WKB structure", () => {
+        // decodeWkb only supports Polygon/MultiPolygon (GEOS buffer outputs).
+        // LineString is encode-only. Verify encode output structure.
+        const line: LineString = {
+            type: "LineString",
+            coordinates: [
+                [139.7, 35.6],
+                [139.8, 35.7],
+                [139.9, 35.8],
+            ],
+        };
+        const encoded = encodeWkb(line);
+        expect(encoded[0]).toBe(0x01); // little-endian
+        // Verify we can read back the header.
+        const view = new DataView(
+            encoded.buffer,
+            encoded.byteOffset,
+            encoded.length,
+        );
+        expect(view.getUint32(1, true)).toBe(2); // LineString type
+        expect(view.getUint32(5, true)).toBe(3); // numPoints
+    });
+
+    test("Polygon with hole round-trip", () => {
+        const poly: Polygon = {
+            type: "Polygon",
+            coordinates: [
+                [
+                    [0, 0],
+                    [10, 0],
+                    [10, 10],
+                    [0, 10],
+                    [0, 0],
+                ],
+                [
+                    [3, 3],
+                    [7, 3],
+                    [7, 7],
+                    [3, 7],
+                    [3, 3],
+                ],
+            ],
+        };
+        const encoded = encodeWkb(poly);
+        const decoded = decodeWkb(encoded)!;
+        expect(decoded.type).toBe("Polygon");
+        const out = decoded as Polygon;
+        expect(out.coordinates.length).toBe(2);
+        expect(
+            ringsEqual(
+                out.coordinates[0] as [number, number][],
+                poly.coordinates[0] as [number, number][],
+            ),
+        ).toBe(true);
+        expect(
+            ringsEqual(
+                out.coordinates[1] as [number, number][],
+                poly.coordinates[1] as [number, number][],
+            ),
+        ).toBe(true);
+    });
+
+    test("MultiPolygon round-trip", () => {
+        const mp: MultiPolygon = {
+            type: "MultiPolygon",
+            coordinates: [
+                [
+                    [
+                        [0, 0],
+                        [5, 0],
+                        [5, 5],
+                        [0, 5],
+                        [0, 0],
+                    ],
+                ],
+                [
+                    [
+                        [10, 10],
+                        [15, 10],
+                        [15, 15],
+                        [10, 15],
+                        [10, 10],
+                    ],
+                ],
+            ],
+        };
+        const encoded = encodeWkb(mp);
+        const decoded = decodeWkb(encoded)!;
+        // Two polygons → remains MultiPolygon.
+        expect(decoded.type).toBe("MultiPolygon");
+        const out = decoded as MultiPolygon;
+        expect(out.coordinates.length).toBe(2);
+    });
+
+    test("Single-polygon MultiPolygon collapses to Polygon on decode", () => {
+        const mp: MultiPolygon = {
+            type: "MultiPolygon",
+            coordinates: [
+                [
+                    [
+                        [0, 0],
+                        [5, 0],
+                        [5, 5],
+                        [0, 5],
+                        [0, 0],
+                    ],
+                ],
+            ],
+        };
+        const encoded = encodeWkb(mp);
+        const decoded = decodeWkb(encoded)!;
+        // Single → collapsed.
+        expect(decoded.type).toBe("Polygon");
+    });
+
+    test("MultiPoint round-trip (encode only, verify structure)", () => {
+        const mp: MultiPoint = {
+            type: "MultiPoint",
+            coordinates: [
+                [139.7, 35.6],
+                [139.8, 35.7],
+                [139.9, 35.8],
+            ],
+        };
+        const encoded = encodeWkb(mp);
+        // Decode a MultiPoint manually to verify structure (the decoder
+        // only supports Polygon/MultiPolygon, but encode should still work).
+        expect(encoded.length).toBeGreaterThan(0);
+
+        // Verify byte order marker.
+        expect(encoded[0]).toBe(0x01); // little-endian
+    });
+
+    test("MultiLineString round-trip (encode only, verify structure)", () => {
+        const ml: MultiLineString = {
+            type: "MultiLineString",
+            coordinates: [
+                [
+                    [0, 0],
+                    [1, 1],
+                ],
+                [
+                    [2, 2],
+                    [3, 3],
+                ],
+            ],
+        };
+        const encoded = encodeWkb(ml);
+        expect(encoded.length).toBeGreaterThan(0);
+        expect(encoded[0]).toBe(0x01);
+    });
+});
+
+// ---- T1.2 Golden bytes -----------------------------------------------------
+
+describe("WKB golden bytes (T1.2)", () => {
+    test("2-point LineString produces expected bytes", () => {
+        const line: LineString = {
+            type: "LineString",
+            coordinates: [
+                [1.0, 2.0],
+                [3.0, 4.0],
+            ],
+        };
+        const bytes = encodeWkb(line);
+
+        // Header: byteOrder=01, type=2 (uint32LE)
+        expect(bytes[0]).toBe(0x01);
+        // type = 2 (little-endian uint32)
+        expect(bytes[1]).toBe(0x02);
+        expect(bytes[2]).toBe(0x00);
+        expect(bytes[3]).toBe(0x00);
+        expect(bytes[4]).toBe(0x00);
+
+        // numPoints = 2 (uint32LE)
+        expect(bytes[5]).toBe(0x02);
+        expect(bytes[6]).toBe(0x00);
+        expect(bytes[7]).toBe(0x00);
+        expect(bytes[8]).toBe(0x00);
+
+        // Verify we can read the bytes back.
+        const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
+        expect(view.getUint8(0)).toBe(0x01);
+        expect(view.getUint32(1, true)).toBe(2); // type
+        expect(view.getUint32(5, true)).toBe(2); // numPoints
+        // First coordinate at offset 9: (1.0, 2.0) as float64LE
+        expect(view.getFloat64(9, true)).toBe(1.0);
+        expect(view.getFloat64(17, true)).toBe(2.0);
+        // Second coordinate at offset 25: (3.0, 4.0)
+        expect(view.getFloat64(25, true)).toBe(3.0);
+        expect(view.getFloat64(33, true)).toBe(4.0);
+
+        // Total size: 5 (header) + 4 (numPoints) + 2 * 16 (coords) = 41
+        expect(bytes.length).toBe(41);
+    });
+
+    test("unit-square Polygon produces expected bytes", () => {
+        const poly: Polygon = {
+            type: "Polygon",
+            coordinates: [
+                [
+                    [0, 0],
+                    [1, 0],
+                    [1, 1],
+                    [0, 1],
+                    [0, 0],
+                ],
+            ],
+        };
+        const bytes = encodeWkb(poly);
+        const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
+
+        expect(view.getUint8(0)).toBe(0x01); // byte order LE
+        expect(view.getUint32(1, true)).toBe(3); // type = Polygon
+        expect(view.getUint32(5, true)).toBe(1); // numRings = 1
+        expect(view.getUint32(9, true)).toBe(5); // ring[0] numPoints = 5
+
+        // First point in ring: (0, 0)
+        expect(view.getFloat64(13, true)).toBe(0);
+        expect(view.getFloat64(21, true)).toBe(0);
+    });
+});
+
+// ---- T1.3 Decode independently-produced WKB --------------------------------
+
+describe("WKB decode independent fixtures (T1.3)", () => {
+    // A canonical polygon WKB manually constructed:
+    // byteOrder=01, type=3 (Polygon), numRings=1, ring[0].numPoints=4,
+    // points: (0,0), (10,0), (10,10), (0,10), (0,0)
+    // This is a known sequence, hand-verified.
+    function makeSquareWKB(): Uint8Array {
+        const buf = new ArrayBuffer(1 + 4 + 4 + 4 + 5 * 16); // 93 bytes
+        const v = new DataView(buf);
+        let off = 0;
+        v.setUint8(off, 0x01);
+        off += 1; // byte order
+        v.setUint32(off, 3, true);
+        off += 4; // type = Polygon
+        v.setUint32(off, 1, true);
+        off += 4; // numRings = 1
+        v.setUint32(off, 5, true);
+        off += 4; // ring[0].numPoints = 5
+        v.setFloat64(off, 0, true);
+        off += 8; // (0, 0)
+        v.setFloat64(off, 0, true);
+        off += 8;
+        v.setFloat64(off, 10, true);
+        off += 8; // (10, 0)
+        v.setFloat64(off, 0, true);
+        off += 8;
+        v.setFloat64(off, 10, true);
+        off += 8; // (10, 10)
+        v.setFloat64(off, 10, true);
+        off += 8;
+        v.setFloat64(off, 0, true);
+        off += 8; // (0, 10)
+        v.setFloat64(off, 10, true);
+        off += 8;
+        v.setFloat64(off, 0, true);
+        off += 8; // (0, 0)
+        v.setFloat64(off, 0, true);
+        off += 8;
+        return new Uint8Array(buf, 0, off);
+    }
+
+    test("decode independently-built polygon WKB", () => {
+        const wkb = makeSquareWKB();
+        const geom = decodeWkb(wkb)!;
+        expect(geom.type).toBe("Polygon");
+        const poly = geom as Polygon;
+        expect(poly.coordinates.length).toBe(1);
+        expect(poly.coordinates[0].length).toBe(5);
+        expect(poly.coordinates[0][0]).toEqual([0, 0]);
+        expect(poly.coordinates[0][1]).toEqual([10, 0]);
+        expect(poly.coordinates[0][2]).toEqual([10, 10]);
+        expect(poly.coordinates[0][3]).toEqual([0, 10]);
+        expect(poly.coordinates[0][4]).toEqual([0, 0]);
+    });
+
+    test("decode independently-built MultiPolygon WKB", () => {
+        // Two polygons in a MultiPolygon, ISO format.
+        // Outer: byteOrder=01, type=6 (MultiPolygon), numPolygons=2
+        //   Poly1: byteOrder=01, type=3, numRings=1, numPoints=4, (0,0)-(1,0)-(1,1)-(0,1)-(0,0)
+        //   Poly2: byteOrder=01, type=3, numRings=1, numPoints=4, (2,2)-(3,2)-(3,3)-(2,3)-(2,2)
+        const buf = new ArrayBuffer(1 + 4 + 4 + 2 * (1 + 4 + 4 + 4 + 5 * 16));
+        const v = new DataView(buf);
+        let off = 0;
+
+        // MultiPolygon header
+        v.setUint8(off, 0x01);
+        off += 1;
+        v.setUint32(off, 6, true);
+        off += 4; // type = MultiPolygon
+        v.setUint32(off, 2, true);
+        off += 4; // numPolygons = 2
+
+        // Poly1
+        v.setUint8(off, 0x01);
+        off += 1;
+        v.setUint32(off, 3, true);
+        off += 4; // type = Polygon
+        v.setUint32(off, 1, true);
+        off += 4; // numRings = 1
+        v.setUint32(off, 5, true);
+        off += 4; // numPoints = 5
+        v.setFloat64(off, 0, true);
+        v.setFloat64(off + 8, 0, true);
+        off += 16;
+        v.setFloat64(off, 1, true);
+        v.setFloat64(off + 8, 0, true);
+        off += 16;
+        v.setFloat64(off, 1, true);
+        v.setFloat64(off + 8, 1, true);
+        off += 16;
+        v.setFloat64(off, 0, true);
+        v.setFloat64(off + 8, 1, true);
+        off += 16;
+        v.setFloat64(off, 0, true);
+        v.setFloat64(off + 8, 0, true);
+        off += 16;
+
+        // Poly2
+        v.setUint8(off, 0x01);
+        off += 1;
+        v.setUint32(off, 3, true);
+        off += 4;
+        v.setUint32(off, 1, true);
+        off += 4;
+        v.setUint32(off, 5, true);
+        off += 4;
+        v.setFloat64(off, 2, true);
+        v.setFloat64(off + 8, 2, true);
+        off += 16;
+        v.setFloat64(off, 3, true);
+        v.setFloat64(off + 8, 2, true);
+        off += 16;
+        v.setFloat64(off, 3, true);
+        v.setFloat64(off + 8, 3, true);
+        off += 16;
+        v.setFloat64(off, 2, true);
+        v.setFloat64(off + 8, 3, true);
+        off += 16;
+        v.setFloat64(off, 2, true);
+        v.setFloat64(off + 8, 2, true);
+        off += 16;
+
+        const wkb = new Uint8Array(buf, 0, off);
+        const geom = decodeWkb(wkb)!;
+        expect(geom.type).toBe("MultiPolygon");
+        const mp = geom as MultiPolygon;
+        expect(mp.coordinates.length).toBe(2);
+        expect(mp.coordinates[0][0][0]).toEqual([0, 0]);
+        expect(mp.coordinates[1][0][0]).toEqual([2, 2]);
+    });
+});
+
+// ---- T1.4 Malformed input --------------------------------------------------
+
+describe("WKB malformed input (T1.4)", () => {
+    test("empty bytes throws WkbError", () => {
+        expect(() => decodeWkb(new Uint8Array(0))).toThrow(WkbError);
+    });
+
+    test("truncated header throws WkbError", () => {
+        const bytes = new Uint8Array([0x01, 0x03]); // only 2 bytes
+        expect(() => decodeWkb(bytes)).toThrow(WkbError);
+    });
+
+    test("unsupported byte order throws WkbError", () => {
+        // Big-endian (0x00) not supported.
+        const buf = new ArrayBuffer(5);
+        const v = new DataView(buf);
+        v.setUint8(0, 0x00); // big-endian byte order
+        v.setUint32(1, 3, false); // Polygon
+        expect(() => decodeWkb(new Uint8Array(buf))).toThrow(WkbError);
+    });
+
+    test("unsupported geometry type throws WkbError", () => {
+        // Type 1 = Point, not supported for decode.
+        const buf = new ArrayBuffer(1 + 4);
+        const v = new DataView(buf);
+        v.setUint8(0, 0x01);
+        v.setUint32(1, 1, true); // Point
+        expect(() => decodeWkb(new Uint8Array(buf))).toThrow(WkbError);
+    });
+
+    test("Polygon with 0 rings (POLYGON EMPTY) returns null", () => {
+        const buf = new ArrayBuffer(1 + 4 + 4);
+        const v = new DataView(buf);
+        v.setUint8(0, 0x01);
+        v.setUint32(1, 3, true); // Polygon
+        v.setUint32(5, 0, true); // 0 rings
+        expect(decodeWkb(new Uint8Array(buf))).toBeNull();
+    });
+
+    test("Polygon ring with 0 points throws WkbError", () => {
+        const buf = new ArrayBuffer(1 + 4 + 4 + 4);
+        const v = new DataView(buf);
+        v.setUint8(0, 0x01);
+        v.setUint32(1, 3, true); // Polygon
+        v.setUint32(5, 1, true); // 1 ring
+        v.setUint32(9, 0, true); // 0 points in ring
+        expect(() => decodeWkb(new Uint8Array(buf))).toThrow(WkbError);
+    });
+
+    test("truncated mid-ring throws WkbError", () => {
+        // Header + 1 ring + 5 points declared but only 2 coordinate pairs.
+        const buf = new ArrayBuffer(1 + 4 + 4 + 4 + 2 * 16); // only 2 coords
+        const v = new DataView(buf);
+        v.setUint8(0, 0x01);
+        v.setUint32(1, 3, true);
+        v.setUint32(5, 1, true); // 1 ring
+        v.setUint32(9, 5, true); // 5 points claimed
+        v.setFloat64(13, 0, true);
+        v.setFloat64(21, 0, true);
+        // Only wrote 2 points, but declared 5.
+        expect(() => decodeWkb(new Uint8Array(buf))).toThrow(WkbError);
+    });
+
+    test("MultiPolygon with 0 polygons (MULTIPOLYGON EMPTY) returns null", () => {
+        const buf = new ArrayBuffer(1 + 4 + 4);
+        const v = new DataView(buf);
+        v.setUint8(0, 0x01);
+        v.setUint32(1, 6, true); // MultiPolygon
+        v.setUint32(5, 0, true); // 0 polygons
+        expect(decodeWkb(new Uint8Array(buf))).toBeNull();
+    });
+});
+
+// ---- T1.5 Property tests ---------------------------------------------------
+
+describe("WKB property tests (T1.5)", () => {
+    test("random polygons round-trip correctly", () => {
+        const rand = mulberry32(42);
+        for (let i = 0; i < 100; i++) {
+            const numRings = Math.floor(rand() * 3) + 1; // 1–3 rings
+            const rings: [number, number][][] = [];
+            for (let r = 0; r < numRings; r++) {
+                const numPoints = Math.floor(rand() * 10) + 4; // 4–13 points
+                const ring: [number, number][] = [];
+                for (let p = 0; p < numPoints; p++) {
+                    ring.push([rand() * 360 - 180, rand() * 180 - 90]);
+                }
+                // Close the ring
+                ring.push([ring[0][0], ring[0][1]]);
+                rings.push(ring);
+            }
+            const poly: Polygon = { type: "Polygon", coordinates: rings };
+            const encoded = encodeWkb(poly);
+            const decoded = decodeWkb(encoded)!;
+            expect(decoded.type).toBe("Polygon");
+            const out = decoded as Polygon;
+            expect(out.coordinates.length).toBe(rings.length);
+            for (let r = 0; r < rings.length; r++) {
+                expect(out.coordinates[r].length).toBe(rings[r].length);
+                for (let p = 0; p < rings[r].length; p++) {
+                    expect(out.coordinates[r][p][0]).toBe(rings[r][p][0]);
+                    expect(out.coordinates[r][p][1]).toBe(rings[r][p][1]);
+                }
+            }
+        }
+    });
+
+    test("random MultiPolygons round-trip correctly", () => {
+        const rand = mulberry32(99);
+        for (let i = 0; i < 100; i++) {
+            const numPolys = Math.floor(rand() * 5) + 1; // 1–5
+            const polys: [number, number][][][] = [];
+            for (let p = 0; p < numPolys; p++) {
+                const numPoints = Math.floor(rand() * 10) + 4;
+                const ring: [number, number][] = [];
+                for (let q = 0; q < numPoints; q++) {
+                    ring.push([rand() * 360 - 180, rand() * 180 - 90]);
+                }
+                ring.push([ring[0][0], ring[0][1]]);
+                polys.push([ring]);
+            }
+            const mp: MultiPolygon = {
+                type: "MultiPolygon",
+                coordinates: polys,
+            };
+            const encoded = encodeWkb(mp);
+            const decoded = decodeWkb(encoded)!;
+
+            if (numPolys === 1) {
+                expect(decoded.type).toBe("Polygon");
+            } else {
+                expect(decoded.type).toBe("MultiPolygon");
+                const out = decoded as MultiPolygon;
+                expect(out.coordinates.length).toBe(numPolys);
+            }
+        }
+    });
+
+    test("fuzz byte truncation never crashes decoder", () => {
+        const rand = mulberry32(123);
+        const poly: Polygon = {
+            type: "Polygon",
+            coordinates: [
+                [
+                    [0, 0],
+                    [10, 0],
+                    [10, 10],
+                    [0, 10],
+                    [0, 0],
+                ],
+            ],
+        };
+        const encoded = encodeWkb(poly);
+
+        for (let i = 0; i < 200; i++) {
+            const truncLen = Math.floor(rand() * (encoded.length + 5));
+            const truncated = encoded.slice(0, truncLen);
+            try {
+                decodeWkb(truncated);
+                // If it doesn't throw, the result should at least have a type.
+                // (Valid truncations at boundary points may produce a valid
+                // single-polygon result if the truncation happens after complete data.)
+            } catch (e) {
+                expect(e).toBeInstanceOf(WkbError);
+                // Must not be a raw TypeError or RangeError (OOB access).
+            }
+        }
+    });
+});

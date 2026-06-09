@@ -4,8 +4,7 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /**
- * G1 smoke-test Expo Module — minimal GEOS integration to prove linking
- * and execution on Android before G2 builds the full backend.
+ * G2 production Expo Module — GEOS-backed bufferWKB replacing the G1 smoke test.
  */
 class NativeGeometryModule : Module() {
 
@@ -22,13 +21,17 @@ class NativeGeometryModule : Module() {
             nativeGeosVersion()
         }
 
-        Function("smokeTest") { wkb: ByteArray ->
-            nativeSmokeTest(wkb)
+        Function("bufferWKB") { wkb: ByteArray, distance: Double, quadrantSegments: Int ->
+            nativeBufferWKB(wkb, distance, quadrantSegments)
         }
     }
 
     // -- JNI declarations ---------------------------------------------------
 
     private external fun nativeGeosVersion(): String
-    private external fun nativeSmokeTest(wkb: ByteArray): ByteArray?
+    private external fun nativeBufferWKB(
+        wkb: ByteArray,
+        distance: Double,
+        quadrantSegments: Int
+    ): ByteArray?
 }

@@ -60,7 +60,7 @@ modules/native-geometry/
     build-geos-ios.sh
     build-geos-android.sh
     fetch-geos.sh            # download + verify tarball
-    geos-version.txt         # "3.13.4" — source of truth for all scripts
+    geos-version.txt         # "3.14.1" — source of truth for all scripts
 ```
 
 Add to `.gitignore`:
@@ -437,7 +437,7 @@ returns the expected version.
 // Temporary: add this in app/_layout.tsx, inside the root component
 import NativeGeometry from "native-geometry";
 console.log("[G1] GEOS version:", NativeGeometry.geosVersion());
-// Expect Metro log: "[G1] GEOS version: 3.13.4"
+// Expect Metro log: "[G1] GEOS version: 3.14.1"
 ```
 
 **Why this matters:** This is the minimal proof that JS → native → GEOS C API
@@ -511,13 +511,13 @@ disabling unused GEOS features at compile time).
 
 G1 is done when:
 
-- [ ] `pnpm geos:fetch` downloads and verifies GEOS 3.13.4 (C1 — reproducibility)
+- [ ] `pnpm geos:fetch` downloads and verifies GEOS 3.14.1 (C1 — reproducibility)
 - [ ] `pnpm geos:build:ios` produces `libgeos.xcframework` (C1)
 - [ ] `pnpm geos:build:android` produces `libgeos.a` per ABI (C1)
 - [ ] Symbol export check passes — C API visible, C++ hidden (C2)
 - [ ] `expo prebuild --clean` preserves artifacts and autolinks the module (C3)
 - [ ] Dev-client build succeeds on iOS **and** Android (C4)
-- [ ] `geosVersion()` returns `"3.13.4"` on iOS **and** Android (C5)
+- [ ] `geosVersion()` returns `"3.14.1"` on iOS **and** Android (C5)
 - [ ] `smokeTest(validWkb)` returns non-null Polygon WKB on iOS **and** Android (C6)
 - [ ] `smokeTest(garbageWkb)` returns null on iOS **and** Android (C7)
 - [ ] Per-arch binary size ≤ 3 MB (C8)

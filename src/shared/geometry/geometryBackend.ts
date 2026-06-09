@@ -10,6 +10,7 @@ import type {
 
 import { APP_CONFIG } from "@/config/appConfig";
 import { jsGeometryBackend } from "./jsGeometryBackend";
+import { geosGeometryBackend } from "./geosGeometryBackend";
 
 // ─── Interface ───────────────────────────────────────────────────────────
 
@@ -104,16 +105,10 @@ export function getGeometryBackend(): GeometryBackend {
     // ── Force native (with JS fallback) ─────────────────────────
     if (configBackend === "geos") {
         if (nativeAvailable) {
-            // TODO(G2): replace with geosGeometryBackend.
-            // _backend = geosGeometryBackend;
-            // console.log(
-            //   '[geometryBackend] backend=geos reason=config (backend forced to "geos" in APP_CONFIG)',
-            // );
-            // return _backend;
+            _backend = geosGeometryBackend;
             console.log(
-                "[geometryBackend] backend=js reason=fallback (geos backend not yet implemented)",
+                '[geometryBackend] backend=geos reason=config (backend forced to "geos" in APP_CONFIG)',
             );
-            _backend = jsGeometryBackend;
             return _backend;
         }
         console.log(
@@ -125,16 +120,10 @@ export function getGeometryBackend(): GeometryBackend {
 
     // ── Auto ────────────────────────────────────────────────────
     if (nativeAvailable) {
-        // TODO(G2): replace with geosGeometryBackend.
-        // _backend = geosGeometryBackend;
-        // console.log(
-        //   '[geometryBackend] backend=geos reason=auto (native-geometry module available)',
-        // );
-        // return _backend;
+        _backend = geosGeometryBackend;
         console.log(
-            "[geometryBackend] backend=js reason=unavailable (native-geometry not yet implemented)",
+            "[geometryBackend] backend=geos reason=auto (native-geometry module available)",
         );
-        _backend = jsGeometryBackend;
         return _backend;
     }
 

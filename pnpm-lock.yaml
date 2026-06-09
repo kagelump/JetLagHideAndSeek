@@ -31,6 +31,9 @@ importers:
             "@turf/buffer":
                 specifier: ^7.3.5
                 version: 7.3.5
+            "@turf/center":
+                specifier: ~7.3.5
+                version: 7.3.5
             "@turf/circle":
                 specifier: ^7.2.0
                 version: 7.2.0
@@ -42,13 +45,16 @@ importers:
                 version: 7.3.5
             "@turf/nearest-point-on-line":
                 specifier: ^7.2.0
-                version: 7.2.0
+                version: 7.3.5
             "@turf/simplify":
                 specifier: ^7.3.5
                 version: 7.3.5
             "@turf/voronoi":
                 specifier: ^7.3.5
                 version: 7.3.5
+            d3-geo:
+                specifier: ~1.7.1
+                version: 1.7.1
             expo:
                 specifier: ~54.0.34
                 version: 54.0.34(@babel/core@7.28.3)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native@0.81.5(@babel/core@7.28.3)(@react-native/metro-config@0.85.3(@babel/core@7.28.3))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
@@ -125,6 +131,9 @@ importers:
             "@testing-library/react-native":
                 specifier: ^13.0.0
                 version: 13.3.3(jest@29.7.0(@types/node@22.15.19))(react-native@0.81.5(@babel/core@7.28.3)(@react-native/metro-config@0.85.3(@babel/core@7.28.3))(@types/react@19.1.17)(react@19.1.0))(react-test-renderer@19.1.0(react@19.1.0))(react@19.1.0)
+            "@types/d3-geo":
+                specifier: ^1.12.7
+                version: 1.12.7
             "@types/jest":
                 specifier: ^29.5.0
                 version: 29.5.14
@@ -2651,12 +2660,6 @@ packages:
                 integrity: sha512-r+ohqxoyqeigFB0oFrQx/YEHIkOKqcKpCjvZkvZs7Tkv+IFco5MezAd2zd4rzK+0DfFgDP3KpJc7HqrYjvEjhg==,
             }
 
-    "@turf/nearest-point-on-line@7.2.0":
-        resolution:
-            {
-                integrity: sha512-UOhAeoDPVewBQV+PWg1YTMQcYpJsIqfW5+EuZ5vJl60XwUa0+kqB/eVfSLNXmHENjKKIlEt9Oy9HIDF4VeWmXA==,
-            }
-
     "@turf/nearest-point-on-line@7.3.5":
         resolution:
             {
@@ -2709,6 +2712,12 @@ packages:
         resolution:
             {
                 integrity: sha512-r1bzfrm0tomOI8g1SzvCaQHo6Lcv6zu0EA+W2kHrt8dyrHQxGzBBL4kdkzIS+jBMV+EYcMAEAqXqYaLJq5rOZg==,
+            }
+
+    "@types/d3-geo@1.12.7":
+        resolution:
+            {
+                integrity: sha512-QetZrWWjuMfCe0BHLjD+dOThlgk7YGZ2gj+yhFAbDN5TularNBEQiBs5/CIgX0+IBDjt7/fbkDd5V70J1LjjKA==,
             }
 
     "@types/d3-voronoi@1.1.12":
@@ -10650,7 +10659,7 @@ snapshots:
             "@turf/distance": 7.2.0
             "@turf/helpers": 7.3.5
             "@turf/length": 7.2.0
-            "@turf/nearest-point-on-line": 7.2.0
+            "@turf/nearest-point-on-line": 7.3.5
             debounce: 2.2.0
             react: 19.1.0
             react-native: 0.81.5(@babel/core@7.28.3)(@react-native/metro-config@0.85.3(@babel/core@7.28.3))(@types/react@19.1.17)(react@19.1.0)
@@ -11353,15 +11362,6 @@ snapshots:
             "@types/geojson": 7946.0.16
             tslib: 2.8.1
 
-    "@turf/nearest-point-on-line@7.2.0":
-        dependencies:
-            "@turf/distance": 7.2.0
-            "@turf/helpers": 7.3.5
-            "@turf/invariant": 7.3.5
-            "@turf/meta": 7.3.5
-            "@types/geojson": 7946.0.16
-            tslib: 2.8.1
-
     "@turf/nearest-point-on-line@7.3.5":
         dependencies:
             "@turf/distance": 7.3.5
@@ -11425,6 +11425,10 @@ snapshots:
     "@types/babel__traverse@7.20.6":
         dependencies:
             "@babel/types": 7.28.2
+
+    "@types/d3-geo@1.12.7":
+        dependencies:
+            "@types/geojson": 7946.0.16
 
     "@types/d3-voronoi@1.1.12": {}
 
