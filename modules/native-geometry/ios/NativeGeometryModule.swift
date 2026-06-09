@@ -1,4 +1,5 @@
 import ExpoModulesCore
+
 // GEOS C API symbols (GEOSversion, GEOSinit_r, etc.) are available directly
 // because geos_bridge.h is listed in the pod's source_files and the
 // umbrella header includes it. No `import GEOS` needed.
@@ -104,9 +105,15 @@ public class NativeGeometryModule: Module {
         // at the end — no double-free (the G1 smokeTest bug is not carried forward).
         Function("bufferWKB") {
             (wkb: Data, distance: Double, quadrantSegments: Int) -> Data? in
+            #if DEBUG
+            let tTotal0 = CFAbsoluteTimeGetCurrent()
+            #endif
             let ctx = geosContext()
 
             // Read WKB → GEOS geometry.
+            #if DEBUG
+            let tParse0 = CFAbsoluteTimeGetCurrent()
+            #endif
             guard let rawGeom = wkb.withUnsafeBytes({ (ptr: UnsafeRawBufferPointer) -> OpaquePointer? in
                 guard let base = ptr.baseAddress else { return nil }
                 return GEOSGeomFromWKB_buf_r(ctx, base, ptr.count)
@@ -114,6 +121,9 @@ public class NativeGeometryModule: Module {
                 NSLog("[NativeGeometry] bufferWKB: failed to parse WKB")
                 return nil
             }
+            #if DEBUG
+            let tParseMs = (CFAbsoluteTimeGetCurrent() - tParse0) * 1000
+            #endif
 
             // Own the geometry pointer — mutating so we can reassign on MakeValid.
             var geom: OpaquePointer? = rawGeom
@@ -125,23 +135,49 @@ public class NativeGeometryModule: Module {
 
             // Validate; attempt MakeValid if invalid.
             // GEOSisValid_r returns 1 (valid), 0 (invalid), or 2 (exception).
+            #if DEBUG
+            let tValid0 = CFAbsoluteTimeGetCurrent()
+            #endif
             let valid = GEOSisValid_r(ctx, geom!)
+            #if DEBUG
+            let tValidMs = (CFAbsoluteTimeGetCurrent() - tValid0) * 1000
+            var tMakeValidMs: Double = 0
+            #endif
             if valid != 1 {
                 NSLog("[NativeGeometry] bufferWKB: geometry invalid — attempting MakeValid")
+                #if DEBUG
+                let tMake0 = CFAbsoluteTimeGetCurrent()
+                #endif
                 guard let fixed = GEOSMakeValid_r(ctx, geom!) else {
                     return nil
                 }
+                #if DEBUG
+                tMakeValidMs = (CFAbsoluteTimeGetCurrent() - tMake0) * 1000
+                #endif
                 // Destroy the original invalid geometry; take ownership of the fixed one.
                 GEOSGeom_destroy_r(ctx, geom!)
                 geom = fixed
             }
 
-            return _bufferAndWrite(
+            #if DEBUG
+            let tBuffer0 = CFAbsoluteTimeGetCurrent()
+            #endif
+            let result = _bufferAndWrite(
                 ctx: ctx,
                 geom: geom!,
                 distance: distance,
                 quadrantSegments: Int32(quadrantSegments)
             )
+            #if DEBUG
+            let tBufferMs = (CFAbsoluteTimeGetCurrent() - tBuffer0) * 1000
+            let tTotalMs = (CFAbsoluteTimeGetCurrent() - tTotal0) * 1000
+
+            NSLog("[NativeGeometry] bufferWKB parse=%.2fms valid=%.2fms makeValid=%.2fms buffer+write=%.2fms total=%.2fms (wkb=%ld bytes, qs=%d)",
+                  tParseMs, tValidMs, tMakeValidMs, tBufferMs, tTotalMs,
+                  wkb.count, quadrantSegments)
+            #endif
+
+            return result
         }
     }
 }
