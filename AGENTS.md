@@ -92,6 +92,11 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
 - `babel.config.js` must keep `react-native-reanimated/plugin` last.
 - `metro.config.js` pins native singletons. If a new native package starts
   resolving duplicate copies, update Metro intentionally.
+- **After pulling `native-geometry` changes** (new WKB functions, ABI bump):
+  rebuild the dev client. A stale binary keeps the buffer fast path but degrades
+  overlay ops to JS with a loud `console.warn` per op; body-of-water measuring
+  will hard-lock on the polyclip-JS dissolve (~25 s). Rebuild with
+  `expo prebuild --clean` + `expo run:ios/android` to restore full GEOS perf.
 
 ## Source Layout
 
