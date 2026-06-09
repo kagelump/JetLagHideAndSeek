@@ -30,6 +30,45 @@ let initPromise: Promise<void> | null = null;
 const GEOSBUF_CAP_ROUND = 1;
 const GEOSBUF_JOIN_ROUND = 1;
 
+function ensureGeos(): void {
+    if (!geos) {
+        throw new Error(
+            "geos-wasm not initialized — await initGeosWasm() in beforeAll",
+        );
+    }
+}
+
+function getModule(): any {
+    ensureGeos();
+    return geos!.Module;
+}
+
+/** Parse a little-endian WKB buffer into a GEOS geometry pointer. */
+function wkbToGeom(wkb: Uint8Array): any {
+    const M = getModule();
+    const inPtr = M._malloc(wkb.length);
+    M.HEAPU8.set(wkb, inPtr);
+    const geom = geos.GEOSGeomFromWKB_buf(inPtr, wkb.length);
+    M._free(inPtr);
+    return geom || null;
+}
+
+/** Serialize a GEOS geometry pointer into a little-endian WKB buffer. */
+function geomToWKB(geom: any): Uint8Array | null {
+    const M = getModule();
+    const sizePtr = M._malloc(4); // size_t is 32-bit on wasm32
+    const outPtr = geos.GEOSGeomToWKB_buf(geom, sizePtr);
+    const outSize = outPtr ? M.HEAPU32[sizePtr >> 2] : 0;
+    let out: Uint8Array | null = null;
+    if (outPtr && outSize > 0) {
+        // Copy out of the heap before freeing (the heap can move/realloc).
+        out = new Uint8Array(M.HEAPU8.subarray(outPtr, outPtr + outSize));
+        geos.GEOSFree(outPtr);
+    }
+    M._free(sizePtr);
+    return out;
+}
+
 /**
  * Load + initialize geos-wasm once. Call from `beforeAll`. Idempotent and
  * safe to call concurrently.
@@ -61,8 +100,7 @@ export function initGeosWasm(): Promise<void> {
  * buffer path (which goes through WKB/heap, not cwrap string returns).
  */
 export function geosWasmVersion(): string {
-    if (!geos)
-        throw new Error("geos-wasm not initialized — call initGeosWasm()");
+    ensureGeos();
     try {
         return geos.GEOSversion() || "unknown";
     } catch {
@@ -82,18 +120,9 @@ export function bufferWKB(
     distance: number,
     quadrantSegments: number,
 ): Uint8Array | null {
-    if (!geos) {
-        throw new Error(
-            "geos-wasm not initialized — await initGeosWasm() in beforeAll",
-        );
-    }
-    const M = geos.Module;
+    ensureGeos();
 
-    // --- WKB → GEOS geometry (copy bytes into the wasm heap) ---
-    const inPtr = M._malloc(wkb.length);
-    M.HEAPU8.set(wkb, inPtr);
-    const geom = geos.GEOSGeomFromWKB_buf(inPtr, wkb.length);
-    M._free(inPtr);
+    const geom = wkbToGeom(wkb);
     if (!geom) return null;
 
     // --- Buffer with native-matching params (round cap/join, qs) ---
@@ -106,19 +135,8 @@ export function bufferWKB(
     geos.GEOSGeom_destroy(geom);
     if (!buffered) return null;
 
-    // --- GEOS geometry → WKB (read bytes back off the heap) ---
-    const sizePtr = M._malloc(4); // size_t is 32-bit on wasm32
-    const outPtr = geos.GEOSGeomToWKB_buf(buffered, sizePtr);
-    const outSize = outPtr ? M.HEAPU32[sizePtr >> 2] : 0;
-    let out: Uint8Array | null = null;
-    if (outPtr && outSize > 0) {
-        // Copy out of the heap before freeing (the heap can move/realloc).
-        out = new Uint8Array(M.HEAPU8.subarray(outPtr, outPtr + outSize));
-        geos.GEOSFree(outPtr);
-    }
-    M._free(sizePtr);
+    const out = geomToWKB(buffered);
     geos.GEOSGeom_destroy(buffered);
-
     return out;
 }
 
@@ -129,36 +147,43 @@ export function bufferWKB(
  * Requires {@link initGeosWasm} first.
  */
 export function unaryUnionWKB(wkb: Uint8Array): Uint8Array | null {
-    if (!geos) {
-        throw new Error(
-            "geos-wasm not initialized — await initGeosWasm() in beforeAll",
-        );
-    }
-    const M = geos.Module;
+    ensureGeos();
 
-    // --- Parse WKB → GEOS geometry ---
-    const inPtr = M._malloc(wkb.length);
-    M.HEAPU8.set(wkb, inPtr);
-    const geom = geos.GEOSGeomFromWKB_buf(inPtr, wkb.length);
-    M._free(inPtr);
+    const geom = wkbToGeom(wkb);
     if (!geom) return null;
 
-    // --- Unary union ---
     const unioned = geos.GEOSUnaryUnion(geom);
     geos.GEOSGeom_destroy(geom);
     if (!unioned) return null;
 
-    // --- GEOS geometry → WKB ---
-    const sizePtr = M._malloc(4);
-    const outPtr = geos.GEOSGeomToWKB_buf(unioned, sizePtr);
-    const outSize = outPtr ? M.HEAPU32[sizePtr >> 2] : 0;
-    let out: Uint8Array | null = null;
-    if (outPtr && outSize > 0) {
-        out = new Uint8Array(M.HEAPU8.subarray(outPtr, outPtr + outSize));
-        geos.GEOSFree(outPtr);
-    }
-    M._free(sizePtr);
+    const out = geomToWKB(unioned);
     geos.GEOSGeom_destroy(unioned);
-
     return out;
 }
+
+const binary =
+    (geosFn: string) =>
+    (a: Uint8Array, b: Uint8Array): Uint8Array | null => {
+        ensureGeos();
+
+        const ga = wkbToGeom(a);
+        const gb = wkbToGeom(b);
+        if (!ga || !gb) {
+            if (ga) geos.GEOSGeom_destroy(ga);
+            if (gb) geos.GEOSGeom_destroy(gb);
+            return null;
+        }
+
+        const result = geos[geosFn](ga, gb);
+        geos.GEOSGeom_destroy(ga);
+        geos.GEOSGeom_destroy(gb);
+        if (!result) return null;
+
+        const out = geomToWKB(result);
+        geos.GEOSGeom_destroy(result);
+        return out;
+    };
+
+export const differenceWKB = binary("GEOSDifference");
+export const unionWKB = binary("GEOSUnion");
+export const intersectionWKB = binary("GEOSIntersection");
