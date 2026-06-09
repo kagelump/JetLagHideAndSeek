@@ -564,12 +564,15 @@ export function computeLineBuffer(
                 );
                 if (buf) polygonBuffers.push(buf);
             } catch (err) {
-                console.warn(`[lineBuffer] polygon buffer failed:`, err);
+                console.warn(
+                    `[lineBuffer] [${getGeometryBackend().name}] polygon buffer failed:`,
+                    err,
+                );
             }
         }
 
         console.log(
-            `[lineBuffer] polygon path: ${polyFeatures.length} polys, ` +
+            `[lineBuffer] [${getGeometryBackend().name}] polygon path: ${polyFeatures.length} polys, ` +
                 `${totalPolyCoords} coords → ${polygonBuffers.length} buffers`,
         );
     }
@@ -691,13 +694,16 @@ export function computeLineBuffer(
                                     BUFFER_STEPS,
                                 );
                         } catch (err) {
-                            console.warn(`[lineBuffer] buffer failed:`, err);
+                            console.warn(
+                                `[lineBuffer] [${getGeometryBackend().name}] buffer failed:`,
+                                err,
+                            );
                         }
                         const bufferMs = performance.now() - t0;
                         if (lineBufferResult) {
                             console.log(
-                                `[lineBuffer] line buffer done: ${lineBufferResult.geometry.type} ` +
-                                    `in ${bufferMs.toFixed(0)}ms`,
+                                `[lineBuffer] [${getGeometryBackend().name}] line buffer done: ` +
+                                    `${lineBufferResult.geometry.type} in ${bufferMs.toFixed(0)}ms`,
                             );
                         }
                     }

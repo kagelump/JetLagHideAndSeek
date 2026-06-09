@@ -10,6 +10,7 @@ import type {
 
 import type { Bbox, Position } from "@/shared/geojson";
 import type { QuestionState } from "@/features/questions/questionTypes";
+import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
 import { isLineMeasuringCategory } from "./measuringCategories";
 import {
     clipLineFeaturesToPlayArea,
@@ -233,7 +234,7 @@ export function buildMeasuringRenderState(
             const dilated = getDilatedPlayArea(playAreaBoundary);
             const tDilateMs = performance.now() - tDilate0;
             console.log(
-                `[measuringGeometry] getDilatedPlayArea in ${tDilateMs.toFixed(0)}ms`,
+                `[measuringGeometry] [${getGeometryBackend().name}] getDilatedPlayArea in ${tDilateMs.toFixed(0)}ms`,
             );
 
             const tClip0 = performance.now();

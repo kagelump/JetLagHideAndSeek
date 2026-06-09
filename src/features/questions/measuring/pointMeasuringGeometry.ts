@@ -392,14 +392,19 @@ export function computePointUnionBuffer(
             8, // Low circle resolution; union smooths the result.
         );
     } catch (err) {
-        console.warn(`[pointBuffer] buffer failed:`, err);
+        console.warn(
+            `[pointBuffer] [${getGeometryBackend().name}] buffer failed:`,
+            err,
+        );
         bufferCache.set(key, null);
         return null;
     }
     const bufferMs = performance.now() - t0;
 
     if (!result) {
-        console.log(`[pointBuffer] buffer returned undefined`);
+        console.log(
+            `[pointBuffer] [${getGeometryBackend().name}] buffer returned null`,
+        );
         bufferCache.set(key, null);
         return null;
     }

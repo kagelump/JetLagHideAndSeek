@@ -104,6 +104,7 @@ export const geosGeometryBackend: GeometryBackend = {
     name: "geos",
 
     bufferMeters(geom, meters, quadrantSegments, units = "meters") {
+        const t0 = performance.now();
         try {
             if (isFeatureCollection(geom)) {
                 // Bug-for-bug: buffer each feature independently, keep only
@@ -118,14 +119,30 @@ export const geosGeometryBackend: GeometryBackend = {
                     );
                     if (result) results.push(result);
                 }
+                const ms = performance.now() - t0;
+                console.log(
+                    `[geos] bufferMeters FC(${geom.features.length}) r=${meters} qs=${quadrantSegments} → ` +
+                        `${results.length} features (returning ${results[0]?.geometry.type ?? "null"}) in ${ms.toFixed(0)}ms`,
+                );
                 return results[0] ?? null;
             }
 
             // Single Feature input.
-            return bufferFeature(geom as Feature, meters, quadrantSegments);
+            const result = bufferFeature(
+                geom as Feature,
+                meters,
+                quadrantSegments,
+            );
+            const ms = performance.now() - t0;
+            console.log(
+                `[geos] bufferMeters ${geom.geometry?.type ?? "?"} r=${meters} qs=${quadrantSegments} → ` +
+                    `${result?.geometry.type ?? "null"} in ${ms.toFixed(0)}ms`,
+            );
+            return result;
         } catch (err) {
+            const ms = performance.now() - t0;
             console.warn(
-                "[geosGeometryBackend] bufferMeters failed, falling back to JS:",
+                `[geos] bufferMeters failed (${ms.toFixed(0)}ms), falling back to JS:`,
                 err,
             );
             return jsGeometryBackend.bufferMeters(

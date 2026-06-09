@@ -19,6 +19,7 @@ export const jsGeometryBackend: GeometryBackend = {
     name: "js",
 
     bufferMeters(geom, meters, quadrantSegments, units = "meters") {
+        const t0 = performance.now();
         try {
             // @turf/buffer v7 has two overloads — Feature → Feature and
             // FeatureCollection → FeatureCollection. TypeScript can't
@@ -29,10 +30,14 @@ export const jsGeometryBackend: GeometryBackend = {
                     steps: quadrantSegments,
                 }) as FeatureCollection<Polygon | MultiPolygon> | undefined;
 
-                if (fc?.features?.[0]) {
-                    return fc.features[0] as Feature<Polygon | MultiPolygon>;
-                }
-                return null;
+                const result = fc?.features?.[0]
+                    ? (fc.features[0] as Feature<Polygon | MultiPolygon>)
+                    : null;
+                const ms = performance.now() - t0;
+                console.log(
+                    `[js] bufferMeters FC(${geom.features.length}) r=${meters} qs=${quadrantSegments} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                );
+                return result;
             }
 
             // Single Feature input — result is already a Feature.
@@ -41,9 +46,13 @@ export const jsGeometryBackend: GeometryBackend = {
                 steps: quadrantSegments,
             }) as Feature<Polygon | MultiPolygon> | undefined;
 
+            const ms = performance.now() - t0;
+            console.log(
+                `[js] bufferMeters ${geom.geometry?.type ?? "?"} r=${meters} qs=${quadrantSegments} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+            );
             return result ?? null;
         } catch (err) {
-            console.warn("[jsGeometryBackend] bufferMeters failed:", err);
+            console.warn("[js] bufferMeters failed:", err);
             return null;
         }
     },
