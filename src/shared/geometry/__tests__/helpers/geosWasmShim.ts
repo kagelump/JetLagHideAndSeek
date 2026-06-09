@@ -121,3 +121,44 @@ export function bufferWKB(
 
     return out;
 }
+
+/**
+ * Unary union a little-endian WKB geometry (raw WGS84), returning WKB or
+ * `null` on failure. Synchronous, mirroring the native module's signature.
+ *
+ * Requires {@link initGeosWasm} first.
+ */
+export function unaryUnionWKB(wkb: Uint8Array): Uint8Array | null {
+    if (!geos) {
+        throw new Error(
+            "geos-wasm not initialized — await initGeosWasm() in beforeAll",
+        );
+    }
+    const M = geos.Module;
+
+    // --- Parse WKB → GEOS geometry ---
+    const inPtr = M._malloc(wkb.length);
+    M.HEAPU8.set(wkb, inPtr);
+    const geom = geos.GEOSGeomFromWKB_buf(inPtr, wkb.length);
+    M._free(inPtr);
+    if (!geom) return null;
+
+    // --- Unary union ---
+    const unioned = geos.GEOSUnaryUnion(geom);
+    geos.GEOSGeom_destroy(geom);
+    if (!unioned) return null;
+
+    // --- GEOS geometry → WKB ---
+    const sizePtr = M._malloc(4);
+    const outPtr = geos.GEOSGeomToWKB_buf(unioned, sizePtr);
+    const outSize = outPtr ? M.HEAPU32[sizePtr >> 2] : 0;
+    let out: Uint8Array | null = null;
+    if (outPtr && outSize > 0) {
+        out = new Uint8Array(M.HEAPU8.subarray(outPtr, outPtr + outSize));
+        geos.GEOSFree(outPtr);
+    }
+    M._free(sizePtr);
+    geos.GEOSGeom_destroy(unioned);
+
+    return out;
+}
