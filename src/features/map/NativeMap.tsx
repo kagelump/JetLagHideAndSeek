@@ -249,13 +249,11 @@ export function NativeMap({
                         visible={isQuestionDetailRoute}
                     />
 
-                    {hasLocationPermission ? (
-                        <MLUserLocation
-                            minDisplacement={5}
-                            onUpdate={handleLocationUpdate}
-                            visible
-                        />
-                    ) : null}
+                    <MLUserLocation
+                        minDisplacement={5}
+                        onUpdate={handleLocationUpdate}
+                        visible={hasLocationPermission}
+                    />
 
                     <QuestionPinLayer
                         activePinKey={activePinKey}
