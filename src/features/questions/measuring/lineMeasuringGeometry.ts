@@ -740,23 +740,21 @@ export function computeLineBuffer(
     // non-overlapping geometry that polyclip differences in ~ms.
     const merged = mergeBuffersToMultiPolygon(allBuffers);
 
-    // The dissolve uses a 0-radius buffer — the standard union/clean idiom
-    // (GEOS and JSTS both unary-union a self-overlapping MultiPolygon at
-    // distance 0). Pass a single Feature, NOT a FeatureCollection:
-    // `bufferMeters(fc, 0)` does not union — the backend buffers each feature
-    // independently and returns only the first result (see geometryBackend).
+    // Dissolve the self-overlapping MultiPolygon into clean geometry via
+    // unaryUnion (G5). The 0-radius buffer trick (`bufferMeters(merged, 0)`)
+    // was a stand-in for GEOSUnaryUnion — `unaryUnion` is the correct
+    // semantic and doesn't need a misleading `bufferSteps` argument.
     //
     // Only the native GEOS backend can dissolve this pathological input
-    // cheaply; the pure-JS (JSTS) oracle takes ~25 s on the real body-of-water
-    // window. GEOS is the production backend (the mask itself is polyclip-JS
-    // and relies on this dissolve to stay responsive), so when GEOS is
+    // cheaply; the pure-JS (polyclip-ts) oracle takes ~25 s on the real
+    // body-of-water window. GEOS is the production backend, so when GEOS is
     // unavailable we return the un-dissolved merge — still correct, just
     // heavier for the mask — rather than block the render thread here.
     const backend = getGeometryBackend();
     if (backend.name !== "geos") return merged;
 
     try {
-        const dissolved = backend.bufferMeters(merged, 0, BUFFER_STEPS);
+        const dissolved = backend.unaryUnion(merged);
         if (dissolved) return dissolved;
     } catch (err) {
         console.warn(`[lineBuffer] dissolve(merged buffers) failed:`, err);

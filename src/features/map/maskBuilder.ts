@@ -1,6 +1,7 @@
-import { difference, intersection, union, type Geom } from "polyclip-ts";
+import type { Feature, MultiPolygon, Polygon } from "geojson";
 import type { GeoJsonFeatureCollection, Position } from "./geojsonTypes";
 import { MAP } from "@/config/appConfig";
+import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
 
 export const WORLD_MASK_RING: Position[] = [
     [-180, -85],
@@ -21,6 +22,9 @@ type PolygonFeature = {
         type: "Polygon" | "MultiPolygon";
     };
 };
+
+/** Normalized array of polygon coordinate arrays (consistent with getPolygons). */
+type PolyCoords = Position[][][];
 
 export type PlayAreaMaskHole = {
     featureIndex: number;
@@ -211,17 +215,21 @@ export function buildCombinedEligibilityMask(
         return { features: [], type: "FeatureCollection" };
     }
 
-    let eligibleArea: Geom;
+    const backend = getGeometryBackend();
+
+    let eligibleArea: PolyCoords;
     if (requiredGeoms.length === 0) {
-        eligibleArea = playAreaPolygons as Geom;
+        eligibleArea = playAreaPolygons;
     } else if (requiredGeoms.length === 1) {
         eligibleArea = requiredGeoms[0];
     } else {
         const t0 = performance.now();
-        eligibleArea = intersection(
-            requiredGeoms[0],
-            ...requiredGeoms.slice(1),
+        const features = requiredGeoms.map(coordsToFeature);
+        const intersected = reduceOverlay(
+            features,
+            backend.intersection.bind(backend),
         );
+        eligibleArea = intersected ? featureToCoords(intersected) : [];
         console.log(
             `[maskBuilder] intersection(${requiredGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
         );
@@ -233,19 +241,27 @@ export function buildCombinedEligibilityMask(
 
     if (excludedGeoms.length > 0) {
         const t0 = performance.now();
-        const excludedArea =
-            excludedGeoms.length === 1
-                ? excludedGeoms[0]
-                : union(excludedGeoms[0], ...excludedGeoms.slice(1));
+        let excludedCoords: PolyCoords;
+        if (excludedGeoms.length === 1) {
+            excludedCoords = excludedGeoms[0];
+        } else {
+            const features = excludedGeoms.map(coordsToFeature);
+            const united = reduceOverlay(features, backend.union.bind(backend));
+            excludedCoords = united ? featureToCoords(united) : [];
+        }
         if (excludedGeoms.length > 1) {
             console.log(
                 `[maskBuilder] union(${excludedGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
             );
         }
 
-        if (hasGeomArea(excludedArea)) {
+        if (hasGeomArea(excludedCoords)) {
             const t1 = performance.now();
-            eligibleArea = difference(eligibleArea, excludedArea) as Geom;
+            const diffResult = backend.difference(
+                coordsToFeature(eligibleArea),
+                coordsToFeature(excludedCoords),
+            );
+            eligibleArea = diffResult ? featureToCoords(diffResult) : [];
             console.log(
                 `[maskBuilder] difference(eligibleArea, excludedArea) in ${(performance.now() - t1).toFixed(2)}ms`,
             );
@@ -257,10 +273,13 @@ export function buildCombinedEligibilityMask(
     }
 
     const t2 = performance.now();
-    const maskedArea = difference(
-        playAreaPolygons as Geom,
-        eligibleArea,
-    ) as Position[][][];
+    const diffResult = backend.difference(
+        coordsToFeature(playAreaPolygons),
+        coordsToFeature(eligibleArea),
+    );
+    const maskedArea: PolyCoords = diffResult
+        ? featureToCoords(diffResult)
+        : [];
     console.log(
         `[maskBuilder] difference(playArea, eligibleArea) in ${(performance.now() - t2).toFixed(2)}ms`,
     );
@@ -286,25 +305,23 @@ export function buildCombinedEligibilityMask(
     return result;
 }
 
-function getGeoms(collections: PolygonFeatureCollection[]): Geom[] {
-    const geoms: Geom[] = [];
+function getGeoms(collections: PolygonFeatureCollection[]): PolyCoords[] {
+    const geoms: PolyCoords[] = [];
     for (const collection of collections) {
         const polygons = getPolygons(collection);
         if (polygons.length > 0) {
-            geoms.push(polygons as Geom);
+            geoms.push(polygons);
         }
     }
     return geoms;
 }
 
-function hasGeomArea(geom: Geom): boolean {
-    return (geom as Position[][][]).some(
-        (polygon) => Array.isArray(polygon) && polygon.length > 0,
-    );
+function hasGeomArea(geom: PolyCoords): boolean {
+    return geom.some((polygon) => Array.isArray(polygon) && polygon.length > 0);
 }
 
 function buildMultiPolygonFeatureCollection(
-    polygons: Position[][][],
+    polygons: PolyCoords,
 ): GeoJsonFeatureCollection {
     return {
         features:
@@ -322,6 +339,48 @@ function buildMultiPolygonFeatureCollection(
                 : [],
         type: "FeatureCollection",
     };
+}
+
+// ── Overlay helpers (G5) ──────────────────────────────────────────────────
+
+/** Wrap a normalized array of polygon coords into a Polygon/MultiPolygon Feature. */
+function coordsToFeature(coords: PolyCoords): Feature<Polygon | MultiPolygon> {
+    if (coords.length === 1) {
+        return {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "Polygon", coordinates: coords[0] },
+        };
+    }
+    return {
+        type: "Feature",
+        properties: {},
+        geometry: { type: "MultiPolygon", coordinates: coords },
+    };
+}
+
+/** Unwrap a Polygon/MultiPolygon Feature back to normalized polygon coords. */
+function featureToCoords(f: Feature<Polygon | MultiPolygon>): PolyCoords {
+    if (f.geometry.type === "Polygon") {
+        return [f.geometry.coordinates as Position[][]];
+    }
+    return f.geometry.coordinates as PolyCoords;
+}
+
+/** Reduce an array of Features with a binary overlay op. Returns null if any step produces empty. */
+function reduceOverlay(
+    features: Feature<Polygon | MultiPolygon>[],
+    op: (
+        a: Feature<Polygon | MultiPolygon>,
+        b: Feature<Polygon | MultiPolygon>,
+    ) => Feature<Polygon | MultiPolygon> | null,
+): Feature<Polygon | MultiPolygon> | null {
+    if (features.length === 0) return null;
+    let result: Feature<Polygon | MultiPolygon> | null = features[0];
+    for (let i = 1; i < features.length && result; i++) {
+        result = op(result, features[i]);
+    }
+    return result;
 }
 
 export function asSeparateMaskConstraints(

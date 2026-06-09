@@ -1,12 +1,13 @@
-import { intersection, type Geom } from "polyclip-ts";
 import type {
     Feature,
     FeatureCollection,
     GeoJsonProperties,
     MultiPolygon,
     Polygon,
+    Position,
 } from "geojson";
 import { VORONOI } from "@/config/appConfig";
+import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
 
 const MAX_CACHE_SIZE = VORONOI.maxClipCacheSize;
 const cache = new Map<string, FeatureCollection<Polygon | MultiPolygon>>();
@@ -16,20 +17,18 @@ let nextCellCollectionId = 1;
 let nextBoundaryId = 1;
 
 /** Memoizes extractBoundaryCoords result by boundary object identity. */
-const boundaryGeomCache = new WeakMap<object, Geom | null>();
+const boundaryGeomCache = new WeakMap<object, Position[][][] | null>();
 
 // ─── Bbox helpers ─────────────────────────────────────────────────────────
 
 type CellBbox = [number, number, number, number]; // [west, south, east, north]
 
-/** Bounding box of a multipolygon Geom (the boundary). */
-function computeBbox(coords: Geom): CellBbox {
+/** Bounding box of a multipolygon (the boundary). */
+function computeBbox(coords: Position[][][]): CellBbox {
     let west = Infinity;
     let south = Infinity;
     let east = -Infinity;
     let north = -Infinity;
-    // Work with plain number[][][] to avoid polyclip-ts Geom union types.
-    // The inner arrays are coordinate pairs [lng, lat] — iterate by index.
     const polys = coords as unknown as number[][][];
     for (const poly of polys) {
         for (const ring of poly) {
@@ -101,33 +100,32 @@ function cacheKey(cells: object, boundary: object): string {
 
 /**
  * Extract polygon coordinate arrays from a boundary FeatureCollection into a
- * single multipolygon Geom. Returns null when the boundary has no polygons.
+ * single multipolygon coordinate array. Returns null when the boundary has no
+ * polygons.
  *
  * Memoizes by boundary object identity so that multiple matching questions
  * sharing the same boundary reference only traverse it once.
  */
 function extractBoundaryCoords(
     boundary: FeatureCollection<Polygon | MultiPolygon>,
-): Geom | null {
+): Position[][][] | null {
     const memoized = boundaryGeomCache.get(boundary);
     if (memoized !== undefined) {
         return memoized;
     }
 
-    // Build as plain number[][][] to avoid the polyclip-ts Geom push type
-    // constraint, then cast at the end — consistent with maskBuilder.ts.
-    const coords: number[][][] = [];
+    const coords: Position[][][] = [];
     for (const feature of boundary.features) {
         const geom = feature.geometry;
         if (geom.type === "Polygon") {
-            coords.push(geom.coordinates as unknown as number[][]);
+            coords.push(geom.coordinates as unknown as Position[][]);
         } else if (geom.type === "MultiPolygon") {
             for (const polygon of geom.coordinates) {
-                coords.push(polygon as unknown as number[][]);
+                coords.push(polygon as unknown as Position[][]);
             }
         }
     }
-    const result = coords.length > 0 ? (coords as unknown as Geom) : null;
+    const result = coords.length > 0 ? coords : null;
     boundaryGeomCache.set(boundary, result);
     return result;
 }
@@ -182,8 +180,33 @@ export function clipCellsToPlayArea<
 
     // Compute the boundary envelope once before the loop. Most Voronoi cells
     // near the search center lie well inside the play-area bbox and can skip
-    // the expensive polyclip-ts intersection entirely.
+    // the expensive overlay intersection entirely.
     const bbox = computeBbox(boundaryCoords);
+
+    // Pre-wrap the boundary as a Feature for the backend overlay op.
+    // The same boundary is used in every slow-path cell intersection, so
+    // wrapping once avoids redundant GeoJSON → WKB encoding per cell when
+    // the GEOS backend is active.
+    const boundaryFeature: Feature<Polygon | MultiPolygon> =
+        boundaryCoords.length === 1
+            ? {
+                  type: "Feature",
+                  properties: {},
+                  geometry: {
+                      type: "Polygon",
+                      coordinates: boundaryCoords[0],
+                  },
+              }
+            : {
+                  type: "Feature",
+                  properties: {},
+                  geometry: {
+                      type: "MultiPolygon",
+                      coordinates: boundaryCoords,
+                  },
+              };
+
+    const backend = getGeometryBackend();
     const resultFeatures: Feature<Polygon | MultiPolygon, P>[] = [];
 
     let fastPathHits = 0;
@@ -216,36 +239,26 @@ export function clipCellsToPlayArea<
             continue;
         }
 
-        // Cell straddles the boundary edge — expensive polyclip-ts clip.
+        // Cell straddles the boundary edge — clip via the geometry backend.
         slowPathHits++;
         try {
-            const cellGeom = cell.geometry.coordinates as unknown as Geom;
-            const clipped = intersection(cellGeom, boundaryCoords);
+            const clipped = backend.intersection(
+                cell as Feature<Polygon | MultiPolygon>,
+                boundaryFeature,
+            );
 
             // Cell whose site lies outside the boundary → intersection is empty → drop
-            if (clipped.length === 0) {
+            if (!clipped) {
                 continue;
             }
 
-            let geometry: Polygon | MultiPolygon;
-            if (clipped.length === 1) {
-                geometry = {
-                    type: "Polygon",
-                    coordinates: clipped[0],
-                } as Polygon;
-            } else {
-                geometry = {
-                    type: "MultiPolygon",
-                    coordinates: clipped,
-                } as MultiPolygon;
-            }
-
+            const geom = clipped.geometry;
             resultFeatures.push({
                 type: "Feature",
                 properties: cell.properties
                     ? { ...cell.properties }
                     : ({} as P),
-                geometry,
+                geometry: geom,
             });
         } catch (err) {
             if (__DEV__) {
