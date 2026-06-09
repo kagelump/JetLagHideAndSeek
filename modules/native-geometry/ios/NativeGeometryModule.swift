@@ -22,7 +22,10 @@ private func geosContext() -> GEOSContextHandle_t {
     // Double-check after acquiring the lock.
     if let ctx = _geosContext { return ctx }
 
-    let ctx = GEOS_init_r()
+    guard let ctx = GEOS_init_r() else {
+        // GEOS_init_r returns nil on allocation failure.
+        fatalError("[NativeGeometry] GEOS_init_r returned nil")
+    }
     // Install notice + error handlers that log instead of printing to stderr.
     let noticeCb: GEOSMessageHandler_r = { (msg, _) in
         if let msg = msg {
@@ -59,8 +62,8 @@ private func _bufferAndWrite(
     defer { GEOSBufferParams_destroy_r(ctx, params) }
 
     _ = GEOSBufferParams_setQuadrantSegments_r(ctx, params, quadrantSegments)
-    _ = GEOSBufferParams_setEndCapStyle_r(ctx, params, GEOSBUF_CAP_ROUND)
-    _ = GEOSBufferParams_setJoinStyle_r(ctx, params, GEOSBUF_JOIN_ROUND)
+    _ = GEOSBufferParams_setEndCapStyle_r(ctx, params, Int32(GEOSBUF_CAP_ROUND.rawValue))
+    _ = GEOSBufferParams_setJoinStyle_r(ctx, params, Int32(GEOSBUF_JOIN_ROUND.rawValue))
     // Leave mitre limit at GEOS default (matches JSTS default).
 
     guard let buffered = GEOSBufferWithParams_r(ctx, geom, params, distance) else {
@@ -121,8 +124,8 @@ public class NativeGeometryModule: Module {
             }
 
             // Validate; attempt MakeValid if invalid.
-            var valid: Int8 = 0
-            _ = GEOSisValid_r(ctx, geom!, &valid)
+            // GEOSisValid_r returns 1 (valid), 0 (invalid), or 2 (exception).
+            let valid = GEOSisValid_r(ctx, geom!)
             if valid != 1 {
                 NSLog("[NativeGeometry] bufferWKB: geometry invalid — attempting MakeValid")
                 guard let fixed = GEOSMakeValid_r(ctx, geom!) else {

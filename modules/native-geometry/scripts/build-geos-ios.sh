@@ -113,9 +113,9 @@ for SLICE_PATH in "$BUILD_DIR/device" "$BUILD_DIR/simulator"; do
         SLICE="ios-arm64-simulator"
     fi
     HEADERS="$TMP_XCFRAMEWORK/$SLICE/Headers"
-    mkdir -p "$HEADERS"
+    mkdir -p "$HEADERS/geos"
     cp "$SLICE_PATH/capi/geos_c.h" "$HEADERS/"
-    cp "$VENDOR_DIR/include/geos/export.h" "$HEADERS/"
+    cp "$VENDOR_DIR/include/geos/export.h" "$HEADERS/geos/"
 done
 
 # Plist content
