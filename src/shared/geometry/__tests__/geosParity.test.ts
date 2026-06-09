@@ -34,70 +34,14 @@ import {
     geosWasmVersion,
     bufferWKB as geosWasmBufferWKB,
 } from "./helpers/geosWasmShim";
-
-// ── Geographic metric helpers (dependency-free; mirror @turf/area) ──────────
-
-const AREA_RADIUS = 6_378_137; // WGS84 semi-major axis, as @turf/area uses.
-const rad = (deg: number) => (deg * Math.PI) / 180;
-
-/** Signed spherical area of a ring (the @mapbox/geojson-area algorithm). */
-function ringArea(coords: number[][]): number {
-    const n = coords.length;
-    if (n <= 2) return 0;
-    let total = 0;
-    for (let i = 0; i < n; i++) {
-        const lower = coords[i];
-        const middle = coords[(i + 1) % n];
-        const upper = coords[(i + 2) % n];
-        total += (rad(upper[0]) - rad(lower[0])) * Math.sin(rad(middle[1]));
-    }
-    return (total * AREA_RADIUS * AREA_RADIUS) / 2;
-}
-
-function polygonAreaM2(rings: number[][][]): number {
-    if (rings.length === 0) return 0;
-    let area = Math.abs(ringArea(rings[0]));
-    for (let i = 1; i < rings.length; i++) area -= Math.abs(ringArea(rings[i]));
-    return area;
-}
-
-function geomAreaM2(geom: Polygon | MultiPolygon): number {
-    if (geom.type === "Polygon") return polygonAreaM2(geom.coordinates);
-    return geom.coordinates.reduce((sum, poly) => sum + polygonAreaM2(poly), 0);
-}
-
-type Bbox = [number, number, number, number]; // [w, s, e, n]
-
-function geomBbox(geom: Polygon | MultiPolygon): Bbox {
-    let w = Infinity,
-        s = Infinity,
-        e = -Infinity,
-        n = -Infinity;
-    const visit = (rings: number[][][]) => {
-        for (const ring of rings)
-            for (const [x, y] of ring) {
-                if (x < w) w = x;
-                if (x > e) e = x;
-                if (y < s) s = y;
-                if (y > n) n = y;
-            }
-    };
-    if (geom.type === "Polygon") visit(geom.coordinates);
-    else for (const poly of geom.coordinates) visit(poly);
-    return [w, s, e, n];
-}
-
-/** Max edge displacement between two bboxes, in meters (approx). */
-function bboxEdgeDeltaMeters(a: Bbox, b: Bbox, atLat: number): number {
-    const mPerDegLat = 111_320;
-    const mPerDegLon = 111_320 * Math.cos(rad(atLat));
-    return Math.max(
-        Math.abs(a[0] - b[0]) * mPerDegLon,
-        Math.abs(a[2] - b[2]) * mPerDegLon,
-        Math.abs(a[1] - b[1]) * mPerDegLat,
-        Math.abs(a[3] - b[3]) * mPerDegLat,
-    );
-}
+import {
+    geomAreaM2,
+    geomBbox,
+    bboxEdgeDeltaMeters,
+    bboxToleranceM,
+    AREA_RATIO_MIN,
+    AREA_RATIO_MAX,
+} from "../parityMetrics";
 
 // ── Fixtures (chosen by geometric role: corridor, area, scattered points) ───
 
@@ -153,13 +97,6 @@ const fixtures: { name: string; feature: Feature }[] = [
 
 const radiiMeters = [500, 2000, 5000];
 const QS = 8; // matches every app call site (BUFFER_STEPS / literal 8)
-
-// Parity gates (G2 plan, Layer 5).
-const AREA_RATIO_MIN = 0.99;
-const AREA_RATIO_MAX = 1.01;
-// bbox displacement allowance: arc-discretization jitter scales with radius;
-// a gross translation bug shifts by hundreds of meters, far beyond this.
-const bboxToleranceM = (radius: number) => radius * 0.02 + 5;
 
 describe("GEOS ↔ turf buffer parity (geos-wasm)", () => {
     beforeAll(async () => {

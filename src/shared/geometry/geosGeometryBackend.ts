@@ -47,6 +47,10 @@ function isFeatureCollection(geom: {
 /**
  * Buffer a single Feature through the GEOS native path:
  * project → encode → bufferWKB → decode → unproject.
+ *
+ * When `__DEV__` is true, logs a `[geosPerf]` line with per-step timings
+ * (encode, native, decode) so the marshalling split can be validated
+ * independently of the total wall-clock time.
  */
 function bufferFeature(
     feature: Feature,
@@ -80,18 +84,33 @@ function bufferFeature(
     );
 
     // 3. Encode projected geometry to WKB.
+    const tEncode0 = __DEV__ ? performance.now() : 0;
     const wkb = encodeWkb(projected);
+    const tEncodeMs = __DEV__ ? performance.now() - tEncode0 : 0;
 
     // 4. Call native GEOS buffer in meter units.
+    const tNative0 = __DEV__ ? performance.now() : 0;
     const resultWkb = bufferWKB(wkb, meters, quadrantSegments);
+    const tNativeMs = __DEV__ ? performance.now() - tNative0 : 0;
     if (!resultWkb) return null;
 
     // 5. Decode buffered WKB back to GeoJSON.
+    const tDecode0 = __DEV__ ? performance.now() : 0;
     const buffered = decodeWkb(resultWkb);
+    const tDecodeMs = __DEV__ ? performance.now() - tDecode0 : 0;
     if (!buffered) return null; // empty geometry (POLYGON EMPTY etc.)
 
     // 6. Unproject from planar meters back to WGS84.
     const unprojected = unprojectGeometry(buffered, proj);
+
+    if (__DEV__) {
+        console.log(
+            `[geosPerf] encode=${tEncodeMs.toFixed(2)}ms ` +
+                `native=${tNativeMs.toFixed(2)}ms ` +
+                `decode=${tDecodeMs.toFixed(2)}ms ` +
+                `type=${geom.type} r=${meters} qs=${quadrantSegments}`,
+        );
+    }
 
     return {
         type: "Feature",
