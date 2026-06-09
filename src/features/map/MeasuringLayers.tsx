@@ -1,6 +1,3 @@
-import { useMemo } from "react";
-import type { LineString } from "geojson";
-
 import type { MeasuringRenderState } from "@/features/questions/measuring/measuringTypes";
 import { colors } from "@/theme/colors";
 
@@ -21,51 +18,24 @@ const EMPTY_FEATURES = {
 } as const;
 
 /**
- * Stable key derived from connector geometry so that the ShapeSource
- * remounts when a connector endpoint changes — prevents stale GeoJSON
- * from persisting across map-tap / my-location updates.
- */
-function useConnectorsKey(
-    features: MeasuringRenderState["nearestPointConnectors"]["features"],
-): string {
-    return useMemo(
-        () =>
-            features
-                .map((f) => {
-                    const coords = (f.geometry as LineString).coordinates;
-                    return [
-                        coords[0][0].toFixed(6),
-                        coords[0][1].toFixed(6),
-                        coords[1][0].toFixed(6),
-                        coords[1][1].toFixed(6),
-                    ].join(",");
-                })
-                .join("|"),
-        [features],
-    );
-}
-
-/**
  * Renders connector lines, nearest-point markers, and the clipped reference
  * line geometry for line-category Measuring questions (e.g. Shinkansen
  * tracks, prefecture borders).
  *
  * Always keeps the ShapeSources mounted — even with empty collections — so
  * MapLibre GL Native does not fail to re-register the source ids during
- * gestures.
+ * gestures. Never uses dynamic keys on native MapView children; geometry
+ * updates flow through the shape prop to avoid nil-subview crashes from
+ * Fabric interop child remounts.
  */
 export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
     const lineFeatures = visible ? measuring.lineFeatures : EMPTY_FEATURES;
-    const connectorsKey = useConnectorsKey(
-        measuring.nearestPointConnectors.features,
-    );
-    const markersKey = useMemo(
-        () =>
-            measuring.nearestPointMarkers.features
-                .map((f) => f.geometry.coordinates.join(","))
-                .join("|"),
-        [measuring.nearestPointMarkers.features],
-    );
+    const connectorFeatures = visible
+        ? measuring.nearestPointConnectors
+        : EMPTY_FEATURES;
+    const markerFeatures = visible
+        ? measuring.nearestPointMarkers
+        : EMPTY_FEATURES;
 
     return (
         <>
@@ -82,11 +52,7 @@ export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
             </MLShapeSource>
 
             {/* ── Connector: seeker pin → nearest point ──────────────── */}
-            <MLShapeSource
-                id="measuring-connectors"
-                key={`conn:${connectorsKey}`}
-                shape={measuring.nearestPointConnectors}
-            >
+            <MLShapeSource id="measuring-connectors" shape={connectorFeatures}>
                 <MLLineLayer
                     id="measuring-connectors-line"
                     style={{
@@ -99,11 +65,7 @@ export function MeasuringLayers({ measuring, visible }: MeasuringLayersProps) {
             </MLShapeSource>
 
             {/* ── Nearest-point marker ────────────────────────────────── */}
-            <MLShapeSource
-                id="measuring-markers"
-                key={`markers:${markersKey}`}
-                shape={measuring.nearestPointMarkers}
-            >
+            <MLShapeSource id="measuring-markers" shape={markerFeatures}>
                 <MLCircleLayer
                     id="measuring-markers-circle"
                     style={{
