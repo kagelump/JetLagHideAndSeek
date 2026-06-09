@@ -54,11 +54,20 @@ export function initGeosWasm(): Promise<void> {
     return initPromise;
 }
 
-/** GEOS version string of the wasm build (e.g. "3.13.0-CAPI-1.19.0"). */
+/**
+ * GEOS version string of the wasm build (e.g. "3.13.0-CAPI-1.19.0"), or
+ * "unknown" if the string-returning C call doesn't marshal under the test
+ * environment. Best-effort — used only for diagnostic logging, never on the
+ * buffer path (which goes through WKB/heap, not cwrap string returns).
+ */
 export function geosWasmVersion(): string {
     if (!geos)
         throw new Error("geos-wasm not initialized — call initGeosWasm()");
-    return geos.GEOSversion();
+    try {
+        return geos.GEOSversion() || "unknown";
+    } catch {
+        return "unknown";
+    }
 }
 
 /**

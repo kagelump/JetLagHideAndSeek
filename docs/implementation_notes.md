@@ -188,9 +188,49 @@ Store thinning ships one arch per device, so the per-device cost is one slice.
 - Android (`NativeGeometryModule.kt` + `native-geometry-jni.cpp`): same
   semantics, thread-safe context init (`std::call_once`).
 
+**On-host GEOS parity (geos-wasm):** done. The GEOS buffer math is validated
+against the `@turf/buffer` oracle in Jest — no device required. See the runbook
+below.
+
 **On-device (Layers 5–8):** not yet done — see `g2-plan.md` Testing & validation.
-The parity harness, crash/perf validation, and Maestro E2E flow require a
-device/simulator with a dev build.
+The crash/perf validation and Maestro E2E flow require a device/simulator with a
+dev build. Note the buffer _math_ is now covered on-host (geos-wasm), so the
+device harness's remaining unique job is the **native glue** (Swift/JNI memory
+lifetime, the expo-modules-core `Data`/`ByteArray`↔`Uint8Array` marshalling),
+**on-device perf**, and the **exact vendored 3.14.1** build.
+
+### On-host GEOS parity gate (geos-wasm)
+
+The native Expo module can't run in Jest, but GEOS itself is platform-agnostic C
+and runs in Node via [`geos-wasm`](https://www.npmjs.com/package/geos-wasm). The
+`geosParity` suite drives the **real** `geosGeometryBackend` pipeline (project →
+`encodeWkb` → GEOS → `decodeWkb` → unproject) against the `jsGeometryBackend`
+turf oracle and asserts they agree, closing the "GEOS math never compared to the
+oracle" gap without a device.
+
+```bash
+pnpm test:geos     # NODE_OPTIONS=--experimental-vm-modules, jest.config.geos.js
+```
+
+- **Files:** `src/shared/geometry/__tests__/geosParity.test.ts` (the gate) and
+  `__tests__/helpers/geosWasmShim.ts` (a `bufferWKB(wkb, distance, qs)` shim over
+  the GEOS C API matching the native module's contract; pointed at the mocked
+  `native-geometry` so the real backend runs unmodified).
+- **What it validates:** the WKB codec, the AEQD projection, the backend adapter,
+  and GEOS buffer math vs turf — Tokyo/Osaka line + polygon + multipoint fixtures
+  × {500, 2000, 5000} m at QS=8. Current result: **area ratio 1.00000, bbox Δ
+  0.00 m** across all cases (GEOS is a C++ port of the same JTS buffer algorithm
+  turf uses, run in the identical projected space the backend replicates).
+- **Why a separate config/flag:** geos-wasm is ESM-only and uses `import.meta`,
+  so the suite needs `--experimental-vm-modules`. It is excluded from the default
+  `pnpm test` (see `testPathIgnorePatterns` in `jest.config.js`) and run via the
+  dedicated `test:geos` script / `jest.config.geos.js`.
+- **Version caveat:** geos-wasm bundles GEOS 3.13.x, not the vendored 3.14.1.
+  Parity is gated on **tolerance** (area ratio + bbox proximity), stable across
+  GEOS 3.x — not exact bytes. It does **not** exercise the native Swift/JNI
+  wrappers, marshalling, or the exact vendored build (that's the device harness).
+- **CI:** runs as a standalone step on a plain Linux Node runner (no native
+  toolchain) — `pnpm test:geos`. Complements the heavier Maestro/emulator job.
 
 ### Parity-harness runbook (TBD — placeholder for Layers 5–8)
 
