@@ -16,6 +16,7 @@ import {
     clipLineFeaturesToPlayArea,
     computeLineBufferCached,
     computeLineCategory,
+    filterFeaturesByBboxMargin,
     getClippedLineFeaturesCached,
     getDilatedPlayArea,
     makeClippedLineCacheKey,
@@ -107,14 +108,29 @@ export function buildMeasuringRenderState(
             // Buffer the line at the seeker's distance so the mask covers
             // all points within range of ANY point on the line, not just
             // the single nearest point.
+            //
+            // windowFeatures was selected with a 50 km margin for
+            // nearest-point search (see computeLineCategory →
+            // selectWindowFeatures). For the buffer, only features within
+            // ~radiusMeters of the play area can contribute inside it;
+            // re-scope here so the budget loop never sees features it
+            // doesn't need to buffer.
             if (q.answer === "positive" || q.answer === "negative") {
                 let buf: Feature<Polygon | MultiPolygon> | null;
                 try {
+                    const bufferFeatures = playAreaBbox
+                        ? filterFeaturesByBboxMargin(
+                              lineCat.windowFeatures,
+                              playAreaBbox,
+                              lineCat.distanceMeters,
+                          )
+                        : lineCat.windowFeatures;
+
                     buf = computeLineBufferCached(
                         q.category,
                         q.center,
                         lineCat.distanceMeters,
-                        lineCat.windowFeatures,
+                        bufferFeatures,
                     );
                 } catch (err) {
                     console.warn(

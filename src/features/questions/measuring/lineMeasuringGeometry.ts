@@ -111,6 +111,32 @@ export function selectWindowFeatures(
     return result;
 }
 
+// ─── Buffer-scoped feature filter ──────────────────────────────────────
+
+/**
+ * Filters `windowFeatures` to only those whose bbox intersects the play-area
+ * bbox expanded by `marginMeters`. This re-scopes the wide nearest-search
+ * window (50 km) to the buffer radius so the budget loop never sees features
+ * that cannot contribute to the buffer inside the play area.
+ */
+export function filterFeaturesByBboxMargin(
+    features: LineOrPolygonFeature[],
+    bbox: Bbox,
+    marginMeters: number,
+): LineOrPolygonFeature[] {
+    if (features.length === 0) return [];
+    const midLat = (bbox[1] + bbox[3]) / 2;
+    const marginLon = metersToDegLon(marginMeters, midLat);
+    const marginLat = metersToDegLat(marginMeters);
+    const expandedBbox: Bbox = [
+        bbox[0] - marginLon,
+        bbox[1] - marginLat,
+        bbox[2] + marginLon,
+        bbox[3] + marginLat,
+    ];
+    return features.filter((f) => bboxIntersects(featureBbox(f), expandedBbox));
+}
+
 // ─── computeLineCategory cache ─────────────────────────────────────────
 
 /** Increment to invalidate all cached line-category results. */
@@ -422,6 +448,25 @@ export function clearLineBufferCache(): void {
 // --- Line buffer input budget ------------------------------------------------
 
 /**
+ * Uniform subsampling: selects `target` evenly-spaced points along the
+ * coordinate array. Always preserves first and last vertex so the shape
+ * stays anchored. When `target >= l.length` returns a shallow copy.
+ *
+ * This is the shape-preserving hard-cap fallback in `applyBufferBudget` —
+ * it degrades resolution uniformly across the whole polyline instead of
+ * slicing to a prefix, which would collapse the shape to a straight capsule.
+ */
+function uniformlySubsample(l: Position[], target: number): Position[] {
+    if (target >= l.length) return [...l];
+    const result: Position[] = [];
+    const step = (l.length - 1) / (target - 1);
+    for (let i = 0; i < target; i++) {
+        result.push(l[Math.round(i * step)]);
+    }
+    return result;
+}
+
+/**
  * Applies a bounded escalation loop to drop/simplify line segments until
  * they fit within `MAX_BUFFER_SEGMENTS` and `MAX_BUFFER_COORDS`.
  *
@@ -466,12 +511,14 @@ export function applyBufferBudget(
     working = working.slice(0, MAX_BUFFER_SEGMENTS);
     // Re-simplify at a high tolerance for the survivors.
     working = working.map((l) => simplifyCoords(l, tol));
-    // If still over coord budget, truncate each line.
+    // If still over coord budget, uniformly subsample each line so the
+    // shape degrades in resolution rather than collapsing to a straight
+    // capsule from a prefix slice.
     const coords = working.reduce((s, l) => s + l.length, 0);
     if (coords > MAX_BUFFER_COORDS) {
         const ratio = MAX_BUFFER_COORDS / coords;
         working = working.map((l) =>
-            l.slice(0, Math.max(2, Math.floor(l.length * ratio))),
+            uniformlySubsample(l, Math.max(2, Math.floor(l.length * ratio))),
         );
     }
 

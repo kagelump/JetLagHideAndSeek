@@ -21,6 +21,7 @@ import {
     computeLineBuffer,
     applyBufferBudget,
     featureToRings,
+    filterFeaturesByBboxMargin,
     polygonFeaturesToLineFeatures,
     getClippedLineFeaturesCached,
     getDilatedPlayArea,
@@ -1059,6 +1060,100 @@ describe("computeLineCategory", () => {
     });
 });
 
+// ─── filterFeaturesByBboxMargin ──────────────────────────────────────────
+
+describe("filterFeaturesByBboxMargin", () => {
+    // Small bbox in central Tokyo (~1 km square).
+    const BBOX: [number, number, number, number] = [
+        139.69, 35.68, 139.71, 35.7,
+    ];
+
+    function makeLineWithBbox(coords: [number, number][]): Feature<LineString> {
+        const xs = coords.map((c) => c[0]);
+        const ys = coords.map((c) => c[1]);
+        return {
+            type: "Feature",
+            bbox: [
+                Math.min(...xs),
+                Math.min(...ys),
+                Math.max(...xs),
+                Math.max(...ys),
+            ],
+            geometry: { type: "LineString", coordinates: coords },
+            properties: {},
+        };
+    }
+
+    it("keeps a feature whose bbox intersects the expanded bbox", () => {
+        // Feature inside the bbox.
+        const f = makeLineWithBbox([
+            [139.7, 35.69],
+            [139.705, 35.695],
+        ]);
+        const result = filterFeaturesByBboxMargin([f], BBOX, 500);
+        expect(result).toHaveLength(1);
+        expect(result[0]).toBe(f);
+    });
+
+    it("keeps a feature just outside the bbox but within the margin", () => {
+        // Feature ~300 m south of the bbox, within a 500 m margin.
+        // ~0.0027° = 300 m at this latitude.
+        const justOutside: [number, number][] = [
+            [139.7, 35.6773],
+            [139.705, 35.6773],
+        ];
+        const f = makeLineWithBbox(justOutside);
+        const result = filterFeaturesByBboxMargin([f], BBOX, 500);
+        expect(result).toHaveLength(1);
+        expect(result[0]).toBe(f);
+    });
+
+    it("drops a feature far outside the margin", () => {
+        // Feature 10 km away — far beyond a 500 m margin.
+        const farAway: [number, number][] = [
+            [139.7, 35.6],
+            [139.705, 35.6],
+        ];
+        const f = makeLineWithBbox(farAway);
+        const result = filterFeaturesByBboxMargin([f], BBOX, 500);
+        expect(result).toHaveLength(0);
+    });
+
+    it("reduces the real body-of-water window when scoped to 161 m", () => {
+        // Verify that re-scoping the 50 km body-of-water window to a small
+        // buffer radius dramatically reduces feature count.
+        const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
+        __setLineBundleForTest("body-of-water", bundle);
+        __clearLineBundlesForTest(); // clean up after the require side-effect
+
+        // Window features selected with the 50 km margin (simulating
+        // computeLineCategory's output).
+        const wideFeatures = selectWindowFeatures(
+            "body-of-water",
+            BBOX,
+            [139.7, 35.69],
+            50_000,
+        );
+        expect(wideFeatures.length).toBeGreaterThan(100);
+
+        // Re-scoped to 161 m — only features that could contribute to a
+        // 161 m buffer inside the play area.
+        const scopedFeatures = filterFeaturesByBboxMargin(
+            wideFeatures,
+            BBOX,
+            161,
+        );
+        expect(scopedFeatures.length).toBeLessThan(wideFeatures.length);
+        // With a 161 m margin, the count should be dramatically smaller.
+        expect(scopedFeatures.length).toBeLessThan(wideFeatures.length / 5);
+    });
+
+    it("returns empty array for empty input", () => {
+        const result = filterFeaturesByBboxMargin([], BBOX, 500);
+        expect(result).toHaveLength(0);
+    });
+});
+
 // ─── computeLineBuffer input budget tests ───────────────────────────────
 
 describe("computeLineBuffer input budget", () => {
@@ -1183,6 +1278,48 @@ describe("computeLineBuffer input budget", () => {
             expect(result).not.toBeNull();
             expect(ms).toBeLessThan(1000);
         });
+
+        it("hard-cap fallback preserves shape with uniform subsampling, not prefix slice", () => {
+            // When the escalation loop exhausts all 6 rounds, the hard-cap
+            // fallback enforces MAX_BUFFER_* by keeping the top-N segments
+            // and uniformly subsampling any that still exceed the coord cap.
+            //
+            // A prefix slice would collapse a polyline to its first N
+            // coords — a straight capsule anchored only at the start.
+            // Uniform subsampling distributes the budget evenly across the
+            // whole line, preserving the overall shape and both endpoints.
+            //
+            // Design: 500 segments × 200 coords each = 100k coords, each
+            // ~22 km long with 0.03° (~3.3 km) zigzag amplitude. At the
+            // 2,000 m radius the escalation rounds end at tol=2,560 m /
+            // lenFloor=10.2 km, so all lines survive. After hard-cap sort
+            // to 400 segments, each simplified line still has ~100 coords
+            // → 40k coords > MAX_BUFFER_COORDS (20k) → uniform subsample.
+            const lines: [number, number][][] = [];
+            for (let i = 0; i < 500; i++) {
+                const cx = 139.0 + (i % 25) * 0.04;
+                const cy = 35.0 + Math.floor(i / 25) * 0.04;
+                const seg: [number, number][] = [];
+                for (let j = 0; j < 200; j++) {
+                    // 0.03° ≈ 3.3 km amplitude — survives simplification
+                    // at tol=2,560 m so interior points aren't all removed.
+                    const yOff = j % 2 === 0 ? 0.03 : -0.03;
+                    seg.push([cx + j * 0.001, cy + yOff]);
+                }
+                lines.push(seg);
+            }
+            const result = applyBufferBudget(lines, 2000);
+
+            expect(result.length).toBeLessThanOrEqual(400);
+            expect(result.length).toBeGreaterThan(0);
+
+            // Every surviving line must have interior shape preserved
+            // (> 2 coords). A prefix-slice would produce straight capsules
+            // with only 2 endpoints; uniform subsampling preserves bends.
+            for (const r of result) {
+                expect(r.length).toBeGreaterThan(2);
+            }
+        });
     });
 
     describe("computeLineBuffer", () => {
@@ -1291,6 +1428,48 @@ describe("computeLineBuffer input budget", () => {
             // ceiling catches a regression to unbounded work without flaking
             // on slower CI.
             expect(ms).toBeLessThan(8000);
+        });
+
+        it("scoped buffer at 161 m stays within budget without escalation (P9 regression)", () => {
+            // Pre-fix: the buffer re-used the 50 km nearest-search window,
+            // which for Tokyo holds ~1,498 line features / 53k coords. At
+            // 161 m that exhausts all budget rounds, drops whole rivers
+            // (Meguro), and truncates survivors to straight capsules
+            // (Tachiaikawa).  Post-fix: filterFeaturesByBboxMargin
+            // re-scopes to ~161 m → ~165 features / ~5k coords, which fits
+            // the budget without any escalation.
+            const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
+            __setLineBundleForTest("body-of-water", bundle);
+
+            // Tokyo 23-wards ~bbox (contains the Meguro and Tachiaikawa rivers).
+            const tokyoBbox: [number, number, number, number] = [
+                139.6, 35.5, 139.9, 35.8,
+            ];
+
+            const cat = computeLineCategory(
+                [139.7, 35.62], // near Meguro river
+                "body-of-water",
+                tokyoBbox,
+            );
+            expect(cat).not.toBeNull();
+
+            // Pre-filter to buffer radius — the core fix.
+            const scoped = filterFeaturesByBboxMargin(
+                cat!.windowFeatures,
+                tokyoBbox,
+                161,
+            );
+
+            // The scoped window should have far fewer features than the
+            // 50 km window (which is ~1,400+ for Tokyo).
+            expect(scoped.length).toBeLessThan(cat!.windowFeatures.length);
+            expect(scoped.length).toBeLessThan(500);
+
+            // The reduced input should stay under budget without any
+            // escalation rounds — computeLineBuffer returns immediately.
+            const buf = computeLineBuffer(scoped, 161);
+            expect(buf).not.toBeNull();
+            expect(/Polygon|MultiPolygon/.test(buf!.geometry.type)).toBe(true);
         });
     });
 });
