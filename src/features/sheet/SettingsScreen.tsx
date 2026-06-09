@@ -186,13 +186,22 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     title="Reset Game"
                 />
                 {__DEV__ ? (
-                    <SheetListRow
-                        accessibilityLabel="Clear cached map and POI data"
-                        description="Clear cached map/POI data? Downloaded offline packs are kept."
-                        onPress={handleClearCache}
-                        testID="settings-clear-cache-row"
-                        title="Clear Cache"
-                    />
+                    <>
+                        <SheetListRow
+                            accessibilityLabel="Clear cached map and POI data"
+                            description="Clear cached map/POI data? Downloaded offline packs are kept."
+                            onPress={handleClearCache}
+                            testID="settings-clear-cache-row"
+                            title="Clear Cache"
+                        />
+                        <SheetListRow
+                            accessibilityLabel="Run GEOS parity harness"
+                            description="Validate native GEOS buffer against JS oracle on-device."
+                            onPress={() => onNavigate("geometry-parity")}
+                            testID="settings-geometry-parity-row"
+                            title="Run GEOS Parity Harness"
+                        />
+                    </>
                 ) : null}
                 {maintenanceResult ? (
                     <Text

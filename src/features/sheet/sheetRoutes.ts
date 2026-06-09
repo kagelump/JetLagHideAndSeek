@@ -8,7 +8,8 @@ export type SheetRouteName =
     | "play-area"
     | "hiding-zone"
     | "offline-data"
-    | "admin-divisions";
+    | "admin-divisions"
+    | "geometry-parity";
 
 export const SHEET_SNAP_INDEX = {
     compact: 0,
