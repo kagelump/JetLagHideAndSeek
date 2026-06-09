@@ -7,6 +7,8 @@ import type {
     FeatureCollection,
 } from "geojson";
 
+import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
+
 import {
     clearLineCategoryCache,
     clearLineDistanceCache,
@@ -1535,6 +1537,42 @@ describe("polygon body-of-water", () => {
         it("returns null for empty polygon features array", () => {
             const result = computeLineBuffer([], 1000);
             expect(result).toBeNull();
+        });
+
+        it("unions polygon + far-apart line buffers (regression: combine dropped all but one piece)", () => {
+            // A small water polygon near (139.0, 35.0)…
+            const lake: LineBundle["features"][number] = {
+                type: "Feature",
+                bbox: [139.0, 35.0, 139.02, 35.02],
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [
+                        [
+                            [139.0, 35.0],
+                            [139.02, 35.0],
+                            [139.02, 35.02],
+                            [139.0, 35.02],
+                            [139.0, 35.0],
+                        ],
+                    ],
+                },
+                properties: {},
+            };
+            // …and a river line ~10 km away near (140.0, 36.0), long enough
+            // to survive the min-feature-length filter.
+            const river = makeLineFeature([
+                [140.0, 36.0],
+                [140.05, 36.0],
+                [140.1, 36.0],
+            ]);
+
+            const result = computeLineBuffer([lake, river], 1000);
+            expect(result).not.toBeNull();
+            // The merged buffer must cover BOTH the polygon and the line.
+            // Before the fix, the FeatureCollection "union" kept only the
+            // first buffer, so the river's buffer was silently dropped.
+            expect(booleanPointInPolygon([139.01, 35.01], result!)).toBe(true);
+            expect(booleanPointInPolygon([140.05, 36.0], result!)).toBe(true);
         });
 
         it("handles MultiPolygon features", () => {

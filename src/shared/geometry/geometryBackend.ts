@@ -28,14 +28,25 @@ export interface GeometryBackend {
 
     /**
      * Buffer a geometry by `meters` using `quadrantSegments` arc fidelity.
+     * The return is always a single Polygon or MultiPolygon Feature, or
+     * `null` on failure.
      *
-     * The input may be any geometry type accepted by `@turf/buffer`,
-     * including `FeatureCollection` (used internally for union-via-buffer
-     * and play-area dilation). The return is always a single Polygon or
-     * MultiPolygon Feature, or `null` on failure.
+     * ⚠️ FeatureCollection input does NOT union. Each feature is buffered
+     * independently and **only the first result is returned** — a bug-for-bug
+     * quirk shared by both backends (see geosGeometryBackend header; a real
+     * N-ary union is deferred to GEOSUnaryUnion). In particular,
+     * `bufferMeters(fc, 0)` is NOT a "cheap union" — it returns only
+     * `features[0]` and silently drops the rest. To union multiple polygons,
+     * merge them into one MultiPolygon feature (polyclip difference/
+     * intersection treat a MultiPolygon's members as their set union) or call
+     * polyclip-ts `union` directly. To buffer a set of points as a unioned
+     * blob, pass a single MultiPoint feature (not an FC) — GEOS/turf union
+     * the resulting circles natively.
      *
-     * @param geom  Input geometry or FeatureCollection.
-     * @param meters  Buffer radius in meters (0 = union-only pass-through).
+     * @param geom  Input geometry or FeatureCollection (see the union caveat
+     *   above before passing an FC).
+     * @param meters  Buffer radius in meters. `0` is a per-feature no-op pass
+     *   (NOT a union — see above).
      * @param quadrantSegments  Arc resolution (maps to turf `steps` in JS
      *   backend, GEOS `quadrantSegments` in native backend).
      * @param units  Always "meters" for the JS backend; kept for future

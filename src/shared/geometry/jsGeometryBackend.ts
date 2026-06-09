@@ -25,6 +25,9 @@ export const jsGeometryBackend: GeometryBackend = {
             // FeatureCollection → FeatureCollection. TypeScript can't
             // resolve a union argument against overloads, so narrow first.
             if (geom.type === "FeatureCollection") {
+                // ⚠️ Does NOT union: turf buffers each feature independently
+                // and we keep only features[0]. `bufferMeters(fc, 0)` is not a
+                // cheap union — see the GeometryBackend.bufferMeters JSDoc.
                 const fc = buffer(geom, meters, {
                     units,
                     steps: quadrantSegments,

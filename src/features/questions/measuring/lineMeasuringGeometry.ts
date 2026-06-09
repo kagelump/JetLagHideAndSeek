@@ -720,32 +720,75 @@ export function computeLineBuffer(
         return polygonBuffers[0];
     }
 
-    // Union all buffer results together.
+    // Combine all buffer results into one MultiPolygon.
     const allBuffers: Feature<Polygon | MultiPolygon>[] =
         polygonBuffers.slice();
     if (lineBufferResult) allBuffers.push(lineBufferResult);
 
-    // No union needed for a single result.
+    // No combine needed for a single result.
     if (allBuffers.length === 1) return allBuffers[0];
 
-    // Buffer with 0 radius as a cheap union (buffers the union of the
-    // FeatureCollection via the geometry backend).
-    const combined: FeatureCollection<Polygon | MultiPolygon> = {
-        type: "FeatureCollection",
-        features: allBuffers,
-    };
+    // Merge every buffer piece into one MultiPolygon feature.
+    //
+    // A multi-piece category like body-of-water yields ~40 heavily-overlapping
+    // buffer pieces (dissolved water polygons + river lines). The merge is a
+    // cheap concatenation and is geometrically a union, but its members
+    // overlap. The downstream play-area mask runs polyclip
+    // `difference(playArea, eligibleArea)` — and polyclip's sweepline cost
+    // explodes on the mutual intersections of dozens of overlapping ribbons,
+    // hard-locking the render. So we dissolve the merge into clean,
+    // non-overlapping geometry that polyclip differences in ~ms.
+    const merged = mergeBuffersToMultiPolygon(allBuffers);
+
+    // The dissolve uses a 0-radius buffer — the standard union/clean idiom
+    // (GEOS and JSTS both unary-union a self-overlapping MultiPolygon at
+    // distance 0). Pass a single Feature, NOT a FeatureCollection:
+    // `bufferMeters(fc, 0)` does not union — the backend buffers each feature
+    // independently and returns only the first result (see geometryBackend).
+    //
+    // Only the native GEOS backend can dissolve this pathological input
+    // cheaply; the pure-JS (JSTS) oracle takes ~25 s on the real body-of-water
+    // window. GEOS is the production backend (the mask itself is polyclip-JS
+    // and relies on this dissolve to stay responsive), so when GEOS is
+    // unavailable we return the un-dissolved merge — still correct, just
+    // heavier for the mask — rather than block the render thread here.
+    const backend = getGeometryBackend();
+    if (backend.name !== "geos") return merged;
+
     try {
-        const unioned = getGeometryBackend().bufferMeters(
-            combined,
-            0,
-            BUFFER_STEPS,
-        );
-        if (unioned) return unioned;
-    } catch {
-        // Fallback: return the first buffer.
+        const dissolved = backend.bufferMeters(merged, 0, BUFFER_STEPS);
+        if (dissolved) return dissolved;
+    } catch (err) {
+        console.warn(`[lineBuffer] dissolve(merged buffers) failed:`, err);
     }
 
-    return allBuffers[0];
+    return merged;
+}
+
+/**
+ * Flattens a set of Polygon/MultiPolygon buffer features into a single
+ * MultiPolygon feature by concatenating their polygon coordinate arrays.
+ * Members may overlap — callers dissolve the result before use.
+ */
+function mergeBuffersToMultiPolygon(
+    buffers: Feature<Polygon | MultiPolygon>[],
+): Feature<MultiPolygon> {
+    const polygons: Position[][][] = [];
+    for (const f of buffers) {
+        const g = f.geometry;
+        if (g.type === "Polygon") {
+            polygons.push(g.coordinates as Position[][]);
+        } else {
+            for (const poly of g.coordinates) {
+                polygons.push(poly as Position[][]);
+            }
+        }
+    }
+    return {
+        type: "Feature",
+        properties: {},
+        geometry: { type: "MultiPolygon", coordinates: polygons },
+    };
 }
 
 /**
