@@ -34,9 +34,9 @@ export function VoronoiOutlineLayers({
             <MLLineLayer
                 id="voronoi-outlines-line"
                 style={{
-                    lineColor: "#666666",
-                    lineOpacity: 0.25,
-                    lineWidth: 1,
+                    lineColor: "#555555",
+                    lineOpacity: 0.5,
+                    lineWidth: 1.5,
                 }}
             />
         </MLShapeSource>

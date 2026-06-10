@@ -53,9 +53,9 @@ describe("VoronoiOutlineLayers", () => {
             .getAllByTestId("map-line-layer")
             .find((l) => l.props.id === "voronoi-outlines-line");
         expect(lineLayer).toBeTruthy();
-        expect(lineLayer?.props.style.lineColor).toBe("#666666");
-        expect(lineLayer?.props.style.lineOpacity).toBe(0.25);
-        expect(lineLayer?.props.style.lineWidth).toBe(1);
+        expect(lineLayer?.props.style.lineColor).toBe("#555555");
+        expect(lineLayer?.props.style.lineOpacity).toBe(0.5);
+        expect(lineLayer?.props.style.lineWidth).toBe(1.5);
     });
 
     it("keeps shape source mounted with empty features when not visible", () => {

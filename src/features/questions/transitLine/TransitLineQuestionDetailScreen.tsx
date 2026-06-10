@@ -49,6 +49,36 @@ export function TransitLineQuestionDetailScreen({
 
     return (
         <>
+            <View style={styles.section}>
+                <Text
+                    accessibilityLabel="Transit line answer section"
+                    style={styles.sectionTitle}
+                >
+                    Answer
+                </Text>
+                <QuestionAnswerSelector
+                    answer={question.answer}
+                    disabledAnswers={
+                        question.lineId === null
+                            ? ["positive", "negative"]
+                            : undefined
+                    }
+                    onChange={(answer) =>
+                        updateQuestion(question.id, (current) =>
+                            current.type === "matching"
+                                ? {
+                                      ...current,
+                                      answer,
+                                      updatedAt: new Date().toISOString(),
+                                  }
+                                : current,
+                        )
+                    }
+                    questionType={question.type}
+                    testIDPrefix="matching-answer-option"
+                />
+            </View>
+
             <QuestionLocationSelector
                 center={question.center}
                 onCenterChange={(center) =>
@@ -60,6 +90,17 @@ export function TransitLineQuestionDetailScreen({
                 showSetToLocationButton={false}
                 testIDPrefix="transit-line"
             />
+
+            {selectedStations.length === 0 ? (
+                <Text style={styles.emptyHint} testID="transit-line-no-presets">
+                    Select transit presets in Hiding Zones settings to see
+                    available lines.
+                </Text>
+            ) : lineOptions.length === 0 ? (
+                <Text style={styles.emptyHint}>
+                    No transit lines found within range.
+                </Text>
+            ) : null}
 
             <View style={styles.optionList}>
                 {lineOptions.map((line) => {
@@ -114,36 +155,6 @@ export function TransitLineQuestionDetailScreen({
                     );
                 })}
             </View>
-
-            <View style={styles.section}>
-                <Text
-                    accessibilityLabel="Transit line answer section"
-                    style={styles.sectionTitle}
-                >
-                    Answer
-                </Text>
-                <QuestionAnswerSelector
-                    answer={question.answer}
-                    disabledAnswers={
-                        question.lineId === null
-                            ? ["positive", "negative"]
-                            : undefined
-                    }
-                    onChange={(answer) =>
-                        updateQuestion(question.id, (current) =>
-                            current.type === "matching"
-                                ? {
-                                      ...current,
-                                      answer,
-                                      updatedAt: new Date().toISOString(),
-                                  }
-                                : current,
-                        )
-                    }
-                    questionType={question.type}
-                    testIDPrefix="matching-answer-option"
-                />
-            </View>
         </>
     );
 }
@@ -194,6 +205,12 @@ const styles = StyleSheet.create({
     lineRowSelected: {
         borderColor: colors.tint,
         backgroundColor: colors.buttonSubtle,
+    },
+    emptyHint: {
+        color: colors.muted,
+        fontSize: 13,
+        lineHeight: 18,
+        marginTop: 8,
     },
     meta: { color: colors.muted, fontSize: 12, marginTop: 2 },
     optionList: { gap: 8, marginTop: 12 },
