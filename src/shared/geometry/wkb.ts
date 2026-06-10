@@ -309,6 +309,11 @@ function decodePolygonCoords(v: WkbView): Coords[][] | null {
  * GEOMETRYCOLLECTION EMPTY) — these are legitimate GEOS outputs for
  * zero-distance buffers on degenerate input. The caller skips them.
  *
+ * Non-empty GeometryCollections are unpacked: all Polygon/MultiPolygon
+ * members are extracted and flattened into a single Polygon or MultiPolygon.
+ * This handles GEOS unaryUnion dissolving complex MultiPolygon inputs where
+ * the native op emits a GeometryCollection instead of a plain MultiPolygon.
+ *
  * Throws `WkbError` on malformed / truncated / unsupported non-empty input.
  */
 export function decodeWkb(bytes: Uint8Array): Polygon | MultiPolygon | null {
@@ -358,10 +363,58 @@ export function decodeWkb(bytes: Uint8Array): Polygon | MultiPolygon | null {
         return { type: "MultiPolygon", coordinates: multiCoords };
     }
 
-    // GEOMETRYCOLLECTION EMPTY (type 7) — legitimate empty output.
+    // GEOMETRYCOLLECTION (type 7)
+    // - Empty: legitimate output for degenerate operations — return null.
+    // - Non-empty: GEOS unaryUnion may return a GeometryCollection when
+    //   dissolving complex MultiPolygon inputs with topological edge cases.
+    //   Extract all Polygon/MultiPolygon members and flatten into a single
+    //   Polygon or MultiPolygon result. Non-polygon sub-geometries are
+    //   lower-dimensional artifacts (points, lines) that don't contribute
+    //   area — skip them.
     if (header.type === 7) {
         const numGeoms = readUint32(v);
-        if (numGeoms === 0) return null;
+        if (numGeoms === 0) return null; // GEOMETRYCOLLECTION EMPTY
+
+        const allPolygons: Coords[][][] = [];
+        for (let i = 0; i < numGeoms; i++) {
+            const subHeader = readWkbHeader(v);
+            if (!subHeader) {
+                throw new WkbError(
+                    "truncated: expected sub-geometry header in GeometryCollection",
+                );
+            }
+
+            if (subHeader.type === WKB_POLYGON) {
+                const coords = decodePolygonCoords(v);
+                if (coords) allPolygons.push(coords);
+            } else if (subHeader.type === WKB_MULTIPOLYGON) {
+                const numPolys = readUint32(v);
+                for (let j = 0; j < numPolys; j++) {
+                    const polyHeader = readWkbHeader(v);
+                    if (!polyHeader || polyHeader.type !== WKB_POLYGON) {
+                        throw new WkbError(
+                            "expected Polygon sub-geometry in MultiPolygon within GeometryCollection",
+                        );
+                    }
+                    const coords = decodePolygonCoords(v);
+                    if (coords) allPolygons.push(coords);
+                }
+            } else {
+                // Non-polygon sub-geometry (Point=1, LineString=2, etc.).
+                // These are dimensionally-lower artifacts; we can't safely
+                // skip their bytes without a full WKB parser for every type.
+                // Throw so the caller's try/catch falls back to JS polyclip-ts.
+                throw new WkbError(
+                    `unsupported sub-geometry type ${subHeader.type} in GeometryCollection (expected Polygon or MultiPolygon)`,
+                );
+            }
+        }
+
+        if (allPolygons.length === 0) return null;
+        if (allPolygons.length === 1) {
+            return { type: "Polygon", coordinates: allPolygons[0] };
+        }
+        return { type: "MultiPolygon", coordinates: allPolygons };
     }
 
     throw new WkbError(

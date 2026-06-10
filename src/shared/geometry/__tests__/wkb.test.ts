@@ -469,6 +469,210 @@ describe("WKB malformed input (T1.4)", () => {
     });
 });
 
+// ---- T1.4b GeometryCollection decode ----------------------------------------
+
+describe("WKB GeometryCollection decode (T1.4b)", () => {
+    /** Build a WKB GeometryCollection from an array of pre-built sub-geometry WKB blobs. */
+    function makeGCWKB(subGeomWkbs: Uint8Array[]): Uint8Array {
+        // Total size: 1 (byteOrder) + 4 (type) + 4 (numGeoms) + sum(subGeom bytes)
+        const totalLen =
+            1 + 4 + 4 + subGeomWkbs.reduce((s, g) => s + g.length, 0);
+        const buf = new ArrayBuffer(totalLen);
+        const v = new DataView(buf);
+        let off = 0;
+        v.setUint8(off, 0x01);
+        off += 1; // byte order LE
+        v.setUint32(off, 7, true);
+        off += 4; // type = GeometryCollection
+        v.setUint32(off, subGeomWkbs.length, true);
+        off += 4; // numGeometries
+        for (const g of subGeomWkbs) {
+            new Uint8Array(buf).set(g, off);
+            off += g.length;
+        }
+        return new Uint8Array(buf, 0, off);
+    }
+
+    /** Build a WKB Polygon: 1 ring, 5-point square. */
+    function makePolyWKB(
+        x0: number,
+        y0: number,
+        x1: number,
+        y1: number,
+    ): Uint8Array {
+        const buf = new ArrayBuffer(1 + 4 + 4 + 4 + 5 * 16);
+        const v = new DataView(buf);
+        let off = 0;
+        v.setUint8(off, 0x01);
+        off += 1;
+        v.setUint32(off, 3, true);
+        off += 4; // Polygon
+        v.setUint32(off, 1, true);
+        off += 4; // numRings = 1
+        v.setUint32(off, 5, true);
+        off += 4; // numPoints = 5
+        v.setFloat64(off, x0, true);
+        v.setFloat64(off + 8, y0, true);
+        off += 16;
+        v.setFloat64(off, x1, true);
+        v.setFloat64(off + 8, y0, true);
+        off += 16;
+        v.setFloat64(off, x1, true);
+        v.setFloat64(off + 8, y1, true);
+        off += 16;
+        v.setFloat64(off, x0, true);
+        v.setFloat64(off + 8, y1, true);
+        off += 16;
+        v.setFloat64(off, x0, true);
+        v.setFloat64(off + 8, y0, true);
+        off += 16;
+        return new Uint8Array(buf, 0, off);
+    }
+
+    /** Build a WKB MultiPolygon (ISO) with two polygons. */
+    function makeTwoPolyMPWKB(
+        x0: number,
+        y0: number,
+        x1: number,
+        y1: number,
+        x2: number,
+        y2: number,
+        x3: number,
+        y3: number,
+    ): Uint8Array {
+        const poly1 = makePolyWKB(x0, y0, x1, y1); // full WKB Polygon blob
+        const poly2 = makePolyWKB(x2, y2, x3, y3);
+        const buf = new ArrayBuffer(1 + 4 + 4 + poly1.length + poly2.length);
+        const v = new DataView(buf);
+        let off = 0;
+        v.setUint8(off, 0x01);
+        off += 1;
+        v.setUint32(off, 6, true);
+        off += 4; // MultiPolygon
+        v.setUint32(off, 2, true);
+        off += 4; // numPolygons = 2
+        new Uint8Array(buf).set(poly1, off);
+        off += poly1.length;
+        new Uint8Array(buf).set(poly2, off);
+        off += poly2.length;
+        return new Uint8Array(buf, 0, off);
+    }
+
+    test("GeometryCollection with 0 sub-geometries → null", () => {
+        const wkb = makeGCWKB([]);
+        expect(decodeWkb(wkb)).toBeNull();
+    });
+
+    test("GeometryCollection with one Polygon → Polygon", () => {
+        const poly = makePolyWKB(0, 0, 5, 5);
+        const wkb = makeGCWKB([poly]);
+        const result = decodeWkb(wkb)!;
+        expect(result.type).toBe("Polygon");
+        const out = result as Polygon;
+        expect(out.coordinates.length).toBe(1);
+        expect(out.coordinates[0].length).toBe(5);
+        expect(out.coordinates[0][0]).toEqual([0, 0]);
+        expect(out.coordinates[0][1]).toEqual([5, 0]);
+        expect(out.coordinates[0][2]).toEqual([5, 5]);
+        expect(out.coordinates[0][3]).toEqual([0, 5]);
+        expect(out.coordinates[0][4]).toEqual([0, 0]);
+    });
+
+    test("GeometryCollection with two Polygons → MultiPolygon", () => {
+        const poly1 = makePolyWKB(0, 0, 5, 5);
+        const poly2 = makePolyWKB(10, 10, 15, 15);
+        const wkb = makeGCWKB([poly1, poly2]);
+        const result = decodeWkb(wkb)!;
+        expect(result.type).toBe("MultiPolygon");
+        const out = result as MultiPolygon;
+        expect(out.coordinates.length).toBe(2);
+    });
+
+    test("GeometryCollection with one MultiPolygon member → extracts polygons", () => {
+        const mp = makeTwoPolyMPWKB(0, 0, 5, 5, 10, 10, 15, 15);
+        const wkb = makeGCWKB([mp]);
+        const result = decodeWkb(wkb)!;
+        // Two polygons extracted from the single MultiPolygon member.
+        expect(result.type).toBe("MultiPolygon");
+        const out = result as MultiPolygon;
+        expect(out.coordinates.length).toBe(2);
+    });
+
+    test("GeometryCollection with mixed Polygon + MultiPolygon members → flattens all", () => {
+        const poly = makePolyWKB(0, 0, 5, 5);
+        const mp = makeTwoPolyMPWKB(10, 10, 15, 15, 20, 20, 25, 25);
+        const wkb = makeGCWKB([poly, mp]);
+        const result = decodeWkb(wkb)!;
+        // 1 (Polygon) + 2 (from MultiPolygon) = 3 polygons.
+        expect(result.type).toBe("MultiPolygon");
+        const out = result as MultiPolygon;
+        expect(out.coordinates.length).toBe(3);
+    });
+
+    test("GeometryCollection with only one polygon total → collapses to Polygon", () => {
+        // Build a GC containing one MultiPolygon with a single polygon.
+        // This tests the collapse path: MultiPolygon with 1 polygon → Polygon.
+        const innerPoly = makePolyWKB(0, 0, 5, 5);
+        const mpBuf = new ArrayBuffer(1 + 4 + 4 + innerPoly.length);
+        const mpView = new DataView(mpBuf);
+        mpView.setUint8(0, 0x01);
+        mpView.setUint32(1, 6, true);
+        mpView.setUint32(5, 1, true); // numPolygons = 1
+        new Uint8Array(mpBuf).set(innerPoly, 9);
+        const singlePolyMP = new Uint8Array(mpBuf, 0, 9 + innerPoly.length);
+
+        const wkb = makeGCWKB([singlePolyMP]);
+        const result = decodeWkb(wkb)!;
+        // Single polygon from the MultiPolygon → collapses to Polygon.
+        expect(result.type).toBe("Polygon");
+    });
+
+    test("GeometryCollection with non-polygon sub-geometry → throws", () => {
+        // Build a WKB Point (type 1) with coords (1.0, 2.0).
+        const buf = new ArrayBuffer(1 + 4 + 2 * 8);
+        const v = new DataView(buf);
+        v.setUint8(0, 0x01);
+        v.setUint32(1, 1, true); // Point
+        v.setFloat64(5, 1, true);
+        v.setFloat64(13, 2, true);
+        const pointWkb = new Uint8Array(buf);
+
+        const wkb = makeGCWKB([pointWkb]);
+        expect(() => decodeWkb(wkb)).toThrow(WkbError);
+    });
+
+    test("GeometryCollection with polygon + point → throws (no partial success)", () => {
+        const poly = makePolyWKB(0, 0, 5, 5);
+        // Point WKB
+        const ptBuf = new ArrayBuffer(1 + 4 + 2 * 8);
+        const ptView = new DataView(ptBuf);
+        ptView.setUint8(0, 0x01);
+        ptView.setUint32(1, 1, true);
+        ptView.setFloat64(5, 3, true);
+        ptView.setFloat64(13, 3, true);
+
+        const wkb = makeGCWKB([poly, new Uint8Array(ptBuf)]);
+        // Even though the first member is a valid Polygon, the second is a
+        // Point and we can't safely skip it — throws to trigger JS fallback.
+        expect(() => decodeWkb(wkb)).toThrow(WkbError);
+    });
+
+    test("GeometryCollection truncated mid-member → throws", () => {
+        // Declare 2 members but truncate the second one mid-header.
+        const poly = makePolyWKB(0, 0, 5, 5);
+        // Full buffer size for GC header + 1 full polygon + 3 bytes of second member.
+        const bufSize = 1 + 4 + 4 + poly.length + 3;
+        const buf = new ArrayBuffer(bufSize);
+        const v = new DataView(buf);
+        v.setUint8(0, 0x01);
+        v.setUint32(1, 7, true);
+        v.setUint32(5, 2, true); // claim 2 members
+        new Uint8Array(buf).set(poly, 9);
+        // Second member starts at offset 9 + poly.length but only has 3 bytes.
+        expect(() => decodeWkb(new Uint8Array(buf))).toThrow(WkbError);
+    });
+});
+
 // ---- T1.5 Property tests ---------------------------------------------------
 
 describe("WKB property tests (T1.5)", () => {
