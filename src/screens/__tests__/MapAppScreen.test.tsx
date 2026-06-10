@@ -593,7 +593,7 @@ describe("MapAppScreen", () => {
         expect(screen.getByText("Transit line: not selected")).toBeTruthy();
     });
 
-    it("uses a carousel for radar distance options at preview snaps and a grid at the large snap", async () => {
+    it("always uses a carousel for radar distance options", async () => {
         jest.useFakeTimers();
         const screen = renderWithSafeArea(<MapAppScreen />);
 
@@ -621,11 +621,12 @@ describe("MapAppScreen", () => {
                 .features[0].properties.distanceMeters,
         ).toBe(1000);
 
+        // Carousel remains at all snap points.
         fireEvent(screen.getByTestId("bottom-sheet"), "onChange", 2);
-        expect(screen.getByTestId("radar-distance-option-grid")).toBeTruthy();
         expect(
-            screen.queryByTestId("radar-distance-option-carousel"),
-        ).toBeNull();
+            screen.getByTestId("radar-distance-option-carousel"),
+        ).toBeTruthy();
+        expect(screen.queryByTestId("radar-distance-option-grid")).toBeNull();
 
         fireEvent(screen.getByTestId("bottom-sheet"), "onChange", 0);
         expect(
@@ -746,6 +747,10 @@ describe("MapAppScreen", () => {
         });
         await pressAddRadarQuestion(screen);
 
+        // Tap does NOT move pin (long press required).
+        const initialCoords = getMapShapeSource(screen, "question-pins").props
+            .shape.features[0].geometry.coordinates;
+
         fireEvent(screen.getByTestId("native-map"), "onPress", {
             geometry: { coordinates: [139.75, 35.7] },
         });
@@ -753,9 +758,10 @@ describe("MapAppScreen", () => {
             expect(
                 getMapShapeSource(screen, "question-pins").props.shape
                     .features[0].geometry.coordinates,
-            ).toEqual([139.75, 35.7]);
+            ).toEqual(initialCoords);
         });
 
+        // "Set to My Location" still moves the pin.
         openQuestionActions(screen);
         await act(async () => {
             fireEvent.press(
@@ -768,30 +774,6 @@ describe("MapAppScreen", () => {
                     .features[0].geometry.coordinates,
             ).toEqual([139.6503, 35.6762]);
         });
-
-        jest.mocked(Location.getCurrentPositionAsync).mockRejectedValueOnce(
-            new Error("Cannot obtain current location"),
-        );
-        fireEvent(screen.getByTestId("native-map"), "onPress", {
-            geometry: { coordinates: [139.8, 35.71] },
-        });
-        await waitFor(() => {
-            expect(
-                getMapShapeSource(screen, "question-pins").props.shape
-                    .features[0].geometry.coordinates,
-            ).toEqual([139.8, 35.71]);
-        });
-
-        openQuestionActions(screen);
-        await act(async () => {
-            fireEvent.press(
-                screen.getByTestId("question-actions-set-location"),
-            );
-        });
-        expect(
-            getMapShapeSource(screen, "question-pins").props.shape.features[0]
-                .geometry.coordinates,
-        ).toEqual([139.8, 35.71]);
 
         fireEvent.press(screen.getByText("Back"));
         act(() => {
@@ -1275,9 +1257,12 @@ describe("MapAppScreen", () => {
             jest.restoreAllMocks();
         });
 
-        it("tapping the map to move the pin works while the sheet is unlocked", async () => {
+        it("tapping the map does not move the pin (long press required)", async () => {
             const screen = renderWithSafeArea(<MapAppScreen />);
             await navigateToUnlockedQuestionSheet(screen);
+
+            const originalCoords = getMapShapeSource(screen, "question-pins")
+                .props.shape.features[0].geometry.coordinates;
 
             fireEvent(screen.getByTestId("native-map"), "onPress", {
                 geometry: { coordinates: [139.75, 35.7] },
@@ -1286,11 +1271,12 @@ describe("MapAppScreen", () => {
             act(() => {
                 jest.runOnlyPendingTimers();
             });
+            // Pin should NOT have moved — tap no longer places pins.
             await waitFor(() => {
                 expect(
                     getMapShapeSource(screen, "question-pins").props.shape
                         .features[0].geometry.coordinates,
-                ).toEqual([139.75, 35.7]);
+                ).toEqual(originalCoords);
             });
 
             cleanupMovePinTest();

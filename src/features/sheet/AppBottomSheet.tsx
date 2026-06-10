@@ -39,9 +39,7 @@ export const AppBottomSheet = forwardRef<
     );
     const snapPoints = useMemo(() => [...SHEET_SNAP_POINTS], []);
     const [route, setRoute] = useState<SheetRouteName>("main");
-    const [sheetIndex, setSheetIndex] = useState<number>(
-        SHEET_SNAP_INDEX.medium,
-    );
+    const [, setSheetIndex] = useState<number>(SHEET_SNAP_INDEX.medium);
     const currentIndexRef = useRef<number>(SHEET_SNAP_INDEX.medium);
 
     useImperativeHandle(ref, () => ({
@@ -104,11 +102,7 @@ export const AppBottomSheet = forwardRef<
             }}
         >
             <SheetView accessible={false} style={styles.content}>
-                <MainDrawer
-                    route={route}
-                    onNavigate={setRoute}
-                    sheetIndex={sheetIndex}
-                />
+                <MainDrawer route={route} onNavigate={setRoute} />
             </SheetView>
         </Sheet>
     );

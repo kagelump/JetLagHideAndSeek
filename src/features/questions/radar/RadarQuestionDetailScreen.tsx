@@ -6,11 +6,6 @@ import {
     TextInput,
     View,
 } from "react-native";
-import Animated, {
-    FadeIn,
-    FadeOut,
-    LinearTransition,
-} from "react-native-reanimated";
 
 import { UnitSegmentedControl } from "@/components/UnitSegmentedControl";
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
@@ -25,7 +20,6 @@ import {
     radarDistancePresetOptions,
 } from "@/features/questions/radar/radarTypes";
 import { useRadarDistanceDraftInput } from "@/features/questions/radar/useRadarDistanceDraftInput";
-import { SHEET_SNAP_INDEX } from "@/features/sheet/sheetRoutes";
 import {
     updateRadarAnswer,
     updateQuestionCenter,
@@ -38,19 +32,14 @@ const allDistanceOptions: RadarDistanceOption[] = [
     ...radarDistancePresetOptions,
     "other",
 ];
-const SELECTOR_LAYOUT_TRANSITION = LinearTransition.duration(160);
-const SELECTOR_ENTERING = FadeIn.duration(120);
-const SELECTOR_EXITING = FadeOut.duration(90);
 
 type RadarQuestionDetailScreenProps = {
     question: RadarQuestion;
-    sheetIndex: number;
     updateQuestion: ReturnType<typeof useQuestionActions>["updateQuestion"];
 };
 
 export function RadarQuestionDetailScreen({
     question,
-    sheetIndex,
     updateQuestion,
 }: RadarQuestionDetailScreenProps) {
     const { selectedStations } = useHidingZoneDerived();
@@ -67,56 +56,42 @@ export function RadarQuestionDetailScreen({
     });
 
     const nearest = findNearestStation(question.center, selectedStations);
-    const isPreviewSnap = sheetIndex <= SHEET_SNAP_INDEX.medium;
 
     return (
         <>
             <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Answer</Text>
+                <QuestionAnswerSelector
+                    answer={question.answer}
+                    onChange={(answer) =>
+                        updateQuestion(question.id, (current) =>
+                            current.type === "radar"
+                                ? updateRadarAnswer(current, answer)
+                                : current,
+                        )
+                    }
+                    questionType={question.type}
+                    testIDPrefix="radar-answer-option"
+                />
+            </View>
+
+            <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Distance</Text>
-                <Animated.View layout={SELECTOR_LAYOUT_TRANSITION}>
-                    {isPreviewSnap ? (
-                        <Animated.View
-                            entering={SELECTOR_ENTERING}
-                            exiting={SELECTOR_EXITING}
-                            key="distance-carousel"
-                        >
-                            <ScrollView
-                                contentContainerStyle={
-                                    styles.optionCarouselContent
-                                }
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.optionCarousel}
-                                testID="radar-distance-option-carousel"
-                            >
-                                {allDistanceOptions.map((option) =>
-                                    renderDistanceOption({
-                                        handleDistanceOptionPress,
-                                        option,
-                                        selectedOption: question.distanceOption,
-                                    }),
-                                )}
-                            </ScrollView>
-                        </Animated.View>
-                    ) : (
-                        <Animated.View
-                            entering={SELECTOR_ENTERING}
-                            exiting={SELECTOR_EXITING}
-                            key="distance-grid"
-                            layout={SELECTOR_LAYOUT_TRANSITION}
-                            style={styles.optionGrid}
-                            testID="radar-distance-option-grid"
-                        >
-                            {allDistanceOptions.map((option) =>
-                                renderDistanceOption({
-                                    handleDistanceOptionPress,
-                                    option,
-                                    selectedOption: question.distanceOption,
-                                }),
-                            )}
-                        </Animated.View>
+                <ScrollView
+                    contentContainerStyle={styles.optionCarouselContent}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.optionCarousel}
+                    testID="radar-distance-option-carousel"
+                >
+                    {allDistanceOptions.map((option) =>
+                        renderDistanceOption({
+                            handleDistanceOptionPress,
+                            option,
+                            selectedOption: question.distanceOption,
+                        }),
                     )}
-                </Animated.View>
+                </ScrollView>
 
                 {question.distanceOption === "other" ? (
                     <>
@@ -150,22 +125,6 @@ export function RadarQuestionDetailScreen({
                 <Text style={styles.metadata} testID="radar-distance-meters">
                     Current distance {Math.round(question.distanceMeters)} m
                 </Text>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Answer</Text>
-                <QuestionAnswerSelector
-                    answer={question.answer}
-                    onChange={(answer) =>
-                        updateQuestion(question.id, (current) =>
-                            current.type === "radar"
-                                ? updateRadarAnswer(current, answer)
-                                : current,
-                        )
-                    }
-                    questionType={question.type}
-                    testIDPrefix="radar-answer-option"
-                />
             </View>
 
             <QuestionLocationSelector
@@ -313,12 +272,6 @@ const styles = StyleSheet.create({
         color: colors.muted,
         fontSize: 13,
         lineHeight: 18,
-        marginTop: 8,
-    },
-    optionGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
         marginTop: 8,
     },
     optionCarousel: {

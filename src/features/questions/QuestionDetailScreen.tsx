@@ -22,13 +22,7 @@ import {
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
-type QuestionDetailScreenProps = {
-    sheetIndex: number;
-};
-
-export function QuestionDetailScreen({
-    sheetIndex,
-}: QuestionDetailScreenProps) {
+export function QuestionDetailScreen() {
     const { activeQuestion } = useQuestionDerived();
     const { updateQuestion } = useQuestionActions();
 
@@ -52,7 +46,6 @@ export function QuestionDetailScreen({
                 {activeQuestion.type === "radar" ? (
                     <RadarQuestionDetailScreen
                         question={activeQuestion}
-                        sheetIndex={sheetIndex}
                         updateQuestion={updateQuestion}
                     />
                 ) : activeQuestion.type === "matching" &&

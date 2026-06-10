@@ -57,10 +57,9 @@ type SheetTransition = {
 type MainDrawerProps = {
     onNavigate: (route: SheetRouteName) => void;
     route: SheetRouteName;
-    sheetIndex: number;
 };
 
-export function MainDrawer({ route, onNavigate, sheetIndex }: MainDrawerProps) {
+export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
     const [displayedRoute, setDisplayedRoute] = useState(route);
     const displayedRouteRef = useRef(route);
     const [transition, setTransition] = useState<SheetTransition | null>(null);
@@ -198,11 +197,7 @@ export function MainDrawer({ route, onNavigate, sheetIndex }: MainDrawerProps) {
                         transition.isAnimating ? leavingStyle : null,
                     ]}
                 >
-                    {renderRouteContent(
-                        transition.from,
-                        handleNavigate,
-                        sheetIndex,
-                    )}
+                    {renderRouteContent(transition.from, handleNavigate)}
                 </Animated.View>
             ) : null}
 
@@ -220,7 +215,7 @@ export function MainDrawer({ route, onNavigate, sheetIndex }: MainDrawerProps) {
                         : null,
                 ]}
             >
-                {renderRouteContent(currentRoute, handleNavigate, sheetIndex)}
+                {renderRouteContent(currentRoute, handleNavigate)}
             </Animated.View>
 
             {backTarget ? (
@@ -260,7 +255,6 @@ function getEnteringLayerStyle(direction: TransitionDirection) {
 function renderRouteContent(
     routeName: SheetRouteName,
     onNavigate: (route: SheetRouteName) => void,
-    sheetIndex: number,
 ) {
     switch (routeName) {
         case "settings":
@@ -322,7 +316,6 @@ function renderRouteContent(
                 <QuestionDetailShell
                     onBack={() => onNavigate("questions")}
                     onNavigate={onNavigate}
-                    sheetIndex={sheetIndex}
                 />
             );
         default: {
@@ -387,11 +380,9 @@ function ChildSheetShell({
 function QuestionDetailShell({
     onBack,
     onNavigate,
-    sheetIndex,
 }: {
     onBack: () => void;
     onNavigate: (route: SheetRouteName) => void;
-    sheetIndex: number;
 }) {
     const { activeQuestion } = useQuestionDerived();
     const title = activeQuestion
@@ -409,7 +400,7 @@ function QuestionDetailShell({
             onBack={onBack}
             title={title}
         >
-            <QuestionDetailScreen sheetIndex={sheetIndex} />
+            <QuestionDetailScreen />
         </ChildSheetShell>
     );
 }
