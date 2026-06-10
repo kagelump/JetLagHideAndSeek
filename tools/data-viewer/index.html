@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Viewer — JetLag Hide &amp; Seek</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  #map { width: 100vw; height: 100vh; }
+  #loading {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.7); color: #fff; padding: 12px 24px;
+    border-radius: 8px; font-size: 14px; z-index: 10; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  #loading.hidden { opacity: 0; }
+  #legend {
+    position: fixed; top: 10px; right: 10px; background: rgba(255,255,255,0.92);
+    border-radius: 8px; padding: 10px 14px; font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 5; line-height: 1.8;
+  }
+  .legend-swatch {
+    display: inline-block; width: 20px; height: 3px; vertical-align: middle;
+    margin-right: 6px; border-radius: 2px;
+  }
+  .legend-swatch.polygon { height: 12px; width: 12px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="loading">Loading layers…</div>
+<div id="legend">
+  <div><span class="legend-swatch" style="background:#2563eb"></span>Coastline</div>
+  <div><span class="legend-swatch" style="background:#dc2626;height:3px"></span>High-speed rail</div>
+  <div><span class="legend-swatch polygon" style="background:rgba(56,189,248,0.4);border:1px solid #1d4ed8"></span>Body of water (polygon)</div>
+  <div><span class="legend-swatch" style="background:#059669"></span>Body of water (waterway)</div>
+  <div><span class="legend-swatch" style="background:#ea580c;border-top:2px dashed #ea580c;height:0"></span>Admin 1st border</div>
+  <div><span class="legend-swatch" style="background:#6b7280;border-top:1.5px dashed #6b7280;height:0"></span>Admin 2nd border</div>
+  <div><span class="legend-swatch" style="background:#16a34a;height:2px"></span>Default zones</div>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:4px 0">
+  <div style="font-weight:600;margin-bottom:2px">POIs (33,757)</div>
+  <div><span class="legend-swatch polygon" style="background:#22c55e"></span>Park</div>
+  <div><span class="legend-swatch polygon" style="background:#ef4444"></span>Hospital</div>
+  <div><span class="legend-swatch polygon" style="background:#a855f7"></span>Museum</div>
+  <div><span class="legend-swatch polygon" style="background:#78716c"></span>Mountain</div>
+  <div><span class="legend-swatch polygon" style="background:#f59e0b"></span>Landmark</div>
+  <div><span class="legend-swatch polygon" style="background:#3b82f6"></span>Library</div>
+  <div><span class="legend-swatch polygon" style="background:#15803d"></span>Golf course</div>
+  <div><span class="legend-swatch polygon" style="background:#ec4899"></span>Movie theater</div>
+  <div><span class="legend-swatch polygon" style="background:#6366f1"></span>Foreign consulate</div>
+  <div><span class="legend-swatch polygon" style="background:#f97316"></span>Amusement park</div>
+  <div><span class="legend-swatch polygon" style="background:#14b8a6"></span>Zoo</div>
+  <div><span class="legend-swatch polygon" style="background:#06b6d4"></span>Aquarium</div>
+  <div><span class="legend-swatch polygon" style="background:#e11d48"></span>Airport</div>
+  <div><span class="legend-swatch polygon" style="background:#8b5cf6"></span>Station name length</div>
+</div>
+<script>
+const KANTO_BBOX = [137.9, 33.9, 141.9, 37.9];
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: {
+    version: 8,
+    sources: {
+      osm: {
+        type: "raster",
+        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors",
+        maxzoom: 19,
+      },
+    },
+    layers: [{ id: "osm", type: "raster", source: "osm" }],
+  },
+  bounds: KANTO_BBOX,
+  fitBoundsOptions: { padding: 20 },
+});
+
+const SOURCES = {
+  coastline: "/api/measuring/coastline",
+  "high-speed-rail": "/api/measuring/high-speed-rail",
+  "body-of-water": "/api/measuring/body-of-water",
+  "admin-1st-border": "/api/measuring/admin-1st-border",
+  "admin-2nd-border": "/api/measuring/admin-2nd-border",
+  zones: "/api/zones",
+  pois: "/api/pois",
+};
+
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: ${res.status}`);
+  return res.json();
+}
+
+function addMeasuringSource(id, data) {
+  map.addSource(id, { type: "geojson", data });
+}
+
+function addMeasuringLayers(id, config) {
+  for (const layer of config) {
+    map.addLayer({ ...layer, source: id });
+  }
+}
+
+const LAYER_CONFIGS = {
+  coastline: [
+    {
+      id: "coastline-line",
+      type: "line",
+      paint: { "line-color": "#2563eb", "line-width": 3 },
+    },
+  ],
+  "high-speed-rail": [
+    {
+      id: "hsr-line",
+      type: "line",
+      paint: { "line-color": "#dc2626", "line-width": 5 },
+    },
+  ],
+  "body-of-water": [
+    {
+      id: "water-fill",
+      type: "fill",
+      filter: ["==", ["geometry-type"], "Polygon"],
+      paint: { "fill-color": "#38bdf8", "fill-opacity": 0.35 },
+    },
+    {
+      id: "water-outline",
+      type: "line",
+      filter: ["==", ["geometry-type"], "Polygon"],
+      paint: { "line-color": "#1d4ed8", "line-width": 1.6 },
+    },
+    {
+      id: "waterway-line",
+      type: "line",
+      filter: ["==", ["geometry-type"], "LineString"],
+      paint: { "line-color": "#059669", "line-width": 2 },
+    },
+  ],
+  "admin-1st-border": [
+    {
+      id: "admin1-line",
+      type: "line",
+      paint: {
+        "line-color": "#ea580c",
+        "line-width": 3,
+        "line-dasharray": [6, 3],
+      },
+    },
+  ],
+  "admin-2nd-border": [
+    {
+      id: "admin2-line",
+      type: "line",
+      paint: {
+        "line-color": "#6b7280",
+        "line-width": 2,
+        "line-dasharray": [4, 3],
+      },
+    },
+  ],
+  zones: [
+    {
+      id: "zones-fill",
+      type: "fill",
+      paint: { "fill-color": "#16a34a", "fill-opacity": 0.08 },
+    },
+    {
+      id: "zones-outline",
+      type: "line",
+      paint: { "line-color": "#16a34a", "line-width": 2 },
+    },
+  ],
+  pois: [
+    {
+      id: "poi-circle",
+      type: "circle",
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 1.5, 10, 3, 14, 7],
+        "circle-color": [
+          "match",
+          ["get", "category"],
+          "park", "#22c55e",
+          "hospital", "#ef4444",
+          "museum", "#a855f7",
+          "mountain", "#78716c",
+          "landmark", "#f59e0b",
+          "library", "#3b82f6",
+          "golf-course", "#15803d",
+          "movie-theater", "#ec4899",
+          "foreign-consulate", "#6366f1",
+          "amusement-park", "#f97316",
+          "zoo", "#14b8a6",
+          "aquarium", "#06b6d4",
+          "commercial-airport", "#e11d48",
+          "station-name-length", "#8b5cf6",
+          "#9ca3af",
+        ],
+        "circle-opacity": 0.7,
+        "circle-stroke-width": 0.5,
+        "circle-stroke-color": "#fff",
+      },
+    },
+  ],
+};
+
+async function loadLayers() {
+  const entries = Object.entries(SOURCES);
+  const results = await Promise.allSettled(
+    entries.map(([, url]) => fetchJson(url))
+  );
+
+  let loaded = 0;
+  for (let i = 0; i < entries.length; i++) {
+    const [id] = entries[i];
+    const result = results[i];
+    if (result.status === "rejected") {
+      console.error(`Failed to load ${id}:`, result.reason);
+      continue;
+    }
+    addMeasuringSource(id, result.value);
+    addMeasuringLayers(id, LAYER_CONFIGS[id]);
+    loaded++;
+  }
+
+  document.getElementById("loading").classList.add("hidden");
+  console.log(`Loaded ${loaded}/${entries.length} layers`);
+}
+
+const popup = new maplibregl.Popup({
+  closeButton: false,
+  closeOnClick: false,
+  offset: 8,
+  maxWidth: "240px",
+});
+
+map.on("load", loadLayers);
+
+map.on("mouseenter", "poi-circle", (e) => {
+  map.getCanvas().style.cursor = "pointer";
+  const p = e.features[0].properties;
+  let html = `<strong>${p.name ?? "(unnamed)"}</strong><br>${p.category}`;
+  if (p.osmId) html += `<br>osm ${p.osmType ?? ""} ${p.osmId}`;
+  if (p.iata) html += ` · IATA ${p.iata}`;
+  popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+});
+
+map.on("mouseleave", "poi-circle", () => {
+  map.getCanvas().style.cursor = "";
+  popup.remove();
+});
+</script>
+</body>
+</html>

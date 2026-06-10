@@ -1,6 +1,7 @@
 name: Share Link Pages
 
 # Deploys the static app-link fallback site for jetlag.hinoka.org.
+# Also deploys the bundle-viewer data visualization tool.
 # GitHub Pages must be enabled with GitHub Actions as the source.
 
 on:
@@ -10,6 +11,10 @@ on:
         paths:
             - "site/**"
             - "scripts/build-share-site-config.mjs"
+            - "tools/data-viewer/**"
+            - "assets/measuring/**"
+            - "assets/poi/**"
+            - "assets/default-zones/**"
             - ".github/workflows/pages.yml"
     workflow_dispatch:
 
@@ -41,6 +46,9 @@ jobs:
                   APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
                   ANDROID_SHA256_CERT_FINGERPRINTS: ${{ secrets.ANDROID_SHA256_CERT_FINGERPRINTS }}
               run: node scripts/build-share-site-config.mjs
+
+            - name: Build bundle viewer
+              run: node tools/data-viewer/build.mjs
 
             - uses: actions/configure-pages@v5
               with:
