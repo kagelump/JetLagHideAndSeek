@@ -2025,70 +2025,12 @@ async function main() {
             features.length = 0;
             features.push(...dissolved);
 
-            // ── Cross-tile ring dedup ─────────────────────────────────
-            // Adjacent tiles overlap by DISSOLVE_TILE_OVERLAP_DEG, so
-            // interior rings in the overlap zone appear identically in
-            // both tiles. Remove duplicate rings to avoid double-
-            // rendering in the bundle viewer and extra work at runtime.
-            {
-                const seen = new Set();
-                let dupRings = 0;
-                let droppedFeats = 0;
-                const deduped = [];
-                for (const feat of features) {
-                    const filtered = [];
-                    for (const poly of feat.geometry.coordinates) {
-                        const kept = [];
-                        for (const ring of poly) {
-                            const hash =
-                                ring.length +
-                                ":" +
-                                ring
-                                    .map(
-                                        (p) =>
-                                            p[0].toFixed(6) +
-                                            "," +
-                                            p[1].toFixed(6),
-                                    )
-                                    .join(";");
-                            if (!seen.has(hash)) {
-                                seen.add(hash);
-                                kept.push(ring);
-                            } else {
-                                dupRings++;
-                            }
-                        }
-                        if (kept.length > 0) filtered.push(kept);
-                    }
-                    if (filtered.length === 0) {
-                        droppedFeats++;
-                        continue;
-                    }
-                    if (filtered.length !== feat.geometry.coordinates.length) {
-                        feat.geometry.coordinates = filtered;
-                        feat.bbox = computePolygonBbox(feat.geometry);
-                    }
-                    deduped.push(feat);
-                }
-                if (dupRings > 0) {
-                    console.log(
-                        `  [dissolve] ring dedup: removed ${dupRings.toLocaleString()} duplicate rings` +
-                            (droppedFeats
-                                ? `, dropped ${droppedFeats} empty features`
-                                : "") +
-                            ` (${features.length} → ${deduped.length} features)`,
-                    );
-                    features.length = 0;
-                    features.push(...deduped);
-                }
-            }
-
-            // ── Cross-tile polygon merge (for clipping only) ──────────
-            // The per-tile dissolve produces one feature per non-empty tile.
-            // Adjacent tiles overlap by DISSOLVE_TILE_OVERLAP_DEG, so
-            // water bodies that span tile boundaries appear in multiple
-            // features. Merge them into one clean polygon for clipping
-            // waterway lines at the polygon boundary.
+            // ── Cross-tile polygon merge ───────────────────────────────
+            // Per-tile dissolve clips to tile bounds, so adjacent tiles
+            // produce different outlines for the same polygon in the
+            // overlap zone. Merge all tile outputs into one clean polygon
+            // to eliminate overlap artifacts. The merged result also serves
+            // as the clipping reference for waterway centerlines.
             let mergedPolyCoords = null;
             if (features.length > 1) {
                 const tMerge = Date.now();
@@ -2097,10 +2039,26 @@ async function main() {
                 );
                 if (mergedCoords.length > 0) {
                     mergedPolyCoords = mergedCoords[0];
+                    // Replace per-tile features with the merged result to
+                    // eliminate overlap artifacts at tile boundaries.
+                    const mergedFeat = {
+                        type: "Feature",
+                        bbox: computePolygonBbox({
+                            type: "MultiPolygon",
+                            coordinates: mergedPolyCoords,
+                        }),
+                        geometry: {
+                            type: "MultiPolygon",
+                            coordinates: mergedPolyCoords,
+                        },
+                        properties: {},
+                    };
+                    features.length = 0;
+                    features.push(mergedFeat);
                 }
                 console.log(
-                    `  [dissolve] cross-tile merge: ${features.length} tile polys → ` +
-                        `1 merged for clipping (${((Date.now() - tMerge) / 1000).toFixed(1)}s)`,
+                    `  [dissolve] cross-tile merge: → 1 merged polygon` +
+                        ` (${((Date.now() - tMerge) / 1000).toFixed(1)}s)`,
                 );
             } else if (features.length === 1) {
                 mergedPolyCoords = features[0].geometry.coordinates;
@@ -2452,6 +2410,7 @@ export {
     stitchSegments,
     validateLineContinuity,
     polygonDissolve,
+    unionAllCoords,
     cleanPolygonFeature,
     simplifyPolygonFeature,
     polygonPerimeterMeters,

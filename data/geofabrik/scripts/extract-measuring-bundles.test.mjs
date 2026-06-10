@@ -11,6 +11,7 @@ import {
     simplifyPolygonFeature,
     polygonPerimeterMeters,
     polygonDissolve,
+    unionAllCoords,
 } from "./extract-measuring-bundles.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -497,6 +498,38 @@ function makePolygon(coords) {
 describe("polygonDissolve", () => {
     const EXTRACT_BBOX = [139.0, 35.0, 140.0, 36.0];
 
+    /** Simple point-in-polygon (even-odd rule). */
+    function pointInPolygon(point, ring) {
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const xi = ring[i][0],
+                yi = ring[i][1];
+            const xj = ring[j][0],
+                yj = ring[j][1];
+            if (
+                yi > point[1] !== yj > point[1] &&
+                point[0] < ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi
+            ) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    /** Check if a point falls inside any ring of any polygon feature. */
+    function pointInAnyPolygon(point, features) {
+        for (const f of features) {
+            const rings =
+                f.geometry.type === "Polygon"
+                    ? f.geometry.coordinates
+                    : f.geometry.coordinates.flat();
+            for (const ring of rings) {
+                if (pointInPolygon(point, ring)) return true;
+            }
+        }
+        return false;
+    }
+
     it("dissolve merges overlapping polygons into a single polygon", () => {
         // Two overlapping squares that fit entirely within the tile at
         // [139.0, 35.0] (tile bbox ≈ [138.99, 34.99, 139.26, 35.26]).
@@ -692,6 +725,140 @@ describe("polygonDissolve", () => {
                 f.geometry.type === "Polygon" ||
                     f.geometry.type === "MultiPolygon",
             );
+        }
+    });
+
+    it("cross-tile dissolve does not produce overlapping polygons", () => {
+        // Two narrow river-like polygons straddling the tile boundary at
+        // lat 35.25 (tile 0: [34.99, 35.26], tile 1: [35.24, 35.51]).
+        // Each polygon is a narrow strip crossing the boundary. Adjacent
+        // tiles dissolve them independently, producing overlapping output
+        // with different outlines in the overlap zone [35.24, 35.26].
+        //
+        // This is a regression test for the cross-tile overlap bug that
+        // caused weird merge visuals at bridge areas (e.g. OSM ways
+        // 624304778 + 624304779).
+        const riverA = makePolygon([
+            [
+                [139.1, 35.23],
+                [139.12, 35.23],
+                [139.12, 35.27],
+                [139.1, 35.27],
+                [139.1, 35.23],
+            ],
+        ]);
+        const riverB = makePolygon([
+            [
+                [139.12, 35.23],
+                [139.14, 35.23],
+                [139.14, 35.27],
+                [139.12, 35.27],
+                [139.12, 35.23],
+            ],
+        ]);
+
+        const dissolved = polygonDissolve(
+            [riverA, riverB],
+            EXTRACT_BBOX,
+            0.0001,
+        );
+
+        // Per-tile dissolve produces ≥2 features when the polygons
+        // straddle a tile boundary (overlap artifacts).
+        assert.ok(
+            dissolved.length >= 2,
+            `expected ≥2 per-tile features, got ${dissolved.length}`,
+        );
+
+        // Cross-tile merge should produce a single clean polygon.
+        const mergedCoords = unionAllCoords(
+            dissolved.map((f) => f.geometry.coordinates),
+        );
+        assert.strictEqual(
+            mergedCoords.length,
+            1,
+            `expected 1 merged polygon, got ${mergedCoords.length}`,
+        );
+
+        const merged = [
+            {
+                type: "Feature",
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: mergedCoords[0],
+                },
+            },
+        ];
+
+        // Both input polygon centers must be inside the merged result.
+        const centerA = [139.11, 35.25];
+        const centerB = [139.13, 35.25];
+        assert.ok(
+            pointInAnyPolygon(centerA, merged),
+            "center of riverA not inside merged polygon",
+        );
+        assert.ok(
+            pointInAnyPolygon(centerB, merged),
+            "center of riverB not inside merged polygon",
+        );
+
+        // The merged polygon must not have overlapping rings — check that
+        // no two outer rings have >50% area overlap. This is the core
+        // regression assertion: before the fix, the per-tile features
+        // overlapped in the tile boundary zone.
+        function shoelaceAreaSqDeg(ring) {
+            let area = 0;
+            for (let i = 0; i < ring.length - 1; i++) {
+                area += ring[i][0] * ring[i + 1][1];
+                area -= ring[i + 1][0] * ring[i][1];
+            }
+            return Math.abs(area / 2);
+        }
+
+        function bboxOverlapArea(a, b) {
+            const west = Math.max(a[0], b[0]);
+            const east = Math.min(a[2], b[2]);
+            const south = Math.max(a[1], b[1]);
+            const north = Math.min(a[3], b[3]);
+            if (west >= east || south >= north) return 0;
+            return (east - west) * (north - south);
+        }
+
+        function ringBbox(ring) {
+            let minLon = Infinity,
+                maxLon = -Infinity,
+                minLat = Infinity,
+                maxLat = -Infinity;
+            for (const [lon, lat] of ring) {
+                if (lon < minLon) minLon = lon;
+                if (lon > maxLon) maxLon = lon;
+                if (lat < minLat) minLat = lat;
+                if (lat > maxLat) maxLat = lat;
+            }
+            return [minLon, minLat, maxLon, maxLat];
+        }
+
+        // Collect all outer rings from the merged polygon.
+        const outerRings = [];
+        for (const poly of mergedCoords[0]) {
+            outerRings.push(poly[0]);
+        }
+        for (let i = 0; i < outerRings.length; i++) {
+            for (let j = i + 1; j < outerRings.length; j++) {
+                const areaI = shoelaceAreaSqDeg(outerRings[i]);
+                const areaJ = shoelaceAreaSqDeg(outerRings[j]);
+                const overlap = bboxOverlapArea(
+                    ringBbox(outerRings[i]),
+                    ringBbox(outerRings[j]),
+                );
+                const minArea = Math.min(areaI, areaJ);
+                if (minArea > 0) {
+                    assert.ok(
+                        overlap / minArea < 0.5,
+                        `outer rings ${i} and ${j} overlap ${((overlap / minArea) * 100).toFixed(1)}% (bbox estimate)`,
+                    );
+                }
+            }
         }
     });
 });
