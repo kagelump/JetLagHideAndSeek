@@ -4,12 +4,20 @@ import { QueryClient } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 
 /** 30 days — boundary data changes very rarely. */
-export const BOUNDARY_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// Infinity tells TanStack Query "never stale by time" and avoids a 30-day
+// setTimeout that overflows Node's 32-bit signed integer timer (~24.8 days).
+// Boundary data is refreshed by explicit user action, not a clock.
+export const BOUNDARY_CACHE_TTL_MS = Infinity;
+
+const IS_TEST =
+    typeof process !== "undefined" &&
+    (process.env.NODE_ENV === "test" ||
+        process.env.JEST_WORKER_ID !== undefined);
 
 export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            retry: 2,
+            retry: IS_TEST ? 0 : 2,
             staleTime: 5 * 60 * 1000,
             gcTime: 30 * 60 * 1000,
             refetchOnWindowFocus: false, // not meaningful on RN

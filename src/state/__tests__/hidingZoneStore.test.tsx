@@ -232,6 +232,10 @@ describe("HidingZoneProvider zone geometry updates", () => {
     });
 
     it("debounces radius edits but flushes geometry for imports and preset changes", async () => {
+        // Use fake timers from the start — eliminates reliance on real-time
+        // waitFor polling for the debounce window later in the test.
+        jest.useFakeTimers();
+
         let actions: ReturnType<typeof useHidingZoneActions> | null = null;
 
         function GeometryProbe() {
@@ -258,22 +262,30 @@ describe("HidingZoneProvider zone geometry updates", () => {
             </PlayAreaProvider>,
         );
 
-        await waitFor(() => {
-            expect(
-                screen.getByTestId("probe-preset-count"),
-            ).not.toHaveTextContent("0");
+        // Flush all pending timers and microtasks so the async preset load
+        // (dynamic import → .then() → setState → re-render) settles.
+        await act(async () => {
+            jest.runAllTimers();
         });
+
+        // Presets should be loaded by now — assert synchronously.
+        expect(screen.getByTestId("probe-preset-count")).not.toHaveTextContent(
+            "0",
+        );
 
         act(() => {
             actions!.addPreset("tokyo-metro");
         });
-        await waitFor(() => {
-            expect(
-                screen.getByTestId("probe-geometry-radius"),
-            ).toHaveTextContent("600");
+        await act(async () => {
+            jest.runAllTimers();
         });
+        expect(screen.getByTestId("probe-geometry-radius")).toHaveTextContent(
+            "600",
+        );
 
-        jest.useFakeTimers();
+        // Debounce window: rapid radius edits update the canonical value
+        // immediately but do NOT trigger an expensive geometry recompute
+        // until the 300 ms debounce timer fires.
         act(() => {
             actions!.setRadiusDisplayValue("5");
             actions!.setRadiusDisplayValue("50");
@@ -301,6 +313,7 @@ describe("HidingZoneProvider zone geometry updates", () => {
             "500",
         );
 
+        // replaceSetup and addPreset flush geometry immediately — no debounce.
         act(() => {
             actions!.setRadiusDisplayValue("700");
             actions!.replaceSetup({
