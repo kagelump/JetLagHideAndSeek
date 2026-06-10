@@ -4,6 +4,7 @@ import { MATCHING } from "@/config/appConfig";
 
 import type { AdminDivisionNamePack } from "./adminDivisionConfig";
 import type { FetchDebugInfo } from "./fetchDebug";
+import { isAdminBoundaryCategory } from "./matchingSelectors";
 import type { MatchingCategory } from "./matchingTypes";
 import {
     findMatchingFeaturesWithIndex,
@@ -130,6 +131,22 @@ export async function searchMatchingFeaturesProgressive(
             `[prog] iter=${iter} inRadius=${inRadius.length} ` +
                 `(filtered from ${result.candidates.length} raw)`,
         );
+
+        // Admin boundary containment is binary — expanding the radius never
+        // finds more matches.  Short-circuit on the first iteration.
+        if (isAdminBoundaryCategory(category)) {
+            console.log(
+                `[prog] iter=${iter} STOP: admin boundary (${inRadius.length} matches)`,
+            );
+            return {
+                candidates: inRadius,
+                source: result.source,
+                searchRadiusMeters: effectiveRadius,
+                debug: result.debug
+                    ? { ...result.debug, totalCount: inRadius.length }
+                    : undefined,
+            };
+        }
 
         // Stop if the search disk now covers the entire play area.
         // Skip this check for unbounded searches (e.g. commercial airports

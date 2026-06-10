@@ -12,7 +12,12 @@ import { colors } from "@/theme/colors";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-export type FetchOrigin = "overpass" | "local-bundle" | "memory" | "disk";
+export type FetchOrigin =
+    | "overpass"
+    | "local-bundle"
+    | "admin-boundary"
+    | "memory"
+    | "disk";
 
 export type FetchDebugInfo = {
     /** Total number of candidate features returned to the UI. */

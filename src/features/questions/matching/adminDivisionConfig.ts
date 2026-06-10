@@ -93,7 +93,7 @@ const ADMIN_CATEGORIES: MatchingCategory[] = [
 ];
 
 /** Index of each admin category in the 4-entry tuple. */
-const ADMIN_CATEGORY_INDEX: Record<string, number> = {
+export const ADMIN_CATEGORY_INDEX: Record<string, number> = {
     "admin-1st": 0,
     "admin-2nd": 1,
     "admin-3rd": 2,

@@ -4,10 +4,15 @@ import type { Position } from "@/shared/geojson";
 import { haversineDistanceMeters } from "@/shared/geojson";
 
 import type { AdminDivisionNamePack } from "./adminDivisionConfig";
+import { ADMIN_CATEGORY_INDEX } from "./adminDivisionConfig";
 import type { FetchDebugInfo } from "./fetchDebug";
+import { queryAdminBoundary } from "./adminBoundaryLoader";
 import { regionCoveringPoint } from "./bundledPois";
 import { getCategoryConfig } from "./matchingCategories";
-import { isBundleableCategory } from "./matchingSelectors";
+import {
+    isBundleableCategory,
+    isAdminBoundaryCategory,
+} from "./matchingSelectors";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
 import {
     DEFAULT_SEARCH_RADIUS_METERS,
@@ -621,6 +626,38 @@ export async function findMatchingFeaturesWithIndex(
         }
         console.log(
             `[spatialIndex] ${category} ${coveringRegion} → null (unavailable), falling back to Overpass`,
+        );
+    }
+
+    // Try admin boundary polygon index for admin-1st through admin-4th.
+    if (isAdminBoundaryCategory(category) && options?.adminDivisionPack) {
+        const adminLevel =
+            options.adminDivisionPack[ADMIN_CATEGORY_INDEX[category]].osmLevel;
+        const qT0 = Date.now();
+        const candidates = queryAdminBoundary(lon, lat, adminLevel);
+        const qDurationMs = Date.now() - qT0;
+
+        if (candidates !== null) {
+            console.log(
+                `[adminBoundary] ${category} osmLevel=${adminLevel} → ` +
+                    `${candidates.length} candidates in ${qDurationMs}ms`,
+            );
+            return {
+                candidates,
+                source: "memory",
+                debug: {
+                    totalCount: candidates.length,
+                    origins: { "admin-boundary": candidates.length },
+                    durationMs: qDurationMs,
+                    status: "done",
+                    at: Date.now(),
+                },
+            };
+        }
+        // null means bundle unavailable (e.g. point outside extract bbox) —
+        // fall through to Overpass.
+        console.log(
+            `[adminBoundary] ${category} → null (outside bundle bbox), falling back to Overpass`,
         );
     }
 
