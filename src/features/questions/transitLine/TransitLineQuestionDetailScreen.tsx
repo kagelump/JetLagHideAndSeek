@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
@@ -28,16 +28,25 @@ export function TransitLineQuestionDetailScreen({
 }) {
     const { radiusMeters } = useHidingZoneState();
     const { selectedRoutes, selectedStations } = useHidingZoneDerived();
-    const routeNames = new Map(
-        selectedRoutes.map((route) => [route.id, route.name]),
+
+    const routeNames = useMemo(
+        () => new Map(selectedRoutes.map((route) => [route.id, route.name])),
+        [selectedRoutes],
     );
-    const lineOptions = getTransitLineOptions(
-        selectedStations,
-        routeNames,
-        question.center,
-        radiusMeters,
+    const lineOptions = useMemo(
+        () =>
+            getTransitLineOptions(
+                selectedStations,
+                routeNames,
+                question.center,
+                radiusMeters,
+            ),
+        [selectedStations, routeNames, question.center, radiusMeters],
     );
-    const lineOptionIds = lineOptions.map((line) => line.id).join("\0");
+    const lineOptionIds = useMemo(
+        () => lineOptions.map((line) => line.id).join("\0"),
+        [lineOptions],
+    );
 
     useEffect(() => {
         updateQuestion(question.id, (current) =>

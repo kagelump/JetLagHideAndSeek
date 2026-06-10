@@ -12,6 +12,7 @@ import {
 import { HIDING_ZONE } from "@/config/appConfig";
 
 import type { Feature, Polygon } from "geojson";
+import { sourcePriority } from "@/features/transit/transitTypes";
 import type {
     HidingZonePreset,
     HidingZoneUnit,
@@ -64,8 +65,15 @@ export function getSelectedRoutes(presets: HidingZonePreset[]): TransitRoute[] {
 export function getSelectedStations(
     presets: HidingZonePreset[],
 ): TransitStation[] {
+    // Sort by source priority so higher-priority (GTFS) presets win
+    // name / coords when the same mergeKey appears in multiple presets.
+    // Stable sort keeps config order within the same priority kind.
+    const sorted = [...presets].sort(
+        (a, b) => sourcePriority(a.source) - sourcePriority(b.source),
+    );
+
     const stations = new Map<string, TransitStation>();
-    for (const preset of presets) {
+    for (const preset of sorted) {
         const routeColorById = new Map(
             preset.routes.map((route) => [
                 route.id,
@@ -95,12 +103,18 @@ export function getSelectedStations(
                         station.id,
                     ]),
                 ].sort();
+                // nameEn: first non-empty value from any source (priority
+                // order already applied).
+                if (!existing.nameEn && station.nameEn) {
+                    existing.nameEn = station.nameEn;
+                }
             } else {
                 stations.set(station.mergeKey, {
                     id: station.mergeKey,
                     lat: station.lat,
                     lon: station.lon,
                     name: station.name,
+                    nameEn: station.nameEn,
                     routeColors,
                     routeIds: [...station.routeIds].sort(),
                     sourceStationIds: [station.id],
