@@ -146,8 +146,7 @@ static jbyteArray binaryOpAndWrite(JNIEnv* env, GEOSContextHandle_t ctx,
     }
 
     // --- Validate / fix A --------------------------------------------------
-    char isValidA = 0;
-    GEOSisValid_r(ctx, geomA, &isValidA);
+    char isValidA = GEOSisValid_r(ctx, geomA);
     if (isValidA != 1) {
         LOGD("%s: geometry A invalid — attempting MakeValid", opName);
         auto* fixedA = GEOSMakeValid_r(ctx, geomA);
@@ -161,8 +160,7 @@ static jbyteArray binaryOpAndWrite(JNIEnv* env, GEOSContextHandle_t ctx,
     }
 
     // --- Validate / fix B --------------------------------------------------
-    char isValidB = 0;
-    GEOSisValid_r(ctx, geomB, &isValidB);
+    char isValidB = GEOSisValid_r(ctx, geomB);
     if (isValidB != 1) {
         LOGD("%s: geometry B invalid — attempting MakeValid", opName);
         auto* fixedB = GEOSMakeValid_r(ctx, geomB);
@@ -239,8 +237,7 @@ static jbyteArray unaryOpAndWrite(JNIEnv* env, GEOSContextHandle_t ctx,
     }
 
     // --- Validate / fix ----------------------------------------------------
-    char isValid = 0;
-    GEOSisValid_r(ctx, geom, &isValid);
+    char isValid = GEOSisValid_r(ctx, geom);
     if (isValid != 1) {
         LOGD("%s: geometry invalid — attempting MakeValid", opName);
         auto* fixed = GEOSMakeValid_r(ctx, geom);
@@ -333,8 +330,7 @@ Java_expo_modules_nativegeometry_NativeGeometryModule_nativeBufferWKB(
     }
 
     // --- Validate / fix ----------------------------------------------------
-    char isValid = 0;
-    GEOSisValid_r(ctx, inGeom, &isValid);
+    char isValid = GEOSisValid_r(ctx, inGeom);
     if (isValid != 1) {
         LOGD("bufferWKB: geometry invalid (GEOSisValid_r returned %d) — attempting MakeValid", (int)isValid);
         auto* fixed = GEOSMakeValid_r(ctx, inGeom);

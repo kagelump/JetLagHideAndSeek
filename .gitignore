@@ -32,3 +32,4 @@ data/geofabrik/dist/
 modules/native-geometry/vendor/geos/
 modules/native-geometry/ios/build/
 modules/native-geometry/android/build/
+modules/native-geometry/android/.cxx/

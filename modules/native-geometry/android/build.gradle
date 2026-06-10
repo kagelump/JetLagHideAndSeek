@@ -1,6 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'expo-module'
+apply plugin: 'expo-module-gradle-plugin'
 
 group = 'expo.modules.nativegeometry'
 version = '0.1.0'
@@ -20,15 +20,15 @@ android {
                 cppFlags "-std=c++17 -frtti -fexceptions"
                 // Pre-built GEOS libs are committed per ABI; we point CMake
                 // at the right ABI subdirectory via a variable.
-                def cmakeArgs = ["-DANDROID_STL=c++_shared"]
                 // Enable Address Sanitizer when the Gradle property is set:
                 //   ./gradlew ... -PenableAddressSanitizer=true
                 // Off by default; safe to keep in version control.
                 if (project.hasProperty("enableAddressSanitizer") &&
                     project.property("enableAddressSanitizer") == "true") {
-                    cmakeArgs.add("-DENABLE_ASAN=ON")
+                    arguments = ["-DANDROID_STL=c++_shared", "-DENABLE_ASAN=ON"]
+                } else {
+                    arguments = ["-DANDROID_STL=c++_shared"]
                 }
-                arguments cmakeArgs
             }
         }
 

@@ -4,8 +4,8 @@ project("native-geometry")
 # Pre-built GEOS static library path (per ABI).
 # The ABI is set by Gradle's externalNativeBuild; we use it
 # to find the right pre-built .a.
-set(GEOS_LIB_DIR "${CMAKE_SOURCE_DIR}/../libs/${ANDROID_ABI}")
-set(GEOS_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../libs/include")
+set(GEOS_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI}")
+set(GEOS_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/libs/include")
 
 # Import the pre-built GEOS static library.
 add_library(geos STATIC IMPORTED)
@@ -26,6 +26,12 @@ target_link_libraries(native-geometry-jni
     geos
     c++_shared
     log
+)
+
+# Align ELF segments to 16 KB so the .so is compatible with
+# Android 15+ devices that use a 16 KB page size.
+target_link_options(native-geometry-jni PRIVATE
+    -Wl,-z,max-page-size=16384
 )
 
 # ── Address Sanitizer (dev-only, off by default) ─────────────────────────

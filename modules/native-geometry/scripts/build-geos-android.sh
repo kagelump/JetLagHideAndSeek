@@ -129,11 +129,13 @@ for ABI in "${ABIS[@]}"; do
     cp "$COMBINED" "$OUTPUT_DIR/$ABI/libgeos.a"
     echo "Installed: $OUTPUT_DIR/$ABI/libgeos.a ($(du -h "$OUTPUT_DIR/$ABI/libgeos.a" | cut -f1))"
 
-    # Copy the generated C API header (needed by the Expo Module).
+    # Copy the generated C API headers (needed by the Expo Module).
+    # Match upstream GEOS layout: geos_c.h includes <geos/export.h>,
+    # so export.h lives under include/geos/.
     HEADER_DIR="$OUTPUT_DIR/include"
-    mkdir -p "$HEADER_DIR"
+    mkdir -p "$HEADER_DIR/geos"
     cp "$ABI_BUILD_DIR/capi/geos_c.h" "$HEADER_DIR/"
-    cp "$VENDOR_DIR/include/geos/export.h" "$HEADER_DIR/"
+    cp "$VENDOR_DIR/include/geos/export.h" "$HEADER_DIR/geos/"
 done
 
 echo ""
