@@ -1,0 +1,48 @@
+# Transit station pipeline configuration.
+# See docs/tasks/transit-expansion/design.md for the full architecture.
+
+outputDir: ../../assets/transit
+cacheDir: cache
+notice: NOTICE.md
+
+locales:
+    - id: japan
+      nameSuffixes: ["駅"]
+      maxClusterMeters: 150
+      aliases: []
+
+      # OSM block omitted — added in T5.
+
+      gtfs:
+          - id: tokyo-metro
+            label: Tokyo Metro
+            namespace: odpt-tokyo-metro # preserved — keeps persisted lineIds valid
+            url: "https://api.odpt.org/api/v4/files/TokyoMetro/data/TokyoMetro-Train-GTFS.zip?acl:consumerKey=${ODPT_KEY}"
+            requiresKey: true
+            lineGrouping: route_id # ODPT is already line-granular
+            routeTypes: [1]
+            defaultColor: "#009BBF"
+            license: "ODPT terms — see NOTICE"
+          - id: toei-subway
+            label: Toei Subway
+            namespace: odpt-toei-subway
+            url: "https://api-public.odpt.org/api/v4/files/Toei/data/Toei-Train-GTFS.zip"
+            requiresKey: false
+            lineGrouping: route_id
+            routeTypes: [1]
+            defaultColor: "#6CBB5A"
+            license: "ODPT terms — see NOTICE"
+
+      operators:
+          - match:
+                {
+                    gtfsNamespace: odpt-tokyo-metro,
+                    osmOperator: ["東京メトロ", "Tokyo Metro"],
+                }
+            routeSource: gtfs
+          - match:
+                {
+                    gtfsNamespace: odpt-toei-subway,
+                    osmOperator: ["東京都交通局", "Toei"],
+                }
+            routeSource: gtfs
