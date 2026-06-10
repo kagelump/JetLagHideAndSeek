@@ -81,6 +81,35 @@ function MeasuringAutoResult({
 
     return (
         <>
+            {/* ── Answer selector (top) ─────────────────────────────── */}
+            <View style={styles.section}>
+                <Text
+                    accessibilityLabel="Measuring answer section"
+                    style={styles.sectionTitle}
+                >
+                    Answer
+                </Text>
+                <QuestionAnswerSelector
+                    answer={question.answer}
+                    disabledAnswers={
+                        !answerEnabled ? ["positive", "negative"] : undefined
+                    }
+                    onChange={(answer) => {
+                        updateQuestion(question.id, (current) =>
+                            current.type === "measuring"
+                                ? {
+                                      ...current,
+                                      answer,
+                                      updatedAt: new Date().toISOString(),
+                                  }
+                                : current,
+                        );
+                    }}
+                    questionType={question.type}
+                    testIDPrefix="measuring-answer-option"
+                />
+            </View>
+
             {/* ── Position pin ──────────────────────────────────────── */}
             <QuestionLocationSelector
                 center={question.center}
@@ -152,35 +181,6 @@ function MeasuringAutoResult({
                         );
                     })}
                 </View>
-            </View>
-
-            {/* ── Answer selector ───────────────────────────────────── */}
-            <View style={styles.section}>
-                <Text
-                    accessibilityLabel="Measuring answer section"
-                    style={styles.sectionTitle}
-                >
-                    Answer
-                </Text>
-                <QuestionAnswerSelector
-                    answer={question.answer}
-                    disabledAnswers={
-                        !answerEnabled ? ["positive", "negative"] : undefined
-                    }
-                    onChange={(answer) => {
-                        updateQuestion(question.id, (current) =>
-                            current.type === "measuring"
-                                ? {
-                                      ...current,
-                                      answer,
-                                      updatedAt: new Date().toISOString(),
-                                  }
-                                : current,
-                        );
-                    }}
-                    questionType={question.type}
-                    testIDPrefix="measuring-answer-option"
-                />
             </View>
         </>
     );
