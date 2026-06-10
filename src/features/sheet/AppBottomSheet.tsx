@@ -2,16 +2,18 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import type { ComponentType } from "react";
 import {
     forwardRef,
+    useCallback,
     useEffect,
     useImperativeHandle,
     useMemo,
     useRef,
     useState,
 } from "react";
-import { Keyboard, StyleSheet } from "react-native";
+import { BackHandler, Keyboard, StyleSheet } from "react-native";
 
 import { MainDrawer } from "@/features/sheet/MainDrawer";
 import { SHEET_SNAP_INDEX, SheetRouteName } from "@/features/sheet/sheetRoutes";
+import { getBackTarget } from "@/features/sheet/sheetNav";
 import { colors } from "@/theme/colors";
 
 const Sheet = BottomSheet as ComponentType<any>;
@@ -48,6 +50,26 @@ export const AppBottomSheet = forwardRef<
         },
     }));
 
+    const handleBackPress = useCallback(() => {
+        const backTarget = getBackTarget(route);
+        if (backTarget) {
+            sheetRef.current?.snapToIndex?.(getRouteSnapIndex(backTarget));
+            setRoute(backTarget);
+            return true;
+        }
+        // On "main" route: close the sheet.
+        sheetRef.current?.snapToIndex?.(-1);
+        return true;
+    }, [route]);
+
+    useEffect(() => {
+        const sub = BackHandler.addEventListener(
+            "hardwareBackPress",
+            handleBackPress,
+        );
+        return () => sub.remove();
+    }, [handleBackPress]);
+
     useEffect(() => {
         const target = getRouteSnapIndex(route);
         if (
@@ -69,7 +91,6 @@ export const AppBottomSheet = forwardRef<
             snapPoints={snapPoints}
             enableDynamicSizing={false}
             enableOverDrag={false}
-            enablePanDownToClose
             handleIndicatorStyle={styles.handleIndicator}
             backgroundStyle={styles.sheetBackground}
             accessible={false}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { requestUserCoordinate } from "@/shared/location";
@@ -7,7 +7,10 @@ import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { MeasuringCategoryModal } from "@/features/questions/measuring/MeasuringCategoryModal";
 import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
 import { usePlayArea } from "@/state/playAreaStore";
-import { useQuestionActions } from "@/state/questionStore";
+import {
+    updateQuestionCenter,
+    useQuestionActions,
+} from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
 type AddQuestionScreenProps = {
@@ -16,61 +19,90 @@ type AddQuestionScreenProps = {
 
 export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
     const { playArea } = usePlayArea();
-    const { createQuestion } = useQuestionActions();
+    const { createQuestion, updateQuestion } = useQuestionActions();
     const [showMeasuringModal, setShowMeasuringModal] = useState(false);
     const [pendingMeasuringCenter, setPendingMeasuringCenter] = useState<
         [number, number] | null
     >(null);
 
-    const addRadarQuestion = async () => {
-        const result = await requestUserCoordinate();
-        createQuestion("radar", {
-            center: result.coordinate ?? playArea.center,
+    // Navigate immediately with the play-area center as fallback, then
+    // update the question's center in the background if location arrives.
+    const addRadarQuestion = useCallback(() => {
+        const question = createQuestion("radar", {
+            center: playArea.center,
         });
         onNavigate("question-detail");
-    };
 
-    const addThermometerQuestion = async () => {
-        const result = await requestUserCoordinate();
-        createQuestion("thermometer", {
-            center: result.coordinate ?? playArea.center,
+        requestUserCoordinate().then((result) => {
+            if (result.coordinate) {
+                updateQuestion(question.id, (current) =>
+                    updateQuestionCenter(current, result.coordinate!),
+                );
+            }
+        });
+    }, [createQuestion, onNavigate, playArea.center, updateQuestion]);
+
+    const addThermometerQuestion = useCallback(() => {
+        const question = createQuestion("thermometer", {
+            center: playArea.center,
         });
         onNavigate("question-detail");
-    };
 
-    const openMeasuringModal = async () => {
-        const result = await requestUserCoordinate();
-        setPendingMeasuringCenter(result.coordinate ?? playArea.center);
+        requestUserCoordinate().then((result) => {
+            if (result.coordinate) {
+                updateQuestion(question.id, (current) =>
+                    updateQuestionCenter(current, result.coordinate!),
+                );
+            }
+        });
+    }, [createQuestion, onNavigate, playArea.center, updateQuestion]);
+
+    const openMeasuringModal = useCallback(() => {
+        setPendingMeasuringCenter(playArea.center);
         setShowMeasuringModal(true);
-    };
 
-    const handleMeasuringCategoryPick = (category: MeasuringCategory) => {
-        createQuestion("measuring", {
-            center: pendingMeasuringCenter ?? playArea.center,
-            category,
+        requestUserCoordinate().then((result) => {
+            if (result.coordinate) {
+                setPendingMeasuringCenter(result.coordinate);
+            }
         });
-        setShowMeasuringModal(false);
-        setPendingMeasuringCenter(null);
-        onNavigate("question-detail");
-    };
+    }, [playArea.center]);
 
-    const addTentaclesQuestion = async () => {
-        const result = await requestUserCoordinate();
-        createQuestion("tentacles", {
-            center: result.coordinate ?? playArea.center,
+    const handleMeasuringCategoryPick = useCallback(
+        (category: MeasuringCategory) => {
+            createQuestion("measuring", {
+                center: pendingMeasuringCenter ?? playArea.center,
+                category,
+            });
+            setShowMeasuringModal(false);
+            setPendingMeasuringCenter(null);
+            onNavigate("question-detail");
+        },
+        [createQuestion, onNavigate, pendingMeasuringCenter, playArea.center],
+    );
+
+    const addTentaclesQuestion = useCallback(() => {
+        const question = createQuestion("tentacles", {
+            center: playArea.center,
             category: "museum",
         });
         onNavigate("question-detail");
-    };
+
+        requestUserCoordinate().then((result) => {
+            if (result.coordinate) {
+                updateQuestion(question.id, (current) =>
+                    updateQuestionCenter(current, result.coordinate!),
+                );
+            }
+        });
+    }, [createQuestion, onNavigate, playArea.center, updateQuestion]);
 
     return (
         <SheetScrollView contentContainerStyle={styles.scrollContent}>
             <Pressable
                 accessibilityLabel="Add radar question"
                 accessibilityRole="button"
-                onPress={() => {
-                    void addRadarQuestion();
-                }}
+                onPress={addRadarQuestion}
                 style={({ pressed }) => [
                     styles.optionRow,
                     pressed ? styles.actionPressed : null,
@@ -108,9 +140,7 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
             <Pressable
                 accessibilityLabel="Add thermometer question"
                 accessibilityRole="button"
-                onPress={() => {
-                    void addThermometerQuestion();
-                }}
+                onPress={addThermometerQuestion}
                 style={({ pressed }) => [
                     styles.optionRow,
                     pressed ? styles.actionPressed : null,
@@ -129,9 +159,7 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
             <Pressable
                 accessibilityLabel="Add measuring question"
                 accessibilityRole="button"
-                onPress={() => {
-                    void openMeasuringModal();
-                }}
+                onPress={openMeasuringModal}
                 style={({ pressed }) => [
                     styles.optionRow,
                     pressed ? styles.actionPressed : null,
@@ -150,9 +178,7 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
             <Pressable
                 accessibilityLabel="Add tentacles question"
                 accessibilityRole="button"
-                onPress={() => {
-                    void addTentaclesQuestion();
-                }}
+                onPress={addTentaclesQuestion}
                 style={({ pressed }) => [
                     styles.optionRow,
                     pressed ? styles.actionPressed : null,
