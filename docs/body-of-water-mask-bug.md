@@ -64,6 +64,32 @@ At the correctly-scoped 161 m window (165 lines / 5,125 coords) the budget loop
 returns immediately with **no dropping and no truncation** — both symptoms
 disappear.
 
+## Update 2026-06-10 — symptom #2 gone, symptom #1 confirmed + fix verified
+
+After a dev-client rebuild (GEOS dissolve active) symptom #2 (straight capsule)
+no longer renders — the clean `unaryUnion` hides the prefix-slice artifact. But
+**symptom #1 persists**: the Meguro riverbanks are still masked.
+
+Reproducing the real pipeline (50 km window → `applyBufferBudget` → 161 m line
+buffers) against the committed bundle:
+
+- Window: **1,498 lines / 53,164 coords**. Budget exhausts all 6 rounds (still
+  690 lines), hits the hard cap → kept **400 lines / 2,093 coords** (tolerance
+  doubled to ~640 m).
+- Coverage check on the 21 Meguro-river vertices near 中目黒:
+  **10 / 21 uncovered** → banks masked.
+- The polygon path can't compensate: the 50 km poly window (132 k coords) trips
+  the >20 k budget and simplifies water polygons at ~50 m, which **collapses the
+  thin (~15 m) river channel** → polygon-only buffers leave **17 / 21 uncovered**.
+
+So symptom #1 is the same root cause (defect A): the budget drops/over-simplifies
+the river line, and the over-simplified polygon can't fill the gap. The GEOS
+rebuild only masked #2 — it does nothing for #1.
+
+**Fix A verified.** Re-scoping the buffer window to `radius + ε` (~211 m) yields
+**167 lines / 5,179 coords, 6 polys** — under budget, so no escalation and no
+dropping. Coverage check: **0 / 21 uncovered**. Banks correctly eligible.
+
 ## Two defects
 
 - **A (primary, trigger).** Buffer input is not re-scoped to the buffer radius;

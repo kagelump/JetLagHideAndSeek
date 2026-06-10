@@ -105,7 +105,7 @@ export const APP_CONFIG = {
         /** Maximum mask cache size (LRU). */
         maxMaskCacheSize: 40,
         /** Simplify tolerance for boundary GeoJSON polygons (degrees). */
-        boundarySimplifyTolerance: 0.0003,
+        boundarySimplifyTolerance: 0.0001,
         /** Hit radius in pixels for pin drag detection. */
         pinHitRadiusPx: 50,
     },
