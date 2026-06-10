@@ -344,3 +344,19 @@ jest.mock("native-geometry", () => ({
     intersectionWKB: () => null,
     unaryUnionWKB: () => null,
 }));
+
+// Mock setupPersister globally — the persister's subscription and 30-day
+// maxAge timer (BOUNDARY_CACHE_TTL_MS) bleed past fake-timer boundaries
+// and the 30-day value overflows Node's 32-bit setTimeout. The real
+// queryClient singleton is still used; only the AsyncStorage-backed
+// persistence setup is stubbed.
+jest.mock("@/state/queryClient", () => {
+    const actual = jest.requireActual<typeof import("@/state/queryClient")>(
+        "@/state/queryClient",
+    );
+    return {
+        __esModule: true,
+        ...actual,
+        setupPersister: jest.fn(() => Promise.resolve()),
+    };
+});

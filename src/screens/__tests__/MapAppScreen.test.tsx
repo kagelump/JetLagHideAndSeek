@@ -13,26 +13,9 @@ import {
 import { defaultPlayArea } from "@/features/map/playArea";
 import { AppStateProviders } from "@/state/AppStateProviders";
 
-import { MapAppScreen } from "../MapAppScreen";
-
-// ---------------------------------------------------------------------------
-// Skip async query-client persister rehydration in tests — the persister
-// subscription bleeds past fake-timer boundaries and causes afterEach
-// timeouts.  The real queryClient singleton is still used; only the
-// AsyncStorage-backed persistence setup is stubbed.
-// ---------------------------------------------------------------------------
-jest.mock("@/state/queryClient", () => {
-    const actual = jest.requireActual<typeof import("@/state/queryClient")>(
-        "@/state/queryClient",
-    );
-    return {
-        __esModule: true,
-        ...actual,
-        setupPersister: jest.fn(() => Promise.resolve()),
-    };
-});
-
 import { queryClient } from "@/state/queryClient";
+
+import { MapAppScreen } from "../MapAppScreen";
 
 const EARTH_RADIUS_METERS = 6371008.8;
 
