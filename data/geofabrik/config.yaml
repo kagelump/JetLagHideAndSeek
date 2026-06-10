@@ -71,7 +71,7 @@ measuring:
           minFeatureLengthM: 0 # disabled — junction stubs (20–80 m) are building blocks for stitching
 
         - key: body-of-water
-          osmiumFilter: "w/natural=water r/natural=water w/landuse=basin w/waterway=riverbank w/waterway=river w/waterway=canal"
+          osmiumFilter: "w/natural=water r/natural=water w/landuse=basin w/waterway=riverbank w/waterway=river w/waterway=canal w/waterway=stream"
           geometry: polygon-dissolve
           simplifyTolerance: 0.0001 # degrees (~11 m) — applied after dissolve
           minFeatureLengthM: 100
@@ -89,6 +89,13 @@ measuring:
           geometry: polygon-to-ring
           simplifyTolerance: 0.0001 # degrees (~11 m)
           minFeatureLengthM: 100
+
+        - key: admin-boundaries
+          osmiumFilter: "r/boundary=administrative"
+          postFilter: admin-all # all admin_level values (2–10)
+          geometry: polygon
+          simplifyTolerance: 0.0001 # degrees (~11 m)
+          minFeatureLengthM: 0
 
     # ── Algorithm tuning ─────────────────────────────────────────────
 

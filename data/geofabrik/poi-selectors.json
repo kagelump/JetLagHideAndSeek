@@ -8,6 +8,10 @@
                     "match": [
                         { "key": "aeroway", "value": "aerodrome" },
                         { "key": "iata" }
+                    ],
+                    "exclude": [
+                        { "key": "military", "value": "airfield" },
+                        { "key": "landuse", "value": "military" }
                     ]
                 }
             ]

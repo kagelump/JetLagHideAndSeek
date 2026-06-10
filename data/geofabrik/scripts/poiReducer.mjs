@@ -159,7 +159,24 @@ export function buildCategoryOf(selectorsJson) {
                         }
                     }
                 }
-                if (match) return category;
+                if (match) {
+                    // Check negative (exclude) conditions.
+                    let excluded = false;
+                    for (const cond of sel.exclude ?? []) {
+                        if (cond.value !== undefined) {
+                            if (props[cond.key] === cond.value) {
+                                excluded = true;
+                                break;
+                            }
+                        } else {
+                            if (cond.key in props) {
+                                excluded = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!excluded) return category;
+                }
             }
         }
         return null;

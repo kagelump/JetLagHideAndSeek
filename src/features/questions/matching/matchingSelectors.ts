@@ -15,6 +15,8 @@ export type OsmTagCondition = { key: string; value?: string };
  */
 export type OsmSelector = {
     match: OsmTagCondition[];
+    /** Negative conditions — elements matching any of these are excluded. */
+    exclude?: OsmTagCondition[];
     /** Defaults to all three types when omitted. */
     types?: OsmElementType[];
 };
@@ -33,7 +35,13 @@ export const CATEGORY_SELECTORS: Partial<
     Record<MatchingCategory, OsmSelector[]>
 > = {
     "commercial-airport": [
-        { match: [{ key: "aeroway", value: "aerodrome" }, { key: "iata" }] },
+        {
+            match: [{ key: "aeroway", value: "aerodrome" }, { key: "iata" }],
+            exclude: [
+                { key: "military", value: "airfield" },
+                { key: "landuse", value: "military" },
+            ],
+        },
     ],
     mountain: [{ match: [{ key: "natural", value: "peak" }] }],
     landmark: [{ match: [{ key: "tourism", value: "attraction" }] }],
@@ -74,12 +82,29 @@ export function selectorToOverpassTags(conditions: OsmTagCondition[]): string {
 export function deriveOsmQueryTags(category: MatchingCategory): string {
     const selectors = CATEGORY_SELECTORS[category];
     if (!selectors || selectors.length !== 1) return "";
-    return selectorToOverpassTags(selectors[0].match);
+    const sel = selectors[0];
+    let tags = selectorToOverpassTags(sel.match);
+    for (const cond of sel.exclude ?? []) {
+        if (cond.value !== undefined) {
+            tags += `["${cond.key}"!="${cond.value}"]`;
+        }
+    }
+    return tags;
 }
 
 /** True when the category has bundleable OSM POI selectors. */
 export function isBundleableCategory(category: MatchingCategory): boolean {
     return Boolean(CATEGORY_SELECTORS[category]);
+}
+
+/** True when the category uses the admin boundary polygon index. */
+export function isAdminBoundaryCategory(category: MatchingCategory): boolean {
+    return (
+        category === "admin-1st" ||
+        category === "admin-2nd" ||
+        category === "admin-3rd" ||
+        category === "admin-4th"
+    );
 }
 
 /**

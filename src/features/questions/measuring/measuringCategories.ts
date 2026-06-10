@@ -97,7 +97,7 @@ export const measuringCategories: MeasuringCategoryConfig[] = [
         category: "body-of-water",
         implemented: true,
         osmQueryTags:
-            '(way["natural"="water"]; relation["natural"="water"]; way["landuse"="basin"]; way["waterway"="riverbank"];)',
+            '(way["natural"="water"]; relation["natural"="water"]; way["landuse"="basin"]; way["waterway"="riverbank"]; way["waterway"="stream"];)',
         section: "Borders & Lines",
         title: "Body of Water",
     },
