@@ -367,25 +367,55 @@ function buildSingleThermometerRenderState(
     q: ThermometerQuestion,
     playAreaBoundary: FeatureCollection<Polygon | MultiPolygon>,
 ): ThermometerRenderState {
-    // Skip questions with a null position.
-    if (!q.previousPosition || !q.currentPosition) {
+    const p1 = q.previousPosition;
+    const p2 = q.currentPosition;
+
+    // Missing both pins — nothing to render.
+    if (!p1 && !p2) {
         return {
             hitMaskFeatures: { type: "FeatureCollection", features: [] },
             previewFeatures: { type: "FeatureCollection", features: [] },
         };
     }
 
-    // Skip degenerate travel (< MIN_TRAVEL_METERS).
-    const dist = haversineDistanceMeters(
-        q.previousPosition[1],
-        q.previousPosition[0],
-        q.currentPosition[1],
-        q.currentPosition[0],
-    );
-    if (dist < MIN_TRAVEL_METERS) {
+    // Only one pin set — emit a dotted degenerate line from that pin to itself
+    // (zero-length; the layer will still render it as a dot marker).
+    if (!p1 || !p2) {
+        const p = p1 ?? p2!;
+        const degenerateLine: Feature<LineString> = {
+            type: "Feature",
+            properties: { role: "travel-line", degenerate: true },
+            geometry: { type: "LineString", coordinates: [p, p] },
+        };
         return {
             hitMaskFeatures: { type: "FeatureCollection", features: [] },
-            previewFeatures: { type: "FeatureCollection", features: [] },
+            previewFeatures: {
+                type: "FeatureCollection",
+                features: [degenerateLine],
+            },
+        };
+    }
+
+    // Both pins set — check travel distance.
+    const dist = haversineDistanceMeters(p1[1], p1[0], p2[1], p2[0]);
+    const isDegenerate = dist < MIN_TRAVEL_METERS;
+
+    // Degenerate (pins too close) — emit a dotted line but no mask.
+    if (isDegenerate) {
+        const travelLine: Feature<LineString> = {
+            type: "Feature",
+            properties: { role: "travel-line", degenerate: true },
+            geometry: {
+                type: "LineString",
+                coordinates: [p1, p2],
+            },
+        };
+        return {
+            hitMaskFeatures: { type: "FeatureCollection", features: [] },
+            previewFeatures: {
+                type: "FeatureCollection",
+                features: [travelLine],
+            },
         };
     }
 
@@ -396,12 +426,7 @@ function buildSingleThermometerRenderState(
             : "unanswered";
 
     // ── Check full-state cache ─────────────────────────────────────
-    const stateKey = questionStateCacheKey(
-        q.previousPosition,
-        q.currentPosition,
-        answer,
-        boundaryId,
-    );
+    const stateKey = questionStateCacheKey(p1, p2, answer, boundaryId);
     const cached = stateCache.get(stateKey);
     if (cached) {
         // Promote to most-recently-used.
@@ -412,17 +437,14 @@ function buildSingleThermometerRenderState(
 
     // ── Preview: always when both positions set ────────────────────
     let pv: FeatureCollection<LineString | Polygon>;
-    const pvKey = previewCacheKey(q.previousPosition, q.currentPosition);
+    const pvKey = previewCacheKey(p1, p2);
     const cachedPv = previewCache.get(pvKey);
     if (cachedPv) {
         previewCache.delete(pvKey);
         previewCache.set(pvKey, cachedPv);
         pv = cachedPv;
     } else {
-        pv = buildThermometerPreviewFeatures(
-            q.previousPosition,
-            q.currentPosition,
-        );
+        pv = buildThermometerPreviewFeatures(p1, p2);
         if (previewCache.size >= MAX_CACHE_SIZE) {
             const oldest = previewCache.keys().next().value;
             if (oldest !== undefined) previewCache.delete(oldest);
@@ -434,12 +456,7 @@ function buildSingleThermometerRenderState(
     let hitMask: FeatureCollection<Polygon | MultiPolygon>;
     if (answer === "positive" || answer === "negative") {
         const boundaryBbox = computeBoundaryBbox(playAreaBoundary);
-        const hpKey = halfPlaneCacheKey(
-            q.previousPosition,
-            q.currentPosition,
-            answer,
-            boundaryId,
-        );
+        const hpKey = halfPlaneCacheKey(p1, p2, answer, boundaryId);
         const cachedHp = halfPlaneCache.get(hpKey);
         if (cachedHp) {
             halfPlaneCache.delete(hpKey);
@@ -447,8 +464,8 @@ function buildSingleThermometerRenderState(
             hitMask = cachedHp;
         } else {
             hitMask = buildHalfPlane(
-                q.previousPosition,
-                q.currentPosition,
+                p1,
+                p2,
                 answer,
                 playAreaBoundary,
                 boundaryBbox,

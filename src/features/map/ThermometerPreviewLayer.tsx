@@ -22,11 +22,28 @@ export function ThermometerPreviewLayer({
     return (
         <MLShapeSource id="thermometer-preview" shape={previewFeatures}>
             <MLLineLayer
-                filter={["==", ["get", "role"], "travel-line"]}
+                filter={[
+                    "all",
+                    ["==", ["get", "role"], "travel-line"],
+                    ["!", ["get", "degenerate"]],
+                ]}
                 id="thermometer-travel-line"
                 style={{
                     lineColor: "#888888",
                     lineWidth: 2,
+                }}
+            />
+            <MLLineLayer
+                filter={[
+                    "all",
+                    ["==", ["get", "role"], "travel-line"],
+                    ["get", "degenerate"],
+                ]}
+                id="thermometer-travel-line-degenerate"
+                style={{
+                    lineColor: "#aaaaaa",
+                    lineDasharray: [4, 3],
+                    lineWidth: 1.5,
                 }}
             />
             <MLLineLayer

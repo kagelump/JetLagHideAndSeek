@@ -295,7 +295,7 @@ describe("buildThermometerRenderState", () => {
 
     // ── Test 5: Degenerate (< MIN_TRAVEL_METERS) ─────────────────────────
 
-    it("returns empty render state when travel is less than 100 m", () => {
+    it("emits degenerate preview when travel is less than 100 m", () => {
         // P1 and P2 are ~11 m apart (0.0001° at equator).
         const question = makeThermometerQuestion({
             answer: "positive",
@@ -312,12 +312,15 @@ describe("buildThermometerRenderState", () => {
         const state = buildThermometerRenderState([question], TEST_BOUNDARY);
 
         expect(state.hitMaskFeatures.features).toHaveLength(0);
-        expect(state.previewFeatures.features).toHaveLength(0);
+        expect(state.previewFeatures.features).toHaveLength(1);
+        expect(state.previewFeatures.features[0].properties?.degenerate).toBe(
+            true,
+        );
     });
 
     // ── Test 6: Null positions ────────────────────────────────────────────
 
-    it("returns empty render state when previousPosition is null", () => {
+    it("emits degenerate preview when previousPosition is null", () => {
         const question = makeThermometerQuestion({
             answer: "positive",
             previousPosition: null,
@@ -327,10 +330,13 @@ describe("buildThermometerRenderState", () => {
         const state = buildThermometerRenderState([question], TEST_BOUNDARY);
 
         expect(state.hitMaskFeatures.features).toHaveLength(0);
-        expect(state.previewFeatures.features).toHaveLength(0);
+        expect(state.previewFeatures.features).toHaveLength(1);
+        expect(state.previewFeatures.features[0].properties?.degenerate).toBe(
+            true,
+        );
     });
 
-    it("returns empty render state when currentPosition is null", () => {
+    it("emits degenerate preview when currentPosition is null", () => {
         const question = makeThermometerQuestion({
             answer: "positive",
             previousPosition: P1_WEST,
@@ -340,7 +346,10 @@ describe("buildThermometerRenderState", () => {
         const state = buildThermometerRenderState([question], TEST_BOUNDARY);
 
         expect(state.hitMaskFeatures.features).toHaveLength(0);
-        expect(state.previewFeatures.features).toHaveLength(0);
+        expect(state.previewFeatures.features).toHaveLength(1);
+        expect(state.previewFeatures.features[0].properties?.degenerate).toBe(
+            true,
+        );
     });
 
     // ── Test 7: Unanswered preview ───────────────────────────────────────

@@ -1,16 +1,16 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
-import { QuestionLocationSelector } from "@/features/questions/components/QuestionLocationSelector";
 import type { ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
 import { haversineDistanceMeters } from "@/shared/geojson";
 import { fromMeters } from "@/shared/distanceUnits";
-import {
-    updateThermometerPin,
-    useQuestionActions,
-    useActivePinKey,
-} from "@/state/questionStore";
+import { useQuestionActions, useActivePinKey } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
+import type { Position } from "@/shared/geojson";
+
+function formatCoord(pos: Position): string {
+    return `${pos[1].toFixed(4)}, ${pos[0].toFixed(4)}`;
+}
 
 type ThermometerQuestionDetailScreenProps = {
     question: ThermometerQuestion;
@@ -39,17 +39,6 @@ export function ThermometerQuestionDetailScreen({
 
     const isDegenerate = distanceMeters < 100;
 
-    const handlePinChange = (
-        pin: "start" | "end",
-        position: [number, number],
-    ) => {
-        updateQuestion(question.id, (current) =>
-            current.type === "thermometer"
-                ? updateThermometerPin(current, pin, position)
-                : current,
-        );
-    };
-
     const handleAnswerChange = (
         answer: "unanswered" | "positive" | "negative",
     ) => {
@@ -62,6 +51,19 @@ export function ThermometerQuestionDetailScreen({
 
     return (
         <>
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Answer</Text>
+                <QuestionAnswerSelector
+                    answer={question.answer}
+                    disabledAnswers={
+                        isDegenerate ? ["positive", "negative"] : []
+                    }
+                    onChange={handleAnswerChange}
+                    questionType={question.type}
+                    testIDPrefix="thermometer-answer-option"
+                />
+            </View>
+
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Active Pin</Text>
                 <View style={styles.pinToggleRow}>
@@ -123,31 +125,28 @@ export function ThermometerQuestionDetailScreen({
             </View>
 
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Start Position</Text>
-                {startPosition ? (
-                    <QuestionLocationSelector
-                        center={startPosition}
-                        onCenterChange={(pos) => handlePinChange("start", pos)}
-                        setToLocationAccessibilityLabel="Set thermometer start pin to my location"
-                        testIDPrefix="thermometer-start"
-                    />
-                ) : (
-                    <Text style={styles.metadata}>Not set</Text>
-                )}
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>End Position</Text>
-                {endPosition ? (
-                    <QuestionLocationSelector
-                        center={endPosition}
-                        onCenterChange={(pos) => handlePinChange("end", pos)}
-                        setToLocationAccessibilityLabel="Set thermometer end pin to my location"
-                        testIDPrefix="thermometer-end"
-                    />
-                ) : (
-                    <Text style={styles.metadata}>Not set</Text>
-                )}
+                <View style={styles.positionRow}>
+                    <View style={styles.positionCol}>
+                        <Text style={styles.positionLabel}>Start</Text>
+                        <Text
+                            style={styles.positionValue}
+                            testID="thermometer-start-pos"
+                        >
+                            {startPosition
+                                ? formatCoord(startPosition)
+                                : "Not set"}
+                        </Text>
+                    </View>
+                    <View style={styles.positionCol}>
+                        <Text style={styles.positionLabel}>End</Text>
+                        <Text
+                            style={styles.positionValue}
+                            testID="thermometer-end-pos"
+                        >
+                            {endPosition ? formatCoord(endPosition) : "Not set"}
+                        </Text>
+                    </View>
+                </View>
             </View>
 
             <View style={styles.section}>
@@ -167,19 +166,6 @@ export function ThermometerQuestionDetailScreen({
                         question.
                     </Text>
                 ) : null}
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Answer</Text>
-                <QuestionAnswerSelector
-                    answer={question.answer}
-                    disabledAnswers={
-                        isDegenerate ? ["positive", "negative"] : []
-                    }
-                    onChange={handleAnswerChange}
-                    questionType={question.type}
-                    testIDPrefix="thermometer-answer-option"
-                />
             </View>
         </>
     );
@@ -228,6 +214,24 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         gap: 10,
         marginTop: 10,
+    },
+    positionCol: { flex: 1 },
+    positionLabel: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: "700",
+        textTransform: "uppercase",
+    },
+    positionRow: {
+        flexDirection: "row",
+        gap: 12,
+        marginTop: 8,
+    },
+    positionValue: {
+        color: colors.ink,
+        fontSize: 13,
+        fontWeight: "600",
+        marginTop: 2,
     },
     section: {
         marginTop: 12,

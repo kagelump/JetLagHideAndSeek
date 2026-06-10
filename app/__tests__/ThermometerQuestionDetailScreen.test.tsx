@@ -1,5 +1,5 @@
 import React from "react";
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Text, View } from "react-native";
 
 import { ThermometerQuestionDetailScreen } from "@/features/questions/thermometer/ThermometerQuestionDetailScreen";
@@ -227,41 +227,23 @@ describe("ThermometerQuestionDetailScreen", () => {
         expect(positiveButton.props.accessibilityState.selected).toBe(true);
     });
 
-    it("Set to My Location on a pin updates that pin", async () => {
-        mockRequestUserCoordinate.mockResolvedValue({
-            coordinate: [139.7, 35.7] as [number, number],
-            status: "granted" as const,
-        });
-
+    it("compact position display shows pin coordinates", async () => {
         const question = makeThermometerQuestion({
             previousPosition: [139.75, 35.75],
+            currentPosition: [139.8, 35.8],
         });
         const screen = renderWithProvider(question);
 
         await waitFor(() => {
-            expect(
-                screen.getByTestId("thermometer-start-set-to-location-button"),
-            ).toBeTruthy();
+            expect(screen.getByTestId("thermometer-start-pos")).toBeTruthy();
+            expect(screen.getByTestId("thermometer-end-pos")).toBeTruthy();
         });
 
-        await act(async () => {
-            fireEvent.press(
-                screen.getByTestId("thermometer-start-set-to-location-button"),
-            );
-        });
-
-        await waitFor(() => {
-            expect(screen.getByTestId("probe-start-lat")).toHaveTextContent(
-                "35.7",
-            );
-            expect(screen.getByTestId("probe-start-lon")).toHaveTextContent(
-                "139.7",
-            );
-        });
-
-        const summary = screen.getByTestId("thermometer-start-center-summary");
-        const children = summary.props.children as (string | null)[];
-        expect(children).toContain("35.70000");
-        expect(children).toContain("139.70000");
+        expect(screen.getByTestId("thermometer-start-pos")).toHaveTextContent(
+            "35.7500, 139.7500",
+        );
+        expect(screen.getByTestId("thermometer-end-pos")).toHaveTextContent(
+            "35.8000, 139.8000",
+        );
     });
 });
