@@ -2,7 +2,6 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { getEventCoordinate } from "@/features/map/eventCoordinate";
 import { getQuestionPins } from "@/features/map/getQuestionPins";
 import { NativeMap } from "@/features/map/NativeMap";
 import { useMapPinCommit } from "@/features/map/useMapPinCommit";
@@ -41,23 +40,29 @@ export function MapAppScreen() {
     const isLocked = activeQuestion?.isLocked ?? false;
     const canMove = isQuestionDetailRoute && !isLocked && pins.length > 0;
 
-    const handleMapPress = useCallback(
-        (event?: unknown) => {
-            const coordinate = getEventCoordinate(event);
-            if (
-                coordinate &&
-                activeQuestion &&
-                "center" in activeQuestion &&
-                !isLocked &&
-                isQuestionDetailRoute
-            ) {
-                handlePinCommit(activeQuestion.id, "center", coordinate);
-            }
-            if (sheetIndexRef.current === SHEET_SNAP_INDEX.large) {
-                bottomSheetRef.current?.snapToIndex(SHEET_SNAP_INDEX.compact);
+    const handleMapPress = useCallback(() => {
+        if (sheetIndexRef.current === SHEET_SNAP_INDEX.large) {
+            bottomSheetRef.current?.snapToIndex(SHEET_SNAP_INDEX.compact);
+        }
+    }, []);
+
+    const handlePlacePin = useCallback(
+        (position: [number, number]) => {
+            if (!activeQuestion || isLocked || !isQuestionDetailRoute) return;
+            if (activeQuestion.type === "thermometer") {
+                const pinKey = activePinKey ?? "start";
+                handlePinCommit(activeQuestion.id, pinKey, position);
+            } else if ("center" in activeQuestion) {
+                handlePinCommit(activeQuestion.id, "center", position);
             }
         },
-        [activeQuestion, handlePinCommit, isLocked, isQuestionDetailRoute],
+        [
+            activePinKey,
+            activeQuestion,
+            handlePinCommit,
+            isLocked,
+            isQuestionDetailRoute,
+        ],
     );
 
     const handleSheetIndexChange = useCallback((index: number) => {
@@ -82,6 +87,7 @@ export function MapAppScreen() {
                 isQuestionDetailRoute={isQuestionDetailRoute}
                 onPinCommit={handlePinCommit}
                 onPress={handleMapPress}
+                onPlacePin={handlePlacePin}
                 pins={pins}
                 questionId={questionId}
             />

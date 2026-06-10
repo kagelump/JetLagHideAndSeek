@@ -67,6 +67,8 @@ type NativeMapProps = {
         position: Position,
     ) => void;
     onPress?: (event?: unknown) => void;
+    /** Called on long press with no nearby pin — should place a new pin. */
+    onPlacePin?: (position: Position) => void;
     pins: MapPin[];
     questionId: string | null;
 };
@@ -77,6 +79,7 @@ export function NativeMap({
     isQuestionDetailRoute,
     onPinCommit,
     onPress,
+    onPlacePin,
     pins,
     questionId,
 }: NativeMapProps) {
@@ -182,6 +185,7 @@ export function NativeMap({
         canMove,
         mapRef,
         onCommit: onPinCommit,
+        onPlace: onPlacePin,
         questionId,
     });
 
