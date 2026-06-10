@@ -146,11 +146,12 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
         null,
     );
 
-    // Load the 294 KB preset JSON asynchronously so it doesn't block the
-    // JS thread during initial bundle evaluation.
+    // Load transit preset bundles lazily by play-area bbox.  Previously
+    // loaded bundles are cached; changing the play area loads any newly
+    // intersecting bundles.
     useEffect(() => {
         let cancelled = false;
-        loadHidingZonePresets()
+        loadHidingZonePresets(playArea.bbox)
             .then(() => {
                 if (!cancelled) setPresetsRevision((n) => n + 1);
             })
@@ -161,7 +162,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [playArea.bbox]);
 
     const presets = getHidingZonePresetsOrEmpty();
 

@@ -299,17 +299,18 @@ jest.mock("qrcode/lib/core/qrcode", () => ({
     }),
 }));
 
-// In tests, load the 294 KB hiding-zone preset JSON synchronously via
-// require() so tests don't need dynamic import support. In the real app,
-// the module uses dynamic import() for lazy loading.
+// In tests, load the transit preset JSON synchronously via require() so
+// tests don't need dynamic import support. In the real app, the module uses
+// the generated require-map (transitBundles.generated.ts) for lazy loading.
 jest.mock("@/features/hidingZone/hidingZoneData", () => {
     let cached: any[] | null = null;
     let loadPromise: Promise<any[]> | null = null;
 
-    function loadPresets() {
+    function loadPresets(_bbox?: unknown) {
+        void _bbox;
         if (!loadPromise) {
             loadPromise = Promise.resolve().then(() => {
-                const raw = require("./data/odpt/generated/hiding-zone-presets.json");
+                const raw = require("./assets/transit/japan-kanto.json");
                 cached = raw.presets;
                 return cached;
             });
@@ -319,12 +320,38 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
 
     return {
         __esModule: true,
-        loadHidingZonePresets: () => loadPresets(),
+        loadHidingZonePresets: (bbox?: any) => loadPresets(bbox),
         getHidingZonePresets: () => {
             if (!cached) throw new Error("Presets not loaded yet");
             return cached;
         },
         getHidingZonePresetsOrEmpty: () => cached ?? [],
+        getTransitManifest: () => ({
+            version: 1,
+            bundles: [
+                {
+                    id: "japan-kanto",
+                    bbox: [138.4, 34.8, 140.9, 37.1],
+                    file: "japan-kanto.json",
+                    presets: [
+                        {
+                            id: "tokyo-metro",
+                            label: "Tokyo Metro",
+                            bbox: [139.6, 35.6, 140.0, 35.8],
+                        },
+                        {
+                            id: "toei-subway",
+                            label: "Toei Subway",
+                            bbox: [139.6, 35.5, 140.0, 35.9],
+                        },
+                    ],
+                },
+            ],
+        }),
+        clearTransitBundleCache: () => {
+            cached = null;
+            loadPromise = null;
+        },
     };
 });
 

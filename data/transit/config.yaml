@@ -11,7 +11,26 @@ locales:
       maxClusterMeters: 150
       aliases: []
 
-      # OSM block omitted — added in T5.
+      osm:
+          # Region bboxes for preset assignment (T3).  OSM extraction
+          # (station nodes, route relations) is added in T5.
+          regions:
+              - id: japan-kanto
+                bbox: [138.4, 34.8, 140.9, 37.1]
+              - id: japan-kansai
+                bbox: [134.5, 33.5, 136.5, 35.8]
+              - id: japan-chubu
+                bbox: [136.2, 34.6, 138.6, 37.8]
+              - id: japan-tohoku
+                bbox: [139.5, 36.9, 142.0, 41.6]
+              - id: japan-chugoku
+                bbox: [130.7, 33.3, 134.5, 36.0]
+              - id: japan-kyushu
+                bbox: [129.3, 30.9, 132.5, 34.2]
+              - id: japan-shikoku
+                bbox: [131.9, 32.5, 134.8, 34.5]
+              - id: japan-hokkaido
+                bbox: [139.5, 41.3, 146.0, 45.7]
 
       gtfs:
           - id: tokyo-metro

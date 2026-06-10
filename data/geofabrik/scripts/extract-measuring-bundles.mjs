@@ -1699,14 +1699,16 @@ async function main() {
                     // admin_level, name, name:en, and osmId for client-side
                     // point-in-polygon matching.
                     const geom = feature.geometry;
-                    if (geom.type !== "Polygon" && geom.type !== "MultiPolygon") {
+                    if (
+                        geom.type !== "Polygon" &&
+                        geom.type !== "MultiPolygon"
+                    ) {
                         continue;
                     }
 
                     const props = {
                         osmId: Number(feature.properties["@id"]),
-                        admin_level:
-                            feature.properties.admin_level ?? "",
+                        admin_level: feature.properties.admin_level ?? "",
                     };
                     for (const k of ["name", "name:en"]) {
                         if (feature.properties[k] != null) {

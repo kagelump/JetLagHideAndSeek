@@ -25,10 +25,13 @@ const KNOWN_CYCLES = [
 ];
 
 try {
-    const output = execSync("npx madge --circular --extensions ts,tsx --json src/", {
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-    });
+    const output = execSync(
+        "npx madge --circular --extensions ts,tsx --json src/",
+        {
+            encoding: "utf-8",
+            stdio: ["pipe", "pipe", "pipe"],
+        },
+    );
 
     const result = JSON.parse(output);
     const cycles = result.circular || [];
@@ -45,11 +48,15 @@ try {
     });
 
     if (newCycles.length === 0) {
-        console.log(`✓ No new circular dependencies (${cycles.length} known cycle(s) whitelisted).`);
+        console.log(
+            `✓ No new circular dependencies (${cycles.length} known cycle(s) whitelisted).`,
+        );
         process.exit(0);
     }
 
-    console.error(`✖ Found ${newCycles.length} new circular dependency(ies):\n`);
+    console.error(
+        `✖ Found ${newCycles.length} new circular dependency(ies):\n`,
+    );
     newCycles.forEach((cycle, i) => {
         console.error(`  ${i + 1}) ${cycle.join(" > ")}`);
     });
@@ -72,11 +79,15 @@ try {
             });
 
             if (newCycles.length === 0) {
-                console.log(`✓ No new circular dependencies (${cycles.length} known cycle(s) whitelisted).`);
+                console.log(
+                    `✓ No new circular dependencies (${cycles.length} known cycle(s) whitelisted).`,
+                );
                 process.exit(0);
             }
 
-            console.error(`✖ Found ${newCycles.length} new circular dependency(ies):\n`);
+            console.error(
+                `✖ Found ${newCycles.length} new circular dependency(ies):\n`,
+            );
             newCycles.forEach((cycle, i) => {
                 console.error(`  ${i + 1}) ${cycle.join(" > ")}`);
             });

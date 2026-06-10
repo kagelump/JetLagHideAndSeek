@@ -772,6 +772,7 @@ export function processGtfsFeed(feedConfig, zipBytes) {
         return {
             id: p.presetId,
             label: p.label,
+            operator: feedConfig.label,
             bbox,
             defaultColor: feedConfig.defaultColor || "#888888",
             routes: presetRoutes,

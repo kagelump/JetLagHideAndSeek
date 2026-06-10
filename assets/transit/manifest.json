@@ -1,0 +1,22 @@
+{
+    "version": 1,
+    "bundles": [
+        {
+            "id": "japan-kanto",
+            "bbox": [138.4, 34.8, 140.9, 37.1],
+            "file": "japan-kanto.json",
+            "presets": [
+                {
+                    "id": "tokyo-metro",
+                    "label": "Tokyo Metro",
+                    "bbox": [139.612865, 35.632485, 139.958767, 35.78835]
+                },
+                {
+                    "id": "toei-subway",
+                    "label": "Toei Subway",
+                    "bbox": [139.628901, 35.58705, 139.926613, 35.814541]
+                }
+            ]
+        }
+    ]
+}
