@@ -392,6 +392,239 @@ function bboxesIntersect(a, b) {
     return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
 }
 
+// ─── Line-at-polygon clipping ────────────────────────────────────────────────
+//
+// Clips LineStrings at dissolved-polygon boundaries so centerlines end
+// exactly at the water-body edge instead of flowing through it. Uses
+// proper segment–ring intersection to compute boundary crossing points.
+
+/**
+ * Winding-number point-in-ring test.
+ */
+function pointInRing(px, py, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i];
+        const [xj, yj] = ring[j];
+        if (
+            yi > py !== yj > py &&
+            px < ((xj - xi) * (py - yi)) / (yj - yi) + xi
+        ) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+/**
+ * Spatial grid index over a MultiPolygon's rings. Build once, then use
+ * `pointInGrid` for O(1)-per-point queries instead of checking every ring.
+ */
+function buildPolygonGrid(multiPolyCoords, bbox, cellDeg = 0.05) {
+    const [minX, minY, maxX, maxY] = bbox;
+    const cols = Math.ceil((maxX - minX) / cellDeg);
+    const rows = Math.ceil((maxY - minY) / cellDeg);
+    const polys = multiPolyCoords;
+
+    // Per-polygon outer-ring bboxes.
+    const outerBboxes = polys.map((poly) => {
+        let bx0 = Infinity,
+            by0 = Infinity,
+            bx1 = -Infinity,
+            by1 = -Infinity;
+        for (const [x, y] of poly[0]) {
+            if (x < bx0) bx0 = x;
+            if (y < by0) by0 = y;
+            if (x > bx1) bx1 = x;
+            if (y > by1) by1 = y;
+        }
+        return [bx0, by0, bx1, by1];
+    });
+
+    const grid = new Array(cols * rows);
+    for (let ci = 0; ci < cols; ci++) {
+        const cellMinX = minX + ci * cellDeg;
+        const cellMaxX = cellMinX + cellDeg;
+        for (let ri = 0; ri < rows; ri++) {
+            const cellMinY = minY + ri * cellDeg;
+            const cellMaxY = cellMinY + cellDeg;
+            const entry = [];
+            for (let pi = 0; pi < polys.length; pi++) {
+                const [pxMin, pyMin, pxMax, pyMax] = outerBboxes[pi];
+                if (
+                    pxMin <= cellMaxX &&
+                    pxMax >= cellMinX &&
+                    pyMin <= cellMaxY &&
+                    pyMax >= cellMinY
+                ) {
+                    entry.push(pi);
+                }
+            }
+            if (entry.length > 0) grid[ci * rows + ri] = entry;
+        }
+    }
+    return { grid, polys, cols, rows, cellDeg, minX, minY };
+}
+
+/** Grid-accelerated point-in-MultiPolygon test. */
+function pointInGrid(px, py, idx) {
+    const ci = Math.floor((px - idx.minX) / idx.cellDeg);
+    const ri = Math.floor((py - idx.minY) / idx.cellDeg);
+    if (ci < 0 || ci >= idx.cols || ri < 0 || ri >= idx.rows) return false;
+    const entry = idx.grid[ci * idx.rows + ri];
+    if (!entry) return false;
+    for (const pi of entry) {
+        if (pointInRing(px, py, idx.polys[pi][0])) return true;
+    }
+    return false;
+}
+
+/**
+ * Finds the intersection parameter t ∈ (0,1) of line segment A→B with the
+ * edge C→D.  Returns Infinity when the segments don't intersect.
+ */
+function segSegT(ax, ay, bx, by, cx, cy, dx, dy) {
+    const rx = bx - ax,
+        ry = by - ay;
+    const sx = dx - cx,
+        sy = dy - cy;
+    const denom = rx * sy - ry * sx;
+    if (denom === 0) return Infinity; // parallel
+    const cx_ = cx - ax,
+        cy_ = cy - ay;
+    const t = (cx_ * sy - cy_ * sx) / denom;
+    const u = (cx_ * ry - cy_ * rx) / denom;
+    return t > 0 && t < 1 && u > 0 && u < 1 ? t : Infinity;
+}
+
+/**
+ * For a line segment A→B, returns all intersection parameters t ∈ (0,1)
+ * where the segment crosses the outer-ring boundary of polygons whose
+ * bounding box overlaps the segment.  Uses the grid index to narrow
+ * which polygons are tested.  Results are sorted ascending.
+ */
+function segmentPolyIntersections(ax, ay, bx, by, gridIdx) {
+    const hits = [];
+    // Determine which grid cells the segment's bbox overlaps.
+    const segMinX = Math.min(ax, bx);
+    const segMaxX = Math.max(ax, bx);
+    const segMinY = Math.min(ay, by);
+    const segMaxY = Math.max(ay, by);
+    const ci0 = Math.max(
+        0,
+        Math.floor((segMinX - gridIdx.minX) / gridIdx.cellDeg),
+    );
+    const ci1 = Math.min(
+        gridIdx.cols - 1,
+        Math.floor((segMaxX - gridIdx.minX) / gridIdx.cellDeg),
+    );
+    const ri0 = Math.max(
+        0,
+        Math.floor((segMinY - gridIdx.minY) / gridIdx.cellDeg),
+    );
+    const ri1 = Math.min(
+        gridIdx.rows - 1,
+        Math.floor((segMaxY - gridIdx.minY) / gridIdx.cellDeg),
+    );
+
+    const checked = new Set();
+    for (let ci = ci0; ci <= ci1; ci++) {
+        for (let ri = ri0; ri <= ri1; ri++) {
+            const entry = gridIdx.grid[ci * gridIdx.rows + ri];
+            if (!entry) continue;
+            for (const pi of entry) {
+                if (checked.has(pi)) continue;
+                checked.add(pi);
+                const ring = gridIdx.polys[pi][0]; // outer ring
+                for (let k = 0, l = ring.length - 1; k < ring.length; l = k++) {
+                    const t = segSegT(
+                        ax,
+                        ay,
+                        bx,
+                        by,
+                        ring[k][0],
+                        ring[k][1],
+                        ring[l][0],
+                        ring[l][1],
+                    );
+                    if (t < Infinity) hits.push(t);
+                }
+            }
+        }
+    }
+    hits.sort((a, b) => a - b);
+    return hits;
+}
+
+/**
+ * Clips a LineString so that only portions *outside* the dissolved polygon
+ * survive.  Segments that cross the polygon boundary are split at the exact
+ * intersection point, producing clean endpoints on the polygon edge.
+ */
+function clipLineAtPolygon(coords, gridIdx) {
+    const segments = [];
+    let cur = [];
+
+    for (let i = 0; i < coords.length - 1; i++) {
+        const [ax, ay] = coords[i];
+        const [bx, by] = coords[i + 1];
+        const aIn = pointInGrid(ax, ay, gridIdx);
+        const bIn = pointInGrid(bx, by, gridIdx);
+
+        if (!aIn && !bIn) {
+            // Entire segment is outside — keep it.
+            cur.push(coords[i]);
+            continue;
+        }
+
+        if (aIn && bIn) {
+            // Entire segment is inside — flush what we had.
+            if (cur.length >= 2) segments.push(cur);
+            cur = [];
+            continue;
+        }
+
+        // Segment crosses the boundary. Find intersection points.
+        const hits = segmentPolyIntersections(ax, ay, bx, by, gridIdx);
+        if (hits.length === 0) {
+            // Degenerate: inside/outside flags disagree but no real
+            // intersection found (vertex on edge, etc.) — keep or flush
+            // based on the start-point flag.
+            if (!aIn) {
+                cur.push(coords[i]);
+            } else {
+                if (cur.length >= 2) segments.push(cur);
+                cur = [];
+            }
+            continue;
+        }
+
+        if (!aIn && bIn) {
+            // Outside → inside: keep up to first intersection.
+            cur.push(coords[i]);
+            const t = hits[0];
+            cur.push([ax + t * (bx - ax), ay + t * (by - ay)]);
+            if (cur.length >= 2) segments.push(cur);
+            cur = [];
+        } else {
+            // Inside → outside: start new segment at last intersection.
+            if (cur.length >= 2) segments.push(cur);
+            cur = [];
+            const t = hits[hits.length - 1];
+            cur.push([ax + t * (bx - ax), ay + t * (by - ay)]);
+        }
+    }
+
+    // Last vertex.
+    const last = coords[coords.length - 1];
+    if (!pointInGrid(last[0], last[1], gridIdx)) {
+        cur.push(last);
+    }
+    if (cur.length >= 2) segments.push(cur);
+
+    return segments;
+}
+
 /**
  * Unions an array of polyclip-ts coordinate arrays (each a GeoJSON
  * `geometry.coordinates` for a Polygon or MultiPolygon) into as few merge
@@ -1540,6 +1773,12 @@ async function main() {
                         feature.geometry.type === "LineString" ||
                         feature.geometry.type === "MultiLineString"
                     ) {
+                        // Skip underground/covered waterways (layer ≤ -1).
+                        // These are tunnels or culverts — not bodies of water
+                        // you can walk to.
+                        const layer = parseInt(feature.properties?.layer, 10);
+                        if (Number.isFinite(layer) && layer <= -1) continue;
+
                         // Tag with waterway type so post-processing can apply
                         // per-type min-length floors.
                         const waterwayType = feature.properties?.waterway;
@@ -1786,6 +2025,87 @@ async function main() {
             features.length = 0;
             features.push(...dissolved);
 
+            // ── Cross-tile ring dedup ─────────────────────────────────
+            // Adjacent tiles overlap by DISSOLVE_TILE_OVERLAP_DEG, so
+            // interior rings in the overlap zone appear identically in
+            // both tiles. Remove duplicate rings to avoid double-
+            // rendering in the bundle viewer and extra work at runtime.
+            {
+                const seen = new Set();
+                let dupRings = 0;
+                let droppedFeats = 0;
+                const deduped = [];
+                for (const feat of features) {
+                    const filtered = [];
+                    for (const poly of feat.geometry.coordinates) {
+                        const kept = [];
+                        for (const ring of poly) {
+                            const hash =
+                                ring.length +
+                                ":" +
+                                ring
+                                    .map(
+                                        (p) =>
+                                            p[0].toFixed(6) +
+                                            "," +
+                                            p[1].toFixed(6),
+                                    )
+                                    .join(";");
+                            if (!seen.has(hash)) {
+                                seen.add(hash);
+                                kept.push(ring);
+                            } else {
+                                dupRings++;
+                            }
+                        }
+                        if (kept.length > 0) filtered.push(kept);
+                    }
+                    if (filtered.length === 0) {
+                        droppedFeats++;
+                        continue;
+                    }
+                    if (filtered.length !== feat.geometry.coordinates.length) {
+                        feat.geometry.coordinates = filtered;
+                        feat.bbox = computePolygonBbox(feat.geometry);
+                    }
+                    deduped.push(feat);
+                }
+                if (dupRings > 0) {
+                    console.log(
+                        `  [dissolve] ring dedup: removed ${dupRings.toLocaleString()} duplicate rings` +
+                            (droppedFeats
+                                ? `, dropped ${droppedFeats} empty features`
+                                : "") +
+                            ` (${features.length} → ${deduped.length} features)`,
+                    );
+                    features.length = 0;
+                    features.push(...deduped);
+                }
+            }
+
+            // ── Cross-tile polygon merge (for clipping only) ──────────
+            // The per-tile dissolve produces one feature per non-empty tile.
+            // Adjacent tiles overlap by DISSOLVE_TILE_OVERLAP_DEG, so
+            // water bodies that span tile boundaries appear in multiple
+            // features. Merge them into one clean polygon for clipping
+            // waterway lines at the polygon boundary.
+            let mergedPolyCoords = null;
+            if (features.length > 1) {
+                const tMerge = Date.now();
+                const mergedCoords = unionAllCoords(
+                    features.map((f) => f.geometry.coordinates),
+                );
+                if (mergedCoords.length > 0) {
+                    mergedPolyCoords = mergedCoords[0];
+                }
+                console.log(
+                    `  [dissolve] cross-tile merge: ${features.length} tile polys → ` +
+                        `1 merged for clipping (${((Date.now() - tMerge) / 1000).toFixed(1)}s)`,
+                );
+            } else if (features.length === 1) {
+                mergedPolyCoords = features[0].geometry.coordinates;
+            }
+
             // ── Waterway centerline post-processing ─────────────────────
             if (waterwayLineFeatures.length > 0) {
                 const tLine0 = Date.now();
@@ -1860,7 +2180,74 @@ async function main() {
                         `total: ${((Date.now() - tLine0) / 1000).toFixed(1)}s`,
                 );
 
-                features.push(...simplified);
+                // Clip waterway lines at dissolved polygon boundaries.
+                // Centerlines stop at the water-body edge with exact
+                // intersection points — they don't flow through the
+                // riverbank polygon and aren't crudely removed.
+                if (mergedPolyCoords) {
+                    const gridIdx = buildPolygonGrid(
+                        mergedPolyCoords,
+                        extractBbox,
+                        0.05,
+                    );
+                    let clippedCount = 0;
+                    let clippedSegments = 0;
+                    const clipped = [];
+                    for (const f of simplified) {
+                        const segs = clipLineAtPolygon(
+                            f.geometry.coordinates,
+                            gridIdx,
+                        );
+                        if (segs.length === 0) {
+                            clippedCount++;
+                            continue;
+                        }
+                        if (segs.length === 1) {
+                            const segBbox = computeBbox(segs[0]);
+                            if (bboxesIntersect(segBbox, extractBbox)) {
+                                clipped.push({
+                                    ...f,
+                                    geometry: {
+                                        type: "LineString",
+                                        coordinates: segs[0],
+                                    },
+                                    bbox: segBbox,
+                                });
+                            } else {
+                                clippedCount++;
+                            }
+                        } else {
+                            clippedCount++;
+                            clippedSegments += segs.length;
+                            for (const seg of segs) {
+                                const segBbox = computeBbox(seg);
+                                if (!bboxesIntersect(segBbox, extractBbox)) {
+                                    clippedSegments--;
+                                    continue;
+                                }
+                                clipped.push({
+                                    type: "Feature",
+                                    geometry: {
+                                        type: "LineString",
+                                        coordinates: seg,
+                                    },
+                                    properties: f.properties,
+                                    bbox: segBbox,
+                                });
+                            }
+                        }
+                    }
+                    if (clippedCount > 0) {
+                        console.log(
+                            `  [waterway] clip at polygon: ${simplified.length} → ` +
+                                `${clipped.length} features ` +
+                                `(${clippedCount} trimmed, ${clippedSegments} segments)`,
+                        );
+                    }
+                    features.push(...clipped);
+                } else {
+                    features.push(...simplified);
+                }
             }
         }
 
