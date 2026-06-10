@@ -20,7 +20,7 @@ locales:
             url: "https://api.odpt.org/api/v4/files/TokyoMetro/data/TokyoMetro-Train-GTFS.zip?acl:consumerKey=${ODPT_KEY}"
             requiresKey: true
             lineGrouping: route_id # ODPT is already line-granular
-            routeTypes: [1]
+            routeTypes: [0, 1, 2]
             defaultColor: "#009BBF"
             license: "ODPT terms — see NOTICE"
           - id: toei-subway
@@ -29,7 +29,7 @@ locales:
             url: "https://api-public.odpt.org/api/v4/files/Toei/data/Toei-Train-GTFS.zip"
             requiresKey: false
             lineGrouping: route_id
-            routeTypes: [1]
+            routeTypes: [0, 1, 2]
             defaultColor: "#6CBB5A"
             license: "ODPT terms — see NOTICE"
 
