@@ -24,6 +24,7 @@ const CATEGORY_KEYS = [
     "body-of-water",
     "admin-1st-border",
     "admin-2nd-border",
+    "admin-boundaries",
 ];
 
 describe("measuring bundle structural validator", () => {
@@ -196,9 +197,36 @@ describe("measuring bundle structural validator", () => {
             it("every feature has valid properties", () => {
                 const isAdminBorder =
                     key === "admin-1st-border" || key === "admin-2nd-border";
+                const isAdminBoundaries = key === "admin-boundaries";
                 const isBodyOfWater = key === "body-of-water";
                 for (const f of bundle.features) {
-                    if (isAdminBorder) {
+                    if (isAdminBoundaries) {
+                        // Admin boundaries features carry osmId and
+                        // admin_level (required), plus optionally name
+                        // and name:en.
+                        assert.ok(
+                            typeof f.properties.osmId === "number",
+                            `missing osmId: ${JSON.stringify(f.properties)}`,
+                        );
+                        assert.ok(
+                            typeof f.properties.admin_level === "string" &&
+                                f.properties.admin_level.length > 0,
+                            `missing or empty admin_level: ${JSON.stringify(f.properties)}`,
+                        );
+                        const keys = Object.keys(f.properties);
+                        const allowed = new Set([
+                            "osmId",
+                            "admin_level",
+                            "name",
+                            "name:en",
+                        ]);
+                        for (const k of keys) {
+                            assert.ok(
+                                allowed.has(k),
+                                `unexpected property "${k}" in ${JSON.stringify(f.properties)}`,
+                            );
+                        }
+                    } else if (isAdminBorder) {
                         // Admin border features carry relationId (required)
                         // and optionally name / name:en.
                         assert.ok(

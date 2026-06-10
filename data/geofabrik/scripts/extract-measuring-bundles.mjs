@@ -166,6 +166,12 @@ function applyPostFilter(category, tags) {
             return adminLevelPostFilter(tags, 4);
         case "admin-7":
             return adminLevelPostFilter(tags, 7);
+        case "admin-all":
+            return (
+                tags.boundary === "administrative" &&
+                typeof tags.admin_level === "string" &&
+                tags.admin_level.length > 0
+            );
         default:
             return true;
     }
@@ -1518,7 +1524,8 @@ async function main() {
         let pbfPath;
         if (
             category.key === "admin-1st-border" ||
-            category.key === "admin-2nd-border"
+            category.key === "admin-2nd-border" ||
+            category.key === "admin-boundaries"
         ) {
             // Three-step pipeline so osmium can assemble relations into
             // complete Polygons:
@@ -1638,7 +1645,8 @@ async function main() {
         let seqPath;
         if (
             category.key === "admin-1st-border" ||
-            category.key === "admin-2nd-border"
+            category.key === "admin-2nd-border" ||
+            category.key === "admin-boundaries"
         ) {
             seqPath = adminSeqPath;
         } else {
@@ -1669,7 +1677,8 @@ async function main() {
 
         const isAdmin =
             category.key === "admin-1st-border" ||
-            category.key === "admin-2nd-border";
+            category.key === "admin-2nd-border" ||
+            category.key === "admin-boundaries";
 
         if (isAdmin) {
             // Admin: read the assembled GeoJSON FeatureCollection.
@@ -1685,48 +1694,90 @@ async function main() {
                     continue;
                 }
 
-                // Extract relationId and name for runtime filtering.
-                const props = {
-                    relationId: Number(feature.properties["@id"]),
-                };
-                // Carry name tags for potential future UI use.
-                for (const k of ["name", "name:en"]) {
-                    if (feature.properties[k] != null) {
-                        props[k] = feature.properties[k];
+                if (category.geometry === "polygon") {
+                    // polygon mode: keep full Polygon/MultiPolygon with
+                    // admin_level, name, name:en, and osmId for client-side
+                    // point-in-polygon matching.
+                    const geom = feature.geometry;
+                    if (geom.type !== "Polygon" && geom.type !== "MultiPolygon") {
+                        continue;
                     }
-                }
 
-                const lineFeatures = featureToLineStrings(feature);
-                for (const lf of lineFeatures) {
-                    // Merge relation metadata into each ring segment.
-                    lf.properties = { ...props };
+                    const props = {
+                        osmId: Number(feature.properties["@id"]),
+                        admin_level:
+                            feature.properties.admin_level ?? "",
+                    };
+                    for (const k of ["name", "name:en"]) {
+                        if (feature.properties[k] != null) {
+                            props[k] = feature.properties[k];
+                        }
+                    }
 
-                    const lineStrings =
-                        lf.geometry.type === "MultiLineString"
-                            ? lf.geometry.coordinates.map((coords) => ({
-                                  type: "Feature",
-                                  geometry: {
-                                      type: "LineString",
-                                      coordinates: coords,
-                                  },
-                                  properties: { ...props },
-                              }))
-                            : [lf];
+                    const cleaned = cleanPolygonFeature(feature);
+                    if (!cleaned) continue;
 
-                    for (const ls of lineStrings) {
-                        const tolerance =
-                            SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
-                        const simplified = simplifyFeature(ls, tolerance);
-                        const bbox = computeBbox(
-                            simplified.geometry.coordinates,
-                        );
+                    const tolerance =
+                        SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
+                    const simplified = simplifyPolygonFeature(
+                        cleaned,
+                        tolerance,
+                    );
+                    if (!simplified) continue;
 
-                        features.push({
-                            type: "Feature",
-                            bbox,
-                            geometry: simplified.geometry,
-                            properties: { ...props },
-                        });
+                    const bbox = computePolygonBbox(simplified.geometry);
+
+                    features.push({
+                        type: "Feature",
+                        bbox,
+                        geometry: simplified.geometry,
+                        properties: props,
+                    });
+                } else {
+                    // polygon-to-ring mode: existing border-ring extraction.
+                    // Extract relationId and name for runtime filtering.
+                    const props = {
+                        relationId: Number(feature.properties["@id"]),
+                    };
+                    // Carry name tags for potential future UI use.
+                    for (const k of ["name", "name:en"]) {
+                        if (feature.properties[k] != null) {
+                            props[k] = feature.properties[k];
+                        }
+                    }
+
+                    const lineFeatures = featureToLineStrings(feature);
+                    for (const lf of lineFeatures) {
+                        // Merge relation metadata into each ring segment.
+                        lf.properties = { ...props };
+
+                        const lineStrings =
+                            lf.geometry.type === "MultiLineString"
+                                ? lf.geometry.coordinates.map((coords) => ({
+                                      type: "Feature",
+                                      geometry: {
+                                          type: "LineString",
+                                          coordinates: coords,
+                                      },
+                                      properties: { ...props },
+                                  }))
+                                : [lf];
+
+                        for (const ls of lineStrings) {
+                            const tolerance =
+                                SIMPLIFY_TOLERANCES[category.key] ?? 0.0001;
+                            const simplified = simplifyFeature(ls, tolerance);
+                            const bbox = computeBbox(
+                                simplified.geometry.coordinates,
+                            );
+
+                            features.push({
+                                type: "Feature",
+                                bbox,
+                                geometry: simplified.geometry,
+                                properties: { ...props },
+                            });
+                        }
                     }
                 }
             }
