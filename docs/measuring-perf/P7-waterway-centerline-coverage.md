@@ -95,7 +95,7 @@ mixed line+polygon bundle. `body-of-water` stays `schemaVersion: 2`.
     `properties: { waterway: feature.properties?.waterway }`, so the size
     checkpoint can filter per-type if needed.
 
-                                                                Distinguish the two subsets downstream purely by `geometry.type`.
+Distinguish the two subsets downstream purely by `geometry.type`.
 
 ### B + C. Polygon path: collapse-fallback + lower tolerance
 

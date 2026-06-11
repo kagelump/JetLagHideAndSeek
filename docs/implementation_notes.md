@@ -507,3 +507,119 @@ fails. The next planned feed is JR East (~70+ lines in Kantō).
 loads exclusively from `assets/transit/`. Cached ODPT GTFS zips remain in
 `data/odpt/cache/` (referenced by transit pipeline fallback). The ODPT
 `scripts/` directory is kept for the shared `transit-identity.mjs` module.
+
+### Per-operator OSM presets (2026-06-11)
+
+The monolithic `osm-<region>` baseline preset was replaced with per-operator
+presets. Each operator with ≥3 standalone stations in a region gets its own
+preset (`kind: "operator"`). Operators with <3 stations and stations without
+operator tags go into an `osm-<region>-other` catch-all (`kind: "coverage"`).
+The threshold and "Other" label are in `conflateStage.mjs`.
+
+**Multi-operator stations (semicolon-separated `operator` tags):** stations are
+duplicated into each operator's group. At selection time, `getSelectedStations`
+merges them back by `mergeKey` — route colors from both operators combine
+correctly.
+
+**Enriched seeds in OSM operator presets:** GTFS seeds that had OSM records
+attached during conflation carry `osmOperators` and `osmSourceIds` (propagated
+in `conflate.mjs`). These enriched seeds are included in the matching OSM
+operator preset, using the GTFS seed id as `mergeKey`. This is how major
+multi-operator hubs (Shibuya, Shinjuku) appear in the JR East preset even
+though their OSM node is tagged `operator=東京地下鉄`.
+
+**Operator name normalization** lives in `normalizeOperator.mjs`:
+
+- `buildOperatorNormalizer(operatorNames)` — reverse-map from config.yaml
+  `operatorNames`, exact match first, then substring containment (handles
+  "東日本旅客鉄道 (JR East)" containing "東日本旅客鉄道")
+- `splitOperators(raw, normalize)` — splits on `;`, normalizes each part,
+  filters empties. Used for multi-operator OSM tags.
+
+Add new operator variants to `config.yaml` → `operatorNames`. The pipeline
+picks them up on the next `pnpm data:transit`.
+
+### OSM route relation extraction
+
+OSM route relations are extracted via `osmium tags-filter` → `osmium cat
+-f osm` (OSM XML) → streaming line-by-line XML parser in `osmStage.mjs`.
+GeoJSONSeq export **does not** work for relations — osmium can't compute
+geometry for `type=route` relations, and it strips member lists from the
+output. OSM XML is the reliable format.
+
+Key gotchas from implementation:
+
+- **Close-tag ordering in streaming XML parser:** the `</relation>` handler
+  must run BEFORE the `!inRelation` guard, otherwise close tags are silently
+  skipped when inside a relation.
+- **Node coordinate collection:** collect ALL `<node>` elements (not just
+  those with tags) — `stop_position` nodes referenced by route relations
+  need their coordinates for spatial stop resolution.
+- **Per-region stats counter:** track per-region delta (`current - total`),
+  not cumulative `parsed` count, to avoid double-counting across regions.
+
+### Spatial stop resolution for OSM routes
+
+OSM route relations reference `public_transport=stop_position` nodes (points
+on the track), not `railway=station` nodes. Our station cache only has the
+latter. `buildLine()` in `osmRoutes.mjs` now has a spatial fallback:
+
+1. Exact OSM node id match in station cache (fast path)
+2. **Spatial fallback:** look up the stop node's coordinates in `nodeCoords`
+   (collected during OSM XML parsing), then find ALL named stations within
+   `maxClusterMeters * 2` range. Matching ALL stations (not just the nearest)
+   is critical for multi-operator hubs — a Yamanote Line stop_position at
+   Shinjuku should match JR East, Odakyu, AND Keio station nodes.
+3. Name-based resolution (existing fallback)
+
+Without this, 759 of 822 route lines had <2 resolved stations and were dropped.
+After the fix, only ~99 lines are dropped (genuinely sparse routes).
+
+### Two-pass operator inference for OSM routes
+
+Many OSM route_master relations set `network` but omit `operator` (e.g.,
+Keihin-Tōhoku Line has `network=山手線`, no operator). `buildLine()` already
+falls back from the master's tags to directional variants. A post-processing
+pass in `processOsmRoutes()` then applies:
+
+1. **Network peer inference:** lines with real operators contribute to a
+   `network → most-common-operator` map. Lines whose operator came from the
+   network fallback check this map first.
+2. **Config override:** `config.yaml` → `networkNames` maps stubborn networks
+   to operators.
+3. **Station majority vote:** for lines that still have no operator, tally
+   operator votes from the line's member stations (using operators learned
+   from lines that DO have them in pass 1). The majority operator wins.
+
+Add stubborn network→operator mappings to `config.yaml` → `networkNames`.
+Most cases resolve automatically via step 1 or 3.
+
+### Preset ID slug collision avoidance
+
+Preset IDs are `osm-<region>-<slug>` where `slug = slugify(operatorName)`.
+The slug function in `conflateStage.mjs` strips non-ASCII characters, which
+causes collisions: both "JR東日本" and "JR東海" slugify to "jr". Fix:
+
+- Slugs with length ≥5 are used as-is (e.g., "jr-east" is fine)
+- Shorter slugs append a djb2 hash: `jr-<hash>` — deterministic across builds
+- Names with no ASCII at all (e.g., "ゆりかもめ") get `op<hash>`
+
+This is checked at emit time by `validateUniquePresetIds()` — it catches any
+remaining collisions and fails the build with a clear error.
+
+### Updated Kantō validation numbers
+
+| Stage          | Metric             | Value                      |
+| -------------- | ------------------ | -------------------------- |
+| OSM extraction | features read      | 2,964                      |
+| OSM extraction | mapped stations    | 2,706                      |
+| OSM extraction | after dedup        | 2,431                      |
+| Route extract  | relations parsed   | 767                        |
+| Route extract  | lines resolved     | 714                        |
+| Conflation     | GTFS seeds         | 334                        |
+| Conflation     | attachments        | 255                        |
+| Conflation     | standalone         | 10,264                     |
+| Conflation     | near-misses        | 34                         |
+| Conflation     | I1 invariant       | passed                     |
+| Emit           | japan-kanto bundle | 40 presets, 655 KB         |
+| Emit           | JR East in Kantō   | 1,027 stations, 157 routes |
