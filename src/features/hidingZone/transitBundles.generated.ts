@@ -13,7 +13,7 @@ export type TransitBundleMeta = {
     id: string;
     bbox: Bbox;
     file: string;
-    presets: { id: string; label: string; bbox: Bbox }[];
+    presets: { id: string; label: string; bbox: Bbox; kind?: string }[];
 };
 
 export type TransitManifest = {
@@ -33,16 +33,19 @@ export const TRANSIT_MANIFEST = {
                     id: "tokyo-metro",
                     label: "Tokyo Metro",
                     bbox: [139.612865, 35.632485, 139.958767, 35.78835],
+                    kind: "operator",
                 },
                 {
                     id: "toei-subway",
                     label: "Toei Subway",
                     bbox: [139.628901, 35.58705, 139.926613, 35.814541],
+                    kind: "operator",
                 },
                 {
                     id: "osm-japan-kanto",
                     label: "All stations in japan-kanto",
                     bbox: [134.595873, 34.0538709, 140.8921829, 37.0972316],
+                    kind: "coverage",
                 },
             ],
         },

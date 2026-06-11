@@ -113,6 +113,7 @@ export function buildManifest(regionPresets, regions) {
                 id: p.id,
                 label: p.label,
                 bbox: p.bbox,
+                kind: p.id.startsWith("osm-") ? "coverage" : "operator",
             })),
         });
     }
@@ -149,7 +150,7 @@ export function generateRequireMap(manifest, relativeToScript) {
     lines.push("  id: string;");
     lines.push("  bbox: Bbox;");
     lines.push("  file: string;");
-    lines.push("  presets: { id: string; label: string; bbox: Bbox }[];");
+    lines.push("  presets: { id: string; label: string; bbox: Bbox; kind?: string }[];");
     lines.push("};");
     lines.push("");
     lines.push("export type TransitManifest = {");

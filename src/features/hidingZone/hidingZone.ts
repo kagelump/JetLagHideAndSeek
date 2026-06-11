@@ -441,3 +441,51 @@ function getStationRouteColors(
         ),
     ];
 }
+
+// ─── Play-area scoped helpers (T8) ──────────────────────────────────────
+
+export type PresetPlayAreaStats = {
+    presetId: string;
+    stationsInArea: number;
+};
+
+/**
+ * Count stations within the play area per preset.
+ */
+export function getPresetPlayAreaStats(
+    presets: HidingZonePreset[],
+    playAreaBbox: Bbox,
+): PresetPlayAreaStats[] {
+    return presets.map((preset) => ({
+        presetId: preset.id,
+        stationsInArea: preset.stations.filter(
+            (s) =>
+                s.lon >= playAreaBbox[0] &&
+                s.lon <= playAreaBbox[2] &&
+                s.lat >= playAreaBbox[1] &&
+                s.lat <= playAreaBbox[3],
+        ).length,
+    }));
+}
+
+/**
+ * Clip selected stations to the play-area bbox expanded by radiusMeters.
+ */
+export function clipStationsToPlayArea(
+    stations: TransitStation[],
+    playAreaBbox: Bbox | undefined,
+    radiusMeters: number,
+): TransitStation[] {
+    if (!playAreaBbox) return stations;
+    // Approximate degree expansion (conservative over-estimate).
+    const degPad = radiusMeters / 111320;
+    const [w, s, e, n] = playAreaBbox;
+    const clipBbox: Bbox = [w - degPad, s - degPad, e + degPad, n + degPad];
+    return stations.filter(
+        (st) =>
+            st.lon >= clipBbox[0] &&
+            st.lon <= clipBbox[2] &&
+            st.lat >= clipBbox[1] &&
+            st.lat <= clipBbox[3],
+    );
+}
