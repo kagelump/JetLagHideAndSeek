@@ -1,6 +1,10 @@
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const transitGeojson = require("./lib/transitGeojson.js");
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const PORT = 3210;
@@ -108,6 +112,44 @@ const server = createServer((req, res) => {
     if (pathname === "/api/zones") {
         try {
             const geojson = zonesGeojson();
+            res.writeHead(200, {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache",
+            });
+            res.end(JSON.stringify(geojson));
+        } catch (err) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: err.message }));
+        }
+        return;
+    }
+
+    if (pathname === "/api/transit-routes") {
+        try {
+            const bundle = readJson("assets/transit/japan-kanto.json");
+            const geojson = transitGeojson.buildRouteFeatureCollection(
+                bundle.presets ?? [],
+            );
+            res.writeHead(200, {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache",
+            });
+            res.end(JSON.stringify(geojson));
+        } catch (err) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: err.message }));
+        }
+        return;
+    }
+
+    if (pathname === "/api/transit-stations") {
+        try {
+            const bundle = readJson("assets/transit/japan-kanto.json");
+            const stations = transitGeojson.getSelectedStations(
+                bundle.presets ?? [],
+            );
+            const geojson =
+                transitGeojson.buildStationFeatureCollection(stations);
             res.writeHead(200, {
                 "Content-Type": "application/json",
                 "Cache-Control": "no-cache",

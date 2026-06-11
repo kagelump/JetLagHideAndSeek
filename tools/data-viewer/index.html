@@ -72,6 +72,19 @@
         <div id="map"></div>
         <div id="loading">Loading layers…</div>
         <div id="legend">
+            <div style="font-weight: 600; margin-bottom: 2px">
+                <label
+                    style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        cursor: pointer;
+                    "
+                >
+                    <input type="checkbox" id="toggle-lines-polygons" checked />
+                    Lines &amp; Polygons
+                </label>
+            </div>
             <div>
                 <span class="legend-swatch" style="background: #2563eb"></span
                 >Coastline
@@ -134,7 +147,17 @@
                 "
             />
             <div style="font-weight: 600; margin-bottom: 2px">
-                POIs (33,757)
+                <label
+                    style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        cursor: pointer;
+                    "
+                >
+                    <input type="checkbox" id="toggle-pois" checked />
+                    POIs (33,757)
+                </label>
             </div>
             <div>
                 <span
@@ -234,6 +257,55 @@
                 ></span
                 >Station name length
             </div>
+            <hr
+                style="
+                    border: none;
+                    border-top: 1px solid #e5e7eb;
+                    margin: 4px 0;
+                "
+            />
+            <div style="font-weight: 600; margin-bottom: 4px">Transit</div>
+            <div>
+                <label
+                    style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        cursor: pointer;
+                    "
+                >
+                    <input type="checkbox" id="toggle-transit-routes" />
+                    <span
+                        class="legend-swatch"
+                        style="
+                            background: linear-gradient(
+                                90deg,
+                                #009bbf,
+                                #c9242f,
+                                #b1cb39
+                            );
+                        "
+                    ></span
+                    >Route lines
+                </label>
+            </div>
+            <div>
+                <label
+                    style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        cursor: pointer;
+                    "
+                >
+                    <input type="checkbox" id="toggle-transit-stations" />
+                    <span
+                        class="legend-swatch polygon"
+                        style="background: #1f6f78; border: 1.5px solid #fff"
+                    ></span
+                    >Stations
+                </label>
+            </div>
         </div>
         <script>
             const KANTO_BBOX = [137.9, 33.9, 141.9, 37.9];
@@ -267,6 +339,8 @@
                 "admin-2nd-border": "/api/measuring/admin-2nd-border",
                 zones: "/api/zones",
                 pois: "/api/pois",
+                "transit-routes": "/api/transit-routes",
+                "transit-stations": "/api/transit-stations",
             };
 
             async function fetchJson(url) {
@@ -423,6 +497,57 @@
                         },
                     },
                 ],
+                "transit-routes": [
+                    {
+                        id: "transit-routes-line",
+                        type: "line",
+                        layout: {
+                            visibility: "none",
+                            "line-cap": "round",
+                            "line-join": "round",
+                        },
+                        paint: {
+                            "line-color": [
+                                "to-color",
+                                ["get", "color"],
+                                "#888",
+                            ],
+                            "line-width": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                6,
+                                1,
+                                10,
+                                2,
+                                13,
+                                4,
+                                16,
+                                7,
+                            ],
+                            "line-opacity": 0.9,
+                        },
+                    },
+                ],
+                "transit-stations": Array.from({ length: 6 }, function (_, i) {
+                    return {
+                        id: "transit-stations-ring-" + (5 - i),
+                        type: "circle",
+                        filter: ["==", ["get", "ringIndex"], 5 - i],
+                        layout: { visibility: "none" },
+                        paint: {
+                            "circle-color": [
+                                "to-color",
+                                ["get", "color"],
+                                "#888",
+                            ],
+                            "circle-opacity": 0.95,
+                            "circle-radius": 5 + (5 - i) * 3,
+                            "circle-stroke-color": "#fff",
+                            "circle-stroke-width": 1.5,
+                        },
+                    };
+                }),
             };
 
             async function loadLayers() {
@@ -467,6 +592,87 @@
             });
 
             map.on("mouseleave", "poi-circle", () => {
+                map.getCanvas().style.cursor = "";
+                popup.remove();
+            });
+
+            // ── Layer toggles ───────────────────────────────────────────
+            const LINE_POLYGON_LAYERS = [
+                "coastline-line",
+                "hsr-line",
+                "water-fill",
+                "water-outline",
+                "waterway-line",
+                "admin1-line",
+                "admin2-line",
+                "zones-fill",
+                "zones-outline",
+            ];
+
+            document
+                .getElementById("toggle-lines-polygons")
+                .addEventListener("change", (e) => {
+                    const vis = e.target.checked ? "visible" : "none";
+                    for (const id of LINE_POLYGON_LAYERS) {
+                        map.setLayoutProperty(id, "visibility", vis);
+                    }
+                });
+
+            document
+                .getElementById("toggle-pois")
+                .addEventListener("change", (e) => {
+                    const vis = e.target.checked ? "visible" : "none";
+                    map.setLayoutProperty("poi-circle", "visibility", vis);
+                });
+
+            document
+                .getElementById("toggle-transit-routes")
+                .addEventListener("change", (e) => {
+                    const vis = e.target.checked ? "visible" : "none";
+                    map.setLayoutProperty(
+                        "transit-routes-line",
+                        "visibility",
+                        vis,
+                    );
+                });
+
+            document
+                .getElementById("toggle-transit-stations")
+                .addEventListener("change", (e) => {
+                    const vis = e.target.checked ? "visible" : "none";
+                    for (let i = 0; i < 6; i++) {
+                        map.setLayoutProperty(
+                            `transit-stations-ring-${i}`,
+                            "visibility",
+                            vis,
+                        );
+                    }
+                });
+
+            // ── Station hover popup ─────────────────────────────────────
+            function truncateList(str, max) {
+                if (!str) return "";
+                const items = str.split(", ");
+                if (items.length <= max) return str;
+                return (
+                    items.slice(0, max).join(", ") +
+                    ` +${items.length - max} more`
+                );
+            }
+
+            map.on("mouseenter", "transit-stations-ring-0", (e) => {
+                map.getCanvas().style.cursor = "pointer";
+                const p = e.features[0].properties;
+                let html = `<strong>${p.name}</strong>`;
+                if (p.operators)
+                    html += `<br><em>${truncateList(p.operators, 3)}</em>`;
+                if (p.routeNames)
+                    html += `<br><span style="color:#666">${truncateList(p.routeNames, 4)}</span>`;
+                html += `<br><span style="color:#999;font-size:11px">Ring ${p.ringIndex + 1}/${p.ringCount}</span>`;
+                popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+            });
+
+            map.on("mouseleave", "transit-stations-ring-0", () => {
                 map.getCanvas().style.cursor = "";
                 popup.remove();
             });

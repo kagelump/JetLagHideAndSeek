@@ -84,6 +84,30 @@ writeJson("poi/japan-kanto.json", {
 });
 console.log(`  poi/japan-kanto.json — ${poiFeatures.length} features`);
 
+// --- Transit routes & stations ---
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const transitGeojson = require("./lib/transitGeojson.js");
+
+mkdirSync(join(DATA_OUT, "transit"), { recursive: true });
+
+const transitBundle = readJson("assets/transit/japan-kanto.json");
+const presets = transitBundle.presets ?? [];
+
+const routeFeatures = transitGeojson.buildRouteFeatureCollection(presets);
+writeJson("transit/routes.json", routeFeatures);
+console.log(
+    `  transit/routes.json — ${routeFeatures.features.length} features`,
+);
+
+const mergedStations = transitGeojson.getSelectedStations(presets);
+const stationFeatures =
+    transitGeojson.buildStationFeatureCollection(mergedStations);
+writeJson("transit/stations.json", stationFeatures);
+console.log(
+    `  transit/stations.json — ${stationFeatures.features.length} features (${mergedStations.length} stations)`,
+);
+
 // --- HTML ---
 cpSync(join(import.meta.dirname, "index-static.html"), join(OUT, "index.html"));
 console.log(`  index.html`);
