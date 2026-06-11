@@ -67,7 +67,7 @@ describe("deriveOsmQueryTags", () => {
 
     it('returns the Overpass QL tag string for "commercial-airport"', () => {
         expect(deriveOsmQueryTags("commercial-airport")).toBe(
-            `["aeroway"="aerodrome"]["iata"]["military"!="airfield"]`,
+            `["aeroway"="aerodrome"]["iata"]["military"!="airfield"]["landuse"!="military"]`,
         );
     });
 

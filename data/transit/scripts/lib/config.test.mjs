@@ -266,6 +266,78 @@ describe("validateConfig", () => {
         const errors = validateConfig(cfg);
         assert.ok(errors.some((e) => e.includes("gtfs")));
     });
+
+    it("accepts valid overrides", () => {
+        const cfg = {
+            locales: [
+                {
+                    id: "jp",
+                    maxClusterMeters: 150,
+                    overrides: {
+                        relations: {
+                            12345: { suppressJumpWarning: true },
+                            67890: { stopOrder: ["osm:node:1", "osm:node:2"] },
+                        },
+                    },
+                },
+            ],
+        };
+        assert.deepEqual(validateConfig(cfg), []);
+    });
+
+    it("rejects non-numeric relation override keys", () => {
+        const cfg = {
+            locales: [
+                {
+                    id: "jp",
+                    maxClusterMeters: 150,
+                    overrides: {
+                        relations: {
+                            "not-a-number": { suppressJumpWarning: true },
+                        },
+                    },
+                },
+            ],
+        };
+        const errors = validateConfig(cfg);
+        assert.ok(errors.some((e) => e.includes("numeric relation ID")));
+    });
+
+    it("rejects non-array stopOrder", () => {
+        const cfg = {
+            locales: [
+                {
+                    id: "jp",
+                    maxClusterMeters: 150,
+                    overrides: {
+                        relations: { 123: { stopOrder: "not-an-array" } },
+                    },
+                },
+            ],
+        };
+        const errors = validateConfig(cfg);
+        assert.ok(errors.some((e) => e.includes("stopOrder must be an array")));
+    });
+
+    it("rejects non-boolean suppressJumpWarning", () => {
+        const cfg = {
+            locales: [
+                {
+                    id: "jp",
+                    maxClusterMeters: 150,
+                    overrides: {
+                        relations: { 123: { suppressJumpWarning: "yes" } },
+                    },
+                },
+            ],
+        };
+        const errors = validateConfig(cfg);
+        assert.ok(
+            errors.some((e) =>
+                e.includes("suppressJumpWarning must be a boolean"),
+            ),
+        );
+    });
 });
 
 // ─── cache.mjs tests ─────────────────────────────────────────────────────────

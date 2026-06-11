@@ -9,6 +9,7 @@
 import { normalizeName } from "./names.mjs";
 import { createOsmElementId } from "./osmStations.mjs";
 import { haversineM } from "./grid.mjs";
+import { detectImplausibleJumps, repairStopOrder } from "./stopOrderRepair.mjs";
 
 // ─── Route relation processing ─────────────────────────────────────────────
 
@@ -34,6 +35,11 @@ export function processOsmRoutes(
         linesDroppedGtfs: 0,
         unresolvedStops: 0,
         linesTooFewStations: 0,
+        detectedJumps: 0,
+        repairedStops: 0,
+        unrepairableVariants: 0,
+        ambiguousMatches: 0,
+        weakMatches: 0,
     };
 
     // Separate masters from plain routes.
@@ -101,6 +107,7 @@ export function processOsmRoutes(
             localeConfig,
             stats,
             nodeCoords,
+            localeConfig.overrides?.relations,
         );
         if (line) {
             masterLines.push(line);
@@ -122,6 +129,7 @@ export function processOsmRoutes(
             localeConfig,
             stats,
             nodeCoords,
+            localeConfig.overrides?.relations,
         );
         if (line) {
             masterLines.push(line);
@@ -279,6 +287,7 @@ function buildLine(
     localeConfig,
     stats,
     nodeCoords,
+    relationOverrides = {},
 ) {
     const tags = primaryRel.properties?.tags ?? primaryRel.properties ?? {};
     const id = primaryRel.id ?? primaryRel.properties?.["@id"];
@@ -320,6 +329,7 @@ function buildLine(
     const branchLines = [];
 
     for (const rel of variants) {
+        const relId = rel.id ?? rel.properties?.["@id"];
         const members = rel.members ?? rel.properties?.members ?? [];
         const variantStationIds = [];
 
@@ -348,6 +358,10 @@ function buildLine(
                 const maxDist = (localeConfig.maxClusterMeters ?? 150) * 2;
                 let bestEffectiveDist = Infinity;
                 let bestStationId = null;
+                let bestRawDist = Infinity;
+                let secondBestEffectiveDist = Infinity;
+                let secondBestStationId = null;
+                const matchCandidates = [];
                 for (const station of stationById.values()) {
                     if (!station.name) continue;
                     const dist = haversineM(
@@ -365,13 +379,47 @@ function buildLine(
                               ? 25
                               : 50;
                     const effectiveDist = dist + penalty;
+                    matchCandidates.push({
+                        stationId: station.id,
+                        effectiveDist,
+                        dist,
+                    });
                     if (effectiveDist < bestEffectiveDist) {
+                        secondBestEffectiveDist = bestEffectiveDist;
+                        secondBestStationId = bestStationId;
                         bestEffectiveDist = effectiveDist;
                         bestStationId = station.id;
+                        bestRawDist = dist;
+                    } else if (effectiveDist < secondBestEffectiveDist) {
+                        secondBestEffectiveDist = effectiveDist;
+                        secondBestStationId = station.id;
                     }
                 }
                 if (bestStationId) {
                     resolvedId = bestStationId;
+
+                    // Ambiguous: second-best is within 10% of best (R10).
+                    if (
+                        secondBestStationId !== null &&
+                        secondBestEffectiveDist <= bestEffectiveDist * 1.1
+                    ) {
+                        stats.ambiguousMatches++;
+                        console.warn(
+                            `  [osmRoutes] Ambiguous spatial match for relation ${relId || "?"} ` +
+                                `stop node ${nid}: best=${bestStationId} (${bestEffectiveDist.toFixed(0)}m), ` +
+                                `second=${secondBestStationId} (${secondBestEffectiveDist.toFixed(0)}m)`,
+                        );
+                    }
+
+                    // Weak: best raw distance is near the max threshold (>80%) (R10).
+                    if (bestRawDist > maxDist * 0.8) {
+                        stats.weakMatches++;
+                        console.warn(
+                            `  [osmRoutes] Weak spatial match for relation ${relId || "?"} ` +
+                                `stop node ${nid}: ${bestStationId} at ${bestRawDist.toFixed(0)}m ` +
+                                `(threshold ${maxDist}m)`,
+                        );
+                    }
                 } else {
                     stats.unresolvedStops++;
                 }
@@ -398,6 +446,96 @@ function buildLine(
             if (resolvedId) {
                 variantStationIds.push(resolvedId);
                 allStationIds.add(resolvedId);
+            }
+        }
+
+        // Apply explicit stop-order override if present.
+        const relOverride = relId
+            ? relationOverrides[String(relId)]
+            : undefined;
+        if (relOverride?.stopOrder) {
+            const matched = relOverride.stopOrder.filter((sid) =>
+                variantStationIds.includes(sid),
+            ).length;
+            if (matched === 0) {
+                console.warn(
+                    `  [osmRoutes] Stale stopOrder override for relation ${relId}: ` +
+                        `none of the ${relOverride.stopOrder.length} specified IDs matched resolved stops`,
+                );
+            } else if (matched < relOverride.stopOrder.length) {
+                console.warn(
+                    `  [osmRoutes] Partial stopOrder override for relation ${relId}: ` +
+                        `${matched}/${relOverride.stopOrder.length} specified IDs matched`,
+                );
+            }
+
+            const ordered = [];
+            for (const sid of relOverride.stopOrder) {
+                if (variantStationIds.includes(sid)) {
+                    ordered.push(sid);
+                }
+            }
+            for (const sid of variantStationIds) {
+                if (!ordered.includes(sid)) ordered.push(sid);
+            }
+            variantStationIds.length = 0;
+            variantStationIds.push(...ordered);
+        }
+
+        // Stop-order detection and repair.
+        // Dedupe consecutive duplicate station ids (R6) before repair.
+        const dedupedStationIds = [];
+        for (const sid of variantStationIds) {
+            if (dedupedStationIds[dedupedStationIds.length - 1] !== sid) {
+                dedupedStationIds.push(sid);
+            }
+        }
+
+        const variantStops = dedupedStationIds
+            .map((sid) => {
+                const s = stationById.get(sid);
+                return s ? { id: sid, lat: s.lat, lon: s.lon } : null;
+            })
+            .filter(Boolean);
+
+        if (variantStops.length >= 3) {
+            const flagged = detectImplausibleJumps(variantStops);
+            if (flagged.length > 0) {
+                if (!relOverride?.suppressJumpWarning) {
+                    stats.detectedJumps += flagged.length;
+                }
+
+                if (relOverride?.suppressJumpWarning) {
+                    // Silently skip repair and warning.
+                } else if (relOverride?.stopOrder) {
+                    // Human-specified order is highest authority; warn only (R3).
+                    console.warn(
+                        `  [osmRoutes] Stop-order warning for relation ${relId || "?"}: ` +
+                            `explicit stopOrder still has ${flagged.length} flagged gap(s)`,
+                    );
+                } else {
+                    const repairResult = repairStopOrder(variantStops, {
+                        maxRepairs: 3,
+                    });
+                    if (repairResult.repaired) {
+                        stats.repairedStops += repairResult.repairsDone;
+                        variantStationIds.length = 0;
+                        variantStationIds.push(
+                            ...repairResult.stops.map((s) => s.id),
+                        );
+                        console.warn(
+                            `  [osmRoutes] Repaired stop order for relation ${relId || "?"} ` +
+                                `(${repairResult.repairsDone} reinsertion(s))`,
+                        );
+                    } else {
+                        stats.unrepairableVariants++;
+                    }
+                    for (const w of repairResult.warnings) {
+                        console.warn(
+                            `  [osmRoutes] Stop-order warning for relation ${relId || "?"}: ${w}`,
+                        );
+                    }
+                }
             }
         }
 

@@ -478,10 +478,14 @@ export async function osmStage(ctx) {
             allNodeCoords,
         );
         ctx.osmRouteLines = result.lines;
+        ctx.osmRouteStats = result.stats;
         console.log(
             `[osm/routes] ${result.stats.totalRelations} relations → ${result.stats.linesKept} lines ` +
                 `(${result.stats.linesDroppedGtfs} dropped via operator gating, ` +
-                `${result.stats.linesTooFewStations} too few stations)`,
+                `${result.stats.linesTooFewStations} too few stations)` +
+                (result.stats.detectedJumps > 0
+                    ? `, ${result.stats.detectedJumps} jump(s) detected, ${result.stats.repairedStops} repaired, ${result.stats.unrepairableVariants} unrepairable`
+                    : ""),
         );
     } else {
         console.log(

@@ -324,6 +324,7 @@ export async function conflateStage(ctx) {
         nearMisses,
         enrichedSeeds,
         osmBaselinePresets,
+        osmRouteStats: ctx.osmRouteStats,
     });
 }
 
@@ -528,6 +529,30 @@ async function writeBuildReport(ctx, data) {
         if (sorted.length > 50) {
             lines.push(`- ... and ${sorted.length - 50} more`);
         }
+        lines.push("");
+    }
+
+    if (data.osmRouteStats) {
+        lines.push("## OSM route stats");
+        lines.push("");
+        lines.push(`- Total relations: ${data.osmRouteStats.totalRelations}`);
+        lines.push(`- Lines kept: ${data.osmRouteStats.linesKept}`);
+        lines.push(
+            `- Lines dropped (GTFS-sourced): ${data.osmRouteStats.linesDroppedGtfs}`,
+        );
+        lines.push(
+            `- Lines too few stations: ${data.osmRouteStats.linesTooFewStations}`,
+        );
+        lines.push(`- Unresolved stops: ${data.osmRouteStats.unresolvedStops}`);
+        lines.push(`- Detected jumps: ${data.osmRouteStats.detectedJumps}`);
+        lines.push(`- Repaired stops: ${data.osmRouteStats.repairedStops}`);
+        lines.push(
+            `- Unrepairable variants: ${data.osmRouteStats.unrepairableVariants}`,
+        );
+        lines.push(
+            `- Ambiguous spatial matches: ${data.osmRouteStats.ambiguousMatches}`,
+        );
+        lines.push(`- Weak spatial matches: ${data.osmRouteStats.weakMatches}`);
         lines.push("");
     }
 

@@ -9,6 +9,8 @@ locales:
     - id: japan
       nameSuffixes: ["駅"]
       maxClusterMeters: 150
+      overrides:
+          relations: {}
       aliases: []
 
       osm:

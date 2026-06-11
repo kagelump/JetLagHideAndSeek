@@ -11,6 +11,8 @@ import {
 export const createGtfsRouteId = _createGtfsRouteId;
 export const createGtfsStopId = _createGtfsStopId;
 
+import { detectImplausibleJumps } from "./stopOrderRepair.mjs";
+
 // ─── CSV parsing ────────────────────────────────────────────────────────────
 // Extracted from data/odpt/scripts/fetch-odpt.mjs so both pipelines share one
 // implementation.  Handles BOMs, quoted commas, and CRLF line endings.
@@ -563,6 +565,19 @@ function buildRouteCoordsFromStops(
 
         const signature = stopTimes.map((st) => st.stopId).join("|");
         if (linesBySignature.has(signature)) continue;
+
+        // Warn-only jump detection on GTFS-derived sequences.
+        const stopObjects = stopTimes.map((st) => {
+            const stop = stopsById.get(st.stopId);
+            return { lat: Number(stop.stop_lat), lon: Number(stop.stop_lon) };
+        });
+        const flagged = detectImplausibleJumps(stopObjects);
+        if (flagged.length > 0) {
+            console.warn(
+                `  [gtfs] Route ${routeId} trip ${trip.trip_id}: ` +
+                    `${flagged.length} implausible gap(s) at position(s) ${flagged.join(", ")}`,
+            );
+        }
 
         linesBySignature.set(
             signature,

@@ -1420,14 +1420,14 @@ describe("computeLineBuffer input budget", () => {
             );
             const ms = performance.now() - t0;
             expect(buf).not.toBeNull();
-            // Boundedness guard, not a tight perf assertion. The dissolved
+            // Boundedness guard, not a tight perf assertion.  The dissolved
             // Tokyo Bay window is genuine dense coastline geometry (~67
-            // MultiPolygons), so buffering takes ~2.5 s locally and more on
-            // CI — but the P1 budget + polygon-coord simplification keep it
-            // bounded. Pre-fix this softlocked (never returned). The generous
-            // ceiling catches a regression to unbounded work without flaking
-            // on slower CI.
-            expect(ms).toBeLessThan(8000);
+            // MultiPolygons, 251k coords pre-simplify).  @turf/buffer (jsts)
+            // under the JS backend takes ~15–25 s for the polygon buffer;
+            // the native GEOS backend does the same work in ~0.5–2 s.
+            // Raise the ceiling to 30 s so the guard still catches a true
+            // softlock (~∞) while surviving both backends without flaking.
+            expect(ms).toBeLessThan(30000);
         });
 
         it("scoped buffer at 161 m stays within budget without escalation (P9 regression)", () => {

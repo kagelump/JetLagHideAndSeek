@@ -174,6 +174,85 @@ export function validateConfig(cfg, configPath = "config.yaml") {
                 }
             }
         }
+
+        // Validate overrides.
+        if (loc.overrides !== undefined) {
+            if (
+                typeof loc.overrides !== "object" ||
+                loc.overrides === null ||
+                Array.isArray(loc.overrides)
+            ) {
+                errors.push(
+                    `${prefix}: "overrides" must be an object when present`,
+                );
+            } else {
+                if (loc.overrides.relations !== undefined) {
+                    if (
+                        typeof loc.overrides.relations !== "object" ||
+                        loc.overrides.relations === null ||
+                        Array.isArray(loc.overrides.relations)
+                    ) {
+                        errors.push(
+                            `${prefix}: "overrides.relations" must be an object`,
+                        );
+                    } else {
+                        for (const [relId, relOverride] of Object.entries(
+                            loc.overrides.relations,
+                        )) {
+                            if (!/^\d+$/.test(String(relId))) {
+                                errors.push(
+                                    `${prefix}: overrides.relations key "${relId}" must be a numeric relation ID`,
+                                );
+                                continue;
+                            }
+                            if (
+                                relOverride === null ||
+                                typeof relOverride !== "object" ||
+                                Array.isArray(relOverride)
+                            ) {
+                                errors.push(
+                                    `${prefix}: overrides.relations[${relId}] must be an object`,
+                                );
+                                continue;
+                            }
+                            if (
+                                relOverride.stopOrder !== undefined &&
+                                !Array.isArray(relOverride.stopOrder)
+                            ) {
+                                errors.push(
+                                    `${prefix}: overrides.relations[${relId}].stopOrder must be an array`,
+                                );
+                            } else if (Array.isArray(relOverride.stopOrder)) {
+                                for (
+                                    let si = 0;
+                                    si < relOverride.stopOrder.length;
+                                    si++
+                                ) {
+                                    const el = relOverride.stopOrder[si];
+                                    if (
+                                        typeof el !== "string" ||
+                                        !el.startsWith("osm:node:")
+                                    ) {
+                                        errors.push(
+                                            `${prefix}: overrides.relations[${relId}].stopOrder[${si}] must be a string like "osm:node:<id>"`,
+                                        );
+                                    }
+                                }
+                            }
+                            if (
+                                relOverride.suppressJumpWarning !== undefined &&
+                                typeof relOverride.suppressJumpWarning !==
+                                    "boolean"
+                            ) {
+                                errors.push(
+                                    `${prefix}: overrides.relations[${relId}].suppressJumpWarning must be a boolean`,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return errors;

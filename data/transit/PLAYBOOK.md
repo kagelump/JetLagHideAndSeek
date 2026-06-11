@@ -76,3 +76,42 @@ source. Follow this playbook to add the JR East GTFS feed. Key facts:
 The same playbook works for London (TfL), Taipei (TDX/MOTC), SF Bay Area
 (511.org + agency split), and Schengen NAP feeds — plus a new `locales:` entry
 the first time a locale is touched.
+
+## Overriding OSM relation data
+
+When a relation has data issues that the pipeline repair can't fix and upstream
+OSM edits haven't propagated, add an explicit override instead of editing the
+pipeline code.
+
+### When to override vs fix upstream
+
+- **Fix upstream in OSM** for: wrong stop order, missing stations, incorrect
+  colors, outdated route geometry. These benefit all OSM consumers.
+- **Override in config** for: persistent upstream issues that haven't been
+  fixed after a reasonable time, or cases where the "correct" data is disputed.
+
+### Override types
+
+In `data/transit/config.yaml`, under `locales[<locale>].overrides.relations`:
+
+```yaml
+overrides:
+    relations:
+        "12185878":
+            suppressJumpWarning: true
+        "12345678":
+            stopOrder: ["osm:node:123", "osm:node:456", "osm:node:789"]
+```
+
+- `suppressJumpWarning: true` — Skip the implausible-jump check for this
+  relation. Use when the large gap is legitimate (e.g. a ferry connection,
+  limited express with very sparse stops).
+- `stopOrder: [...]` — Explicit ordered list of station IDs. Resolved stops
+  not in this list are appended at the end. Use when member order is wrong and
+  the correct order is known.
+
+### Stale override detection
+
+The pipeline warns when a `stopOrder` override no longer matches any resolved
+stops (e.g. after an upstream node ID change). Review and update or remove
+the override.
