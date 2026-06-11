@@ -24,8 +24,9 @@ patterns wholesale.
 - Default play area: Tokyo 23 Wards, OSM relation `19631009`
   (`assets/default-zones/tokyo.json`). Deterministic E2E fixture: Osaka, OSM
   relation `358674` (`assets/default-zones/osaka.json`).
-- Hiding-zone presets: Tokyo Metro and Toei Subway, generated from ODPT GTFS into
-  `data/odpt/generated/hiding-zone-presets.json`.
+- Hiding-zone presets: Tokyo Metro and Toei Subway (334 stations) plus OSM
+  baseline (~2,400 stations in Kantō), generated into `assets/transit/` and
+  lazy-loaded by play-area bbox via the transit pipeline (`data/transit/`).
 
 ## Commands
 
@@ -37,11 +38,11 @@ pnpm test       # jest + node --test suites (pretest); NOT run by pnpm check
 pnpm typecheck
 pnpm lint
 pnpm format:check
-pnpm test:data:odpt
+pnpm test:data:transit # node --test pipeline suites
 pnpm test -- NativeMap.test.tsx        # single suite
 pnpm data:poi        # regenerate bundled POIs -> assets/poi (commit the output)
 pnpm data:measuring  # regenerate measuring bundles -> assets/measuring (commit)
-pnpm data:odpt       # regenerate ODPT presets (needs network + ODPT_KEY)
+pnpm data:transit    # regenerate transit bundles (needs network or --cache-only)
 ```
 
 `pnpm check` does **not** run jest — run `pnpm test` as well.
@@ -125,8 +126,10 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
   (distance units, geojson, debounce, location), and app-link config.
 - `src/theme/colors.ts`: shared color tokens. `src/types/`: ambient JSON and
   third-party types.
-- `data/odpt/`: ODPT config, fetch script, attribution, ignored cache, checked-in
-  preset JSON.
+- `data/transit/`: Transit pipeline — config, GTFS/OSM extraction, conflation,
+  bundle emission, generated NOTICE; cache + report git-ignored.
+- `data/odpt/`: Legacy ODPT pipeline (deprecated — replaced by `data/transit/`);
+  kept for cached GTFS zips and reference output.
 - `data/geofabrik/`: OSM POI + measuring extraction pipeline (config, scripts,
   attribution). The PBF cache and heavy intermediates are git-ignored; committed
   runtime artifacts are `assets/poi/` and `assets/measuring/`.
@@ -227,15 +230,17 @@ focused feature/store and let the map render derived data.
   canonical value in meters.
 - Color routes/stations from generated preset route colors. A station shared by
   multiple selected routes renders concentric rings, not one arbitrary color.
-- ODPT generated data is checked in; raw GTFS zips live in ignored
-  `data/odpt/cache/`.
+- Transit preset data is generated into `assets/transit/` by `pnpm data:transit`;
+  bundles and manifest are committed. The pipeline reuses cached GTFS zips from
+  `data/odpt/cache/` and the Japan PBF from `data/geofabrik/cache/`.
 - Some GTFS feeds (incl. cached Tokyo Metro data) omit `shapes.txt` or route
-  `shape_id`. Preserve the fallback that derives route geometry from ordered
-  `stop_times` so route lines don't silently empty while colors still exist.
-- `data/odpt/scripts/fetch-odpt.mjs --cache-only` regenerates checked-in preset
-  JSON from cached GTFS zips when network access or `ODPT_KEY` is unavailable.
-- Keep `data/odpt/NOTICE.md` and `data/odpt/sources.md` current; generated JSON
-  carries an attribution block. `pnpm data:odpt` needs network + `ODPT_KEY`.
+  `shape_id`. The pipeline preserves the fallback that derives route geometry
+  from ordered `stop_times` so route lines don't silently empty while colors
+  still exist.
+- `pnpm data:transit -- --cache-only` regenerates committed bundles from cached
+  data when network access or `ODPT_KEY` is unavailable.
+- Keep `data/transit/NOTICE.md` and `data/transit/sources.md` current; bundles
+  carry an attribution block.
 
 ## POI Spatial Index
 
