@@ -26,6 +26,7 @@ function loose(id, name, lat, lon, opts = {}) {
         nameVariants: opts.nameVariants ?? [name],
         wikidata: opts.wikidata ?? undefined,
         nameEn: opts.nameEn ?? undefined,
+        operator: opts.operator ?? undefined,
     };
 }
 
@@ -174,5 +175,87 @@ describe("attachStationRecords", () => {
             suffixes: ["駅"],
         });
         assert.equal(enrichedSeeds[0].nameEn, "Shinjuku");
+    });
+
+    it("enriches seeds with osmOperators from attached OSM record", () => {
+        const seeds = [
+            seed("gtfs:ns:stop:1", "Shinjuku", 35.689, 139.7, {
+                wikidata: "Q123",
+            }),
+        ];
+        const looseRecs = [
+            loose("osm:node:s", "新宿駅", 35.689, 139.701, {
+                wikidata: "Q123",
+                operator: "JR East",
+                nameVariants: ["新宿駅", "Shinjuku"],
+            }),
+        ];
+        const { enrichedSeeds } = attachStationRecords({
+            seeds,
+            looseRecords: looseRecs,
+            maxClusterMeters: 150,
+            suffixes: ["駅"],
+        });
+        assert.ok(Array.isArray(enrichedSeeds[0].osmOperators));
+        assert.equal(enrichedSeeds[0].osmOperators.length, 1);
+        assert.equal(enrichedSeeds[0].osmOperators[0], "JR East");
+    });
+
+    it("enriches seeds with osmSourceIds from attached OSM record", () => {
+        const seeds = [
+            seed("gtfs:ns:stop:1", "Shinjuku", 35.689, 139.7, {
+                wikidata: "Q123",
+            }),
+        ];
+        const looseRecs = [
+            loose("osm:node:s", "新宿駅", 35.689, 139.701, {
+                wikidata: "Q123",
+                operator: "JR East",
+                nameVariants: ["新宿駅", "Shinjuku"],
+            }),
+        ];
+        const { enrichedSeeds } = attachStationRecords({
+            seeds,
+            looseRecords: looseRecs,
+            maxClusterMeters: 150,
+            suffixes: ["駅"],
+        });
+        assert.ok(Array.isArray(enrichedSeeds[0].osmSourceIds));
+        assert.equal(enrichedSeeds[0].osmSourceIds.length, 1);
+        assert.equal(enrichedSeeds[0].osmSourceIds[0], "osm:node:s");
+    });
+
+    it("accumulates osmOperators from multiple attached OSM records", () => {
+        const seeds = [
+            seed("gtfs:ns:stop:1", "Otemachi", 35.688, 139.764, {
+                wikidata: "Q456",
+            }),
+        ];
+        const looseRecs = [
+            loose("osm:node:a", "大手町駅", 35.688, 139.764, {
+                wikidata: "Q456",
+                operator: "Tokyo Metro",
+                nameVariants: ["大手町駅", "Otemachi"],
+            }),
+            loose("osm:node:b", "大手町", 35.688, 139.765, {
+                wikidata: "Q456",
+                operator: "Toei Subway",
+                nameVariants: ["大手町", "Otemachi"],
+            }),
+        ];
+        const { enrichedSeeds } = attachStationRecords({
+            seeds,
+            looseRecords: looseRecs,
+            maxClusterMeters: 150,
+            suffixes: ["駅"],
+        });
+        assert.ok(Array.isArray(enrichedSeeds[0].osmOperators));
+        assert.equal(enrichedSeeds[0].osmOperators.length, 2);
+        assert.ok(enrichedSeeds[0].osmOperators.includes("Tokyo Metro"));
+        assert.ok(enrichedSeeds[0].osmOperators.includes("Toei Subway"));
+        assert.ok(Array.isArray(enrichedSeeds[0].osmSourceIds));
+        assert.equal(enrichedSeeds[0].osmSourceIds.length, 2);
+        assert.ok(enrichedSeeds[0].osmSourceIds.includes("osm:node:a"));
+        assert.ok(enrichedSeeds[0].osmSourceIds.includes("osm:node:b"));
     });
 });

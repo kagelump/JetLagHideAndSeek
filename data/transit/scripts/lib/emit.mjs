@@ -43,12 +43,22 @@ export function assignPresetsToRegions(presets, regions) {
     }
 
     for (const preset of presets) {
-        // OSM baseline presets: id is "osm-<regionId>" → assign to that region.
+        // OSM presets: id may be "osm-<regionId>" (coverage) or
+        // "osm-<regionId>-<operatorSlug>" (per-operator).  Find the region by
+        // matching the id prefix.
         if (preset.id.startsWith("osm-")) {
-            const regionId = preset.id.slice(4);
-            if (map.has(regionId)) {
-                map.get(regionId).push(preset);
-            } else {
+            let matched = false;
+            for (const r of regions) {
+                if (
+                    preset.id === `osm-${r.id}` ||
+                    preset.id.startsWith(`osm-${r.id}-`)
+                ) {
+                    map.get(r.id).push(preset);
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
                 map.get(regions[0].id).push(preset);
             }
             continue;
@@ -113,7 +123,9 @@ export function buildManifest(regionPresets, regions) {
                 id: p.id,
                 label: p.label,
                 bbox: p.bbox,
-                kind: p.id.startsWith("osm-") ? "coverage" : "operator",
+                kind:
+                    p.kind ||
+                    (p.id.startsWith("osm-") ? "coverage" : "operator"),
             })),
         });
     }
@@ -150,7 +162,9 @@ export function generateRequireMap(manifest, relativeToScript) {
     lines.push("  id: string;");
     lines.push("  bbox: Bbox;");
     lines.push("  file: string;");
-    lines.push("  presets: { id: string; label: string; bbox: Bbox; kind?: string }[];");
+    lines.push(
+        "  presets: { id: string; label: string; bbox: Bbox; kind?: string }[];",
+    );
     lines.push("};");
     lines.push("");
     lines.push("export type TransitManifest = {");

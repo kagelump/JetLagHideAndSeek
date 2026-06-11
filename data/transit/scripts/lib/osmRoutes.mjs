@@ -8,6 +8,7 @@
 
 import { normalizeName } from "./names.mjs";
 import { createOsmElementId } from "./osmStations.mjs";
+import { haversineM } from "./grid.mjs";
 
 // ─── Route relation processing ─────────────────────────────────────────────
 
@@ -19,7 +20,12 @@ import { createOsmElementId } from "./osmStations.mjs";
  * @param {object} localeConfig - locale config from config.yaml
  * @returns {{ lines: object[], stats: object }}
  */
-export function processOsmRoutes(relations, stationRecords, localeConfig) {
+export function processOsmRoutes(
+    relations,
+    stationRecords,
+    localeConfig,
+    nodeCoords,
+) {
     const stats = {
         totalRelations: 0,
         masterCount: 0,
@@ -94,6 +100,7 @@ export function processOsmRoutes(relations, stationRecords, localeConfig) {
             stationByName,
             localeConfig,
             stats,
+            nodeCoords,
         );
         if (line) {
             masterLines.push(line);
@@ -114,6 +121,7 @@ export function processOsmRoutes(relations, stationRecords, localeConfig) {
             stationByName,
             localeConfig,
             stats,
+            nodeCoords,
         );
         if (line) {
             masterLines.push(line);
@@ -155,6 +163,107 @@ export function processOsmRoutes(relations, stationRecords, localeConfig) {
         keptLines.push(line);
     }
 
+    // ─── Two-pass operator inference ────────────────────────────────────
+    //
+    // Many OSM route relations set `network` but omit `operator`.  Use
+    // lines that DO have operators to infer operators for lines that don't.
+
+    const networkNames = localeConfig.networkNames || {};
+
+    // Pass 1: collect operator data from lines with real (non-network)
+    //         operators.
+    /** @type {Map<string, Map<string, number>>} network → (operator → count) */
+    const networkOperatorVotes = new Map();
+    /** @type {Map<string, Map<string, number>>} stationId → (operator → count) */
+    const stationOperatorVotes = new Map();
+
+    for (const line of keptLines) {
+        const isNetworkFallback =
+            line.networkTag && line.operator === line.networkTag;
+        if (isNetworkFallback || !line.operator) continue;
+
+        // Contribute to network → operator map.
+        if (line.networkTag) {
+            if (!networkOperatorVotes.has(line.networkTag)) {
+                networkOperatorVotes.set(line.networkTag, new Map());
+            }
+            const netVotes = networkOperatorVotes.get(line.networkTag);
+            netVotes.set(line.operator, (netVotes.get(line.operator) || 0) + 1);
+        }
+
+        // Contribute to station → operator map.
+        for (const sid of line.memberStationIds) {
+            if (!stationOperatorVotes.has(sid)) {
+                stationOperatorVotes.set(sid, new Map());
+            }
+            const stVotes = stationOperatorVotes.get(sid);
+            stVotes.set(line.operator, (stVotes.get(line.operator) || 0) + 1);
+        }
+    }
+
+    // Resolve network → canonical operator (most-voted operator per network).
+    /** @type {Map<string, string>} */
+    const networkToOperator = new Map();
+    for (const [network, votes] of networkOperatorVotes) {
+        let bestOp = null;
+        let bestCount = 0;
+        for (const [op, count] of votes) {
+            if (count > bestCount) {
+                bestCount = count;
+                bestOp = op;
+            }
+        }
+        if (bestOp) networkToOperator.set(network, bestOp);
+    }
+
+    // Pass 2: infer operators for lines whose operator came from the
+    //         network fallback (or is missing entirely).
+    for (const line of keptLines) {
+        const isNetworkFallback =
+            line.networkTag && line.operator === line.networkTag;
+        const isMissing = !line.operator;
+        if (!isNetworkFallback && !isMissing) continue;
+
+        let inferred = null;
+
+        // 1. Network peer inference (other lines in same network).
+        if (line.networkTag) {
+            inferred = networkToOperator.get(line.networkTag);
+        }
+
+        // 2. Config-driven network → operator override.
+        if (!inferred && line.networkTag) {
+            inferred = networkNames[line.networkTag] || null;
+        }
+
+        // 3. Station majority vote.
+        if (!inferred) {
+            /** @type {Map<string, number>} */
+            const votes = new Map();
+            for (const sid of line.memberStationIds) {
+                const stOps = stationOperatorVotes.get(sid);
+                if (stOps) {
+                    for (const [op, count] of stOps) {
+                        votes.set(op, (votes.get(op) || 0) + count);
+                    }
+                }
+            }
+            let bestOp = null;
+            let bestCount = 0;
+            for (const [op, count] of votes) {
+                if (count > bestCount) {
+                    bestCount = count;
+                    bestOp = op;
+                }
+            }
+            inferred = bestOp;
+        }
+
+        if (inferred) {
+            line.operator = inferred;
+        }
+    }
+
     stats.linesKept = keptLines.length;
 
     return { lines: keptLines, stats };
@@ -169,6 +278,7 @@ function buildLine(
     stationByName,
     localeConfig,
     stats,
+    nodeCoords,
 ) {
     const tags = primaryRel.properties?.tags ?? primaryRel.properties ?? {};
     const id = primaryRel.id ?? primaryRel.properties?.["@id"];
@@ -183,7 +293,19 @@ function buildLine(
             ? colorRaw
             : `#${colorRaw}`
         : undefined;
-    const operator = tags.operator || tags.network || undefined;
+    // Prefer the primary relation's operator.  Fall back to the first
+    // variant that has one — many route_masters omit the operator tag
+    // but set it on the directional variants (e.g. Keihin-Tōhoku Line).
+    let operator = tags.operator || tags.network || undefined;
+    if (!operator || operator === tags.network) {
+        for (const rel of variants) {
+            const vt = rel.properties?.tags ?? rel.properties ?? {};
+            if (vt.operator) {
+                operator = vt.operator;
+                break;
+            }
+        }
+    }
 
     // Resolve station members across all variants.
     const stationIds = new Set();
@@ -199,6 +321,42 @@ function buildLine(
                 const canonicalId = createOsmElementId("node", ref);
                 if (stationById.has(canonicalId)) {
                     stationIds.add(canonicalId);
+                } else if (
+                    nodeCoords &&
+                    nodeCoords.has(
+                        typeof ref === "number" ? ref : parseInt(ref, 10),
+                    )
+                ) {
+                    // Spatial fallback: the stop node (often a stop_position)
+                    // isn't in the station cache but we have its coordinates.
+                    // Match ALL named stations within range — multi-operator
+                    // hubs like Shinjuku have separate OSM nodes for each
+                    // operator's entrance, and we want to attribute the stop
+                    // to all of them for full operator coverage.
+                    const nid =
+                        typeof ref === "number" ? ref : parseInt(ref, 10);
+                    const nc = nodeCoords.get(nid);
+                    // Use a wider radius than conflation — stop_position
+                    // nodes for large station complexes can be far from
+                    // individual operator entrance nodes.
+                    const maxDist = (localeConfig.maxClusterMeters ?? 150) * 2;
+                    let matched = false;
+                    for (const station of stationById.values()) {
+                        if (!station.name) continue;
+                        const dist = haversineM(
+                            nc.lat,
+                            nc.lon,
+                            station.lat,
+                            station.lon,
+                        );
+                        if (dist < maxDist) {
+                            stationIds.add(station.id);
+                            matched = true;
+                        }
+                    }
+                    if (!matched) {
+                        stats.unresolvedStops++;
+                    }
                 } else {
                     // Resolve by spatial + name lookup.
                     const nodeTags = m.tags ?? {};
@@ -246,6 +404,8 @@ function buildLine(
         color: color || "#888888",
         sourceId: String(id),
         operator,
+        /** Raw network tag — preserved for two-pass operator inference. */
+        networkTag: tags.network || undefined,
         geometry,
         memberStationIds: [...stationIds],
     };

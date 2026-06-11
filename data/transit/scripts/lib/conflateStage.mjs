@@ -6,6 +6,10 @@ import { resolve, join } from "node:path";
 
 import { attachStationRecords } from "./conflate.mjs";
 import { normalizeName } from "./names.mjs";
+import {
+    buildOperatorNormalizer,
+    splitOperators,
+} from "./normalizeOperator.mjs";
 
 /**
  * Run the conflation stage.
@@ -80,87 +84,221 @@ export async function conflateStage(ctx) {
     );
 
     // Build OSM baseline presets per region.
-    // Group standalone and enriched seeds by region from their source files.
+    // For each region, group standalone OSM stations by operator to create
+    // per-operator presets (enriched seeds stay in their GTFS presets).
+    const operatorNames = ctx.locale.operatorNames || {};
+    const normalizeOp = buildOperatorNormalizer(operatorNames);
+
+    // Build route-based operator inference: if a station is a member of a
+    // route relation, it's served by that route's operator, even if the
+    // station's own operator tag doesn't list it (common for multi-operator
+    // hubs like Shibuya, Shinjuku, etc.).
+    /** @type {Map<string, Set<string>>} osmNodeId → set of normalized operators */
+    const routeOperatorsByStation = new Map();
+    if (ctx.osmRouteLines) {
+        for (const line of ctx.osmRouteLines) {
+            const lineOp = normalizeOp(line.operator);
+            if (!lineOp) continue;
+            for (const memberId of line.memberStationIds) {
+                if (!routeOperatorsByStation.has(memberId)) {
+                    routeOperatorsByStation.set(memberId, new Set());
+                }
+                routeOperatorsByStation.get(memberId).add(lineOp);
+            }
+        }
+    }
     const osmBaselinePresets = [];
 
-    // Each OSM station file → one baseline preset.
+    // Each OSM station file → per-operator presets for that region.
     for (const file of osmStationFiles) {
         if (!existsSync(file)) continue;
         const data = JSON.parse(readFileSync(file, "utf8"));
         const regionId = data.region;
 
-        // Find enriched seeds whose coordinates are in this region and
-        // standalone stations from this region.
         const regionBbox = ctx.locale.osm?.regions?.find(
             (r) => r.id === regionId,
         )?.bbox;
         if (!regionBbox) continue;
 
-        const [w, s, e, n] = regionBbox;
+        const [bw, bs, be, bn] = regionBbox;
 
-        // Enriched seeds in this region: those whose OSM station record was
-        // attached and contributes to a seed.
-        const regionSeedStations = enrichedSeeds
-            .filter((seed) => {
-                // A seed is in the region if it has coords inside the bbox.
-                return (
-                    seed.lon >= w &&
-                    seed.lon <= e &&
-                    seed.lat >= s &&
-                    seed.lat <= n
-                );
-            })
-            .map((seed) => ({
-                id: seed.id,
-                lat: seed.lat,
-                lon: seed.lon,
-                mergeKey: seed.id,
-                name: seed.name,
-                nameEn: seed.nameEn,
-                routeIds: [], // OSM baseline has no routes.
-                sourceId: seed.id,
-            }));
-
-        // Standalone stations from this file.
-        const regionStandalone = standaloneStations.map((s) => ({
-            id: s.id,
-            lat: s.lat,
-            lon: s.lon,
-            mergeKey: s.id,
-            name: s.name,
-            nameEn: s.nameEn,
-            routeIds: [],
-            sourceId: s.id,
-        }));
-
-        const allStations = [...regionSeedStations, ...regionStandalone];
-
-        if (allStations.length === 0) continue;
-
-        const bbox = allStations.reduce(
-            ([bw, bs, be, bn], s) => [
-                Math.min(bw, s.lon),
-                Math.min(bs, s.lat),
-                Math.max(be, s.lon),
-                Math.max(bn, s.lat),
-            ],
-            [Infinity, Infinity, -Infinity, -Infinity],
+        // -- Standalone stations in this region (unattached OSM records).
+        const regionStandalone = standaloneStations.filter(
+            (st) =>
+                st.lon >= bw && st.lon <= be && st.lat >= bs && st.lat <= bn,
         );
 
-        osmBaselinePresets.push({
-            id: `osm-${regionId}`,
-            label: `All stations in ${regionId}`,
-            operator: "OpenStreetMap",
-            bbox: bbox[0] === Infinity ? regionBbox : bbox,
-            defaultColor: "#1f6f78", // STATION_FALLBACK_COLOR
-            routes: [],
-            stations: allStations,
-            source: { kind: "osm", namespace: "openstreetmap" },
-        });
+        if (regionStandalone.length === 0) continue;
+
+        // Group standalone stations by normalized operator.
+        /** @type {Map<string, object[]>} operatorName → stations[] */
+        const operatorGroups = new Map();
+        /** @type {object[]} */
+        const noOperatorStations = [];
+
+        for (const station of regionStandalone) {
+            const tagOps = splitOperators(station.operator, normalizeOp);
+            const routeOps =
+                routeOperatorsByStation.get(station.id) || new Set();
+            // Merge operator-tag operators with route-inferred operators.
+            const operators = [...new Set([...tagOps, ...routeOps])];
+            if (operators.length === 0) {
+                noOperatorStations.push(station);
+            } else {
+                for (const op of operators) {
+                    if (!operatorGroups.has(op)) {
+                        operatorGroups.set(op, []);
+                    }
+                    operatorGroups.get(op).push(station);
+                }
+            }
+        }
+
+        // -- Also include enriched seeds (GTFS stations with OSM attachments)
+        //    in per-operator OSM presets.  Major stations like Shibuya serve
+        //    multiple operators — the GTFS seed covers the transit agency
+        //    (e.g. Tokyo Metro), but the OSM operator preset (e.g. JR East)
+        //    should also include the station so users see full operator
+        //    coverage.
+        const regionEnriched = enrichedSeeds.filter(
+            (seed) =>
+                seed.lon >= bw &&
+                seed.lon <= be &&
+                seed.lat >= bs &&
+                seed.lat <= bn &&
+                seed.osmOperators &&
+                seed.osmOperators.length > 0,
+        );
+
+        for (const seed of regionEnriched) {
+            // Merge OSM tag operators with route-inferred operators for each
+            // OSM source node that was attached to this seed.
+            for (const rawOp of seed.osmOperators) {
+                const tagOps = splitOperators(rawOp, normalizeOp);
+                // Also check route membership for each attached OSM node.
+                const routeOps = new Set();
+                if (seed.osmSourceIds) {
+                    for (const osmId of seed.osmSourceIds) {
+                        const ro = routeOperatorsByStation.get(osmId);
+                        if (ro) {
+                            for (const op of ro) routeOps.add(op);
+                        }
+                    }
+                }
+                const ops = [...new Set([...tagOps, ...routeOps])];
+                for (const op of ops) {
+                    if (!operatorGroups.has(op)) {
+                        operatorGroups.set(op, []);
+                    }
+                    // Pseudo station record: mergeKey uses the GTFS seed id
+                    // so getSelectedStations merges this contribution with
+                    // the GTFS station at selection time.
+                    operatorGroups.get(op).push({
+                        id: seed.osmSourceIds?.[0] || seed.id,
+                        lat: seed.lat,
+                        lon: seed.lon,
+                        mergeKey: seed.id,
+                        name: seed.name,
+                        nameEn: seed.nameEn,
+                        operator: op,
+                    });
+                }
+            }
+        }
+
+        // -- Create per-operator presets (≥3 stations) and collect leftovers.
+        const mainOperatorPresets = [];
+        const leftoverStations = [...noOperatorStations];
+
+        for (const [canonicalOperator, stations] of operatorGroups) {
+            if (stations.length >= 3) {
+                const preset = buildOperatorPreset(
+                    regionId,
+                    canonicalOperator,
+                    stations,
+                );
+                mainOperatorPresets.push(preset);
+            } else {
+                leftoverStations.push(...stations);
+            }
+        }
+
+        // -- Small-operator + no-operator stations → "Other" coverage preset.
+        if (leftoverStations.length > 0) {
+            const otherPreset = buildOtherPreset(regionId, leftoverStations);
+            osmBaselinePresets.push(otherPreset);
+        }
+
+        // -- Match osmRouteLines to presets.
+        for (const preset of mainOperatorPresets) {
+            const presetOpCanonical = normalizeOp(preset.operator);
+            if (!presetOpCanonical) continue;
+
+            // Build station id set for quick lookup (memberStationIds are
+            // "osm:node:<id>" format; standalone station ids are the same).
+            const stationIdSet = new Set(
+                preset.stations.map((s) => s.sourceId),
+            );
+
+            const matchingRoutes = (ctx.osmRouteLines || []).filter((line) => {
+                const lineOp = normalizeOp(line.operator);
+                return lineOp === presetOpCanonical;
+            });
+
+            for (const line of matchingRoutes) {
+                const routeEntry = {
+                    id: line.id,
+                    name: line.name,
+                    color: line.color || preset.defaultColor,
+                    sourceId: line.sourceId,
+                    geometry: line.geometry,
+                };
+                preset.routes.push(routeEntry);
+
+                // Add route ID to stations that are members of this route.
+                for (const memberId of line.memberStationIds) {
+                    if (stationIdSet.has(memberId)) {
+                        const station = preset.stations.find(
+                            (s) => s.sourceId === memberId,
+                        );
+                        if (station) {
+                            station.routeIds.push(line.id);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Detect and warn about duplicate preset ids within this region.
+        const seenIds = new Set();
+        for (const p of mainOperatorPresets) {
+            if (seenIds.has(p.id)) {
+                console.warn(
+                    `  [conflate] DUPLICATE preset id "${p.id}" (operator "${p.operator}") in ${regionId}`,
+                );
+            } else {
+                seenIds.add(p.id);
+                osmBaselinePresets.push(p);
+            }
+        }
+
+        const totalPerOp = mainOperatorPresets.filter(
+            (p, i, arr) => arr.findIndex((x) => x.id === p.id) === i,
+        ).length;
+        const smallOpCount = operatorGroups.size - totalPerOp;
+        console.log(
+            `  [conflate] ${regionId}: ${totalPerOp} operator preset(s)` +
+                (smallOpCount > 0
+                    ? `, ${smallOpCount} small operator(s) folded into Other`
+                    : "") +
+                (leftoverStations.length > 0
+                    ? `, ${leftoverStations.length} station(s) in Other`
+                    : ""),
+        );
     }
 
     console.log(
-        `[conflate] ${osmBaselinePresets.length} OSM baseline preset(s)`,
+        `[conflate] ${osmBaselinePresets.length} OSM baseline preset(s) total`,
     );
 
     // Check invariants.
@@ -187,6 +325,122 @@ export async function conflateStage(ctx) {
         enrichedSeeds,
         osmBaselinePresets,
     });
+}
+
+// ─── OSM baseline preset builder helpers ──────────────────────────────────
+
+/**
+ * Slugify a name for use in preset IDs.
+ * @param {string} name
+ * @returns {string}
+ */
+function slugify(name) {
+    const slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+    // Use the slug only if it retains enough of the name to avoid collisions.
+    // For names with substantial ASCII content (e.g. "JR East" → "jr-east")
+    // the slug is fine.  For names with mostly non-ASCII characters
+    // (e.g. "JR東日本" → "jr") the slug is too generic and we append a hash.
+    if (slug && slug.length >= 5) return slug;
+    // Fallback: djb2 hash so preset ids stay deterministic.
+    let hash = 5381;
+    for (let i = 0; i < name.length; i++) {
+        hash = ((hash << 5) + hash + name.charCodeAt(i)) | 0;
+    }
+    const hashPart = (hash >>> 0).toString(36);
+    return slug ? `${slug}-${hashPart}` : `op${hashPart}`;
+}
+
+/**
+ * Build a per-operator OSM baseline preset.
+ *
+ * @param {string} regionId
+ * @param {string} canonicalOperator - normalized operator name
+ * @param {object[]} stations - OSM station records (original format with operator)
+ * @returns {object} preset
+ */
+function buildOperatorPreset(regionId, canonicalOperator, stations) {
+    const id = `osm-${regionId}-${slugify(canonicalOperator)}`;
+    const bbox = computeBbox(stations);
+
+    const stationContributions = stations.map((s) => ({
+        id: s.id,
+        lat: s.lat,
+        lon: s.lon,
+        mergeKey: s.mergeKey || s.id,
+        name: s.name,
+        nameEn: s.nameEn,
+        routeIds: [],
+        sourceId: s.id,
+        operator: canonicalOperator,
+    }));
+
+    return {
+        id,
+        label: canonicalOperator,
+        operator: canonicalOperator,
+        bbox,
+        defaultColor: "#1f6f78", // STATION_FALLBACK_COLOR
+        routes: [],
+        stations: stationContributions,
+        source: { kind: "osm", namespace: "openstreetmap" },
+        kind: "operator",
+    };
+}
+
+/**
+ * Build the "Other" coverage preset for small/no-operator stations.
+ *
+ * @param {string} regionId
+ * @param {object[]} stations - leftover OSM stations (no operator or <3 per operator)
+ * @returns {object} preset
+ */
+function buildOtherPreset(regionId, stations) {
+    const id = `osm-${regionId}-other`;
+    const bbox = computeBbox(stations);
+
+    const stationContributions = stations.map((s) => ({
+        id: s.id,
+        lat: s.lat,
+        lon: s.lon,
+        mergeKey: s.id,
+        name: s.name,
+        nameEn: s.nameEn,
+        routeIds: [],
+        sourceId: s.id,
+        operator: s.operator || undefined,
+    }));
+
+    return {
+        id,
+        label: `Other stations in ${regionId}`,
+        operator: "OpenStreetMap",
+        bbox,
+        defaultColor: "#1f6f78", // STATION_FALLBACK_COLOR
+        routes: [],
+        stations: stationContributions,
+        source: { kind: "osm", namespace: "openstreetmap" },
+        kind: "coverage",
+    };
+}
+
+/**
+ * Compute the bounding box of an array of { lon, lat } objects.
+ * @param {object[]} items - array with lon/lat fields
+ * @returns {[number, number, number, number]} [w, s, e, n]
+ */
+function computeBbox(items) {
+    return items.reduce(
+        ([bw, bs, be, bn], s) => [
+            Math.min(bw, s.lon),
+            Math.min(bs, s.lat),
+            Math.max(be, s.lon),
+            Math.max(bn, s.lat),
+        ],
+        [Infinity, Infinity, -Infinity, -Infinity],
+    );
 }
 
 // ─── Invariant checks ──────────────────────────────────────────────────────

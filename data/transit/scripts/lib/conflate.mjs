@@ -182,11 +182,22 @@ export function attachStationRecords({
         for (const att of contributors) {
             const loose = looseRecords.find((r) => r.id === att.looseId);
             if (!loose) continue;
-            // Contribute nameEn, wikidata if seed doesn't have them.
+            // Contribute nameEn, wikidata, operator, and OSM source id if seed
+            // doesn't have them.
             if (!enriched.nameEn && loose.nameEn)
                 enriched.nameEn = loose.nameEn;
             if (!enriched.wikidata && loose.wikidata)
                 enriched.wikidata = loose.wikidata;
+            if (loose.operator) {
+                if (!enriched.osmOperators) enriched.osmOperators = [];
+                if (!enriched.osmOperators.includes(loose.operator))
+                    enriched.osmOperators.push(loose.operator);
+            }
+            // Track which OSM records contributed to this seed, so we can
+            // include the seed in per-operator OSM presets.
+            if (!enriched.osmSourceIds) enriched.osmSourceIds = [];
+            if (!enriched.osmSourceIds.includes(loose.id))
+                enriched.osmSourceIds.push(loose.id);
         }
         return enriched;
     });

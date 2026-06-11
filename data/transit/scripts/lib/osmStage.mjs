@@ -8,6 +8,7 @@ import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
 
 import { mapOsmNode, dedupeOsmStations } from "./osmStations.mjs";
+import { processOsmRoutes } from "./osmRoutes.mjs";
 
 /**
  * Run the OSM extraction stage.
@@ -209,5 +210,282 @@ export async function osmStage(ctx) {
         );
 
         ctx.osmStationFiles.push(outputPath);
+    }
+
+    // ─── Route relation extraction ────────────────────────────────────────
+    //
+    // For each region, extract route relations from the same window PBF and
+    // convert them to OSM XML for parsing.  Routes are optional — failures here
+    // are warnings, not fatal.
+
+    console.log("[osm] Extracting route relations...");
+    const allRelations = [];
+    /** @type {Map<number, {lat: number, lon: number}>} */
+    const allNodeCoords = new Map();
+    let routeRelationStats = { total: 0, droppedNoTags: 0, parsed: 0 };
+
+    for (const region of targetRegions) {
+        // Determine PBF path (same logic as station extraction above).
+        let pbfPath;
+        if (hasJapanPbf) {
+            pbfPath = join(cacheDir, `${region.id}-window.osm.pbf`);
+        } else if (region.pbf) {
+            pbfPath = join(cacheDir, `${region.id}-latest.osm.pbf`);
+        } else {
+            console.warn(
+                `  [osm/routes] No PBF source for ${region.id} — skipping routes.`,
+            );
+            continue;
+        }
+
+        if (!existsSync(pbfPath)) {
+            console.warn(
+                `  [osm/routes] PBF not found: ${pbfPath} — skipping routes for ${region.id}.`,
+            );
+            continue;
+        }
+
+        try {
+            // Tags-filter: route relations only.
+            const filteredRoutesPbf = join(
+                cacheDir,
+                `${region.id}-routes.osm.pbf`,
+            );
+            if (!existsSync(filteredRoutesPbf)) {
+                console.log(
+                    `  [osm/routes] Filtering route tags for ${region.id}...`,
+                );
+                execFileSync(
+                    "osmium",
+                    [
+                        "tags-filter",
+                        pbfPath,
+                        "r/route=train",
+                        "r/route=subway",
+                        "r/route=light_rail",
+                        "r/route=monorail",
+                        "r/route_master=train",
+                        "r/route_master=subway",
+                        "r/route_master=light_rail",
+                        "r/route_master=monorail",
+                        "-o",
+                        filteredRoutesPbf,
+                        "-O",
+                    ],
+                    { stdio: "inherit" },
+                );
+            } else {
+                console.log(
+                    `  [osm/routes] Using cached filtered: ${filteredRoutesPbf}`,
+                );
+            }
+
+            // Convert filtered PBF → OSM XML for relation parsing.
+            const routesOsmPath = join(cacheDir, `${region.id}-routes.osm`);
+            if (!existsSync(routesOsmPath)) {
+                console.log(
+                    `  [osm/routes] Converting to OSM XML for ${region.id}...`,
+                );
+                execFileSync(
+                    "osmium",
+                    ["cat", filteredRoutesPbf, "-o", routesOsmPath, "-O"],
+                    { stdio: "inherit" },
+                );
+            } else {
+                console.log(
+                    `  [osm/routes] Using cached XML: ${routesOsmPath}`,
+                );
+            }
+
+            // Parse the OSM XML — extract relation elements using a streaming
+            // line-based approach (avoids loading the full DOM into memory).
+            console.log(`  [osm/routes] Parsing relations for ${region.id}...`);
+            const xmlRl = createInterface({
+                input: createReadStream(routesOsmPath, { encoding: "utf8" }),
+                crlfDelay: Infinity,
+            });
+
+            let currentRelation = null;
+            let inRelation = false;
+
+            // Collect node coordinates for spatial stop resolution in
+            // processOsmRoutes — many route relations reference
+            // stop_position nodes that aren't in the station cache.
+            /** @type {Map<number, {lat: number, lon: number}>} */
+            const nodeCoords = new Map();
+
+            for await (const line of xmlRl) {
+                const trimmed = line.trim();
+
+                // <node id="12345" ... lat="35.6" lon="139.7" ... />
+                // Collect coordinates for spatial matching later.
+                if (trimmed.startsWith("<node ")) {
+                    const nidMatch = trimmed.match(/id="(\d+)"/);
+                    const nlatMatch = trimmed.match(/lat="([^"]+)"/);
+                    const nlonMatch = trimmed.match(/lon="([^"]+)"/);
+                    if (nidMatch && nlatMatch && nlonMatch) {
+                        nodeCoords.set(parseInt(nidMatch[1], 10), {
+                            lat: parseFloat(nlatMatch[1]),
+                            lon: parseFloat(nlonMatch[1]),
+                        });
+                    }
+                    continue;
+                }
+
+                // <relation id="12345" ...>
+                if (trimmed.startsWith("<relation ")) {
+                    currentRelation = { tags: [], members: [] };
+
+                    // Extract the id attribute.
+                    const idMatch = trimmed.match(/id="(\d+)"/);
+                    if (idMatch) {
+                        currentRelation.id = parseInt(idMatch[1], 10);
+                    }
+
+                    // Self-closing tag: <relation ... /> — treat as empty.
+                    if (trimmed.endsWith("/>")) {
+                        // No members or tags, skip.
+                        currentRelation = null;
+                        continue;
+                    }
+
+                    inRelation = true;
+                    continue;
+                }
+
+                // Close tag — handle before the !inRelation guard so it
+                // fires even when we are inside a relation.
+                if (trimmed === "</relation>") {
+                    if (inRelation && currentRelation) {
+                        const tags = currentRelation.tags;
+                        const hasRouteTag = tags.some(
+                            (t) => t.k === "route" || t.k === "route_master",
+                        );
+                        if (hasRouteTag) {
+                            // Convert to the format processOsmRoutes expects.
+                            const tagObj = {};
+                            for (const t of tags) {
+                                tagObj[t.k] = t.v;
+                            }
+
+                            allRelations.push({
+                                id: currentRelation.id,
+                                properties: {
+                                    "@id": currentRelation.id,
+                                    tags: tagObj,
+                                    members: currentRelation.members,
+                                },
+                            });
+                            routeRelationStats.parsed++;
+                        } else {
+                            routeRelationStats.droppedNoTags++;
+                        }
+                    }
+                    inRelation = false;
+                    currentRelation = null;
+                    continue;
+                }
+
+                if (!inRelation || !currentRelation) {
+                    continue;
+                }
+
+                // <tag k="..." v="..."/>
+                if (trimmed.startsWith("<tag ")) {
+                    const kMatch = trimmed.match(/k="([^"]*)"/);
+                    const vMatch = trimmed.match(/v="([^"]*)"/);
+                    if (kMatch && vMatch) {
+                        currentRelation.tags.push({
+                            k: kMatch[1],
+                            v: vMatch[1],
+                        });
+                    }
+                    continue;
+                }
+
+                // <member type="..." ref="..." role="..."/>
+                if (trimmed.startsWith("<member ")) {
+                    const typeMatch = trimmed.match(/type="([^"]*)"/);
+                    const refMatch = trimmed.match(/ref="(\d+)"/);
+                    const roleMatch = trimmed.match(/role="([^"]*)"/);
+                    if (typeMatch && refMatch) {
+                        currentRelation.members.push({
+                            type: typeMatch[1],
+                            ref: parseInt(refMatch[1], 10),
+                            role: roleMatch ? roleMatch[1] : "",
+                        });
+                    }
+                    continue;
+                }
+            }
+
+            const regionParsed =
+                routeRelationStats.parsed - routeRelationStats.total;
+            // Merge this region's node coords into the global map.
+            for (const [id, coords] of nodeCoords) {
+                if (!allNodeCoords.has(id)) allNodeCoords.set(id, coords);
+            }
+
+            routeRelationStats.total = routeRelationStats.parsed;
+            console.log(
+                `  [osm/routes] ${regionParsed} relations parsed for ${region.id} ` +
+                    `(${nodeCoords.size} node coords collected)`,
+            );
+        } catch (err) {
+            console.warn(
+                `  [osm/routes] Route extraction failed for ${region.id}: ${err.message}`,
+            );
+            console.warn(
+                "  [osm/routes] Routes are optional — continuing without them.",
+            );
+        }
+    }
+
+    // Load station records from cached OSM station files.
+    console.log(
+        `[osm/routes] Loading station records from ${ctx.osmStationFiles.length} file(s)...`,
+    );
+    const allStationRecords = [];
+    for (const filePath of ctx.osmStationFiles) {
+        try {
+            let data = "";
+            for await (const chunk of createReadStream(filePath, {
+                encoding: "utf8",
+            })) {
+                data += chunk;
+            }
+            const parsed = JSON.parse(data);
+            if (parsed.records && Array.isArray(parsed.records)) {
+                allStationRecords.push(...parsed.records);
+            }
+        } catch (err) {
+            console.warn(
+                `  [osm/routes] Could not read station file ${filePath}: ${err.message}`,
+            );
+        }
+    }
+
+    // Process routes.
+    if (allRelations.length > 0 && allStationRecords.length > 0) {
+        console.log(
+            `[osm/routes] Processing ${allRelations.length} relations with ${allStationRecords.length} station records...`,
+        );
+        const result = processOsmRoutes(
+            allRelations,
+            allStationRecords,
+            ctx.locale,
+            allNodeCoords,
+        );
+        ctx.osmRouteLines = result.lines;
+        console.log(
+            `[osm/routes] ${result.stats.totalRelations} relations → ${result.stats.linesKept} lines ` +
+                `(${result.stats.linesDroppedGtfs} dropped via operator gating, ` +
+                `${result.stats.linesTooFewStations} too few stations)`,
+        );
+    } else {
+        console.log(
+            `[osm/routes] No route relations (${allRelations.length}) or station records (${allStationRecords.length}) — skipping route processing.`,
+        );
+        ctx.osmRouteLines = [];
     }
 }
