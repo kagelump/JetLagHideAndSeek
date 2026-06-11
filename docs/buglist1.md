@@ -10,7 +10,8 @@
 
 ## Train lines
 
-- Add all of the other Tokyo transit lines, see if we can cover all Japan with some generic way
+- OSM based train lines (eg JR East) rendering is super broken.
+- Add all of the other Tokyo transit lines, see if we can cover all Japan with some generic way (WIP, has bugs)
 
 ### Offline data
 
@@ -22,18 +23,9 @@
 
 - Set to my location button should be smaller or placed in a better location.
 - Tap to set pin should be reversed, tap + hold to set pin instead (assuming there isn't another pin nearby)
-- Toggle for Answer should probably be near the top to make it easier to tap
+    - This is partially implemented, but it should be set on lift, so it doesn't interfere with panning the map.
 - Add some sort of loading / calculating animation when work (masking, etc) is being done.
 - Delta encode bundles docs/tasks/admin-boundaries-delta-encoding.md
-
-## Matching
-
-- Helper polygons should have stronger more visible lines
-- If transit matching is selected but no transit lines are in settings, then show an error saying that a transit line must be selected in settings
-
-## Radar
-
-- I don't like the distance box changing from carousel to grid anymore, just keep it as a carousel without changing
 
 ## Thermometer
 
@@ -49,20 +41,12 @@
 - Must load all POIs in play area
 - Aquarium / Amusement Park overflows weirdly. We should use carousels for category items
 
-## POI
-
-Maybe filter out airports that are military=airfield and/or landuse=military
-
 ## Measuring
-
-### Body of water
-
-- Include waterway=stream
 
 ## Android Issues
 
 - UI flicker when clicking into a menu item
-- Back button doesn't work from question deatils sheet (swipe to go back works)
+- Back button doesn't always seem to work from question deatils sheet (swipe to go back works)
 - Questions -> [Radar|Measuring|Tenticles] Very long delay or just doesn't work
 -
 
