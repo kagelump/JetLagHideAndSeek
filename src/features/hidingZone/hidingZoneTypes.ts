@@ -29,6 +29,8 @@ export type HidingZonePreset = {
     id: string;
     label: string;
     operator: string;
+    /** "operator" for GTFS or per-operator OSM presets, "coverage" for full-region baselines. */
+    kind?: "operator" | "coverage";
     routes: TransitRoute[];
     source: TransitSource;
     stations: TransitStationContribution[];

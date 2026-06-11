@@ -874,9 +874,13 @@ describe("MapAppScreen", () => {
         fireEvent.press(screen.getByTestId("main-settings-row"));
         fireEvent.press(screen.getByTestId("settings-hiding-zone-row"));
 
-        expect(screen.getByText("Suggested presets")).toBeTruthy();
-        expect(screen.getByText("Tokyo Metro")).toBeTruthy();
-        expect(screen.getByText("Toei Subway")).toBeTruthy();
+        expect(screen.getByText("Operators in your play area")).toBeTruthy();
+        expect(
+            screen.getAllByText("Tokyo Metro").length,
+        ).toBeGreaterThanOrEqual(1);
+        expect(
+            screen.getAllByText("Toei Subway").length,
+        ).toBeGreaterThanOrEqual(1);
         expect(screen.getByText("0 presets selected")).toBeTruthy();
         expect(
             screen.getByTestId("hiding-zone-radius-meters").props.children,

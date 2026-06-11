@@ -20,6 +20,8 @@ export type TransitStationContribution = {
     name: string;
     /** Best English / romanized name across sources. */
     nameEn?: string;
+    /** Normalized operator name (from OSM tags or GTFS feed). */
+    operator?: string;
     routeIds: string[];
     sourceId: string;
 };

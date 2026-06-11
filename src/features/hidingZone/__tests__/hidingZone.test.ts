@@ -1,8 +1,10 @@
-import { bboxIntersects } from "@/shared/geojson";
+import { bboxIntersects, type Bbox } from "@/shared/geojson";
 import {
     buildHidingZoneFeatureCollection,
     buildRouteFeatureCollection,
     buildStationFeatureCollection,
+    clipStationsToPlayArea,
+    getPresetPlayAreaStats,
     getSelectedRoutes,
     getSelectedStations,
     getSuggestedPresetIds,
@@ -360,5 +362,91 @@ describe("hidingZone helpers", () => {
         expect(
             Math.min(...movedCoordinates.map(([lon]) => lon)),
         ).toBeGreaterThan(139.8);
+    });
+});
+
+describe("getPresetPlayAreaStats", () => {
+    it("counts stations within the play area bbox", () => {
+        const presets = [
+            {
+                id: "test-preset",
+                stations: [
+                    { lon: 139.7, lat: 35.6 }, // inside
+                    { lon: 139.8, lat: 35.7 }, // inside
+                    { lon: 140.5, lat: 36.0 }, // outside
+                ],
+            },
+        ] as any;
+        const bbox: Bbox = [139.5, 35.5, 140.0, 35.8];
+        const stats = getPresetPlayAreaStats(presets, bbox);
+        expect(stats).toEqual([{ presetId: "test-preset", stationsInArea: 2 }]);
+    });
+
+    it("returns zero for presets with no stations in bbox", () => {
+        const presets = [
+            {
+                id: "far-preset",
+                stations: [{ lon: 141.0, lat: 36.0 }],
+            },
+        ] as any;
+        const bbox: Bbox = [139.5, 35.5, 140.0, 35.8];
+        expect(getPresetPlayAreaStats(presets, bbox)).toEqual([
+            { presetId: "far-preset", stationsInArea: 0 },
+        ]);
+    });
+
+    it("handles multiple presets", () => {
+        const presets = [
+            {
+                id: "a",
+                stations: [{ lon: 139.7, lat: 35.6 }],
+            },
+            {
+                id: "b",
+                stations: [
+                    { lon: 139.7, lat: 35.6 },
+                    { lon: 140.5, lat: 36.0 },
+                ],
+            },
+        ] as any;
+        const bbox: Bbox = [139.5, 35.5, 140.0, 35.8];
+        expect(getPresetPlayAreaStats(presets, bbox)).toEqual([
+            { presetId: "a", stationsInArea: 1 },
+            { presetId: "b", stationsInArea: 1 },
+        ]);
+    });
+});
+
+describe("clipStationsToPlayArea", () => {
+    const stations: any[] = [
+        { id: "inside", lon: 139.7, lat: 35.6 },
+        { id: "outside", lon: 141.0, lat: 36.0 },
+        { id: "edge", lon: 139.9, lat: 35.7 },
+    ];
+    const bbox: Bbox = [139.5, 35.5, 140.0, 35.8];
+
+    it("filters stations outside the play area", () => {
+        const result = clipStationsToPlayArea(stations, bbox, 600);
+        expect(result).toHaveLength(2);
+        expect(result.map((s: any) => s.id)).toEqual(["inside", "edge"]);
+    });
+
+    it("keeps stations just outside the bbox when radius margin covers them", () => {
+        const edgeStations = [
+            { id: "barely-out", lon: 140.001, lat: 35.6 },
+        ] as any;
+        const result = clipStationsToPlayArea(edgeStations, bbox, 600);
+        // 600m ~ 0.0054 deg, so 140.001 is within expanded bbox
+        expect(result).toHaveLength(1);
+    });
+
+    it("returns all stations when play area is undefined", () => {
+        const result = clipStationsToPlayArea(stations, undefined, 600);
+        expect(result).toEqual(stations);
+    });
+
+    it("returns empty array for empty stations", () => {
+        const result = clipStationsToPlayArea([], bbox, 600);
+        expect(result).toEqual([]);
     });
 });
