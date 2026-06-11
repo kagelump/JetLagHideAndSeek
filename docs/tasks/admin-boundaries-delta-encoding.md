@@ -86,8 +86,13 @@ field so the client can dispatch decoders.
 **Encoding rules:**
 
 - `coordinates` is a flat `number[]`, not `Position[][]`.
-- Ring boundaries: a `null` or sentinel separates rings within a Polygon;
-  MultiPolygon uses a second sentinel for polygon boundaries.
+- Ring boundaries: **RESOLVED (2026-06-12): length-prefixed rings, not null
+  sentinels** — `[ringLen, x0, y0, dx1, dy1, …]` per ring, rings
+  concatenated; a MultiPolygon is prefixed per polygon by its ring count.
+  This adopts Review 1's suggestion 1 (pure `number[]`, no mixed-array
+  JSON, no sentinel scanning). The offline-packs epic (T6 encoder, T7
+  decoder) is built on this resolution; do not implement the null-sentinel
+  variant described in earlier drafts of this doc.
 - The first two ints of a ring are the _absolute_ integer coords of the first
   vertex (already quantized, relative to extractBbox min). All subsequent
   pairs are signed deltas from the previous vertex.
