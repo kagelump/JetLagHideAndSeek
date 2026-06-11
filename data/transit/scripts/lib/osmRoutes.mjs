@@ -286,13 +286,17 @@ function buildLine(
 
     const lineId = createOsmElementId("relation", id);
     const name = tags.name || tags.ref || `Line ${id}`;
-    // colour (British spelling) or color
+    // colour (British spelling) or color — validate as hex; drop CSS names
     const colorRaw = tags.colour || tags.color || undefined;
-    const color = colorRaw
+    const colorCandidate = colorRaw
         ? colorRaw.startsWith("#")
             ? colorRaw
             : `#${colorRaw}`
         : undefined;
+    const color =
+        colorCandidate && /^#[0-9a-fA-F]{3,8}$/.test(colorCandidate)
+            ? colorCandidate
+            : undefined;
     // Prefer the primary relation's operator.  Fall back to the first
     // variant that has one — many route_masters omit the operator tag
     // but set it on the directional variants (e.g. Keihin-Tōhoku Line).
@@ -307,107 +311,134 @@ function buildLine(
         }
     }
 
-    // Resolve station members across all variants.
-    const stationIds = new Set();
-    const allMemberNodes = [];
+    // Resolve station members per variant — each variant produces one
+    // ordered station list, giving one LineString segment in the output
+    // MultiLineString.  This keeps branches (e.g. Utsunomiya vs Yokosuka
+    // on the Shōnan–Shinjuku Line) as separate segments instead of
+    // interleaving all stops into one polyline with wild jumps.
+    const allStationIds = new Set();
+    const branchLines = [];
 
     for (const rel of variants) {
         const members = rel.members ?? rel.properties?.members ?? [];
+        const variantStationIds = [];
+
         for (const m of members) {
             const role = m.role ?? "";
-            if (role === "stop" || role === "station") {
-                const ref = m.ref;
-                // Try exact OSM node id match.
-                const canonicalId = createOsmElementId("node", ref);
-                if (stationById.has(canonicalId)) {
-                    stationIds.add(canonicalId);
-                } else if (
-                    nodeCoords &&
-                    nodeCoords.has(
-                        typeof ref === "number" ? ref : parseInt(ref, 10),
-                    )
-                ) {
-                    // Spatial fallback: the stop node (often a stop_position)
-                    // isn't in the station cache but we have its coordinates.
-                    // Match ALL named stations within range — multi-operator
-                    // hubs like Shinjuku have separate OSM nodes for each
-                    // operator's entrance, and we want to attribute the stop
-                    // to all of them for full operator coverage.
-                    const nid =
-                        typeof ref === "number" ? ref : parseInt(ref, 10);
-                    const nc = nodeCoords.get(nid);
-                    // Use a wider radius than conflation — stop_position
-                    // nodes for large station complexes can be far from
-                    // individual operator entrance nodes.
-                    const maxDist = (localeConfig.maxClusterMeters ?? 150) * 2;
-                    let matched = false;
-                    for (const station of stationById.values()) {
-                        if (!station.name) continue;
-                        const dist = haversineM(
-                            nc.lat,
-                            nc.lon,
-                            station.lat,
-                            station.lon,
-                        );
-                        if (dist < maxDist) {
-                            stationIds.add(station.id);
-                            matched = true;
-                        }
+            if (role !== "stop" && role !== "station") continue;
+
+            const ref = m.ref;
+            let resolvedId = null;
+
+            // Try exact OSM node id match.
+            const canonicalId = createOsmElementId("node", ref);
+            if (stationById.has(canonicalId)) {
+                resolvedId = canonicalId;
+            } else if (
+                nodeCoords &&
+                nodeCoords.has(
+                    typeof ref === "number" ? ref : parseInt(ref, 10),
+                )
+            ) {
+                // Spatial fallback: the stop node (often a stop_position)
+                // isn't in the station cache but we have its coordinates.
+                // Pick the closest station within range.
+                const nid = typeof ref === "number" ? ref : parseInt(ref, 10);
+                const nc = nodeCoords.get(nid);
+                const maxDist = (localeConfig.maxClusterMeters ?? 150) * 2;
+                let bestEffectiveDist = Infinity;
+                let bestStationId = null;
+                for (const station of stationById.values()) {
+                    if (!station.name) continue;
+                    const dist = haversineM(
+                        nc.lat,
+                        nc.lon,
+                        station.lat,
+                        station.lon,
+                    );
+                    if (dist >= maxDist) continue;
+                    const railway = station.tags?.railway;
+                    const penalty =
+                        railway === "station"
+                            ? 0
+                            : railway === "halt"
+                              ? 25
+                              : 50;
+                    const effectiveDist = dist + penalty;
+                    if (effectiveDist < bestEffectiveDist) {
+                        bestEffectiveDist = effectiveDist;
+                        bestStationId = station.id;
                     }
-                    if (!matched) {
-                        stats.unresolvedStops++;
-                    }
+                }
+                if (bestStationId) {
+                    resolvedId = bestStationId;
                 } else {
-                    // Resolve by spatial + name lookup.
-                    const nodeTags = m.tags ?? {};
-                    const mName = nodeTags.name;
-                    if (mName) {
-                        const resolved = resolveStopMember(
-                            m,
-                            stationByName,
-                            localeConfig,
-                        );
-                        if (resolved) {
-                            stationIds.add(resolved.id);
-                        } else {
-                            stats.unresolvedStops++;
-                        }
+                    stats.unresolvedStops++;
+                }
+            } else {
+                // Resolve by spatial + name lookup.
+                const nodeTags = m.tags ?? {};
+                const mName = nodeTags.name;
+                if (mName) {
+                    const resolved = resolveStopMember(
+                        m,
+                        stationByName,
+                        localeConfig,
+                    );
+                    if (resolved) {
+                        resolvedId = resolved.id;
                     } else {
                         stats.unresolvedStops++;
                     }
+                } else {
+                    stats.unresolvedStops++;
                 }
-                allMemberNodes.push(m);
+            }
+
+            if (resolvedId) {
+                variantStationIds.push(resolvedId);
+                allStationIds.add(resolvedId);
+            }
+        }
+
+        // Build one LineString for this variant's ordered stops.
+        if (variantStationIds.length >= 2) {
+            const coords = [];
+            for (const sid of variantStationIds) {
+                const s = stationById.get(sid);
+                if (!s) continue;
+                const c = [s.lon, s.lat];
+                // Deduplicate consecutive identical coordinates.
+                const last = coords[coords.length - 1];
+                if (last && last[0] === c[0] && last[1] === c[1]) continue;
+                coords.push(c);
+            }
+            if (coords.length >= 2) {
+                branchLines.push(coords);
             }
         }
     }
 
-    if (stationIds.size < 2) {
+    if (allStationIds.size < 2) {
         stats.linesTooFewStations++;
         return null;
     }
 
-    // Build geometry from member ways (simplified — just use stop positions
-    // as a fallback polyline).
-    const stopCoords = [...stationIds]
-        .map((sid) => stationById.get(sid))
-        .filter(Boolean)
-        .map((s) => [s.lon, s.lat]);
-
     const geometry = {
         type: "MultiLineString",
-        coordinates: stopCoords.length >= 2 ? [stopCoords] : [],
+        coordinates: branchLines,
     };
 
     return {
         id: lineId,
         name,
-        color: color || "#888888",
+        color: color || undefined,
         sourceId: String(id),
         operator,
         /** Raw network tag — preserved for two-pass operator inference. */
         networkTag: tags.network || undefined,
         geometry,
-        memberStationIds: [...stationIds],
+        memberStationIds: [...allStationIds],
     };
 }
 
