@@ -10,6 +10,7 @@ import { processGtfsFeed } from "./lib/gtfs.mjs";
 import { generateNotice } from "./lib/notice.mjs";
 import { emitStage } from "./lib/emit.mjs";
 import { osmStage } from "./lib/osmStage.mjs";
+import { conflateStage } from "./lib/conflateStage.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const transitDir = resolve(scriptDir, "..");
@@ -131,6 +132,13 @@ const STAGES = [
         async run(ctx) {
             console.log("[osm] Extracting OSM station nodes...");
             await osmStage(ctx);
+        },
+    },
+    {
+        name: "conflate",
+        async run(ctx) {
+            console.log("[conflate] Running station conflation...");
+            await conflateStage(ctx);
         },
     },
     {

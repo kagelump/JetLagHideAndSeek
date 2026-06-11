@@ -43,6 +43,17 @@ export function assignPresetsToRegions(presets, regions) {
     }
 
     for (const preset of presets) {
+        // OSM baseline presets: id is "osm-<regionId>" → assign to that region.
+        if (preset.id.startsWith("osm-")) {
+            const regionId = preset.id.slice(4);
+            if (map.has(regionId)) {
+                map.get(regionId).push(preset);
+            } else {
+                map.get(regions[0].id).push(preset);
+            }
+            continue;
+        }
+
         const [lng, lat] = presetCenter(preset);
         const idx = regionIndexForPoint(regionBboxes, lng, lat);
         if (idx >= 0) {
@@ -185,7 +196,10 @@ export async function emitStage(ctx) {
         return;
     }
 
-    const presets = ctx.gtfsPresets || [];
+    const presets = [
+        ...(ctx.gtfsPresets || []),
+        ...(ctx.osmBaselinePresets || []),
+    ];
 
     // Assign presets to regions.
     const regionPresets = assignPresetsToRegions(presets, regions);
