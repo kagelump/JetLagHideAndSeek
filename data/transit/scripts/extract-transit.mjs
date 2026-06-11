@@ -9,6 +9,7 @@ import { loadEnv, fetchToCache } from "./lib/cache.mjs";
 import { processGtfsFeed } from "./lib/gtfs.mjs";
 import { generateNotice } from "./lib/notice.mjs";
 import { emitStage } from "./lib/emit.mjs";
+import { osmStage } from "./lib/osmStage.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const transitDir = resolve(scriptDir, "..");
@@ -123,6 +124,13 @@ const STAGES = [
 
             ctx.gtfsPresets = presets;
             ctx.gtfsStats = allStats;
+        },
+    },
+    {
+        name: "osm",
+        async run(ctx) {
+            console.log("[osm] Extracting OSM station nodes...");
+            await osmStage(ctx);
         },
     },
     {

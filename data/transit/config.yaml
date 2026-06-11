@@ -12,25 +12,38 @@ locales:
       aliases: []
 
       osm:
-          # Region bboxes for preset assignment (T3).  OSM extraction
-          # (station nodes, route relations) is added in T5.
           regions:
               - id: japan-kanto
                 bbox: [138.4, 34.8, 140.9, 37.1]
+                pbf: "https://download.geofabrik.de/asia/japan/kanto-latest.osm.pbf"
               - id: japan-kansai
                 bbox: [134.5, 33.5, 136.5, 35.8]
+                pbf: "https://download.geofabrik.de/asia/japan/kansai-latest.osm.pbf"
               - id: japan-chubu
                 bbox: [136.2, 34.6, 138.6, 37.8]
+                pbf: "https://download.geofabrik.de/asia/japan/chubu-latest.osm.pbf"
               - id: japan-tohoku
                 bbox: [139.5, 36.9, 142.0, 41.6]
+                pbf: "https://download.geofabrik.de/asia/japan/tohoku-latest.osm.pbf"
               - id: japan-chugoku
                 bbox: [130.7, 33.3, 134.5, 36.0]
+                pbf: "https://download.geofabrik.de/asia/japan/chugoku-latest.osm.pbf"
               - id: japan-kyushu
                 bbox: [129.3, 30.9, 132.5, 34.2]
+                pbf: "https://download.geofabrik.de/asia/japan/kyushu-latest.osm.pbf"
               - id: japan-shikoku
                 bbox: [131.9, 32.5, 134.8, 34.5]
+                pbf: "https://download.geofabrik.de/asia/japan/shikoku-latest.osm.pbf"
               - id: japan-hokkaido
                 bbox: [139.5, 41.3, 146.0, 45.7]
+                pbf: "https://download.geofabrik.de/asia/japan/hokkaido-latest.osm.pbf"
+          stationTags:
+              [
+                  "n/railway=station",
+                  "n/railway=halt",
+                  "n/public_transport=station",
+              ]
+          routeTypes: [train, subway, light_rail, monorail]
 
       gtfs:
           - id: tokyo-metro

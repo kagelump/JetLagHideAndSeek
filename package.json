@@ -45,7 +45,7 @@
         "test:geos": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.geos.js",
         "test:data:default-zones": "node scripts/build-default-zone-metadata.mjs --check",
         "test:data:odpt": "node --test data/odpt/scripts/fetch-odpt.test.mjs",
-        "test:data:transit": "node --test data/transit/scripts/lib/config.test.mjs data/transit/scripts/lib/gtfs.test.mjs",
+        "test:data:transit": "node --test data/transit/scripts/lib/config.test.mjs data/transit/scripts/lib/gtfs.test.mjs data/transit/scripts/lib/osmStations.test.mjs",
         "test:data:poi-selectors": "node --import tsx scripts/emit-poi-selectors.mjs --check",
         "test:data:geofabrik": "node --test data/geofabrik/scripts/poiReducer.test.mjs",
         "test:e2e": "maestro test e2e/smoke.yaml && maestro test e2e/play-area.yaml && maestro test e2e/hiding-zone.yaml && maestro test e2e/radar-question.yaml && maestro test e2e/transit-line-question.yaml",
