@@ -44,19 +44,13 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kanto-other",
                     label: "Other stations in japan-kanto",
-                    bbox: [138.4190544, 34.9060338, 140.8402233, 37.0972316],
+                    bbox: [138.4190544, 35.1276923, 140.8402233, 37.0972316],
                     kind: "coverage",
                 },
                 {
                     id: "osm-japan-kanto-jr-east",
                     label: "JR East",
                     bbox: [138.4094028, 34.8170415, 140.8921829, 37.0947862],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kanto-keikyu",
-                    label: "Keikyu",
-                    bbox: [139.5803465, 35.1778307, 139.7882659, 35.638715],
                     kind: "operator",
                 },
                 {
@@ -86,13 +80,13 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kanto-sotetsu",
                     label: "Sotetsu",
-                    bbox: [139.3894064, 35.3959679, 139.7284866, 35.659097],
+                    bbox: [139.3916744, 35.3964559, 139.7284866, 35.659097],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kanto-op1cwatn1",
                     label: "富士急行",
-                    bbox: [138.7689798, 35.3075286, 138.9621956, 35.6129342],
+                    bbox: [138.7689798, 35.4835487, 138.942183, 35.6129342],
                     kind: "operator",
                 },
                 {
@@ -104,31 +98,31 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kanto-op1otocjs",
                     label: "湘南モノレール株式会社",
-                    bbox: [139.4875422, 35.3110438, 139.5314325, 35.3543087],
+                    bbox: [139.4877046, 35.3117271, 139.5313546, 35.3523864],
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kanto-op1jhgr94",
-                    label: "江ノ島電鉄株式会社",
-                    bbox: [139.4826015, 35.3043634, 139.5504286, 35.3397222],
+                    id: "osm-japan-kanto-jr-central",
+                    label: "JR Central",
+                    bbox: [138.4130768, 34.9755818, 139.766706, 35.6812546],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kanto-keikyu",
+                    label: "Keikyu",
+                    bbox: [139.5803465, 35.1778307, 139.7882659, 35.6554012],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kanto-op1gzny3d",
                     label: "横浜高速鉄道",
-                    bbox: [139.6202973, 35.4421165, 139.6509129, 35.4662066],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kanto-yokohama-municipal-subway",
-                    label: "Yokohama Municipal Subway",
-                    bbox: [139.4659913, 35.3959679, 139.6468752, 35.5686778],
+                    bbox: [139.6231953, 35.4421165, 139.6509129, 35.4662066],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kanto-tokyu-railways",
                     label: "Tokyu Railways",
-                    bbox: [139.4445901, 35.4642692, 139.8335333, 36.7478743],
+                    bbox: [139.4445901, 35.4662066, 139.8335333, 36.7478743],
                     kind: "operator",
                 },
                 {
@@ -144,21 +138,9 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kanto-jr-central",
-                    label: "JR Central",
-                    bbox: [138.4009535, 34.9755818, 139.7696216, 35.681935],
-                    kind: "operator",
-                },
-                {
                     id: "osm-japan-kanto-opd9tpo2",
                     label: "箱根登山鉄道",
                     bbox: [139.0359155, 35.2345141, 139.1450197, 35.2508461],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kanto-saitama-new-urban-transit-co-ltd",
-                    label: "Saitama New Urban Transit Co., Ltd.",
-                    bbox: [139.6000557, 35.9063869, 139.6247029, 36.0139563],
                     kind: "operator",
                 },
                 {
@@ -170,19 +152,25 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kanto-odakyu",
                     label: "Odakyu",
-                    bbox: [138.9341778, 35.2556862, 139.701603, 35.692452],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kanto-op1njuj6",
-                    label: "上毛電気鉃道",
-                    bbox: [139.0749235, 36.294102, 139.3787733, 36.4257745],
+                    bbox: [138.9341778, 35.2561225, 139.698857, 35.6837073],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kanto-op13g3417",
                     label: "しなの鉄道",
                     bbox: [138.4217128, 36.3086281, 138.6351092, 36.3475761],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kanto-op1lzcncm",
+                    label: "静岡鉄道",
+                    bbox: [138.4009535, 34.9784748, 138.4878777, 35.0170901],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kanto-yokohama-municipal-subway",
+                    label: "Yokohama Municipal Subway",
+                    bbox: [139.4665279, 35.3964559, 139.6468752, 35.5686778],
                     kind: "operator",
                 },
                 {
@@ -216,9 +204,15 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kanto-keisei",
-                    label: "Keisei",
-                    bbox: [139.7380078, 35.5338295, 140.3872193, 35.8036457],
+                    id: "osm-japan-kanto-saitama-new-urban-transit-co-ltd",
+                    label: "Saitama New Urban Transit Co., Ltd.",
+                    bbox: [139.6000557, 35.9078395, 139.6247029, 36.0139563],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kanto-op1njuj6",
+                    label: "上毛電気鉃道",
+                    bbox: [139.0749235, 36.294102, 139.3787733, 36.4257745],
                     kind: "operator",
                 },
                 {
@@ -228,9 +222,15 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
+                    id: "osm-japan-kanto-op49ht7",
+                    label: "関鉄",
+                    bbox: [140.1384174, 35.9084135, 140.1793295, 35.9296034],
+                    kind: "operator",
+                },
+                {
                     id: "osm-japan-kanto-op1yimp92",
                     label: "池袋線系統",
-                    bbox: [139.083122, 35.9084908, 139.2267337, 35.9925066],
+                    bbox: [139.083122, 35.9084908, 139.2267337, 35.9902119],
                     kind: "operator",
                 },
                 {
@@ -240,27 +240,21 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kanto-opjcjba",
-                    label: "高尾登山電鉄",
-                    bbox: [139.2576432, 35.6311026, 139.2699078, 35.6325002],
+                    id: "osm-japan-kanto-op1jhgr94",
+                    label: "江ノ島電鉄株式会社",
+                    bbox: [139.4826015, 35.3043634, 139.5504286, 35.3385903],
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kanto-opjn4jp0",
-                    label: "株式会社ゆりかもめ",
-                    bbox: [139.7577718, 35.6175656, 139.7954103, 35.665386],
+                    id: "osm-japan-kanto-keisei",
+                    label: "Keisei",
+                    bbox: [139.7380078, 35.5338295, 140.3872193, 35.8036457],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kanto-op1h2uedp",
                     label: "真岡鐵道",
                     bbox: [139.9704471, 36.3041716, 140.1814246, 36.5381552],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kanto-opjidua3",
-                    label: "舞浜リゾートライン",
-                    bbox: [139.8763686, 35.626147, 139.8895705, 35.636259],
                     kind: "operator",
                 },
                 {
@@ -336,15 +330,21 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kanto-toei-yk3qie",
-                    label: "Toei",
-                    bbox: [139.553079, 35.58705, 139.926613, 35.814541],
-                    kind: "operator",
-                },
-                {
                     id: "osm-japan-kanto-op14dfdqb",
                     label: "ゆりかもめ",
                     bbox: [139.7577718, 35.6175656, 139.7954103, 35.665386],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kanto-opjn4jp0",
+                    label: "株式会社ゆりかもめ",
+                    bbox: [139.7577718, 35.6175656, 139.7954103, 35.665386],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kanto-toei-yk3qie",
+                    label: "Toei",
+                    bbox: [139.628901, 35.58705, 139.926613, 35.814541],
                     kind: "operator",
                 },
                 {
@@ -369,6 +369,12 @@ export const TRANSIT_MANIFEST = {
                     id: "osm-japan-kanto-op1arpyj3",
                     label: "上信電鉄",
                     bbox: [138.8919038, 36.2604237, 139.0381956, 36.3123827],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kanto-opjidua3",
+                    label: "舞浜リゾートライン",
+                    bbox: [139.8763686, 35.6274495, 139.8895705, 35.6359285],
                     kind: "operator",
                 },
                 {
@@ -417,25 +423,19 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kansai-other",
                     label: "Other stations in japan-kansai",
-                    bbox: [134.5022692, 33.5010952, 136.4995209, 35.7735746],
+                    bbox: [134.5064514, 33.5010952, 136.4995209, 35.7735746],
                     kind: "coverage",
                 },
                 {
                     id: "osm-japan-kansai-opivr2z",
                     label: "四国旅客鉄道",
-                    bbox: [134.5281015, 33.7290455, 134.6672263, 34.1788965],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kansai-kintetsu",
-                    label: "Kintetsu",
-                    bbox: [135.4953257, 34.3770064, 136.4988331, 35.1699835],
+                    bbox: [134.5070405, 33.7290455, 134.6672263, 34.1788965],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kansai-jr-central",
                     label: "JR Central",
-                    bbox: [135.1956157, 34.1119898, 136.492566, 35.3638665],
+                    bbox: [135.1782824, 34.1119898, 136.492566, 35.3638665],
                     kind: "operator",
                 },
                 {
@@ -445,15 +445,15 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kansai-jr-east",
-                    label: "JR East",
-                    bbox: [135.1755908, 34.6790031, 136.470574, 35.644899],
+                    id: "osm-japan-kansai-kintetsu",
+                    label: "Kintetsu",
+                    bbox: [135.4977756, 34.3770064, 136.4988331, 35.1699835],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kansai-opmxri",
                     label: "京都市交通局",
-                    bbox: [135.7150576, 34.9332242, 135.8172365, 35.062913],
+                    bbox: [135.715634, 34.9332242, 135.8166753, 35.062913],
                     kind: "operator",
                 },
                 {
@@ -465,25 +465,19 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kansai-nankai",
                     label: "Nankai",
-                    bbox: [135.080825, 34.2170732, 135.6148285, 34.6679549],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kansai-hanshin",
-                    label: "Hanshin",
-                    bbox: [135.1441617, 34.6624401, 135.8285414, 34.7368439],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kansai-keihan",
-                    label: "Keihan",
-                    bbox: [135.4867814, 34.6687161, 135.9033943, 35.0704684],
+                    bbox: [135.080825, 34.2170732, 135.6148285, 34.7098074],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kansai-op1fohg9v",
                     label: "水間鉄道",
                     bbox: [135.3575766, 34.4033394, 135.3855272, 34.4455195],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kansai-hankyu",
+                    label: "Hankyu",
+                    bbox: [134.6753702, 34.6292608, 135.769608, 35.0100353],
                     kind: "operator",
                 },
                 {
@@ -499,12 +493,6 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kansai-hankyu",
-                    label: "Hankyu",
-                    bbox: [135.1441617, 34.6624401, 135.7485884, 35.0100353],
-                    kind: "operator",
-                },
-                {
                     id: "osm-japan-kansai-op1bpsjyu",
                     label: "叡山電鉄",
                     bbox: [135.7630053, 35.0304955, 135.8084891, 35.112896],
@@ -513,7 +501,19 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kansai-op9mj5uv",
                     label: "叡山電鉄株式会社",
-                    bbox: [135.7732355, 35.0304955, 135.8086639, 35.0669237],
+                    bbox: [135.7732355, 35.0304955, 135.8084891, 35.0652216],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kansai-keihan",
+                    label: "Keihan",
+                    bbox: [135.4867814, 34.5973293, 135.9033943, 35.0704684],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-kansai-hanshin",
+                    label: "Hanshin",
+                    bbox: [134.6753702, 34.6295136, 135.8285414, 34.8288513],
                     kind: "operator",
                 },
                 {
@@ -537,7 +537,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kansai-opkfaty3",
                     label: "神戸市交通局",
-                    bbox: [135.0174576, 34.6517099, 135.195996, 34.7618497],
+                    bbox: [135.0174576, 34.6517099, 135.1959069, 34.7618497],
                     kind: "operator",
                 },
                 {
@@ -601,12 +601,6 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kansai-op188x4cd",
-                    label: "嵯峨野観光鉄道",
-                    bbox: [135.6702405, 35.0164451, 135.6814425, 35.0187788],
-                    kind: "operator",
-                },
-                {
                     id: "osm-japan-kansai-op1ijac83",
                     label: "能勢電鉄",
                     bbox: [135.4124922, 34.8688085, 135.4448142, 34.9115905],
@@ -619,12 +613,6 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kansai-op1qdsgze",
-                    label: "阪堺電気軌道",
-                    bbox: [135.4912329, 34.6126618, 135.5032542, 34.6493423],
-                    kind: "operator",
-                },
-                {
                     id: "osm-japan-kansai-op1ats42d",
                     label: "三岐鉄道",
                     bbox: [136.4784524, 35.1474693, 136.4988331, 35.1699835],
@@ -634,12 +622,6 @@ export const TRANSIT_MANIFEST = {
                     id: "osm-japan-kansai-op1bpn45m",
                     label: "南海鉄道",
                     bbox: [135.6001349, 34.3378833, 135.6033421, 34.3661019],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-kansai-op4jx47f",
-                    label: "高松琴平電気鉄道",
-                    bbox: [134.5070405, 34.0746743, 134.5513898, 34.155322],
                     kind: "operator",
                 },
                 {
@@ -658,13 +640,13 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-chubu-other",
                     label: "Other stations in japan-chubu",
-                    bbox: [136.2024226, 34.6146895, 138.5963107, 37.3994105],
+                    bbox: [136.2024226, 34.6146895, 138.5932758, 37.3926436],
                     kind: "coverage",
                 },
                 {
                     id: "osm-japan-chubu-jr-east",
                     label: "JR East",
-                    bbox: [136.2017231, 34.6857162, 138.5992422, 37.3633912],
+                    bbox: [136.2017231, 35.6596417, 138.5992422, 37.3633912],
                     kind: "operator",
                 },
                 {
@@ -676,19 +658,19 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-chubu-jr-central",
                     label: "JR Central",
-                    bbox: [136.2901179, 34.6857162, 138.5893576, 36.6431239],
+                    bbox: [136.2249796, 34.6857162, 138.5893576, 36.7017575],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-chubu-op1lzcncm",
+                    label: "静岡鉄道",
+                    bbox: [138.387743, 34.9759301, 138.4878777, 35.0170901],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-chubu-op49hnb",
                     label: "長電",
-                    bbox: [138.1885153, 36.6427727, 138.4146144, 36.7610739],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-chubu-kintetsu",
-                    label: "Kintetsu",
-                    bbox: [136.2047571, 34.6352912, 136.884857, 35.1707285],
+                    bbox: [138.1885153, 36.6431239, 138.4146144, 36.7610739],
                     kind: "operator",
                 },
                 {
@@ -701,6 +683,12 @@ export const TRANSIT_MANIFEST = {
                     id: "osm-japan-chubu-op1kwpnu4",
                     label: "近江鉄道",
                     bbox: [136.2057039, 35.0122637, 136.2901179, 35.3149074],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-chubu-kintetsu",
+                    label: "Kintetsu",
+                    bbox: [136.2047571, 34.6352912, 136.8836761, 35.1699835],
                     kind: "operator",
                 },
                 {
@@ -722,21 +710,21 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-chubu-meitetsu",
-                    label: "Meitetsu",
-                    bbox: [136.6860366, 34.7447087, 137.3968532, 36.7017575],
-                    kind: "operator",
-                },
-                {
                     id: "osm-japan-chubu-opw15mch",
                     label: "名古屋市交通局",
-                    bbox: [136.8532274, 35.0973085, 137.0134764, 35.1928428],
+                    bbox: [136.8532274, 35.1390555, 137.0134764, 35.1775507],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-chubu-op1kd1pdd",
                     label: "豊橋鉄道",
-                    bbox: [137.2690362, 34.666858, 137.3885681, 34.7630551],
+                    bbox: [137.2690362, 34.666858, 137.3885681, 34.7621013],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-chubu-meitetsu",
+                    label: "Meitetsu",
+                    bbox: [136.6867807, 34.7447087, 137.3964811, 35.4344996],
                     kind: "operator",
                 },
                 {
@@ -755,12 +743,6 @@ export const TRANSIT_MANIFEST = {
                     id: "osm-japan-chubu-op1r4ve4i",
                     label: "富山地方鉄道",
                     bbox: [137.223568, 36.6916369, 137.4810621, 36.8747257],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-chubu-op2todam",
-                    label: "名古屋臨海高速鉄道",
-                    bbox: [136.849133, 35.0488985, 136.884857, 35.1707285],
                     kind: "operator",
                 },
                 {
@@ -820,7 +802,19 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-chubu-op1kxd55m",
                     label: "遠州鉄道",
-                    bbox: [137.7324983, 34.703629, 137.8011445, 34.8344623],
+                    bbox: [137.7324983, 34.703629, 137.8079886, 34.8466564],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-chubu-op1bp0fsz",
+                    label: "名古屋市",
+                    bbox: [136.8819049, 35.0930989, 136.9019661, 35.143924],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-chubu-op2todam",
+                    label: "名古屋臨海高速鉄道",
+                    bbox: [136.849133, 35.0488985, 136.8839367, 35.16942],
                     kind: "operator",
                 },
             ],
@@ -833,7 +827,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-tohoku-other",
                     label: "Other stations in japan-tohoku",
-                    bbox: [139.5175571, 37.0132631, 141.958733, 41.4422046],
+                    bbox: [139.5175571, 37.3695415, 141.9123209, 41.4422046],
                     kind: "coverage",
                 },
                 {
@@ -897,6 +891,12 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
+                    id: "osm-japan-tohoku-op6rko9b",
+                    label: "仙台市地下鉄",
+                    bbox: [140.8353433, 38.2433949, 140.9484215, 38.2608821],
+                    kind: "operator",
+                },
+                {
                     id: "osm-japan-tohoku-op1ddopfv",
                     label: "弘南鉄道",
                     bbox: [140.4681793, 40.5218329, 140.5917659, 40.6491481],
@@ -930,7 +930,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-chugoku-other",
                     label: "Other stations in japan-chugoku",
-                    bbox: [130.8146156, 33.3053086, 134.468702, 35.6195566],
+                    bbox: [130.8796162, 33.3669866, 134.4441605, 35.6195566],
                     kind: "coverage",
                 },
                 {
@@ -942,7 +942,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-chugoku-op1awy86m",
                     label: "伊予鉄道",
-                    bbox: [132.702036, 33.7554599, 132.8842865, 33.8834303],
+                    bbox: [132.702036, 33.756067, 132.8842865, 33.8834303],
                     kind: "operator",
                 },
                 {
@@ -972,13 +972,13 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-chugoku-op4jx47f",
                     label: "高松琴平電気鉄道",
-                    bbox: [133.757012, 34.1173923, 134.4837411, 34.3507278],
+                    bbox: [133.8189576, 34.1911636, 134.17302, 34.3507278],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-chugoku-opkfiahx",
                     label: "水島臨海鉄道",
-                    bbox: [133.7331149, 34.5229584, 133.7657825, 34.6019504],
+                    bbox: [133.7331149, 34.5229584, 133.7649638, 34.6009414],
                     kind: "operator",
                 },
                 {
@@ -1002,31 +1002,31 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-chugoku-op1u7makp",
                     label: "筑豊電気鉄道",
-                    bbox: [130.7115356, 33.7535355, 130.7662431, 33.8670036],
+                    bbox: [130.7115356, 33.7535355, 130.7645793, 33.8665935],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-chugoku-opcwafrj",
                     label: "九州旅客鉄道株式会社",
-                    bbox: [130.7122632, 33.8642177, 130.9625874, 33.9460196],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-chugoku-jr-kyushu",
-                    label: "JR Kyushu",
-                    bbox: [130.882509, 33.8868464, 130.9329208, 33.9505246],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-chugoku-hiroshima-rapid-transit",
-                    label: "Hiroshima Rapid Transit",
-                    bbox: [132.4001446, 34.3931587, 132.4773247, 34.4757349],
+                    bbox: [130.7122632, 33.8642177, 130.9612571, 33.9448819],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-chugoku-jr-central",
                     label: "JR Central",
                     bbox: [130.882509, 33.8868464, 133.917825, 34.6654089],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-chugoku-hiroshima-rapid-transit",
+                    label: "Hiroshima Rapid Transit",
+                    bbox: [132.4001446, 34.3931587, 132.4769955, 34.4757349],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-chugoku-jr-kyushu",
+                    label: "JR Kyushu",
+                    bbox: [130.882509, 33.8868464, 130.9329208, 33.9493851],
                     kind: "operator",
                 },
                 {
@@ -1057,7 +1057,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kyushu-other",
                     label: "Other stations in japan-kyushu",
-                    bbox: [129.5827639, 31.2048735, 132.4791606, 34.1939059],
+                    bbox: [129.5827639, 31.3433715, 132.1952113, 34.1939059],
                     kind: "coverage",
                 },
                 {
@@ -1075,7 +1075,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kyushu-jr-west",
                     label: "JR West",
-                    bbox: [130.4197831, 31.5834284, 132.2255418, 34.1726099],
+                    bbox: [130.4203556, 31.5837134, 132.2255418, 34.1726099],
                     kind: "operator",
                 },
                 {
@@ -1087,25 +1087,25 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kyushu-op1u7makp",
                     label: "筑豊電気鉄道",
-                    bbox: [130.7115356, 33.7535355, 130.7662431, 33.8670036],
+                    bbox: [130.7115356, 33.7535355, 130.7645793, 33.8665935],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kyushu-opcwafrj",
                     label: "九州旅客鉄道株式会社",
-                    bbox: [129.852916, 32.5898056, 131.9192001, 33.9460196],
+                    bbox: [129.852916, 32.5898056, 131.9192001, 33.9448819],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kyushu-jr-kyushu",
                     label: "JR Kyushu",
-                    bbox: [129.7260999, 31.8724607, 131.6060258, 33.9505246],
+                    bbox: [129.7260999, 31.8724607, 131.6060258, 33.9493851],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-kyushu-jr-central",
                     label: "JR Central",
-                    bbox: [130.4197831, 33.5900436, 130.882509, 33.8868464],
+                    bbox: [130.4203556, 33.5900436, 130.882509, 33.8868464],
                     kind: "operator",
                 },
                 {
@@ -1141,7 +1141,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-kyushu-opc5trp9",
                     label: "西日本鉄道株式会社",
-                    bbox: [130.4225598, 33.6320356, 130.4441037, 33.7141282],
+                    bbox: [130.4225598, 33.6320356, 130.4424863, 33.7141282],
                     kind: "operator",
                 },
                 {
@@ -1168,12 +1168,6 @@ export const TRANSIT_MANIFEST = {
                     bbox: [130.1963782, 31.8137835, 130.6217417, 32.504005],
                     kind: "operator",
                 },
-                {
-                    id: "osm-japan-kyushu-op3rsdmf",
-                    label: "福岡市",
-                    bbox: [130.313949, 33.6042012, 130.4198606, 33.662151],
-                    kind: "operator",
-                },
             ],
         },
         {
@@ -1184,19 +1178,13 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-shikoku-other",
                     label: "Other stations in japan-shikoku",
-                    bbox: [131.919179, 32.9206771, 134.6480271, 34.4993068],
+                    bbox: [131.919179, 33.161476, 134.5186716, 34.3915286],
                     kind: "coverage",
                 },
                 {
                     id: "osm-japan-shikoku-opivr2z",
                     label: "四国旅客鉄道",
                     bbox: [132.4359975, 33.1755516, 134.6672263, 34.4627408],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-shikoku-op4jx47f",
-                    label: "高松琴平電気鉄道",
-                    bbox: [133.757012, 34.0746743, 134.5513898, 34.3507278],
                     kind: "operator",
                 },
                 {
@@ -1208,13 +1196,19 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-shikoku-op1awy86m",
                     label: "伊予鉄道",
-                    bbox: [132.702036, 33.7554599, 132.8842865, 33.8834303],
+                    bbox: [132.702036, 33.756067, 132.8842865, 33.8834303],
+                    kind: "operator",
+                },
+                {
+                    id: "osm-japan-shikoku-op4jx47f",
+                    label: "高松琴平電気鉄道",
+                    bbox: [133.8189576, 34.1911636, 134.17302, 34.3507278],
                     kind: "operator",
                 },
                 {
                     id: "osm-japan-shikoku-hiroshima-rapid-transit",
                     label: "Hiroshima Rapid Transit",
-                    bbox: [132.4001446, 34.3931587, 132.4773247, 34.4757349],
+                    bbox: [132.4001446, 34.3931587, 132.4769955, 34.4757349],
                     kind: "operator",
                 },
                 {
@@ -1257,7 +1251,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-hokkaido-other",
                     label: "Other stations in japan-hokkaido",
-                    bbox: [139.875745, 41.402265, 144.6614523, 45.2592524],
+                    bbox: [140.2394631, 41.4422046, 144.6614523, 45.2592524],
                     kind: "coverage",
                 },
                 {
@@ -1275,13 +1269,7 @@ export const TRANSIT_MANIFEST = {
                 {
                     id: "osm-japan-hokkaido-op14x7k2m",
                     label: "札幌市交通局",
-                    bbox: [141.2757283, 42.991171, 141.4739808, 43.1130049],
-                    kind: "operator",
-                },
-                {
-                    id: "osm-japan-hokkaido-op1jg4qei",
-                    label: "北海道中央バス",
-                    bbox: [141.6770206, 43.1429754, 141.9299527, 43.5296028],
+                    bbox: [141.2779708, 42.991171, 141.4739808, 43.1130049],
                     kind: "operator",
                 },
                 {
