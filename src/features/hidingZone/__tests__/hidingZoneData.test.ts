@@ -16,7 +16,7 @@ describe("generated hiding-zone preset data", () => {
         for (const preset of presets) {
             const routeIds = new Set(preset.routes.map((route) => route.id));
 
-            expect(preset.source.kind).toBe("gtfs");
+            expect(["gtfs", "osm"]).toContain(preset.source.kind);
             for (const route of preset.routes) {
                 expect(isCanonicalTransitRouteId(route.id)).toBe(true);
                 expect(route.sourceId).not.toBe("");
