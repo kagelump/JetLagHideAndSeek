@@ -48,7 +48,10 @@
 - UI flicker when clicking into a menu item
 - Back button doesn't always seem to work from question deatils sheet (swipe to go back works)
 - Questions -> [Radar|Measuring|Tenticles] Very long delay or just doesn't work
--
+
+## Viewer
+
+- Add toggles for turn on layers (also will need to cluster layers, eg POI, etc)
 
 ## Extra Polish
 
