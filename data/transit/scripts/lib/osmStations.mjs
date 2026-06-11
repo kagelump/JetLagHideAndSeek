@@ -30,7 +30,7 @@ export function createOsmElementId(type, id) {
  * @param {object} feature - GeoJSON Feature with properties.tags (osmium -a type,id export)
  * @param {string} regionId - Geofabrik region id
  * @param {string[]} suffixes - locale nameSuffixes from config
- * @param {{ skippedNoName: number }} stats - mutable stats accumulator
+ * @param {{ skippedNoName: number, skippedNoId: number, skippedNonRailway: number }} stats - mutable stats accumulator
  * @returns {object|null} station record or null (skip)
  */
 export function mapOsmNode(feature, regionId, suffixes, stats) {
@@ -53,6 +53,15 @@ export function mapOsmNode(feature, regionId, suffixes, stats) {
 
     const [lon, lat] = geom.coordinates;
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+    // Reject non-railway nodes that were pulled in by the broad
+    // public_transport=station filter (bus terminals, ferry landings,
+    // gondola stations, etc.).  A railway station must carry a railway
+    // tag; public_transport=station alone is mode-agnostic.
+    if (!tags.railway) {
+        stats.skippedNonRailway++;
+        return null;
+    }
 
     const nameVariants = collectNameVariants(tags);
     const normalized = normalizeName(name, suffixes);

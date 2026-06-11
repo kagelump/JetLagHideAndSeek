@@ -554,7 +554,11 @@ function buildRouteCoordsFromStops(
 
         const stopTimes = [...(stopTimesByTripId.get(trip.trip_id) ?? [])]
             .sort((a, b) => a.sequence - b.sequence)
-            .filter((st) => stopsById.has(st.stopId));
+            .filter((st) => stopsById.has(st.stopId))
+            // After parent-station collapsing, consecutive platforms at the
+            // same station resolve to the same stopId — deduplicate them to
+            // avoid zero-length geometry segments.
+            .filter((st, i, arr) => i === 0 || st.stopId !== arr[i - 1].stopId);
         if (stopTimes.length < 2) continue;
 
         const signature = stopTimes.map((st) => st.stopId).join("|");

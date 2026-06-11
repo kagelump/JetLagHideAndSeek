@@ -146,6 +146,7 @@ export async function osmStage(ctx) {
             total: 0,
             skippedNoName: 0,
             skippedNoId: 0,
+            skippedNonRailway: 0,
             mapped: 0,
         };
         const records = [];
@@ -182,7 +183,7 @@ export async function osmStage(ctx) {
 
         console.log(
             `  ${stats.total.toLocaleString()} features, ${stats.mapped.toLocaleString()} ` +
-                `mapped (${stats.skippedNoName} unnamed, ${stats.skippedNoId} no-id)`,
+                `mapped (${stats.skippedNoName} unnamed, ${stats.skippedNoId} no-id, ${stats.skippedNonRailway} non-railway)`,
         );
 
         // Intra-source dedup.

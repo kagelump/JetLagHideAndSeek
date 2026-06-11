@@ -37,12 +37,7 @@ locales:
               - id: japan-hokkaido
                 bbox: [139.5, 41.3, 146.0, 45.7]
                 pbf: "https://download.geofabrik.de/asia/japan/hokkaido-latest.osm.pbf"
-          stationTags:
-              [
-                  "n/railway=station",
-                  "n/railway=halt",
-                  "n/public_transport=station",
-              ]
+          stationTags: ["n/railway=station", "n/railway=halt"]
           routeTypes: [train, subway, light_rail, monorail]
 
       gtfs:

@@ -61,7 +61,11 @@ describe("createOsmElementId", () => {
 
 describe("mapOsmNode", () => {
     const suffixes = ["駅"];
-    const stats = () => ({ skippedNoName: 0, skippedNoId: 0 });
+    const stats = () => ({
+        skippedNoName: 0,
+        skippedNoId: 0,
+        skippedNonRailway: 0,
+    });
 
     it("maps a complete station node", () => {
         const feature = {
@@ -123,6 +127,26 @@ describe("mapOsmNode", () => {
         const st = stats();
         const rec = mapOsmNode(feature, "jp", suffixes, st);
         assert.equal(rec.nameEn, undefined);
+    });
+
+    it("rejects non-railway nodes (public_transport=station without railway tag)", () => {
+        const feature = {
+            id: 4536777489,
+            geometry: { type: "Point", coordinates: [139.7680596, 35.6797924] },
+            properties: {
+                tags: {
+                    name: "JR高速バスのりば",
+                    "name:en": "Tokyo Station JR Express Bus Terminal",
+                    public_transport: "station",
+                },
+            },
+        };
+        const st = stats();
+        assert.equal(mapOsmNode(feature, "japan-kanto", suffixes, st), null);
+        assert.equal(st.skippedNonRailway, 1);
+        // Other counters should stay at 0 — it has a name and id.
+        assert.equal(st.skippedNoName, 0);
+        assert.equal(st.skippedNoId, 0);
     });
 });
 
