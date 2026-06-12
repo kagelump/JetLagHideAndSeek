@@ -31,9 +31,11 @@ export function createOsmElementId(type, id) {
  * @param {string} regionId - Geofabrik region id
  * @param {string[]} suffixes - locale nameSuffixes from config
  * @param {{ skippedNoName: number, skippedNoId: number, skippedNonRailway: number }} stats - mutable stats accumulator
+ * @param {object} [opts] - options
+ * @param {string[]} [opts.acceptModes] - accepted railway/public_transport modes (default: rail-only gate)
  * @returns {object|null} station record or null (skip)
  */
-export function mapOsmNode(feature, regionId, suffixes, stats) {
+export function mapOsmNode(feature, regionId, suffixes, stats, opts) {
     const props = feature.properties ?? {};
     const tags = props.tags ?? props;
     const name = tags.name;
@@ -58,7 +60,16 @@ export function mapOsmNode(feature, regionId, suffixes, stats) {
     // public_transport=station filter (bus terminals, ferry landings,
     // gondola stations, etc.).  A railway station must carry a railway
     // tag; public_transport=station alone is mode-agnostic.
-    if (!tags.railway) {
+    // When opts.acceptModes is provided, check against that list instead
+    // of the hardcoded railway gate (T17 seam for bus/tram modes).
+    const acceptModes = opts?.acceptModes;
+    if (acceptModes) {
+        // Config-driven mode gate: check railway tag against accepted modes.
+        if (!tags.railway || !acceptModes.includes(tags.railway)) {
+            stats.skippedNonRailway++;
+            return null;
+        }
+    } else if (!tags.railway) {
         stats.skippedNonRailway++;
         return null;
     }

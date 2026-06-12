@@ -8,7 +8,42 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { extractRouteRelationsFromPbf } from "./extractOsmRoutes.mjs";
+import {
+    extractRouteRelationsFromPbf,
+    decodeXmlEntities,
+} from "./extractOsmRoutes.mjs";
+
+describe("decodeXmlEntities", () => {
+    it("decodes &gt; and &lt;", () => {
+        assert.equal(decodeXmlEntities("新竹-&gt;基隆"), "新竹->基隆");
+        assert.equal(decodeXmlEntities("A&lt;B"), "A<B");
+    });
+
+    it("decodes &amp; last (after other entities)", () => {
+        assert.equal(decodeXmlEntities("a&amp;b"), "a&b");
+        assert.equal(decodeXmlEntities("a&amp;amp;b"), "a&amp;b");
+    });
+
+    it("decodes &quot; and &apos;", () => {
+        assert.equal(decodeXmlEntities("a&quot;b"), 'a"b');
+        assert.equal(decodeXmlEntities("a&apos;b"), "a'b");
+    });
+
+    it("decodes numeric character references", () => {
+        assert.equal(decodeXmlEntities("&#65;"), "A");
+        assert.equal(decodeXmlEntities("&#x41;"), "A");
+    });
+
+    it("returns non-string input unchanged", () => {
+        assert.equal(decodeXmlEntities(null), null);
+        assert.equal(decodeXmlEntities(undefined), undefined);
+        assert.equal(decodeXmlEntities(42), 42);
+    });
+
+    it("handles empty string", () => {
+        assert.equal(decodeXmlEntities(""), "");
+    });
+});
 
 describe("extractRouteRelationsFromPbf", () => {
     /** @type {string} */
@@ -91,5 +126,132 @@ describe("extractRouteRelationsFromPbf", () => {
 
         assert.equal(relations.length, 0);
         assert.equal(nodeCoords.size, 0);
+    });
+
+    it("parses <way> elements and returns ways map", async () => {
+        // Use a fresh cache dir to avoid collisions.
+        const wayDir = mkdtempSync(join(tmpdir(), "extractOsmRoutes-way-"));
+        writeFileSync(join(wayDir, "way-region-routes.osm.pbf"), "dummy");
+
+        const osmXml = `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6">
+  <node id="201" lat="35.0" lon="139.0"/>
+  <node id="202" lat="35.1" lon="139.1"/>
+  <node id="203" lat="35.2" lon="139.2"/>
+  <way id="301">
+    <nd ref="201"/>
+    <nd ref="202"/>
+  </way>
+  <way id="302">
+    <nd ref="202"/>
+    <nd ref="203"/>
+  </way>
+  <relation id="401">
+    <tag k="route" v="railway"/>
+    <tag k="name" v="Test Railway"/>
+    <member type="way" ref="301" role=""/>
+    <member type="way" ref="302" role=""/>
+    <member type="node" ref="201" role="stop"/>
+    <member type="node" ref="203" role="stop"/>
+  </relation>
+</osm>`;
+        writeFileSync(join(wayDir, "way-region-routes.osm"), osmXml);
+
+        const { relations, ways } = await extractRouteRelationsFromPbf({
+            pbfPath: join(wayDir, "dummy.osm.pbf"),
+            cacheDir: wayDir,
+            regionId: "way-region",
+        });
+
+        assert.equal(relations.length, 1);
+        assert.equal(ways.size, 2);
+        assert.deepEqual(ways.get(301), [201, 202]);
+        assert.deepEqual(ways.get(302), [202, 203]);
+
+        rmSync(wayDir, { recursive: true, force: true });
+    });
+
+    it("decodes XML entities in tag values and member roles", async () => {
+        const entityDir = mkdtempSync(
+            join(tmpdir(), "extractOsmRoutes-entity-"),
+        );
+        writeFileSync(join(entityDir, "entity-region-routes.osm.pbf"), "dummy");
+
+        const osmXml = `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6">
+  <relation id="501">
+    <tag k="route" v="train"/>
+    <tag k="name" v="區間 1112 新竹-&gt;基隆"/>
+    <member type="node" ref="1" role="stop"/>
+  </relation>
+</osm>`;
+        writeFileSync(join(entityDir, "entity-region-routes.osm"), osmXml);
+
+        const { relations } = await extractRouteRelationsFromPbf({
+            pbfPath: join(entityDir, "dummy.osm.pbf"),
+            cacheDir: entityDir,
+            regionId: "entity-region",
+        });
+
+        assert.equal(relations.length, 1);
+        assert.equal(relations[0].properties.tags.name, "區間 1112 新竹->基隆");
+
+        rmSync(entityDir, { recursive: true, force: true });
+    });
+
+    it("adds railway/tracks filters only when includeRailway is true", async () => {
+        const osmXmlTrainOnly = `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6">
+  <node id="601" lat="35.0" lon="139.0"/>
+  <relation id="701">
+    <tag k="route" v="train"/>
+    <tag k="name" v="Train Line"/>
+    <member type="node" ref="601" role="stop"/>
+  </relation>
+</osm>`;
+
+        const osmXmlBoth = `<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6">
+  <node id="601" lat="35.0" lon="139.0"/>
+  <relation id="701">
+    <tag k="route" v="train"/>
+    <tag k="name" v="Train Line"/>
+    <member type="node" ref="601" role="stop"/>
+  </relation>
+  <relation id="702">
+    <tag k="route" v="railway"/>
+    <tag k="name" v="Railway Line"/>
+    <member type="node" ref="601" role="stop"/>
+  </relation>
+</osm>`;
+
+        // Without includeRailway: only train relations (simulating what
+        // osmium tags-filter would produce with the default mode set).
+        const railDir = mkdtempSync(join(tmpdir(), "extractOsmRoutes-rail-"));
+        writeFileSync(join(railDir, "rail-only-routes.osm.pbf"), "dummy");
+        writeFileSync(join(railDir, "rail-only-routes.osm"), osmXmlTrainOnly);
+        const withoutRail = await extractRouteRelationsFromPbf({
+            pbfPath: join(railDir, "dummy.osm.pbf"),
+            cacheDir: railDir,
+            regionId: "rail-only",
+        });
+        assert.equal(withoutRail.relations.length, 1);
+        assert.equal(withoutRail.relations[0].properties.tags.route, "train");
+
+        // With includeRailway: both relations (simulating what
+        // osmium tags-filter would produce with the railway mode set).
+        const railDir2 = mkdtempSync(join(tmpdir(), "extractOsmRoutes-rail2-"));
+        writeFileSync(join(railDir2, "rail-both-routes-rail.osm.pbf"), "dummy");
+        writeFileSync(join(railDir2, "rail-both-routes-rail.osm"), osmXmlBoth);
+        const withRail = await extractRouteRelationsFromPbf({
+            pbfPath: join(railDir2, "dummy.osm.pbf"),
+            cacheDir: railDir2,
+            regionId: "rail-both",
+            includeRailway: true,
+        });
+        assert.equal(withRail.relations.length, 2);
+
+        rmSync(railDir, { recursive: true, force: true });
+        rmSync(railDir2, { recursive: true, force: true });
     });
 });

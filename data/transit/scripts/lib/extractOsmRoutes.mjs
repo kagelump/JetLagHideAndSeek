@@ -18,49 +18,102 @@ import { createInterface } from "node:readline";
 import { join } from "node:path";
 
 /**
+ * Decode XML entities in a string.
+ *
+ * Handles: &lt; &gt; &amp; &quot; &apos; &#NN; &#xHH;
+ * Decodes &amp; **last** so double-encoded sequences resolve correctly.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+export function decodeXmlEntities(s) {
+    if (!s || typeof s !== "string") return s;
+    let out = s;
+    // fromCodePoint (not fromCharCode) so astral entities (e.g. &#x1F684;)
+    // decode correctly instead of mangling into surrogate halves.
+    out = out.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+        String.fromCodePoint(parseInt(hex, 16)),
+    );
+    out = out.replace(/&#(\d+);/g, (_, dec) =>
+        String.fromCodePoint(parseInt(dec, 10)),
+    );
+    out = out.replace(/&lt;/g, "<");
+    out = out.replace(/&gt;/g, ">");
+    out = out.replace(/&quot;/g, '"');
+    out = out.replace(/&apos;/g, "'");
+    out = out.replace(/&amp;/g, "&");
+    return out;
+}
+
+/**
+ * Default route modes for extraction.
+ */
+const DEFAULT_ROUTE_MODES = ["train", "subway", "light_rail", "monorail"];
+
+/**
  * Extract route relations from a PBF.
  *
  * @param {object} opts
  * @param {string} opts.pbfPath - path to the source OSM PBF
  * @param {string} opts.cacheDir - directory to cache filtered PBF + OSM XML
  * @param {string} opts.regionId - region id (used for cache file names)
- * @returns {Promise<{ relations: object[], nodeCoords: Map<number,{lat: number, lon: number}> }>}
+ * @param {string[]} [opts.routeModes] - route modes to extract (default: train/subway/light_rail/monorail)
+ * @param {boolean} [opts.includeRailway] - include route=railway/track infrastructure (default: false)
+ * @returns {Promise<{ relations: object[], nodeCoords: Map<number,{lat: number, lon: number}>, ways: Map<number, number[]> }>}
  */
 export async function extractRouteRelationsFromPbf({
     pbfPath,
     cacheDir,
     regionId,
+    routeModes,
+    includeRailway,
 }) {
     await mkdir(cacheDir, { recursive: true });
+
+    const modes = routeModes ?? DEFAULT_ROUTE_MODES;
+    const railway = includeRailway ?? false;
+
+    // Cache-key: legacy filename for the default mode set; suffix for railway.
+    const cacheSuffix = railway ? "-rail" : "";
 
     const relations = [];
     /** @type {Map<number, {lat: number, lon: number}>} */
     const nodeCoords = new Map();
+    /** @type {Map<number, number[]>} */
+    const ways = new Map();
     const stats = {
         parsed: 0,
         droppedNoTags: 0,
     };
 
     try {
-        // Tags-filter: route relations only.
-        const filteredRoutesPbf = join(cacheDir, `${regionId}-routes.osm.pbf`);
+        // Build tags-filter args from mode list.
+        const filterArgs = [];
+        for (const mode of modes) {
+            filterArgs.push(`r/route=${mode}`);
+            filterArgs.push(`r/route_master=${mode}`);
+        }
+        if (railway) {
+            filterArgs.push("r/route=railway");
+            filterArgs.push("r/route_master=railway");
+            filterArgs.push("r/route=tracks");
+            filterArgs.push("r/route_master=tracks");
+        }
+
+        const filteredRoutesPbf = join(
+            cacheDir,
+            `${regionId}-routes${cacheSuffix}.osm.pbf`,
+        );
         if (!existsSync(filteredRoutesPbf)) {
             console.log(
-                `  [extractOsmRoutes] Filtering route tags for ${regionId}...`,
+                `  [extractOsmRoutes] Filtering route tags for ${regionId} (${modes.join(",")}${railway ? "+railway" : ""})...`,
             );
             execFileSync(
                 "osmium",
                 [
                     "tags-filter",
                     pbfPath,
-                    "r/route=train",
-                    "r/route=subway",
-                    "r/route=light_rail",
-                    "r/route=monorail",
-                    "r/route_master=train",
-                    "r/route_master=subway",
-                    "r/route_master=light_rail",
-                    "r/route_master=monorail",
+                    ...filterArgs,
                     "-o",
                     filteredRoutesPbf,
                     "-O",
@@ -74,7 +127,10 @@ export async function extractRouteRelationsFromPbf({
         }
 
         // Convert filtered PBF → OSM XML for relation parsing.
-        const routesOsmPath = join(cacheDir, `${regionId}-routes.osm`);
+        const routesOsmPath = join(
+            cacheDir,
+            `${regionId}-routes${cacheSuffix}.osm`,
+        );
         if (!existsSync(routesOsmPath)) {
             console.log(
                 `  [extractOsmRoutes] Converting to OSM XML for ${regionId}...`,
@@ -102,6 +158,8 @@ export async function extractRouteRelationsFromPbf({
 
         let currentRelation = null;
         let inRelation = false;
+        let currentWay = null;
+        let inWay = false;
 
         for await (const line of xmlRl) {
             const trimmed = line.trim();
@@ -117,6 +175,47 @@ export async function extractRouteRelationsFromPbf({
                         lat: parseFloat(nlatMatch[1]),
                         lon: parseFloat(nlonMatch[1]),
                     });
+                }
+                continue;
+            }
+
+            // <way id="12345" ...>
+            if (trimmed.startsWith("<way ")) {
+                const widMatch = trimmed.match(/id="(\d+)"/);
+                if (widMatch) {
+                    currentWay = {
+                        id: parseInt(widMatch[1], 10),
+                        nodeRefs: [],
+                    };
+                }
+
+                if (trimmed.endsWith("/>")) {
+                    // Self-closing way with no nd refs.
+                    if (currentWay) {
+                        ways.set(currentWay.id, currentWay.nodeRefs);
+                    }
+                    currentWay = null;
+                    continue;
+                }
+
+                inWay = true;
+                continue;
+            }
+
+            if (trimmed === "</way>") {
+                if (inWay && currentWay) {
+                    ways.set(currentWay.id, currentWay.nodeRefs);
+                }
+                inWay = false;
+                currentWay = null;
+                continue;
+            }
+
+            // <nd ref="12345"/> inside a way.
+            if (inWay && currentWay && trimmed.startsWith("<nd ")) {
+                const ndMatch = trimmed.match(/ref="(\d+)"/);
+                if (ndMatch) {
+                    currentWay.nodeRefs.push(parseInt(ndMatch[1], 10));
                 }
                 continue;
             }
@@ -185,7 +284,7 @@ export async function extractRouteRelationsFromPbf({
                 if (kMatch && vMatch) {
                     currentRelation.tags.push({
                         k: kMatch[1],
-                        v: vMatch[1],
+                        v: decodeXmlEntities(vMatch[1]),
                     });
                 }
                 continue;
@@ -200,7 +299,7 @@ export async function extractRouteRelationsFromPbf({
                     currentRelation.members.push({
                         type: typeMatch[1],
                         ref: parseInt(refMatch[1], 10),
-                        role: roleMatch ? roleMatch[1] : "",
+                        role: roleMatch ? decodeXmlEntities(roleMatch[1]) : "",
                     });
                 }
                 continue;
@@ -209,7 +308,7 @@ export async function extractRouteRelationsFromPbf({
 
         console.log(
             `  [extractOsmRoutes] ${stats.parsed} relations parsed for ${regionId} ` +
-                `(${nodeCoords.size} node coords collected)` +
+                `(${nodeCoords.size} node coords, ${ways.size} ways collected)` +
                 (stats.droppedNoTags > 0
                     ? `, ${stats.droppedNoTags} dropped (no route tags)`
                     : ""),
@@ -221,8 +320,8 @@ export async function extractRouteRelationsFromPbf({
         console.warn(
             "  [extractOsmRoutes] Routes are optional — continuing without them.",
         );
-        return { relations: [], nodeCoords: new Map() };
+        return { relations: [], nodeCoords: new Map(), ways: new Map() };
     }
 
-    return { relations, nodeCoords };
+    return { relations, nodeCoords, ways };
 }

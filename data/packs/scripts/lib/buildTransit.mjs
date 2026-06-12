@@ -184,13 +184,21 @@ export async function buildTransitArtifact({
             routeColors: region.transitOverrides?.routeColors ?? {},
             operatorNames: region.transitOverrides?.operatorNames ?? {},
             directionTokens: region.transitOverrides?.directionTokens,
+            useRailwayInfrastructure:
+                region.transitOverrides?.useRailwayInfrastructure ?? false,
+            railwayAttachMeters:
+                region.transitOverrides?.railwayAttachMeters ?? 120,
         };
 
-        const { relations, nodeCoords } = await extractRouteRelationsFromPbf({
-            pbfPath,
-            cacheDir: routeCacheDir,
-            regionId: region.id,
-        });
+        const includeRailway =
+            region.transitOverrides?.useRailwayInfrastructure ?? false;
+        const { relations, nodeCoords, ways } =
+            await extractRouteRelationsFromPbf({
+                pbfPath,
+                cacheDir: routeCacheDir,
+                regionId: region.id,
+                includeRailway,
+            });
         const { lines } =
             relations.length > 0 && stationRecords.length > 0
                 ? processOsmRoutes(
@@ -198,6 +206,7 @@ export async function buildTransitArtifact({
                       stationRecords,
                       localeConfig,
                       nodeCoords,
+                      ways,
                   )
                 : { lines: [] };
 
@@ -282,10 +291,18 @@ function buildPresets(records, regionId, lines, normalizeOp) {
     }
 
     const presets = [];
+    const MIN_OPERATOR_STATIONS = 3;
+    const leftoverStations = [];
 
-    // Per-operator presets.
+    // Per-operator presets (≥ MIN_OPERATOR_STATIONS).
+    // Small operators are folded into the coverage "other" preset.
     for (const [operator, opRecords] of byOperator) {
         if (opRecords.length === 0) continue;
+
+        if (operator === "other" || opRecords.length < MIN_OPERATOR_STATIONS) {
+            leftoverStations.push(...opRecords);
+            continue;
+        }
 
         presets.push({
             id: `osm-${regionId}-${slugify(operator)}`,
@@ -303,21 +320,24 @@ function buildPresets(records, regionId, lines, normalizeOp) {
         });
     }
 
-    // Coverage preset (all stations, no operator filter).
-    if (records.length > 0) {
+    // Coverage preset: only leftover stations (no operator or operator
+    // with < MIN_OPERATOR_STATIONS). This mirrors Japan's buildOtherPreset
+    // which holds leftover stations only — avoids duplicating every station
+    // into coverage and causing double-colored rings.
+    if (leftoverStations.length > 0) {
         presets.push({
             id: `osm-${regionId}-coverage`,
             label: `Other stations (${regionId})`,
             operator: "other",
             kind: "coverage",
-            bbox: computeRecordsBbox(records),
+            bbox: computeRecordsBbox(leftoverStations),
             defaultColor: "#1f6f78",
             source: {
                 kind: "osm-pack",
                 namespace: `pack:${regionId}`,
             },
             routes: [],
-            stations: records.map(toStationContribution),
+            stations: leftoverStations.map(toStationContribution),
         });
     }
 

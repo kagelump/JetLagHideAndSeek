@@ -190,25 +190,66 @@ describe("buildTransit routes", { skip: !osmiumAvailable() }, () => {
             "non-rail ferry terminal is filtered out",
         );
 
-        // A route in one operator preset should still color stations in another
-        // operator preset when its resolved member station is present there.
-        const otherPreset = bundle.presets.find(
-            (p) => p.operator === "Other Operator",
+        // A route in one operator preset should still color stations in the
+        // coverage preset when its resolved member station is present there.
+        // "Other Operator" has only 1 station (< MIN_OPERATOR_STATIONS = 3),
+        // so it's folded into the coverage preset.
+        const coveragePreset = bundle.presets.find(
+            (p) => p.kind === "coverage",
         );
-        assert.ok(otherPreset, "other operator preset exists");
-        const otherRoute = otherPreset.routes.find(
+        assert.ok(coveragePreset, "coverage preset exists");
+        const otherRoute = coveragePreset.routes.find(
             (r) => r.name === "Other Line",
         );
-        assert.ok(otherRoute, "other operator route exists");
+        assert.ok(otherRoute, "other operator route exists in coverage preset");
         assert.equal(otherRoute.color.toLowerCase(), "#0000ff");
 
-        const stationX = otherPreset.stations.find(
+        const stationX = coveragePreset.stations.find(
             (s) => s.id === "osm:node:6",
         );
-        assert.ok(stationX, "station X exists in other operator preset");
+        assert.ok(stationX, "station X exists in coverage preset");
         assert.ok(
             stationX.routeIds.includes("osm:relation:104"),
             "cross-operator routeId attaches to member station",
         );
+    });
+
+    it("does not duplicate operator-preset stations into the coverage preset (Issue 1)", async () => {
+        // "Test Operator" has 3 stations (≥ MIN_OPERATOR_STATIONS),
+        // so it gets its own operator preset. Those 3 stations must NOT
+        // also appear in the coverage preset.
+        const result = await buildTransitArtifact({
+            region: { id: "test-region" },
+            pbfPath,
+            distDir,
+            cacheDir,
+        });
+
+        assert.ok(result, "artifact built");
+        const bundle = JSON.parse(
+            gunzipSync(readFileSync(result.gzPath)).toString("utf8"),
+        );
+
+        const operatorPreset = bundle.presets.find(
+            (p) => p.operator === "Test Operator",
+        );
+        const coveragePreset = bundle.presets.find(
+            (p) => p.kind === "coverage",
+        );
+
+        assert.ok(operatorPreset, "operator preset exists");
+
+        if (coveragePreset) {
+            // No station in the operator preset should also be in coverage.
+            const operatorIds = new Set(
+                operatorPreset.stations.map((s) => s.id),
+            );
+            for (const s of coveragePreset.stations) {
+                assert.ok(
+                    !operatorIds.has(s.id),
+                    `station ${s.id} should not be in both operator and coverage presets`,
+                );
+            }
+        }
     });
 });

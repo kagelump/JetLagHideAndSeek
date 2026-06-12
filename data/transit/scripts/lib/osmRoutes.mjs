@@ -11,6 +11,7 @@ import { createOsmElementId } from "./osmStations.mjs";
 import { haversineM } from "./grid.mjs";
 import { detectImplausibleJumps, repairStopOrder } from "./stopOrderRepair.mjs";
 import { buildOperatorNormalizer } from "./normalizeOperator.mjs";
+import { stitchWays, attachStationsAlongLine } from "./wayStitch.mjs";
 
 // ─── Route relation processing ─────────────────────────────────────────────
 
@@ -20,6 +21,8 @@ import { buildOperatorNormalizer } from "./normalizeOperator.mjs";
  * @param {object[]} relations - GeoJSON features with osmium -a type,id export
  * @param {object[]} stationRecords - OSM station records (from T5/T6) for stop resolution
  * @param {object} localeConfig - locale config from config.yaml
+ * @param {Map<number, {lat: number, lon: number}>} [nodeCoords] - node id → coords
+ * @param {Map<number, number[]>} [ways] - way id → ordered node refs (from extractOsmRoutes)
  * @returns {{ lines: object[], stats: object }}
  */
 export function processOsmRoutes(
@@ -27,6 +30,7 @@ export function processOsmRoutes(
     stationRecords,
     localeConfig,
     nodeCoords,
+    ways,
 ) {
     const stats = {
         totalRelations: 0,
@@ -65,6 +69,29 @@ export function processOsmRoutes(
     stats.masterCount = masters.length;
     stats.masterlessCount = routes.filter((r) => !hasMaster(r, masters)).length;
 
+    // Drop the train service layer when railway infrastructure is active.
+    // Keeps railway/tracks/subway/light_rail/monorail + their masters.
+    const useRailway = !!localeConfig.useRailwayInfrastructure;
+    let filteredMasters = masters;
+    let filteredRoutes = routes;
+    if (useRailway) {
+        filteredMasters = masters.filter((m) => {
+            const tags = m.properties?.tags ?? m.properties ?? {};
+            const mt = tags.route_master;
+            return mt !== "train";
+        });
+        filteredRoutes = routes.filter((r) => {
+            const tags = r.properties?.tags ?? r.properties ?? {};
+            const rt = tags.route;
+            return rt !== "train";
+        });
+        // Update stats after filtering.
+        stats.masterCount = filteredMasters.length;
+        stats.masterlessCount = filteredRoutes.filter(
+            (r) => !hasMaster(r, filteredMasters),
+        ).length;
+    }
+
     // Build station lookup: normalized name → station records.
     const stationByName = new Map();
     for (const s of stationRecords) {
@@ -84,12 +111,12 @@ export function processOsmRoutes(
     const masterLines = [];
     const masterIdsSeen = new Set();
 
-    for (const master of masters) {
+    for (const master of filteredMasters) {
         const mid = master.id ?? master.properties?.["@id"];
         if (!mid || masterIdsSeen.has(mid)) continue;
         masterIdsSeen.add(mid);
 
-        const variants = routes.filter((r) => {
+        const variants = filteredRoutes.filter((r) => {
             // Find routes whose master relation is this master.
             // OSM: route members have role=route in the master, or route's
             // tags reference the master via route_master tag... but in practice,
@@ -109,6 +136,7 @@ export function processOsmRoutes(
             stats,
             nodeCoords,
             localeConfig.overrides?.relations,
+            ways,
         );
         if (line) {
             line.isMastered = true;
@@ -117,8 +145,8 @@ export function processOsmRoutes(
     }
 
     // Masterless routes become their own lines.
-    for (const route of routes) {
-        if (hasMaster(route, masters)) continue;
+    for (const route of filteredRoutes) {
+        if (hasMaster(route, filteredMasters)) continue;
         const rid = route.id ?? route.properties?.["@id"];
         if (!rid || masterIdsSeen.has(rid)) continue;
         masterIdsSeen.add(rid);
@@ -132,6 +160,7 @@ export function processOsmRoutes(
             stats,
             nodeCoords,
             localeConfig.overrides?.relations,
+            ways,
         );
         if (line) {
             masterLines.push(line);
@@ -353,6 +382,7 @@ function buildLine(
     stats,
     nodeCoords,
     relationOverrides = {},
+    ways,
 ) {
     const tags = primaryRel.properties?.tags ?? primaryRel.properties ?? {};
     const id = primaryRel.id ?? primaryRel.properties?.["@id"];
@@ -618,15 +648,60 @@ function buildLine(
         }
     }
 
+    // Way-stitch geometry from the *variants'* track ways. The master
+    // relation itself carries only incidental/connector ways (not the real
+    // line), so reading primaryRel.members would stitch junk and override the
+    // good geometry — gather from variants instead. Dedupe by way id so a
+    // bidirectional way shared by both directional variants isn't doubled.
+    let geometry;
+    const wayMembers = [];
+    const seenWayRefs = new Set();
+    for (const rel of variants) {
+        const mems = rel.members ?? rel.properties?.members ?? [];
+        for (const m of mems) {
+            if (m.type !== "way") continue;
+            const ref = typeof m.ref === "number" ? m.ref : parseInt(m.ref, 10);
+            if (!Number.isFinite(ref) || seenWayRefs.has(ref)) continue;
+            seenWayRefs.add(ref);
+            wayMembers.push({ ref });
+        }
+    }
+
+    if (ways && wayMembers.length > 0) {
+        const stitched = stitchWays(wayMembers, ways, nodeCoords);
+        if (stitched.coordinates.length > 0) {
+            geometry = stitched;
+
+            // Spatial attach: pull in stations near the stitched track that
+            // aren't already resolved as stop members. This is what gives
+            // 0-stop infrastructure lines (e.g. 縱貫線/宜蘭線) their stations.
+            const attachMeters = localeConfig.railwayAttachMeters ?? 120;
+            const spatialIds = attachStationsAlongLine(
+                geometry,
+                stationById,
+                attachMeters,
+                allStationIds,
+            );
+            for (const sid of spatialIds) {
+                allStationIds.add(sid);
+            }
+        }
+    }
+
+    // A line needs >= 2 member stations (resolved stops or spatial attaches).
+    // Runs AFTER stitch+attach so way-only lines survive on spatial members.
     if (allStationIds.size < 2) {
         stats.linesTooFewStations++;
         return null;
     }
 
-    const geometry = {
-        type: "MultiLineString",
-        coordinates: branchLines,
-    };
+    // Fall back to the stop-position polyline if no way geometry was built.
+    if (!geometry) {
+        geometry = {
+            type: "MultiLineString",
+            coordinates: branchLines,
+        };
+    }
 
     return {
         id: lineId,

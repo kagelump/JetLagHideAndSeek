@@ -287,6 +287,343 @@ describe("processOsmRoutes", () => {
         assert.equal(lines.length, 1);
         assert.equal(lines[0].color.toLowerCase(), "#aabbcc");
     });
+
+    it("drops route=train relations when useRailwayInfrastructure is set", () => {
+        const relations = [
+            {
+                id: 700,
+                properties: {
+                    tags: {
+                        route_master: "train",
+                        name: "Train Master",
+                        operator: "TestRail",
+                    },
+                },
+                members: [{ ref: "701", role: "route" }],
+            },
+            {
+                id: 701,
+                properties: {
+                    tags: { route: "train", name: "Train Directional" },
+                },
+                members: [
+                    { ref: "60", role: "stop" },
+                    { ref: "61", role: "stop" },
+                ],
+            },
+            {
+                id: 702,
+                properties: {
+                    tags: {
+                        route: "railway",
+                        name: "Railway Line",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { ref: "60", role: "stop" },
+                    { ref: "61", role: "stop" },
+                ],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:60", name: "Stop 60", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:61", name: "Stop 61", lat: 35.1, lon: 139.1 },
+        ];
+
+        const { lines } = processOsmRoutes(relations, stationRecords, {
+            nameSuffixes: [],
+            operators: [],
+            useRailwayInfrastructure: true,
+        });
+
+        // Train master + directional should be dropped.
+        const trainLines = lines.filter(
+            (l) =>
+                l.name.includes("Train") ||
+                l.sourceId === "700" ||
+                l.sourceId === "701",
+        );
+        assert.equal(trainLines.length, 0);
+
+        // Railway line should be kept.
+        const railwayLine = lines.find((l) => l.sourceId === "702");
+        assert.ok(railwayLine, "railway line kept");
+    });
+
+    it("groups route_master=railway with its directional route=railway variants", () => {
+        const relations = [
+            {
+                id: 800,
+                properties: {
+                    tags: {
+                        route_master: "railway",
+                        name: "North Line",
+                        colour: "#FF0000",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { ref: "801", role: "route" },
+                    { ref: "802", role: "route" },
+                ],
+            },
+            {
+                id: 801,
+                properties: {
+                    tags: { route: "railway", name: "North Line Eastbound" },
+                },
+                members: [
+                    { ref: "70", role: "stop" },
+                    { ref: "71", role: "stop" },
+                ],
+            },
+            {
+                id: 802,
+                properties: {
+                    tags: { route: "railway", name: "North Line Westbound" },
+                },
+                members: [
+                    { ref: "71", role: "stop" },
+                    { ref: "72", role: "stop" },
+                ],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:70", name: "Station A", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:71", name: "Station B", lat: 35.1, lon: 139.1 },
+            { id: "osm:node:72", name: "Station C", lat: 35.2, lon: 139.2 },
+        ];
+
+        const { lines } = processOsmRoutes(relations, stationRecords, {
+            nameSuffixes: [],
+            operators: [],
+            useRailwayInfrastructure: true,
+        });
+
+        assert.equal(lines.length, 1);
+        assert.equal(lines[0].name, "North Line");
+        assert.equal(lines[0].color, "#FF0000");
+        assert.ok(lines[0].memberStationIds.length >= 2);
+    });
+
+    it("spatially attaches stations near stitched way geometry", () => {
+        const relations = [
+            {
+                id: 900,
+                properties: {
+                    tags: {
+                        route: "railway",
+                        name: "Infra Line",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { type: "way", ref: 901, role: "" },
+                    { type: "node", ref: 80, role: "stop" },
+                    { type: "node", ref: 81, role: "stop" },
+                ],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:80", name: "End A", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:81", name: "End B", lat: 35.1, lon: 139.1 },
+            { id: "osm:node:82", name: "Nearby", lat: 35.05, lon: 139.05 },
+        ];
+
+        const nodeCoords = new Map([
+            [80, { lat: 35.0, lon: 139.0 }],
+            [81, { lat: 35.1, lon: 139.1 }],
+        ]);
+
+        const ways = new Map([[901, [80, 81]]]);
+
+        const { lines } = processOsmRoutes(
+            relations,
+            stationRecords,
+            {
+                nameSuffixes: [],
+                operators: [],
+                useRailwayInfrastructure: true,
+                railwayAttachMeters: 500,
+            },
+            nodeCoords,
+            ways,
+        );
+
+        assert.equal(lines.length, 1);
+        // Station 82 is near the line geometry and should be attached.
+        assert.ok(
+            lines[0].memberStationIds.includes("osm:node:82"),
+            "spatially nearby station attached",
+        );
+    });
+
+    it("builds mastered-line geometry from variant ways (0 stops), not the master's stray ways", () => {
+        // Regression: a route_master whose directional variants carry the real
+        // track ways AND zero stop members, while the master itself carries a
+        // couple of incidental/connector ways. The line must (a) survive (not be
+        // dropped by the <2-stop guard) and (b) take geometry from the variant
+        // track ways, not the master's stray ways.
+        const relations = [
+            {
+                id: 800,
+                properties: {
+                    tags: {
+                        route_master: "railway",
+                        name: "Trunk Line",
+                        colour: "#0033A0",
+                        operator: "TestRail",
+                    },
+                },
+                // Master carries a stray connector way + the two variants.
+                members: [
+                    { type: "way", ref: 950, role: "" },
+                    { type: "relation", ref: 801, role: "route" },
+                    { type: "relation", ref: 802, role: "route" },
+                ],
+            },
+            {
+                id: 801,
+                properties: {
+                    tags: { route: "railway", name: "Trunk Line (北上)" },
+                },
+                // Real track ways, ZERO stop members.
+                members: [{ type: "way", ref: 901, role: "" }],
+            },
+            {
+                id: 802,
+                properties: {
+                    tags: { route: "railway", name: "Trunk Line (南下)" },
+                },
+                members: [{ type: "way", ref: 902, role: "" }],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:80", name: "Alpha", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:81", name: "Beta", lat: 35.1, lon: 139.1 },
+            { id: "osm:node:82", name: "Gamma", lat: 35.2, lon: 139.2 },
+        ];
+
+        const nodeCoords = new Map([
+            [80, { lat: 35.0, lon: 139.0 }],
+            [81, { lat: 35.1, lon: 139.1 }],
+            [82, { lat: 35.2, lon: 139.2 }],
+            // Stray-way nodes far from any station.
+            [990, { lat: 10.0, lon: 100.0 }],
+            [991, { lat: 10.1, lon: 100.1 }],
+        ]);
+
+        const ways = new Map([
+            [950, [990, 991]], // master stray way — must NOT be used
+            [901, [80, 81]], // variant track
+            [902, [81, 82]], // variant track
+        ]);
+
+        const { lines } = processOsmRoutes(
+            relations,
+            stationRecords,
+            {
+                nameSuffixes: [],
+                operators: [],
+                useRailwayInfrastructure: true,
+                railwayAttachMeters: 500,
+            },
+            nodeCoords,
+            ways,
+        );
+
+        assert.equal(lines.length, 1, "0-stop way-only mastered line survives");
+        const line = lines[0];
+        // All three stations spatially attached along the variant track.
+        assert.ok(
+            ["osm:node:80", "osm:node:81", "osm:node:82"].every((id) =>
+                line.memberStationIds.includes(id),
+            ),
+            "stations attached from variant track geometry",
+        );
+        // Geometry uses the variant track coords, never the stray-way junk.
+        const flat = line.geometry.coordinates.flat();
+        assert.ok(
+            flat.some((c) => c[0] === 139.0 && c[1] === 35.0),
+            "geometry includes variant track coords",
+        );
+        assert.ok(
+            !flat.some((c) => c[0] === 100.0 && c[1] === 10.0),
+            "geometry excludes the master's stray-way coords",
+        );
+    });
+
+    it("does not over-attach stations to parallel lines", () => {
+        // Two parallel lines (海線 and 臺中線) running close together.
+        // A station on 海線 should NOT attach to 臺中線.
+        const relations = [
+            {
+                id: 1000,
+                properties: {
+                    tags: {
+                        route: "railway",
+                        name: "海線",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { type: "node", ref: 90, role: "stop" },
+                    { type: "node", ref: 91, role: "stop" },
+                ],
+            },
+            {
+                id: 1001,
+                properties: {
+                    tags: {
+                        route: "railway",
+                        name: "臺中線",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { type: "node", ref: 92, role: "stop" },
+                    { type: "node", ref: 93, role: "stop" },
+                ],
+            },
+        ];
+
+        // Station 90 is on 海線, station 92 is on 臺中線.
+        // They are 2km apart — beyond railwayAttachMeters.
+        const stationRecords = [
+            { id: "osm:node:90", name: "Coast A", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:91", name: "Coast B", lat: 35.1, lon: 139.1 },
+            { id: "osm:node:92", name: "Central A", lat: 35.0, lon: 139.02 },
+            { id: "osm:node:93", name: "Central B", lat: 35.1, lon: 139.12 },
+        ];
+
+        const { lines } = processOsmRoutes(relations, stationRecords, {
+            nameSuffixes: [],
+            operators: [],
+            useRailwayInfrastructure: true,
+            railwayAttachMeters: 120,
+        });
+
+        assert.equal(lines.length, 2);
+        const haiLine = lines.find((l) => l.name === "海線");
+        const zhongLine = lines.find((l) => l.name === "臺中線");
+        assert.ok(haiLine, "海線 line exists");
+        assert.ok(zhongLine, "臺中線 line exists");
+
+        // Station 90 should only be on 海線, not 臺中線.
+        assert.ok(
+            haiLine.memberStationIds.includes("osm:node:90"),
+            "海線 has station 90",
+        );
+        assert.ok(
+            !zhongLine.memberStationIds.includes("osm:node:90"),
+            "臺中線 does not have station 90",
+        );
+    });
 });
 
 describe("lineNameKey", () => {

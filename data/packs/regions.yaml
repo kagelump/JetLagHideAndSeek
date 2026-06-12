@@ -25,11 +25,31 @@ regions:
       transitOverrides:
           nameSuffixes: ["站", "車站"]
           maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
           routeColors:
-              "台灣高鐵": "#E4002B"
-              "臺灣高鐵": "#E4002B"
-              "區間": "#0070BD"
-              "自強": "#0033A0"
-              "莒光": "#F58B1F"
-              "復興": "#C48C31"
-          operatorNames: {}
+              "縱貫線": "#0033A0"
+              "海岸線": "#0070BD"
+              "北迴線": "#E4002B"
+              "宜蘭線": "#00843D"
+              "臺東線": "#F58B1F"
+              "南迴線": "#C48C31"
+              "屏東線": "#7B4F9D"
+              "集集線": "#8B5E3C"
+              "內灣線": "#2E8B57"
+              "臺中線": "#1F9E8B"
+              "成追線": "#9E1F7A"
+              "台灣高速鐵路": "#FF0000"
+              "臺灣高速鐵路": "#FF0000"
+          operatorNames:
+              # TRA: merge the 2024 corporate-rename + old-bureau variants so
+              # route=railway lines (tagged 臺灣鐵路公司) attach to the main
+              # 國營臺灣鐵路股份有限公司 station preset instead of landing in
+              # the "Other stations" coverage preset.
+              國營臺灣鐵路股份有限公司:
+                  ["臺灣鐵路公司", "臺灣鐵路管理局", "台灣鐵路管理局"]
+              # MRT/LRT operators that appear under duplicate name variants.
+              高雄捷運股份有限公司: ["高雄捷運公司"]
+              新北大眾捷運股份有限公司: ["新北捷運公司", "新北捷運股份有限公司"]
+              臺中捷運: ["臺中捷運公司", "臺中捷運股份有限公司"]
+          # curatedRoutes: {} # T17 — bus/cable-car line modes

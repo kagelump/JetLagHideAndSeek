@@ -518,6 +518,8 @@ async function lintTransit({ distDir, bbox }) {
     }
 
     // Per-operator route-count sanity bound (guards per-train proliferation).
+    // Railway-infrastructure mode collapses per-train routes into per-line,
+    // so the bound is tighter for those regions.
     const maxRoutesPerOperator = 250;
     for (const preset of artifact.presets) {
         if (
@@ -527,6 +529,27 @@ async function lintTransit({ distDir, bbox }) {
             errors.push(
                 `transit.json.gz: operator preset "${preset.id}" has ${preset.routes.length} routes (> ${maxRoutesPerOperator}) — possible per-train proliferation`,
             );
+        }
+    }
+
+    // Additional tight bound for railway-infrastructure regions: per-line
+    // routes should be well under 50 per operator.
+    const maxRoutesInfra = 50;
+    const hasRailwayRoutes = artifact.presets.some((p) =>
+        (p.routes || []).some(
+            (r) => r.name && /線/.test(r.name) && !/支線/.test(r.name),
+        ),
+    );
+    if (hasRailwayRoutes) {
+        for (const preset of artifact.presets) {
+            if (
+                preset.kind === "operator" &&
+                preset.routes.length > maxRoutesInfra
+            ) {
+                errors.push(
+                    `transit.json.gz: operator preset "${preset.id}" has ${preset.routes.length} routes (> ${maxRoutesInfra} railway-infrastructure bound) — possible per-train leakage`,
+                );
+            }
         }
     }
 

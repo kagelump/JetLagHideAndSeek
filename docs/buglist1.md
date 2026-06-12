@@ -1,5 +1,11 @@
 # Buglist
 
+# Unprocessed Buglist
+
+- In SF Bay area, a common game mode is: Allowed transit lines/stations - Everything on rails (BART, MUNI, Caltrain, cablecars, historic streetcars) plus the 38r and 14r bus lines. This requires adding in bus line options.
+
+# Processed Buglist
+
 Difficulty: **[E]** easy (≤half day), **[M]** medium (1–2 days), **[H]** hard
 (multi-day / needs design). Notes give a starting direction, not a spec.
 
