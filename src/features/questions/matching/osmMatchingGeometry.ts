@@ -70,15 +70,12 @@ export function buildOsmMatchingRenderState(
                         c.osmType === question.selectedOsmType,
                 )?.nameLength ?? null;
 
-            const { hitMask, missMask } = buildNameLengthMasks(
-                cells,
-                selectedNameLength,
-            );
+            const { hitMask } = buildNameLengthMasks(cells, selectedNameLength);
 
             if (question.answer === "positive") {
                 hitFeatures.push(...hitMask.features);
             } else if (question.answer === "negative") {
-                missFeatures.push(...missMask.features);
+                missFeatures.push(...hitMask.features);
             }
         } else if (question.answer === "positive") {
             const hitMask = buildOsmMatchingHitMask(cells, selectedOsmKey);

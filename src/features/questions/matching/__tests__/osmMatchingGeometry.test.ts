@@ -264,4 +264,102 @@ describe("buildOsmMatchingRenderState", () => {
         expect(result.hitMaskFeatures.features).toHaveLength(1);
         expect(result.missMaskFeatures.features).toHaveLength(1);
     });
+
+    it("station-name-length positive answer: matching cells are in hit mask", () => {
+        const question = makeMatchingQuestion({
+            answer: "positive",
+            category: "station-name-length",
+            candidates: [
+                {
+                    distanceMeters: 150,
+                    lat: 35.681,
+                    lon: 139.761,
+                    name: "Shinjuku",
+                    nameLength: 7,
+                    osmId: 1,
+                    osmType: "node",
+                    tags: {},
+                },
+                {
+                    distanceMeters: 900,
+                    lat: 35.685,
+                    lon: 139.765,
+                    name: "Ikebukuro",
+                    nameLength: 9,
+                    osmId: 2,
+                    osmType: "node",
+                    tags: {},
+                },
+                {
+                    distanceMeters: 1200,
+                    lat: 35.689,
+                    lon: 139.769,
+                    name: "Ueno",
+                    nameLength: 4,
+                    osmId: 3,
+                    osmType: "node",
+                    tags: {},
+                },
+            ],
+            selectedOsmId: 1,
+            selectedOsmType: "node",
+        });
+        const result = buildOsmMatchingRenderState(
+            [question],
+            playAreaBbox,
+            playAreaBoundary,
+        );
+
+        expect(result.hitMaskFeatures.features).toHaveLength(1);
+        expect(result.missMaskFeatures.features).toHaveLength(0);
+    });
+
+    it("station-name-length negative answer: matching cells are in miss mask (polarity)", () => {
+        const question = makeMatchingQuestion({
+            answer: "negative",
+            category: "station-name-length",
+            candidates: [
+                {
+                    distanceMeters: 150,
+                    lat: 35.681,
+                    lon: 139.761,
+                    name: "Shinjuku",
+                    nameLength: 7,
+                    osmId: 1,
+                    osmType: "node",
+                    tags: {},
+                },
+                {
+                    distanceMeters: 900,
+                    lat: 35.685,
+                    lon: 139.765,
+                    name: "Ikebukuro",
+                    nameLength: 9,
+                    osmId: 2,
+                    osmType: "node",
+                    tags: {},
+                },
+                {
+                    distanceMeters: 1200,
+                    lat: 35.689,
+                    lon: 139.769,
+                    name: "Ueno",
+                    nameLength: 4,
+                    osmId: 3,
+                    osmType: "node",
+                    tags: {},
+                },
+            ],
+            selectedOsmId: 1,
+            selectedOsmType: "node",
+        });
+        const result = buildOsmMatchingRenderState(
+            [question],
+            playAreaBbox,
+            playAreaBoundary,
+        );
+
+        expect(result.hitMaskFeatures.features).toHaveLength(0);
+        expect(result.missMaskFeatures.features).toHaveLength(1);
+    });
 });
