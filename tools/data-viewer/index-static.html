@@ -9,6 +9,9 @@
             href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
         />
         <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+        <script src="lib/columnarToGeojson.js"></script>
+        <script src="lib/deltaEncode.js"></script>
+        <script src="lib/transitGeojson.js"></script>
         <style>
             * {
                 margin: 0;
@@ -54,6 +57,7 @@
                 line-height: 1.8;
                 max-height: calc(100vh - 20px);
                 overflow-y: auto;
+                min-width: 180px;
             }
             .legend-swatch {
                 display: inline-block;
@@ -67,6 +71,76 @@
                 height: 12px;
                 width: 12px;
                 border-radius: 2px;
+            }
+            #catalog-section {
+                margin-bottom: 8px;
+            }
+            #catalog-section summary {
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 11px;
+            }
+            #catalog-list {
+                font-size: 11px;
+                margin-top: 4px;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            .catalog-pack {
+                padding: 3px 0;
+                border-bottom: 1px solid #f0f0f0;
+                cursor: pointer;
+            }
+            .catalog-pack:hover {
+                background: #f5f5f5;
+            }
+            .catalog-artifact {
+                font-size: 10px;
+                color: #666;
+                padding-left: 10px;
+                cursor: pointer;
+            }
+            .catalog-artifact:hover {
+                color: #2563eb;
+                text-decoration: underline;
+            }
+            #drop-zone {
+                border: 2px dashed #ccc;
+                border-radius: 6px;
+                padding: 8px;
+                text-align: center;
+                font-size: 11px;
+                color: #888;
+                margin: 4px 0;
+                cursor: pointer;
+                transition:
+                    border-color 0.2s,
+                    background 0.2s;
+            }
+            #drop-zone.dragover {
+                border-color: #2563eb;
+                background: rgba(37, 99, 235, 0.05);
+            }
+            #pack-meta-info {
+                font-size: 10px;
+                color: #666;
+                margin-bottom: 4px;
+                word-break: break-all;
+            }
+            #provenance-panel {
+                font-size: 10px;
+                color: #555;
+                background: #f9f9f9;
+                border-radius: 4px;
+                padding: 4px 6px;
+                margin: 4px 0;
+                display: none;
+            }
+            .payload-category {
+                font-weight: 600;
+                margin-top: 4px;
+                margin-bottom: 2px;
+                font-size: 11px;
             }
         </style>
     </head>
@@ -308,11 +382,26 @@
                     >Stations
                 </label>
             </div>
+            <hr
+                style="
+                    border: none;
+                    border-top: 1px solid #e5e7eb;
+                    margin: 4px 0;
+                "
+            />
+            <details id="catalog-section">
+                <summary>Pack Catalog</summary>
+                <div id="catalog-list">Loading catalog...</div>
+            </details>
+            <div id="drop-zone">Drop an artifact (.json.gz or .json) here</div>
+            <div id="pack-meta-info"></div>
+            <div id="provenance-panel"></div>
+            <div id="pack-layers-container" style="margin-top: 2px"></div>
         </div>
         <script>
-            const KANTO_BBOX = [137.9, 33.9, 141.9, 37.9];
+            var KANTO_BBOX = [137.9, 33.9, 141.9, 37.9];
 
-            const map = new maplibregl.Map({
+            var map = new maplibregl.Map({
                 container: "map",
                 style: {
                     version: 8,
@@ -333,7 +422,7 @@
                 fitBoundsOptions: { padding: 20 },
             });
 
-            const SOURCES = {
+            var SOURCES = {
                 coastline: "data/measuring/coastline.json",
                 "high-speed-rail": "data/measuring/high-speed-rail.json",
                 "body-of-water": "data/measuring/body-of-water.json",
@@ -345,23 +434,42 @@
                 "transit-stations": "data/transit/stations.json",
             };
 
-            async function fetchJson(url) {
-                const res = await fetch(url);
-                if (!res.ok) throw new Error(`${url}: ${res.status}`);
-                return res.json();
-            }
+            var CATALOG_DATA = null;
+            var PACK_LOADED_LAYERS = {};
 
-            function addMeasuringSource(id, data) {
-                map.addSource(id, { type: "geojson", data });
-            }
+            var POI_COLORS = {
+                park: "#22c55e",
+                hospital: "#ef4444",
+                museum: "#a855f7",
+                mountain: "#78716c",
+                landmark: "#f59e0b",
+                library: "#3b82f6",
+                "golf-course": "#15803d",
+                "movie-theater": "#ec4899",
+                "foreign-consulate": "#6366f1",
+                "amusement-park": "#f97316",
+                zoo: "#14b8a6",
+                aquarium: "#06b6d4",
+                "commercial-airport": "#e11d48",
+                "station-name-length": "#8b5cf6",
+            };
 
-            function addMeasuringLayers(id, config) {
-                for (const layer of config) {
-                    map.addLayer({ ...layer, source: id });
-                }
-            }
+            var BOUNDARY_COLORS = {
+                4: { fill: "rgba(234, 88, 12, 0.12)", line: "#ea580c" },
+                7: { fill: "rgba(107, 114, 128, 0.12)", line: "#6b7280" },
+                8: { fill: "rgba(59, 130, 246, 0.12)", line: "#3b82f6" },
+                9: { fill: "rgba(22, 163, 74, 0.12)", line: "#16a34a" },
+                10: { fill: "rgba(139, 92, 246, 0.12)", line: "#8b5cf6" },
+            };
 
-            const LAYER_CONFIGS = {
+            var POPUP = new maplibregl.Popup({
+                closeButton: false,
+                closeOnClick: false,
+                offset: 8,
+                maxWidth: "240px",
+            });
+
+            var CONFIG_LAYERS = {
                 coastline: [
                     {
                         id: "coastline-line",
@@ -380,7 +488,11 @@
                     {
                         id: "water-fill",
                         type: "fill",
-                        filter: ["==", ["geometry-type"], "Polygon"],
+                        filter: [
+                            "any",
+                            ["==", ["geometry-type"], "Polygon"],
+                            ["==", ["geometry-type"], "MultiPolygon"],
+                        ],
                         paint: {
                             "fill-color": "#38bdf8",
                             "fill-opacity": 0.35,
@@ -389,7 +501,11 @@
                     {
                         id: "water-outline",
                         type: "line",
-                        filter: ["==", ["geometry-type"], "Polygon"],
+                        filter: [
+                            "any",
+                            ["==", ["geometry-type"], "Polygon"],
+                            ["==", ["geometry-type"], "MultiPolygon"],
+                        ],
                         paint: { "line-color": "#1d4ed8", "line-width": 1.6 },
                     },
                     {
@@ -544,54 +660,139 @@
                 }),
             };
 
-            async function loadLayers() {
-                const entries = Object.entries(SOURCES);
-                const results = await Promise.allSettled(
-                    entries.map(([, url]) => fetchJson(url)),
-                );
-
-                let loaded = 0;
-                for (let i = 0; i < entries.length; i++) {
-                    const [id] = entries[i];
-                    const result = results[i];
-                    if (result.status === "rejected") {
-                        console.error(`Failed to load ${id}:`, result.reason);
-                        continue;
-                    }
-                    addMeasuringSource(id, result.value);
-                    addMeasuringLayers(id, LAYER_CONFIGS[id]);
-                    loaded++;
-                }
-
-                document.getElementById("loading").classList.add("hidden");
-                console.log(`Loaded ${loaded}/${entries.length} layers`);
+            async function fetchJson(url) {
+                var res = await fetch(url);
+                if (!res.ok) throw new Error(url + ": " + res.status);
+                return res.json();
             }
 
-            const popup = new maplibregl.Popup({
-                closeButton: false,
-                closeOnClick: false,
-                offset: 8,
-                maxWidth: "240px",
+            function addSource(id, data) {
+                map.addSource(id, { type: "geojson", data: data });
+            }
+
+            function addLayers(id, config) {
+                for (var li = 0; li < config.length; li++) {
+                    map.addLayer(Object.assign({}, config[li], { source: id }));
+                }
+            }
+
+            function removeSourceAndLayers(id) {
+                if (!id || !map.getSource(id)) return;
+                var layers = map.getStyle().layers || [];
+                for (var li = 0; li < layers.length; li++) {
+                    if (layers[li].source === id) {
+                        if (map.getLayer(layers[li].id))
+                            map.removeLayer(layers[li].id);
+                    }
+                }
+                if (map.getSource(id)) map.removeSource(id);
+            }
+
+            function fitBbox(bbox) {
+                if (bbox && bbox.length === 4) {
+                    map.fitBounds(bbox, { padding: 40 });
+                }
+            }
+
+            function clearPackLayers() {
+                var keys = Object.keys(PACK_LOADED_LAYERS);
+                for (var i = 0; i < keys.length; i++) {
+                    removeSourceAndLayers(keys[i]);
+                }
+                PACK_LOADED_LAYERS = {};
+            }
+
+            // ── Built-in Japan layers ────────────────────────────────────
+
+            async function loadLayers() {
+                var entries = Object.entries(SOURCES);
+                var results = await Promise.allSettled(
+                    entries.map(function (e) {
+                        return fetchJson(e[1]);
+                    }),
+                );
+                var loaded = 0;
+                for (var i = 0; i < entries.length; i++) {
+                    var id = entries[i][0];
+                    var result = results[i];
+                    if (result.status === "rejected") {
+                        console.error(
+                            "Failed to load " + id + ":",
+                            result.reason,
+                        );
+                        continue;
+                    }
+                    addSource(id, result.value);
+                    addLayers(id, CONFIG_LAYERS[id]);
+                    loaded++;
+                }
+                document.getElementById("loading").classList.add("hidden");
+                console.log(
+                    "Loaded " + loaded + "/" + entries.length + " layers",
+                );
+            }
+
+            map.on("load", function () {
+                loadLayers();
+                loadCatalog();
             });
 
-            map.on("load", loadLayers);
-
-            map.on("mouseenter", "poi-circle", (e) => {
+            map.on("mouseenter", "poi-circle", function (e) {
                 map.getCanvas().style.cursor = "pointer";
-                const p = e.features[0].properties;
-                let html = `<strong>${p.name ?? "(unnamed)"}</strong><br>${p.category}`;
-                if (p.osmId) html += `<br>osm ${p.osmType ?? ""} ${p.osmId}`;
-                if (p.iata) html += ` · IATA ${p.iata}`;
-                popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+                var p = e.features[0].properties;
+                var html =
+                    "<strong>" +
+                    (p.name || "(unnamed)") +
+                    "</strong><br>" +
+                    p.category;
+                if (p.osmId)
+                    html += "<br>osm " + (p.osmType || "") + " " + p.osmId;
+                if (p.iata) html += " &middot; IATA " + p.iata;
+                POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
             });
-
-            map.on("mouseleave", "poi-circle", () => {
+            map.on("mouseleave", "poi-circle", function () {
                 map.getCanvas().style.cursor = "";
-                popup.remove();
+                POPUP.remove();
             });
 
-            // ── Layer toggles ───────────────────────────────────────────
-            const LINE_POLYGON_LAYERS = [
+            map.on("mouseenter", "transit-stations-ring-0", function (e) {
+                map.getCanvas().style.cursor = "pointer";
+                var p = e.features[0].properties;
+                var html = "<strong>" + p.name + "</strong>";
+                if (p.operators)
+                    html += "<br><em>" + truncateList(p.operators, 3) + "</em>";
+                if (p.routeNames)
+                    html +=
+                        '<br><span style="color:#666">' +
+                        truncateList(p.routeNames, 4) +
+                        "</span>";
+                html +=
+                    '<br><span style="color:#999;font-size:11px">Ring ' +
+                    (p.ringIndex + 1) +
+                    "/" +
+                    p.ringCount +
+                    "</span>";
+                POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
+            });
+            map.on("mouseleave", "transit-stations-ring-0", function () {
+                map.getCanvas().style.cursor = "";
+                POPUP.remove();
+            });
+
+            function truncateList(str, max) {
+                if (!str) return "";
+                var items = str.split(", ");
+                if (items.length <= max) return str;
+                return (
+                    items.slice(0, max).join(", ") +
+                    " +" +
+                    (items.length - max) +
+                    " more"
+                );
+            }
+
+            // ── Layer toggles ─────────────────────────────────────────────
+            var LINE_POLYGON_LAYERS = [
                 "coastline-line",
                 "hsr-line",
                 "water-fill",
@@ -605,71 +806,741 @@
 
             document
                 .getElementById("toggle-lines-polygons")
-                .addEventListener("change", (e) => {
-                    const vis = e.target.checked ? "visible" : "none";
-                    for (const id of LINE_POLYGON_LAYERS) {
-                        map.setLayoutProperty(id, "visibility", vis);
+                .addEventListener("change", function (e) {
+                    var vis = e.target.checked ? "visible" : "none";
+                    for (var i = 0; i < LINE_POLYGON_LAYERS.length; i++) {
+                        map.setLayoutProperty(
+                            LINE_POLYGON_LAYERS[i],
+                            "visibility",
+                            vis,
+                        );
                     }
                 });
-
             document
                 .getElementById("toggle-pois")
-                .addEventListener("change", (e) => {
-                    const vis = e.target.checked ? "visible" : "none";
-                    map.setLayoutProperty("poi-circle", "visibility", vis);
+                .addEventListener("change", function (e) {
+                    map.setLayoutProperty(
+                        "poi-circle",
+                        "visibility",
+                        e.target.checked ? "visible" : "none",
+                    );
                 });
-
             document
                 .getElementById("toggle-transit-routes")
-                .addEventListener("change", (e) => {
-                    const vis = e.target.checked ? "visible" : "none";
+                .addEventListener("change", function (e) {
                     map.setLayoutProperty(
                         "transit-routes-line",
                         "visibility",
-                        vis,
+                        e.target.checked ? "visible" : "none",
                     );
                 });
-
             document
                 .getElementById("toggle-transit-stations")
-                .addEventListener("change", (e) => {
-                    const vis = e.target.checked ? "visible" : "none";
-                    for (let i = 0; i < 6; i++) {
+                .addEventListener("change", function (e) {
+                    var vis = e.target.checked ? "visible" : "none";
+                    for (var i = 0; i < 6; i++) {
                         map.setLayoutProperty(
-                            `transit-stations-ring-${i}`,
+                            "transit-stations-ring-" + i,
                             "visibility",
                             vis,
                         );
                     }
                 });
 
-            // ── Station hover popup ─────────────────────────────────────
-            function truncateList(str, max) {
-                if (!str) return "";
-                const items = str.split(", ");
-                if (items.length <= max) return str;
-                return (
-                    items.slice(0, max).join(", ") +
-                    ` +${items.length - max} more`
+            // ── Pack catalog ──────────────────────────────────────────────
+
+            async function loadCatalog() {
+                try {
+                    var catalog = await fetchJson("/packs/catalog.json");
+                    CATALOG_DATA = catalog;
+                    renderCatalog(catalog);
+                } catch (err) {
+                    document.getElementById("catalog-list").textContent =
+                        "Catalog not available: " + err.message;
+                }
+            }
+
+            function renderCatalog(catalog) {
+                var el = document.getElementById("catalog-list");
+                el.innerHTML = "";
+                if (!catalog || !catalog.packs || catalog.packs.length === 0) {
+                    el.textContent = "No packs in catalog";
+                    return;
+                }
+
+                for (var pi = 0; pi < catalog.packs.length; pi++) {
+                    var pack = catalog.packs[pi];
+                    var packDiv = document.createElement("div");
+                    packDiv.className = "catalog-pack";
+                    var header = document.createElement("div");
+                    var totalMB = (pack.totalBytes / 1024 / 1024).toFixed(1);
+                    header.textContent =
+                        pack.label + " (" + pack.id + ") — " + totalMB + " MB";
+                    packDiv.appendChild(header);
+
+                    // Artifact list
+                    if (pack.artifacts) {
+                        for (var ai = 0; ai < pack.artifacts.length; ai++) {
+                            var art = pack.artifacts[ai];
+                            var artDiv = document.createElement("div");
+                            artDiv.className = "catalog-artifact";
+                            var sizeKB = (art.bytes / 1024).toFixed(0);
+                            var name = art.kind;
+                            if (art.category) name += " / " + art.category;
+                            name += " (" + sizeKB + " KB)";
+                            artDiv.textContent = name;
+                            artDiv.title = "Download " + art.kind + " artifact";
+                            // Click to download (the user then drops the file onto the viewer)
+                            artDiv.addEventListener(
+                                "click",
+                                (function (url) {
+                                    return function () {
+                                        window.open(url, "_blank");
+                                    };
+                                })(art.url),
+                            );
+                            packDiv.appendChild(artDiv);
+                        }
+                    }
+
+                    el.appendChild(packDiv);
+                }
+            }
+
+            // ── Payload kind sniffing ─────────────────────────────────────
+
+            function sniffKind(payload) {
+                if (payload == null || typeof payload !== "object") return null;
+                if (payload.categories && payload.totalCount !== undefined)
+                    return "poi";
+                if (payload.category && Array.isArray(payload.features))
+                    return "measuring";
+                if (payload.index && payload.polygons) return "boundaries";
+                if (payload.presets && Array.isArray(payload.presets))
+                    return "transit";
+                if (payload.regionId && payload.adminLevels) return "meta";
+                return null;
+            }
+
+            // ── Drag-drop ─────────────────────────────────────────────────
+
+            var dropZone = document.getElementById("drop-zone");
+
+            dropZone.addEventListener("dragover", function (e) {
+                e.preventDefault();
+                dropZone.classList.add("dragover");
+            });
+            dropZone.addEventListener("dragleave", function () {
+                dropZone.classList.remove("dragover");
+            });
+            dropZone.addEventListener("drop", function (e) {
+                e.preventDefault();
+                dropZone.classList.remove("dragover");
+                var files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleDroppedFile(files[0]);
+                }
+            });
+            dropZone.addEventListener("click", function () {
+                var input = document.createElement("input");
+                input.type = "file";
+                input.accept = ".json,.json.gz,.gz";
+                input.addEventListener("change", function () {
+                    if (input.files.length > 0)
+                        handleDroppedFile(input.files[0]);
+                });
+                input.click();
+            });
+
+            async function handleDroppedFile(file) {
+                var name = file.name;
+                clearPackLayers();
+                var container = document.getElementById(
+                    "pack-layers-container",
+                );
+                container.innerHTML = "";
+                document.getElementById("provenance-panel").style.display =
+                    "none";
+
+                try {
+                    var payload;
+                    if (name.endsWith(".gz")) {
+                        var reader = new FileReader();
+                        var arrayBuf = await new Promise(function (
+                            resolve,
+                            reject,
+                        ) {
+                            reader.onload = function () {
+                                resolve(reader.result);
+                            };
+                            reader.onerror = reject;
+                            reader.readAsArrayBuffer(file);
+                        });
+                        var ds = new DecompressionStream("gzip");
+                        var decompressed = await new Response(
+                            new ReadableStream({
+                                start: function (c) {
+                                    c.enqueue(arrayBuf);
+                                    c.close();
+                                },
+                            }).pipeThrough(ds),
+                        ).arrayBuffer();
+                        var text = new TextDecoder("utf-8").decode(
+                            decompressed,
+                        );
+                        payload = JSON.parse(text);
+                    } else if (name.endsWith(".json")) {
+                        payload = await file.text().then(JSON.parse);
+                    } else {
+                        dropZone.textContent = "Unsupported file type: " + name;
+                        return;
+                    }
+
+                    var kind = sniffKind(payload);
+                    if (!kind) {
+                        dropZone.textContent = "Unknown artifact format";
+                        return;
+                    }
+
+                    dropZone.textContent = "Loaded: " + name;
+
+                    // Show provenance
+                    showProvenance(payload, name, kind);
+
+                    // Render based on kind
+                    if (kind === "poi") {
+                        renderDroppedPoi(payload);
+                    } else if (kind === "measuring") {
+                        renderDroppedMeasuring(payload);
+                    } else if (kind === "boundaries") {
+                        renderDroppedBoundaries(payload);
+                    } else if (kind === "transit") {
+                        renderDroppedTransit(payload);
+                    } else if (kind === "meta") {
+                        renderDroppedMeta(payload);
+                    }
+                } catch (err) {
+                    dropZone.textContent = "Error: " + err.message;
+                    console.error(err);
+                }
+            }
+
+            function showProvenance(payload, name, kind) {
+                var panel = document.getElementById("provenance-panel");
+                panel.style.display = "block";
+                var lines = [];
+                lines.push("<strong>File:</strong> " + name);
+                lines.push("<strong>Kind:</strong> " + kind);
+                if (payload.schemaVersion != null)
+                    lines.push(
+                        "<strong>Schema:</strong> v" + payload.schemaVersion,
+                    );
+                if (payload.generatedAt)
+                    lines.push(
+                        "<strong>Generated:</strong> " + payload.generatedAt,
+                    );
+                if (payload.totalCount != null)
+                    lines.push(
+                        "<strong>Total POIs:</strong> " + payload.totalCount,
+                    );
+                if (kind === "measuring" && payload.features)
+                    lines.push(
+                        "<strong>Features:</strong> " + payload.features.length,
+                    );
+                if (kind === "boundaries" && payload.index) {
+                    lines.push(
+                        "<strong>Boundary entries:</strong> " +
+                            payload.index.length,
+                    );
+                    var levelCounts = {};
+                    for (var i = 0; i < payload.index.length; i++) {
+                        var lv = payload.index[i].adminLevel;
+                        if (lv != null)
+                            levelCounts[lv] = (levelCounts[lv] || 0) + 1;
+                    }
+                    var levelLines = [];
+                    for (var lvKey in levelCounts) {
+                        levelLines.push(
+                            "Level " + lvKey + ": " + levelCounts[lvKey],
+                        );
+                    }
+                    lines.push(
+                        "<strong>Per-level:</strong> " + levelLines.join(", "),
+                    );
+                }
+                if (kind === "transit" && payload.presets) {
+                    lines.push(
+                        "<strong>Presets:</strong> " + payload.presets.length,
+                    );
+                    var stationCount = 0;
+                    for (var i = 0; i < payload.presets.length; i++) {
+                        stationCount += (payload.presets[i].stations || [])
+                            .length;
+                    }
+                    lines.push("<strong>Stations:</strong> ~" + stationCount);
+                }
+                if (payload.source)
+                    lines.push("<strong>Source:</strong> " + payload.source);
+                panel.innerHTML = lines.join("<br>");
+            }
+
+            function renderDroppedPoi(payload) {
+                var container = document.getElementById(
+                    "pack-layers-container",
+                );
+                container.innerHTML = "";
+                var cats = payload.categories || {};
+                var catKeys = Object.keys(cats);
+
+                for (var ci = 0; ci < catKeys.length; ci++) {
+                    var category = catKeys[ci];
+                    var cat = cats[category];
+                    (function (catName, catData) {
+                        var label = document.createElement("label");
+                        label.style.cssText =
+                            "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
+                        var cb = document.createElement("input");
+                        cb.type = "checkbox";
+                        var color = POI_COLORS[catName] || "#9ca3af";
+                        var swatch = document.createElement("span");
+                        swatch.className = "legend-swatch polygon";
+                        swatch.style.cssText =
+                            "background:" +
+                            color +
+                            ";display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:middle;";
+
+                        cb.addEventListener("change", function () {
+                            var sourceId = "drop-poi-" + catName;
+                            var layerId = "drop-poi-circle-" + catName;
+                            if (this.checked && !PACK_LOADED_LAYERS[sourceId]) {
+                                var fc =
+                                    window.columnarToGeojson.categoryToFeatures(
+                                        catName,
+                                        catData,
+                                    );
+                                addSource(sourceId, fc);
+                                map.addLayer({
+                                    id: layerId,
+                                    type: "circle",
+                                    source: sourceId,
+                                    paint: {
+                                        "circle-radius": [
+                                            "interpolate",
+                                            ["linear"],
+                                            ["zoom"],
+                                            6,
+                                            1.5,
+                                            10,
+                                            3,
+                                            14,
+                                            7,
+                                        ],
+                                        "circle-color": color,
+                                        "circle-opacity": 0.7,
+                                        "circle-stroke-width": 0.5,
+                                        "circle-stroke-color": "#fff",
+                                    },
+                                });
+                                PACK_LOADED_LAYERS[sourceId] = true;
+                            } else if (!this.checked) {
+                                removeSourceAndLayers(sourceId);
+                                delete PACK_LOADED_LAYERS[sourceId];
+                            }
+                        });
+
+                        label.appendChild(cb);
+                        label.appendChild(swatch);
+                        label.appendChild(
+                            document.createTextNode(
+                                catName + " (" + catData.count + ")",
+                            ),
+                        );
+                        container.appendChild(label);
+                    })(category, cat);
+                }
+                fitBbox(payload.bbox);
+            }
+
+            function renderDroppedMeasuring(payload) {
+                var container = document.getElementById(
+                    "pack-layers-container",
+                );
+                container.innerHTML = "";
+                var category = payload.category || "unknown";
+                var features = payload.features || [];
+
+                var label = document.createElement("label");
+                label.style.cssText =
+                    "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
+                var cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.addEventListener("change", function () {
+                    var sourceId = "drop-measuring";
+                    if (this.checked && !PACK_LOADED_LAYERS[sourceId]) {
+                        var fc = {
+                            type: "FeatureCollection",
+                            features: features,
+                        };
+                        addSource(sourceId, fc);
+                        // Use pre-defined config if available, else generic line
+                        var configs = CONFIG_LAYERS[category];
+                        if (configs) {
+                            addLayers(
+                                sourceId,
+                                JSON.parse(JSON.stringify(configs)),
+                            );
+                        } else {
+                            map.addLayer({
+                                id: "drop-measuring-line",
+                                type: "line",
+                                source: sourceId,
+                                paint: {
+                                    "line-color": "#2563eb",
+                                    "line-width": 2,
+                                },
+                            });
+                        }
+                        PACK_LOADED_LAYERS[sourceId] = true;
+                    } else if (!this.checked) {
+                        removeSourceAndLayers(sourceId);
+                        delete PACK_LOADED_LAYERS[sourceId];
+                    }
+                });
+                label.appendChild(cb);
+                label.appendChild(
+                    document.createTextNode(
+                        category + " (" + features.length + " features)",
+                    ),
+                );
+                container.appendChild(label);
+                fitBbox(payload.extractBbox);
+            }
+
+            function renderDroppedBoundaries(payload) {
+                var container = document.getElementById(
+                    "pack-layers-container",
+                );
+                container.innerHTML = "";
+                var levels = payload.levels || [];
+                var levelCounts = {};
+                for (var i = 0; i < payload.index.length; i++) {
+                    var lv = payload.index[i].adminLevel;
+                    if (lv != null)
+                        levelCounts[lv] = (levelCounts[lv] || 0) + 1;
+                }
+
+                for (var li = 0; li < levels.length; li++) {
+                    var level = levels[li];
+                    (function (lv) {
+                        var colors = BOUNDARY_COLORS[lv] || {
+                            fill: "rgba(156, 163, 175, 0.12)",
+                            line: "#9ca3af",
+                        };
+                        var label = document.createElement("label");
+                        label.style.cssText =
+                            "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
+                        var cb = document.createElement("input");
+                        cb.type = "checkbox";
+                        var swatch = document.createElement("span");
+                        swatch.className = "legend-swatch polygon";
+                        swatch.style.cssText =
+                            "background:" +
+                            colors.fill +
+                            ";border:1.5px solid " +
+                            colors.line +
+                            ";display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:middle;";
+
+                        cb.addEventListener("change", function () {
+                            var sourceId = "drop-boundaries-" + lv;
+                            var fillLayerId = "drop-boundaries-fill-" + lv;
+                            var lineLayerId = "drop-boundaries-line-" + lv;
+                            if (this.checked && !PACK_LOADED_LAYERS[sourceId]) {
+                                var features = [];
+                                for (
+                                    var ei = 0;
+                                    ei < payload.index.length;
+                                    ei++
+                                ) {
+                                    var entry = payload.index[ei];
+                                    if (entry.adminLevel !== lv) continue;
+                                    var rid = String(entry.relationId);
+                                    var encoded = payload.polygons[rid];
+                                    if (!encoded) continue;
+                                    var decoded =
+                                        window.deltaEncode.decodeDeltaPolygon(
+                                            encoded,
+                                        );
+                                    var geomType =
+                                        decoded.length > 1
+                                            ? "MultiPolygon"
+                                            : "Polygon";
+                                    var coords =
+                                        decoded.length === 1
+                                            ? decoded[0]
+                                            : decoded;
+                                    features.push({
+                                        type: "Feature",
+                                        geometry: {
+                                            type: geomType,
+                                            coordinates: coords,
+                                        },
+                                        properties: {
+                                            relationId: entry.relationId,
+                                            name: entry.name,
+                                            nameEn: entry.nameEn || null,
+                                            adminLevel: entry.adminLevel,
+                                        },
+                                    });
+                                }
+                                var fc = {
+                                    type: "FeatureCollection",
+                                    features: features,
+                                };
+                                addSource(sourceId, fc);
+                                map.addLayer({
+                                    id: fillLayerId,
+                                    type: "fill",
+                                    source: sourceId,
+                                    paint: {
+                                        "fill-color": colors.line,
+                                        "fill-opacity": 0.1,
+                                    },
+                                });
+                                map.addLayer({
+                                    id: lineLayerId,
+                                    type: "line",
+                                    source: sourceId,
+                                    paint: {
+                                        "line-color": colors.line,
+                                        "line-width": 2,
+                                        "line-opacity": 0.7,
+                                    },
+                                });
+                                PACK_LOADED_LAYERS[sourceId] = true;
+                            } else if (!this.checked) {
+                                removeSourceAndLayers(sourceId);
+                                delete PACK_LOADED_LAYERS[sourceId];
+                            }
+                        });
+
+                        label.appendChild(cb);
+                        label.appendChild(swatch);
+                        label.appendChild(
+                            document.createTextNode(
+                                "Admin level " +
+                                    lv +
+                                    " (" +
+                                    (levelCounts[lv] || 0) +
+                                    ")",
+                            ),
+                        );
+                        container.appendChild(label);
+                    })(level);
+                }
+            }
+
+            function renderDroppedTransit(payload) {
+                var container = document.getElementById(
+                    "pack-layers-container",
+                );
+                container.innerHTML = "";
+                var presets = payload.presets || [];
+
+                // Route lines
+                var routeLabel = document.createElement("label");
+                routeLabel.style.cssText =
+                    "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
+                var routeCb = document.createElement("input");
+                routeCb.type = "checkbox";
+                routeLabel.appendChild(routeCb);
+                routeLabel.appendChild(
+                    document.createTextNode(
+                        "Route lines (" + presets.length + " presets)",
+                    ),
+                );
+                routeCb.addEventListener("change", function () {
+                    var sourceId = "drop-transit-routes";
+                    if (this.checked && !PACK_LOADED_LAYERS[sourceId]) {
+                        var fc =
+                            window.transitGeojson.buildRouteFeatureCollection(
+                                presets,
+                            );
+                        addSource(sourceId, fc);
+                        map.addLayer({
+                            id: "drop-transit-routes-line",
+                            type: "line",
+                            source: sourceId,
+                            layout: {
+                                visibility: "visible",
+                                "line-cap": "round",
+                                "line-join": "round",
+                            },
+                            paint: {
+                                "line-color": [
+                                    "to-color",
+                                    ["get", "color"],
+                                    "#888",
+                                ],
+                                "line-width": [
+                                    "interpolate",
+                                    ["linear"],
+                                    ["zoom"],
+                                    6,
+                                    1,
+                                    10,
+                                    2,
+                                    13,
+                                    4,
+                                    16,
+                                    7,
+                                ],
+                                "line-opacity": 0.9,
+                            },
+                        });
+                        PACK_LOADED_LAYERS[sourceId] = true;
+                    } else if (!this.checked) {
+                        removeSourceAndLayers(sourceId);
+                        delete PACK_LOADED_LAYERS[sourceId];
+                    }
+                });
+                container.appendChild(routeLabel);
+
+                // Stations
+                var stationLabel = document.createElement("label");
+                stationLabel.style.cssText =
+                    "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
+                var stationCb = document.createElement("input");
+                stationCb.type = "checkbox";
+                stationLabel.appendChild(stationCb);
+                stationLabel.appendChild(document.createTextNode("Stations"));
+                stationCb.addEventListener("change", function () {
+                    var sourceId = "drop-transit-stations";
+                    if (this.checked && !PACK_LOADED_LAYERS[sourceId]) {
+                        var stations =
+                            window.transitGeojson.getSelectedStations(presets);
+                        var fc =
+                            window.transitGeojson.buildStationFeatureCollection(
+                                stations,
+                            );
+                        addSource(sourceId, fc);
+                        for (var ri = 0; ri < 6; ri++) {
+                            map.addLayer({
+                                id: "drop-transit-stations-ring-" + ri,
+                                type: "circle",
+                                source: sourceId,
+                                filter: ["==", ["get", "ringIndex"], ri],
+                                paint: {
+                                    "circle-color": [
+                                        "to-color",
+                                        ["get", "color"],
+                                        "#888",
+                                    ],
+                                    "circle-opacity": 0.95,
+                                    "circle-radius": 5 + (5 - ri) * 3,
+                                    "circle-stroke-color": "#fff",
+                                    "circle-stroke-width": 1.5,
+                                },
+                            });
+                        }
+                        PACK_LOADED_LAYERS[sourceId] = true;
+                    } else if (!this.checked) {
+                        removeSourceAndLayers(sourceId);
+                        delete PACK_LOADED_LAYERS[sourceId];
+                    }
+                });
+                container.appendChild(stationLabel);
+
+                // Station hover
+                map.on(
+                    "mouseenter",
+                    "drop-transit-stations-ring-0",
+                    function (e) {
+                        map.getCanvas().style.cursor = "pointer";
+                        var p = e.features[0].properties;
+                        var html = "<strong>" + p.name + "</strong>";
+                        if (p.operators)
+                            html +=
+                                "<br><em>" +
+                                truncateList(p.operators, 3) +
+                                "</em>";
+                        if (p.routeNames)
+                            html +=
+                                '<br><span style="color:#666">' +
+                                truncateList(p.routeNames, 4) +
+                                "</span>";
+                        html +=
+                            '<br><span style="color:#999;font-size:11px">Ring ' +
+                            (p.ringIndex + 1) +
+                            "/" +
+                            p.ringCount +
+                            "</span>";
+                        POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
+                    },
+                );
+                map.on(
+                    "mouseleave",
+                    "drop-transit-stations-ring-0",
+                    function () {
+                        map.getCanvas().style.cursor = "";
+                        POPUP.remove();
+                    },
                 );
             }
 
-            map.on("mouseenter", "transit-stations-ring-0", (e) => {
-                map.getCanvas().style.cursor = "pointer";
-                const p = e.features[0].properties;
-                let html = `<strong>${p.name}</strong>`;
-                if (p.operators)
-                    html += `<br><em>${truncateList(p.operators, 3)}</em>`;
-                if (p.routeNames)
-                    html += `<br><span style="color:#666">${truncateList(p.routeNames, 4)}</span>`;
-                html += `<br><span style="color:#999;font-size:11px">Ring ${p.ringIndex + 1}/${p.ringCount}</span>`;
-                popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
-            });
+            function renderDroppedMeta(payload) {
+                var infoEl = document.getElementById("pack-meta-info");
+                infoEl.textContent =
+                    payload.label +
+                    " (" +
+                    (payload.regionPath || []).join(" / ") +
+                    ")";
+                if (payload.bbox) fitBbox(payload.bbox);
 
-            map.on("mouseleave", "transit-stations-ring-0", () => {
-                map.getCanvas().style.cursor = "";
-                popup.remove();
-            });
+                var container = document.getElementById(
+                    "pack-layers-container",
+                );
+                container.innerHTML = "";
+
+                // POI categories listed (not loadable without the actual POI bundle)
+                var matchingCats =
+                    payload.categories && payload.categories.matching;
+                if (matchingCats && matchingCats.length > 0) {
+                    var catHeader = document.createElement("div");
+                    catHeader.style.cssText =
+                        "font-weight:600;font-size:11px;margin-top:4px;";
+                    catHeader.textContent =
+                        "Matching categories: " + matchingCats.join(", ");
+                    container.appendChild(catHeader);
+                }
+
+                var measCats =
+                    payload.categories && payload.categories.measuring;
+                if (measCats && measCats.length > 0) {
+                    var measHeader = document.createElement("div");
+                    measHeader.style.cssText =
+                        "font-weight:600;font-size:11px;margin-top:4px;";
+                    measHeader.textContent =
+                        "Measuring categories: " + measCats.join(", ");
+                    container.appendChild(measHeader);
+                }
+
+                var bndLevels =
+                    payload.adminLevels && payload.adminLevels.extract;
+                if (bndLevels && bndLevels.length > 0) {
+                    var bndHeader = document.createElement("div");
+                    bndHeader.style.cssText =
+                        "font-weight:600;font-size:11px;margin-top:4px;";
+                    bndHeader.textContent =
+                        "Boundary levels: " + bndLevels.join(", ");
+                    container.appendChild(bndHeader);
+                }
+
+                container.appendChild(
+                    document.createTextNode(
+                        "Drop individual artifacts to inspect them on the map.",
+                    ),
+                );
+            }
         </script>
     </body>
 </html>

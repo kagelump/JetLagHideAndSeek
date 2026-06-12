@@ -306,7 +306,7 @@
                     >Stations
                 </label>
             </div>
-            <div id="pack-boundaries-section" style="display: none">
+            <div id="pack-section" style="display: none">
                 <hr
                     style="
                         border: none;
@@ -315,17 +315,22 @@
                     "
                 />
                 <div style="font-weight: 600; margin-bottom: 4px">
-                    Pack Boundaries
-                    <select
-                        id="pack-region-select"
-                        style="
-                            font-size: 11px;
-                            margin-left: 4px;
-                            max-width: 120px;
-                        "
-                    ></select>
+                    <label style="display: flex; align-items: center; gap: 4px">
+                        Pack
+                        <select
+                            id="pack-select"
+                            style="font-size: 11px; max-width: 140px"
+                        ></select>
+                    </label>
                 </div>
-                <div id="pack-boundary-toggles"></div>
+                <div
+                    id="pack-meta-info"
+                    style="font-size: 10px; color: #666; margin-bottom: 4px"
+                ></div>
+                <div id="pack-poi-section" style="margin-top: 4px"></div>
+                <div id="pack-measuring-section" style="margin-top: 4px"></div>
+                <div id="pack-boundaries-section" style="margin-top: 4px"></div>
+                <div id="pack-transit-section" style="margin-top: 4px"></div>
             </div>
         </div>
         <script>
@@ -366,21 +371,73 @@
 
             async function fetchJson(url) {
                 const res = await fetch(url);
-                if (!res.ok) throw new Error(`${url}: ${res.status}`);
+                if (!res.ok) throw new Error(url + ": " + res.status);
                 return res.json();
             }
 
-            function addMeasuringSource(id, data) {
-                map.addSource(id, { type: "geojson", data });
+            function addSource(id, data) {
+                map.addSource(id, { type: "geojson", data: data });
             }
 
-            function addMeasuringLayers(id, config) {
-                for (const layer of config) {
-                    map.addLayer({ ...layer, source: id });
+            function addLayers(id, config) {
+                for (var li = 0; li < config.length; li++) {
+                    map.addLayer(Object.assign({}, config[li], { source: id }));
                 }
             }
 
-            const LAYER_CONFIGS = {
+            function removeSourceAndLayers(id) {
+                var layers = map.getStyle().layers || [];
+                for (var li = 0; li < layers.length; li++) {
+                    if (layers[li].source === id) {
+                        if (map.getLayer(layers[li].id)) {
+                            map.removeLayer(layers[li].id);
+                        }
+                    }
+                }
+                if (map.getSource(id)) {
+                    map.removeSource(id);
+                }
+            }
+
+            var POPUP = new maplibregl.Popup({
+                closeButton: false,
+                closeOnClick: false,
+                offset: 8,
+                maxWidth: "240px",
+            });
+
+            var POI_COLORS = {
+                park: "#22c55e",
+                hospital: "#ef4444",
+                museum: "#a855f7",
+                mountain: "#78716c",
+                landmark: "#f59e0b",
+                library: "#3b82f6",
+                "golf-course": "#15803d",
+                "movie-theater": "#ec4899",
+                "foreign-consulate": "#6366f1",
+                "amusement-park": "#f97316",
+                zoo: "#14b8a6",
+                aquarium: "#06b6d4",
+                "commercial-airport": "#e11d48",
+                "station-name-length": "#8b5cf6",
+            };
+
+            var BOUNDARY_COLORS = {
+                4: { fill: "rgba(234, 88, 12, 0.12)", line: "#ea580c" },
+                7: { fill: "rgba(107, 114, 128, 0.12)", line: "#6b7280" },
+                8: { fill: "rgba(59, 130, 246, 0.12)", line: "#3b82f6" },
+                9: { fill: "rgba(22, 163, 74, 0.12)", line: "#16a34a" },
+                10: { fill: "rgba(139, 92, 246, 0.12)", line: "#8b5cf6" },
+            };
+
+            var PACK_STATE = {
+                regionId: null,
+                meta: null,
+                loadedLayers: {},
+            };
+
+            var LAYER_CONFIGS = {
                 coastline: [
                     {
                         id: "coastline-line",
@@ -572,55 +629,60 @@
             };
 
             async function loadLayers() {
-                const entries = Object.entries(SOURCES);
-                const results = await Promise.allSettled(
-                    entries.map(([, url]) => fetchJson(url)),
+                var entries = Object.entries(SOURCES);
+                var results = await Promise.allSettled(
+                    entries.map(function (e) {
+                        return fetchJson(e[1]);
+                    }),
                 );
 
-                let loaded = 0;
-                for (let i = 0; i < entries.length; i++) {
-                    const [id] = entries[i];
-                    const result = results[i];
+                var loaded = 0;
+                for (var i = 0; i < entries.length; i++) {
+                    var id = entries[i][0];
+                    var result = results[i];
                     if (result.status === "rejected") {
-                        console.error(`Failed to load ${id}:`, result.reason);
+                        console.error(
+                            "Failed to load " + id + ":",
+                            result.reason,
+                        );
                         continue;
                     }
-                    addMeasuringSource(id, result.value);
-                    addMeasuringLayers(id, LAYER_CONFIGS[id]);
+                    addSource(id, result.value);
+                    addLayers(id, LAYER_CONFIGS[id]);
                     loaded++;
                 }
 
                 document.getElementById("loading").classList.add("hidden");
-                console.log(`Loaded ${loaded}/${entries.length} layers`);
+                console.log(
+                    "Loaded " + loaded + "/" + entries.length + " layers",
+                );
             }
 
-            const popup = new maplibregl.Popup({
-                closeButton: false,
-                closeOnClick: false,
-                offset: 8,
-                maxWidth: "240px",
-            });
-
             map.on("load", function () {
-                loadLayers().then(loadPackBoundaries);
+                loadLayers().then(initPackMode);
             });
 
-            map.on("mouseenter", "poi-circle", (e) => {
+            map.on("mouseenter", "poi-circle", function (e) {
                 map.getCanvas().style.cursor = "pointer";
-                const p = e.features[0].properties;
-                let html = `<strong>${p.name ?? "(unnamed)"}</strong><br>${p.category}`;
-                if (p.osmId) html += `<br>osm ${p.osmType ?? ""} ${p.osmId}`;
-                if (p.iata) html += ` · IATA ${p.iata}`;
-                popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+                var p = e.features[0].properties;
+                var html =
+                    "<strong>" +
+                    (p.name || "(unnamed)") +
+                    "</strong><br>" +
+                    p.category;
+                if (p.osmId)
+                    html += "<br>osm " + (p.osmType || "") + " " + p.osmId;
+                if (p.iata) html += " &middot; IATA " + p.iata;
+                POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
             });
 
-            map.on("mouseleave", "poi-circle", () => {
+            map.on("mouseleave", "poi-circle", function () {
                 map.getCanvas().style.cursor = "";
-                popup.remove();
+                POPUP.remove();
             });
 
             // ── Layer toggles ───────────────────────────────────────────
-            const LINE_POLYGON_LAYERS = [
+            var LINE_POLYGON_LAYERS = [
                 "coastline-line",
                 "hsr-line",
                 "water-fill",
@@ -634,24 +696,28 @@
 
             document
                 .getElementById("toggle-lines-polygons")
-                .addEventListener("change", (e) => {
-                    const vis = e.target.checked ? "visible" : "none";
-                    for (const id of LINE_POLYGON_LAYERS) {
-                        map.setLayoutProperty(id, "visibility", vis);
+                .addEventListener("change", function (e) {
+                    var vis = e.target.checked ? "visible" : "none";
+                    for (var i = 0; i < LINE_POLYGON_LAYERS.length; i++) {
+                        map.setLayoutProperty(
+                            LINE_POLYGON_LAYERS[i],
+                            "visibility",
+                            vis,
+                        );
                     }
                 });
 
             document
                 .getElementById("toggle-pois")
-                .addEventListener("change", (e) => {
-                    const vis = e.target.checked ? "visible" : "none";
+                .addEventListener("change", function (e) {
+                    var vis = e.target.checked ? "visible" : "none";
                     map.setLayoutProperty("poi-circle", "visibility", vis);
                 });
 
             document
                 .getElementById("toggle-transit-routes")
-                .addEventListener("change", (e) => {
-                    const vis = e.target.checked ? "visible" : "none";
+                .addEventListener("change", function (e) {
+                    var vis = e.target.checked ? "visible" : "none";
                     map.setLayoutProperty(
                         "transit-routes-line",
                         "visibility",
@@ -661,190 +727,568 @@
 
             document
                 .getElementById("toggle-transit-stations")
-                .addEventListener("change", (e) => {
-                    const vis = e.target.checked ? "visible" : "none";
-                    for (let i = 0; i < 6; i++) {
+                .addEventListener("change", function (e) {
+                    var vis = e.target.checked ? "visible" : "none";
+                    for (var i = 0; i < 6; i++) {
                         map.setLayoutProperty(
-                            `transit-stations-ring-${i}`,
+                            "transit-stations-ring-" + i,
                             "visibility",
                             vis,
                         );
                     }
                 });
 
-            // ── Pack boundaries ────────────────────────────────────────
-            const BOUNDARY_LEVELS = [4, 7, 8, 9, 10];
-            const BOUNDARY_COLORS = {
-                4: { fill: "rgba(234, 88, 12, 0.12)", line: "#ea580c" },
-                7: { fill: "rgba(107, 114, 128, 0.12)", line: "#6b7280" },
-                8: { fill: "rgba(59, 130, 246, 0.12)", line: "#3b82f6" },
-                9: { fill: "rgba(22, 163, 74, 0.12)", line: "#16a34a" },
-                10: { fill: "rgba(139, 92, 246, 0.12)", line: "#8b5cf6" },
-            };
-
-            async function loadPackBoundaries() {
-                try {
-                    const regions = await fetchJson("/api/pack/regions");
-                    if (!regions || regions.length === 0) return;
-
-                    const section = document.getElementById(
-                        "pack-boundaries-section",
-                    );
-                    section.style.display = "block";
-
-                    const select =
-                        document.getElementById("pack-region-select");
-                    for (const r of regions) {
-                        const opt = document.createElement("option");
-                        opt.value = r;
-                        opt.textContent = r;
-                        select.appendChild(opt);
-                    }
-
-                    // Populate toggles.
-                    const toggleContainer = document.getElementById(
-                        "pack-boundary-toggles",
-                    );
-                    for (const level of BOUNDARY_LEVELS) {
-                        const colors = BOUNDARY_COLORS[level] || {
-                            fill: "rgba(156, 163, 175, 0.12)",
-                            line: "#9ca3af",
-                        };
-                        const div = document.createElement("div");
-                        div.innerHTML = `
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                                <input type="checkbox" class="boundary-toggle" data-level="${level}" />
-                                <span class="legend-swatch polygon" style="background:${colors.fill};border:1.5px solid ${colors.line}"></span>
-                                Admin level ${level}
-                            </label>`;
-                        toggleContainer.appendChild(div);
-                    }
-
-                    // Add event listeners for toggles.
-                    const currentBoundaryLayers = {};
-                    document
-                        .querySelectorAll(".boundary-toggle")
-                        .forEach(function (cb) {
-                            cb.addEventListener("change", async function (e) {
-                                const level = this.dataset.level;
-                                const regionId = select.value;
-                                const checked = this.checked;
-                                const sourceId = "pack-boundaries-" + level;
-                                const fillLayerId =
-                                    "pack-boundaries-fill-" + level;
-                                const lineLayerId =
-                                    "pack-boundaries-line-" + level;
-
-                                if (checked && !currentBoundaryLayers[level]) {
-                                    try {
-                                        currentBoundaryLayers[level] =
-                                            "loading";
-                                        const data = await fetchJson(
-                                            "/api/pack/" +
-                                                regionId +
-                                                "/boundaries/" +
-                                                level,
-                                        );
-                                        const colors = BOUNDARY_COLORS[
-                                            level
-                                        ] || {
-                                            fill: "rgba(156, 163, 175, 0.12)",
-                                            line: "#9ca3af",
-                                        };
-                                        map.addSource(sourceId, {
-                                            type: "geojson",
-                                            data: data,
-                                        });
-                                        map.addLayer({
-                                            id: fillLayerId,
-                                            type: "fill",
-                                            source: sourceId,
-                                            paint: {
-                                                "fill-color": colors.line,
-                                                "fill-opacity": 0.1,
-                                            },
-                                        });
-                                        map.addLayer({
-                                            id: lineLayerId,
-                                            type: "line",
-                                            source: sourceId,
-                                            paint: {
-                                                "line-color": colors.line,
-                                                "line-width": 2,
-                                                "line-opacity": 0.7,
-                                            },
-                                        });
-                                        currentBoundaryLayers[level] = true;
-                                    } catch (err) {
-                                        console.error(
-                                            "Failed to load boundary level",
-                                            level,
-                                            err,
-                                        );
-                                        currentBoundaryLayers[level] = false;
-                                        this.checked = false;
-                                    }
-                                } else if (!checked) {
-                                    if (map.getLayer(fillLayerId)) {
-                                        map.removeLayer(fillLayerId);
-                                    }
-                                    if (map.getLayer(lineLayerId)) {
-                                        map.removeLayer(lineLayerId);
-                                    }
-                                    if (map.getSource(sourceId)) {
-                                        map.removeSource(sourceId);
-                                    }
-                                    delete currentBoundaryLayers[level];
-                                }
-                            });
-                        });
-
-                    // Re-fetch when region changes (reload all active layers).
-                    select.addEventListener("change", function () {
-                        const toggles =
-                            document.querySelectorAll(".boundary-toggle");
-                        toggles.forEach(function (cb) {
-                            if (cb.checked) {
-                                cb.checked = false;
-                                cb.dispatchEvent(new Event("change"));
-                                cb.checked = true;
-                                cb.dispatchEvent(new Event("change"));
-                            }
-                        });
-                    });
-                } catch (err) {
-                    // No pack data available — that's fine.
-                    console.log("No pack boundaries available:", err.message);
-                }
-            }
-
             // ── Station hover popup ─────────────────────────────────────
             function truncateList(str, max) {
                 if (!str) return "";
-                const items = str.split(", ");
+                var items = str.split(", ");
                 if (items.length <= max) return str;
                 return (
                     items.slice(0, max).join(", ") +
-                    ` +${items.length - max} more`
+                    " +" +
+                    (items.length - max) +
+                    " more"
                 );
             }
 
-            map.on("mouseenter", "transit-stations-ring-0", (e) => {
+            map.on("mouseenter", "transit-stations-ring-0", function (e) {
                 map.getCanvas().style.cursor = "pointer";
-                const p = e.features[0].properties;
-                let html = `<strong>${p.name}</strong>`;
+                var p = e.features[0].properties;
+                var html = "<strong>" + p.name + "</strong>";
                 if (p.operators)
-                    html += `<br><em>${truncateList(p.operators, 3)}</em>`;
+                    html += "<br><em>" + truncateList(p.operators, 3) + "</em>";
                 if (p.routeNames)
-                    html += `<br><span style="color:#666">${truncateList(p.routeNames, 4)}</span>`;
-                html += `<br><span style="color:#999;font-size:11px">Ring ${p.ringIndex + 1}/${p.ringCount}</span>`;
-                popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+                    html +=
+                        '<br><span style="color:#666">' +
+                        truncateList(p.routeNames, 4) +
+                        "</span>";
+                html +=
+                    '<br><span style="color:#999;font-size:11px">Ring ' +
+                    (p.ringIndex + 1) +
+                    "/" +
+                    p.ringCount +
+                    "</span>";
+                POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
             });
 
-            map.on("mouseleave", "transit-stations-ring-0", () => {
+            map.on("mouseleave", "transit-stations-ring-0", function () {
                 map.getCanvas().style.cursor = "";
-                popup.remove();
+                POPUP.remove();
             });
+
+            // ── Pack mode ──────────────────────────────────────────────
+            function makeSectionLabel(text) {
+                var div = document.createElement("div");
+                div.style.fontWeight = "600";
+                div.style.marginBottom = "2px";
+                div.style.fontSize = "11px";
+                div.textContent = text;
+                return div;
+            }
+
+            function makeToggle(label, colorStyle, onChange) {
+                var labelEl = document.createElement("label");
+                labelEl.style.cssText =
+                    "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
+                var cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.addEventListener("change", onChange);
+                labelEl.appendChild(cb);
+                if (colorStyle) {
+                    var swatch = document.createElement("span");
+                    swatch.className =
+                        "legend-swatch" +
+                        (colorStyle.polygon ? " polygon" : "");
+                    swatch.style.cssText = colorStyle.polygon
+                        ? "background:" +
+                          colorStyle.fill +
+                          ";border:1.5px solid " +
+                          colorStyle.line +
+                          ";display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:middle;"
+                        : "background:" +
+                          colorStyle.line +
+                          ";display:inline-block;width:20px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;";
+                    labelEl.insertBefore(swatch, cb.nextSibling);
+                }
+                labelEl.appendChild(document.createTextNode(label));
+                return labelEl;
+            }
+
+            function createPoiToggle(category) {
+                var color = POI_COLORS[category] || "#9ca3af";
+                return makeToggle(
+                    category,
+                    { polygon: true, fill: color, line: color },
+                    function (e) {
+                        var sourceId = "pack-poi-" + category;
+                        var layerId = "pack-poi-circle-" + category;
+                        if (
+                            e.target.checked &&
+                            !PACK_STATE.loadedLayers[sourceId]
+                        ) {
+                            PACK_STATE.loadedLayers[sourceId] = "loading";
+                            fetchJson(
+                                "/api/pack/" +
+                                    PACK_STATE.regionId +
+                                    "/poi/" +
+                                    category,
+                            )
+                                .then(function (data) {
+                                    addSource(sourceId, data);
+                                    map.addLayer({
+                                        id: layerId,
+                                        type: "circle",
+                                        source: sourceId,
+                                        paint: {
+                                            "circle-radius": [
+                                                "interpolate",
+                                                ["linear"],
+                                                ["zoom"],
+                                                6,
+                                                1.5,
+                                                10,
+                                                3,
+                                                14,
+                                                7,
+                                            ],
+                                            "circle-color": color,
+                                            "circle-opacity": 0.7,
+                                            "circle-stroke-width": 0.5,
+                                            "circle-stroke-color": "#fff",
+                                        },
+                                    });
+                                    PACK_STATE.loadedLayers[sourceId] = true;
+                                })
+                                .catch(function (err) {
+                                    console.error(
+                                        "Failed to load " + category,
+                                        err,
+                                    );
+                                    PACK_STATE.loadedLayers[sourceId] = false;
+                                    e.target.checked = false;
+                                });
+                        } else if (!e.target.checked) {
+                            if (map.getLayer(layerId)) map.removeLayer(layerId);
+                            if (map.getSource(sourceId))
+                                map.removeSource(sourceId);
+                            delete PACK_STATE.loadedLayers[sourceId];
+                        }
+                    },
+                );
+            }
+
+            function createMeasuringToggle(category) {
+                var colorMap = {
+                    coastline: { line: "#2563eb" },
+                    "high-speed-rail": { line: "#dc2626" },
+                    "body-of-water": { line: "#38bdf8" },
+                    "admin-1st-border": { line: "#ea580c" },
+                    "admin-2nd-border": { line: "#6b7280" },
+                    "admin-boundaries": { line: "#8b5cf6" },
+                };
+                var cs = colorMap[category] || { line: "#9ca3af" };
+                return makeToggle(category, { line: cs.line }, function (e) {
+                    var sourceId = "pack-measuring-" + category;
+                    if (
+                        e.target.checked &&
+                        !PACK_STATE.loadedLayers[sourceId]
+                    ) {
+                        PACK_STATE.loadedLayers[sourceId] = "loading";
+                        fetchJson(
+                            "/api/pack/" +
+                                PACK_STATE.regionId +
+                                "/measuring/" +
+                                category,
+                        )
+                            .then(function (data) {
+                                addSource(sourceId, data);
+                                var layerConfigs = LAYER_CONFIGS[category];
+                                if (layerConfigs) {
+                                    addLayers(sourceId, layerConfigs);
+                                } else {
+                                    // Fallback: draw as lines
+                                    map.addLayer({
+                                        id: "pack-measuring-line-" + category,
+                                        type: "line",
+                                        source: sourceId,
+                                        paint: {
+                                            "line-color": cs.line,
+                                            "line-width": 2,
+                                        },
+                                    });
+                                }
+                                PACK_STATE.loadedLayers[sourceId] = true;
+                            })
+                            .catch(function (err) {
+                                console.error(
+                                    "Failed to load measuring " + category,
+                                    err,
+                                );
+                                PACK_STATE.loadedLayers[sourceId] = false;
+                                e.target.checked = false;
+                            });
+                    } else if (!e.target.checked) {
+                        removeSourceAndLayers(sourceId);
+                        delete PACK_STATE.loadedLayers[sourceId];
+                    }
+                });
+            }
+
+            function createBoundaryToggle(level) {
+                var colors = BOUNDARY_COLORS[level] || {
+                    fill: "rgba(156, 163, 175, 0.12)",
+                    line: "#9ca3af",
+                };
+                return makeToggle(
+                    "Admin level " + level,
+                    { polygon: true, fill: colors.fill, line: colors.line },
+                    function (e) {
+                        var sourceId = "pack-boundaries-" + level;
+                        var fillLayerId = "pack-boundaries-fill-" + level;
+                        var lineLayerId = "pack-boundaries-line-" + level;
+                        if (
+                            e.target.checked &&
+                            !PACK_STATE.loadedLayers[sourceId]
+                        ) {
+                            PACK_STATE.loadedLayers[sourceId] = "loading";
+                            fetchJson(
+                                "/api/pack/" +
+                                    PACK_STATE.regionId +
+                                    "/boundaries/" +
+                                    level,
+                            )
+                                .then(function (data) {
+                                    addSource(sourceId, data);
+                                    map.addLayer({
+                                        id: fillLayerId,
+                                        type: "fill",
+                                        source: sourceId,
+                                        paint: {
+                                            "fill-color": colors.line,
+                                            "fill-opacity": 0.1,
+                                        },
+                                    });
+                                    map.addLayer({
+                                        id: lineLayerId,
+                                        type: "line",
+                                        source: sourceId,
+                                        paint: {
+                                            "line-color": colors.line,
+                                            "line-width": 2,
+                                            "line-opacity": 0.7,
+                                        },
+                                    });
+                                    PACK_STATE.loadedLayers[sourceId] = true;
+                                })
+                                .catch(function (err) {
+                                    console.error(
+                                        "Failed to load boundary level " +
+                                            level,
+                                        err,
+                                    );
+                                    PACK_STATE.loadedLayers[sourceId] = false;
+                                    e.target.checked = false;
+                                });
+                        } else if (!e.target.checked) {
+                            removeSourceAndLayers(sourceId);
+                            delete PACK_STATE.loadedLayers[sourceId];
+                        }
+                    },
+                );
+            }
+
+            function clearAllPackLayers() {
+                var keys = Object.keys(PACK_STATE.loadedLayers);
+                for (var i = 0; i < keys.length; i++) {
+                    removeSourceAndLayers(keys[i]);
+                }
+                PACK_STATE.loadedLayers = {};
+            }
+
+            function switchPack(regionId) {
+                clearAllPackLayers();
+                PACK_STATE.regionId = regionId;
+                if (!regionId) {
+                    document.getElementById("pack-section").style.display =
+                        "none";
+                    return;
+                }
+
+                var infoEl = document.getElementById("pack-meta-info");
+                infoEl.textContent = "Loading meta...";
+
+                fetchJson("/api/pack/" + regionId + "/meta")
+                    .then(function (meta) {
+                        PACK_STATE.meta = meta;
+                        var label = meta.label || regionId;
+                        infoEl.textContent =
+                            label + " (" + meta.regionPath.join(" / ") + ")";
+                        if (meta.bbox) {
+                            map.fitBounds(meta.bbox, { padding: 40 });
+                        }
+
+                        rebuildPackPanels(meta);
+                    })
+                    .catch(function (err) {
+                        console.error(
+                            "Failed to load meta for " + regionId,
+                            err,
+                        );
+                        infoEl.textContent = "Error loading meta";
+                    });
+            }
+
+            function rebuildPackPanels(meta) {
+                // POI categories
+                var poiSection = document.getElementById("pack-poi-section");
+                poiSection.innerHTML = "";
+                var matchingCats = meta.categories && meta.categories.matching;
+                if (matchingCats && matchingCats.length > 0) {
+                    poiSection.appendChild(makeSectionLabel("Matching (POI)"));
+                    for (var i = 0; i < matchingCats.length; i++) {
+                        poiSection.appendChild(
+                            createPoiToggle(matchingCats[i]),
+                        );
+                    }
+                }
+
+                // Measuring categories
+                var measSection = document.getElementById(
+                    "pack-measuring-section",
+                );
+                measSection.innerHTML = "";
+                var measCats = meta.categories && meta.categories.measuring;
+                if (measCats && measCats.length > 0) {
+                    measSection.appendChild(makeSectionLabel("Measuring"));
+                    for (var i = 0; i < measCats.length; i++) {
+                        measSection.appendChild(
+                            createMeasuringToggle(measCats[i]),
+                        );
+                    }
+                }
+
+                // Boundaries
+                var bndSection = document.getElementById(
+                    "pack-boundaries-section",
+                );
+                bndSection.innerHTML = "";
+                var bndLevels = meta.adminLevels && meta.adminLevels.extract;
+                if (bndLevels && bndLevels.length > 0) {
+                    bndSection.appendChild(makeSectionLabel("Boundaries"));
+                    for (var i = 0; i < bndLevels.length; i++) {
+                        bndSection.appendChild(
+                            createBoundaryToggle(bndLevels[i]),
+                        );
+                    }
+                }
+
+                // Transit
+                var trnSection = document.getElementById(
+                    "pack-transit-section",
+                );
+                trnSection.innerHTML = "";
+                trnSection.appendChild(makeSectionLabel("Transit"));
+                trnSection.appendChild(
+                    makeToggle(
+                        "Route lines",
+                        {
+                            line: "linear-gradient(90deg, #009bbf, #c9242f, #b1cb39)",
+                        },
+                        function (e) {
+                            var sourceId = "pack-transit-routes";
+                            if (
+                                e.target.checked &&
+                                !PACK_STATE.loadedLayers[sourceId]
+                            ) {
+                                PACK_STATE.loadedLayers[sourceId] = "loading";
+                                fetchJson(
+                                    "/api/pack/" +
+                                        PACK_STATE.regionId +
+                                        "/transit/routes",
+                                )
+                                    .then(function (data) {
+                                        addSource(sourceId, data);
+                                        map.addLayer({
+                                            id: "pack-transit-routes-line",
+                                            type: "line",
+                                            source: sourceId,
+                                            layout: {
+                                                visibility: "visible",
+                                                "line-cap": "round",
+                                                "line-join": "round",
+                                            },
+                                            paint: {
+                                                "line-color": [
+                                                    "to-color",
+                                                    ["get", "color"],
+                                                    "#888",
+                                                ],
+                                                "line-width": [
+                                                    "interpolate",
+                                                    ["linear"],
+                                                    ["zoom"],
+                                                    6,
+                                                    1,
+                                                    10,
+                                                    2,
+                                                    13,
+                                                    4,
+                                                    16,
+                                                    7,
+                                                ],
+                                                "line-opacity": 0.9,
+                                            },
+                                        });
+                                        PACK_STATE.loadedLayers[sourceId] =
+                                            true;
+                                    })
+                                    .catch(function (err) {
+                                        console.error(
+                                            "Failed to load transit routes",
+                                            err,
+                                        );
+                                        PACK_STATE.loadedLayers[sourceId] =
+                                            false;
+                                        e.target.checked = false;
+                                    });
+                            } else if (!e.target.checked) {
+                                removeSourceAndLayers(sourceId);
+                                delete PACK_STATE.loadedLayers[sourceId];
+                            }
+                        },
+                    ),
+                );
+                trnSection.appendChild(
+                    makeToggle(
+                        "Stations",
+                        { polygon: true, fill: "#1f6f78", line: "#fff" },
+                        function (e) {
+                            var sourceId = "pack-transit-stations";
+                            if (
+                                e.target.checked &&
+                                !PACK_STATE.loadedLayers[sourceId]
+                            ) {
+                                PACK_STATE.loadedLayers[sourceId] = "loading";
+                                fetchJson(
+                                    "/api/pack/" +
+                                        PACK_STATE.regionId +
+                                        "/transit/stations",
+                                )
+                                    .then(function (data) {
+                                        addSource(sourceId, data);
+                                        for (var ri = 0; ri < 6; ri++) {
+                                            map.addLayer({
+                                                id:
+                                                    "pack-transit-stations-ring-" +
+                                                    ri,
+                                                type: "circle",
+                                                source: sourceId,
+                                                filter: [
+                                                    "==",
+                                                    ["get", "ringIndex"],
+                                                    ri,
+                                                ],
+                                                paint: {
+                                                    "circle-color": [
+                                                        "to-color",
+                                                        ["get", "color"],
+                                                        "#888",
+                                                    ],
+                                                    "circle-opacity": 0.95,
+                                                    "circle-radius":
+                                                        5 + (5 - ri) * 3,
+                                                    "circle-stroke-color":
+                                                        "#fff",
+                                                    "circle-stroke-width": 1.5,
+                                                },
+                                            });
+                                        }
+                                        PACK_STATE.loadedLayers[sourceId] =
+                                            true;
+                                    })
+                                    .catch(function (err) {
+                                        console.error(
+                                            "Failed to load transit stations",
+                                            err,
+                                        );
+                                        PACK_STATE.loadedLayers[sourceId] =
+                                            false;
+                                        e.target.checked = false;
+                                    });
+                            } else if (!e.target.checked) {
+                                removeSourceAndLayers(sourceId);
+                                delete PACK_STATE.loadedLayers[sourceId];
+                            }
+                        },
+                    ),
+                );
+
+                // Add station hover for pack transit stations
+                map.on(
+                    "mouseenter",
+                    "pack-transit-stations-ring-0",
+                    function (e) {
+                        map.getCanvas().style.cursor = "pointer";
+                        var p = e.features[0].properties;
+                        var html = "<strong>" + p.name + "</strong>";
+                        if (p.operators)
+                            html +=
+                                "<br><em>" +
+                                truncateList(p.operators, 3) +
+                                "</em>";
+                        if (p.routeNames)
+                            html +=
+                                '<br><span style="color:#666">' +
+                                truncateList(p.routeNames, 4) +
+                                "</span>";
+                        html +=
+                            '<br><span style="color:#999;font-size:11px">Ring ' +
+                            (p.ringIndex + 1) +
+                            "/" +
+                            p.ringCount +
+                            "</span>";
+                        POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
+                    },
+                );
+
+                map.on(
+                    "mouseleave",
+                    "pack-transit-stations-ring-0",
+                    function () {
+                        map.getCanvas().style.cursor = "";
+                        POPUP.remove();
+                    },
+                );
+            }
+
+            async function initPackMode() {
+                try {
+                    var regions = await fetchJson("/api/pack/regions");
+                    if (!regions || regions.length === 0) return;
+
+                    var section = document.getElementById("pack-section");
+                    section.style.display = "block";
+
+                    var select = document.getElementById("pack-select");
+                    var blankOpt = document.createElement("option");
+                    blankOpt.value = "";
+                    blankOpt.textContent = "-- Select pack --";
+                    select.appendChild(blankOpt);
+
+                    for (var i = 0; i < regions.length; i++) {
+                        var opt = document.createElement("option");
+                        opt.value = regions[i];
+                        opt.textContent = regions[i];
+                        select.appendChild(opt);
+                    }
+
+                    select.addEventListener("change", function () {
+                        switchPack(this.value);
+                    });
+                } catch (err) {
+                    console.log("No packs available:", err.message);
+                }
+            }
         </script>
     </body>
 </html>

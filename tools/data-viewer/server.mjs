@@ -6,6 +6,7 @@ import { gunzipSync } from "node:zlib";
 
 const require = createRequire(import.meta.url);
 const transitGeojson = require("./lib/transitGeojson.js");
+const columnarToGeojson = require("./lib/columnarToGeojson.js");
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const PORT = 3210;
@@ -234,9 +235,7 @@ const server = createServer((req, res) => {
                     .filter((d) => d.isDirectory())
                     .map((d) => d.name)
                     .filter((name) =>
-                        existsSync(
-                            join(packDistDir, name, "boundaries.json.gz"),
-                        ),
+                        existsSync(join(packDistDir, name, "meta.json")),
                     );
                 res.writeHead(200, {
                     "Content-Type": "application/json",
@@ -250,8 +249,164 @@ const server = createServer((req, res) => {
             return;
         }
 
-        // /api/pack/<regionId>/boundaries/<level>
-        // e.g. /api/pack/europe-netherlands/boundaries/4
+        // /api/pack/<regionId>/meta — return parsed meta.json
+        const packMetaMatch = pathname.match(/^\/api\/pack\/([\w-]+)\/meta$/);
+        if (packMetaMatch) {
+            const regionId = packMetaMatch[1];
+            const metaPath = join(packDistDir, regionId, "meta.json");
+            if (!existsSync(metaPath)) {
+                res.writeHead(404, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "meta.json not found" }));
+                return;
+            }
+            try {
+                const meta = JSON.parse(readFileSync(metaPath, "utf8"));
+                res.writeHead(200, {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                });
+                res.end(JSON.stringify(meta));
+            } catch (err) {
+                res.writeHead(500, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: err.message }));
+            }
+            return;
+        }
+
+        // /api/pack/<regionId>/poi/<category> — columnar→Point features
+        const packPoiMatch = pathname.match(
+            /^\/api\/pack\/([\w-]+)\/poi\/([\w-]+)$/,
+        );
+        if (packPoiMatch) {
+            const regionId = packPoiMatch[1];
+            const category = packPoiMatch[2];
+            try {
+                const gzPath = join(packDistDir, regionId, "poi.json.gz");
+                if (!existsSync(gzPath)) {
+                    res.writeHead(404, { "Content-Type": "application/json" });
+                    res.end(JSON.stringify({ error: "poi.json.gz not found" }));
+                    return;
+                }
+                const gzBytes = readFileSync(gzPath);
+                const uncompressed = gunzipSync(gzBytes);
+                const artifact = JSON.parse(uncompressed.toString("utf8"));
+                const cats = artifact.categories || {};
+                const cat = cats[category];
+                if (!cat) {
+                    res.writeHead(200, {
+                        "Content-Type": "application/json",
+                        "Cache-Control": "no-cache",
+                    });
+                    res.end(
+                        JSON.stringify({
+                            type: "FeatureCollection",
+                            features: [],
+                        }),
+                    );
+                    return;
+                }
+                const geojson = columnarToGeojson.categoryToFeatures(
+                    category,
+                    cat,
+                );
+                res.writeHead(200, {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                });
+                res.end(JSON.stringify(geojson));
+            } catch (err) {
+                res.writeHead(500, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: err.message }));
+            }
+            return;
+        }
+
+        // /api/pack/<regionId>/measuring/<category> — features from bundle
+        const packMeasuringMatch = pathname.match(
+            /^\/api\/pack\/([\w-]+)\/measuring\/([\w-]+)$/,
+        );
+        if (packMeasuringMatch) {
+            const regionId = packMeasuringMatch[1];
+            const category = packMeasuringMatch[2];
+            try {
+                const gzPath = join(
+                    packDistDir,
+                    regionId,
+                    `measuring-${category}.json.gz`,
+                );
+                if (!existsSync(gzPath)) {
+                    res.writeHead(404, { "Content-Type": "application/json" });
+                    res.end(
+                        JSON.stringify({
+                            error: `measuring-${category}.json.gz not found`,
+                        }),
+                    );
+                    return;
+                }
+                const gzBytes = readFileSync(gzPath);
+                const uncompressed = gunzipSync(gzBytes);
+                const artifact = JSON.parse(uncompressed.toString("utf8"));
+                const geojson = {
+                    type: "FeatureCollection",
+                    features: artifact.features ?? [],
+                };
+                res.writeHead(200, {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                });
+                res.end(JSON.stringify(geojson));
+            } catch (err) {
+                res.writeHead(500, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: err.message }));
+            }
+            return;
+        }
+
+        // /api/pack/<regionId>/transit — reuse lib/transitGeojson.js
+        const packTransitMatch = pathname.match(
+            /^\/api\/pack\/([\w-]+)\/transit\/(routes|stations)$/,
+        );
+        if (packTransitMatch) {
+            const regionId = packTransitMatch[1];
+            const sub = packTransitMatch[2];
+            try {
+                const gzPath = join(packDistDir, regionId, "transit.json.gz");
+                if (!existsSync(gzPath)) {
+                    res.writeHead(404, { "Content-Type": "application/json" });
+                    res.end(
+                        JSON.stringify({
+                            error: "transit.json.gz not found",
+                        }),
+                    );
+                    return;
+                }
+                const gzBytes = readFileSync(gzPath);
+                const uncompressed = gunzipSync(gzBytes);
+                const artifact = JSON.parse(uncompressed.toString("utf8"));
+                const presets = artifact.presets ?? [];
+                let geojson;
+                if (sub === "routes") {
+                    geojson =
+                        transitGeojson.buildRouteFeatureCollection(presets);
+                } else {
+                    const stations =
+                        transitGeojson.getSelectedStations(presets);
+                    geojson =
+                        transitGeojson.buildStationFeatureCollection(stations);
+                }
+                res.writeHead(200, {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                });
+                res.end(JSON.stringify(geojson));
+            } catch (err) {
+                res.writeHead(500, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: err.message }));
+            }
+            return;
+        }
+
+        // Keep existing /api/pack/<regionId>/boundaries/<level>
         const packBoundariesMatch = pathname.match(
             /^\/api\/pack\/([\w-]+)\/boundaries\/(\d+)$/,
         );
@@ -271,7 +426,7 @@ const server = createServer((req, res) => {
             }
             return;
         }
-    }
+    } // closes if (packDistDir)
 
     res.writeHead(404);
     res.end("Not found");

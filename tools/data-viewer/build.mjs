@@ -56,33 +56,14 @@ console.log(
 );
 
 // --- POIs (columnar → GeoJSON) ---
+const columnarToGeojson = require("./lib/columnarToGeojson.js");
+
 mkdirSync(join(DATA_OUT, "poi"), { recursive: true });
 
 const poiData = readJson("assets/poi/japan-kanto.json");
-const poiFeatures = [];
-for (const [category, cat] of Object.entries(poiData.categories)) {
-    for (let i = 0; i < cat.count; i++) {
-        poiFeatures.push({
-            type: "Feature",
-            geometry: { type: "Point", coordinates: [cat.lon[i], cat.lat[i]] },
-            properties: {
-                category,
-                name: cat.name[i] ?? null,
-                osmId: cat.osmId[i] ?? null,
-                osmType: cat.osmType[i] ?? null,
-                ...(cat.iata ? { iata: cat.iata[i] ?? null } : {}),
-                ...(cat.nameLength
-                    ? { nameLength: cat.nameLength[i] ?? null }
-                    : {}),
-            },
-        });
-    }
-}
-writeJson("poi/japan-kanto.json", {
-    type: "FeatureCollection",
-    features: poiFeatures,
-});
-console.log(`  poi/japan-kanto.json — ${poiFeatures.length} features`);
+const poiFeatures = columnarToGeojson.allCategoriesToFeatures(poiData);
+writeJson("poi/japan-kanto.json", poiFeatures);
+console.log(`  poi/japan-kanto.json — ${poiFeatures.features.length} features`);
 
 // --- Transit routes & stations ---
 import { createRequire } from "node:module";
