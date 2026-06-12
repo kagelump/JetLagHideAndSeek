@@ -96,3 +96,41 @@ describe("collectNormalizedVariants", () => {
         assert.deepEqual(collectNormalizedVariants(undefined), []);
     });
 });
+
+// ─── Cross-format consistency fixture ───────────────────────────────────
+//
+// These fixtures are the contract between the pipeline normalizer and the
+// app-side normalizeForSearch() in src/features/offline/boundaryStore.ts.
+// Both MUST produce identical output for every fixture — if either side
+// changes, this test and the corresponding Jest test must be updated
+// together.
+
+const CROSS_FORMAT_FIXTURES = [
+    // [input, expected]
+    ["Amsterdam", "amsterdam"],
+    ["Den Haag", "den haag"],
+    ["São Paulo", "sao paulo"],
+    ["München", "munchen"],
+    ["Düsseldorf", "dusseldorf"],
+    ["東京", "東京"],
+    ["北海道", "北海道"],
+    ["東京都 Tokyo", "東京都 tokyo"],
+    // Japanese dakuten — U+3099 combining mark. These are OUTSIDE the
+    // U+0300–U+036F Combining Diacritical Marks block, so they are
+    // intentionally preserved by both normalizers.
+    ["が", "が"], // か + dakuten → が in composed form; NFKD keeps decomposed
+    // Edge: empty
+    ["", ""],
+];
+
+describe("cross-format fixture consistency", () => {
+    for (const [input, expected] of CROSS_FORMAT_FIXTURES) {
+        it(`normalizes "${input}" → "${expected}"`, () => {
+            assert.equal(
+                normalizeName(input),
+                expected,
+                `normalizeName("${input}") must equal "${expected}"`,
+            );
+        });
+    }
+});

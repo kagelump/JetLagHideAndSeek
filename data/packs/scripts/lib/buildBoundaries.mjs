@@ -16,6 +16,27 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 /**
+ * Check that every ring in a Polygon / MultiPolygon has ≥3 points.
+ * After simplification, tiny features can collapse to degenerate rings.
+ * @param {object} geometry - GeoJSON Polygon or MultiPolygon
+ * @returns {boolean}
+ */
+function hasValidRings(geometry) {
+    if (geometry.type === "Polygon") {
+        for (const ring of geometry.coordinates) {
+            if (ring.length < 3) return false;
+        }
+    } else if (geometry.type === "MultiPolygon") {
+        for (const poly of geometry.coordinates) {
+            for (const ring of poly) {
+                if (ring.length < 3) return false;
+            }
+        }
+    }
+    return true;
+}
+
+/**
  * Compute approximate planar area of a polygon ring in square meters.
  * Uses the Shoelace formula on lon/lat, correcting for latitude.
  * @param {[number, number][]} ring - closed ring of [lon, lat] pairs
@@ -152,6 +173,13 @@ export async function buildBoundaries({ region, pbfPath, distDir, tmpDir }) {
 
         let simplified = simplifyPolygonFeature(cleaned, simplifyTolerance);
         if (!simplified) {
+            droppedBroken++;
+            continue;
+        }
+
+        // Validate rings after simplification — degenerate rings
+        // (<3 points) can appear when a tiny feature collapses.
+        if (!hasValidRings(simplified.geometry)) {
             droppedBroken++;
             continue;
         }

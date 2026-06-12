@@ -17,6 +17,7 @@ const VALID_MEASURING_CATEGORIES = new Set([
     "admin-1st-border",
     "admin-2nd-border",
     "high-speed-rail",
+    "admin-boundaries",
 ]);
 
 /** Valid matching category names (must match the app's MatchingCategory). */
@@ -50,6 +51,13 @@ const VALID_MATCHING_CATEGORIES = new Set([
     "admin-2nd",
     "admin-3rd",
     "admin-4th",
+    "amusement-park",
+    "foreign-consulate",
+    "golf-course",
+    "landmark",
+    "mountain",
+    "movie-theater",
+    "station-name-length",
 ]);
 
 /**

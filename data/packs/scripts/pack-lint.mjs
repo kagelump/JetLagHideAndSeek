@@ -224,9 +224,14 @@ async function lintBoundaries(distDir, distBase, regionId) {
                 const { encodeDeltaPolygon } = await import(
                     "./lib/deltaEncode.mjs"
                 );
+                // decodeDeltaPolygon always returns MultiPolygon coords
+                // ([polygon[ring[point]]]). Unpack the outer wrapper for
+                // single-polygon geometries so encodeDeltaPolygon gets the
+                // right shape.
                 const reencoded = encodeDeltaPolygon({
                     type: decoded.length > 1 ? "MultiPolygon" : "Polygon",
-                    coordinates: decoded,
+                    coordinates:
+                        decoded.length > 1 ? decoded : decoded[0],
                 });
                 if (JSON.stringify(reencoded) !== JSON.stringify(encoded)) {
                     errors.push(
