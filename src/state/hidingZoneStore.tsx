@@ -181,8 +181,8 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
         [selectedPresets],
     );
     const selectedStations = useMemo(
-        () => getSelectedStations(selectedPresets),
-        [selectedPresets],
+        () => getSelectedStations(selectedPresets, presets),
+        [selectedPresets, presets],
     );
     const routeFeatures = useMemo(
         () => buildRouteFeatureCollection(selectedPresets),

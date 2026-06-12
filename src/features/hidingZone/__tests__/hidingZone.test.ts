@@ -292,6 +292,81 @@ describe("hidingZone helpers", () => {
         expect(stations[0].routeColors).not.toContain(operatorB.defaultColor);
     });
 
+    it("resolves cross-preset route colors even when the owner preset is unselected", () => {
+        // Operator A owns line L with a real color. It is NOT selected.
+        const operatorA: HidingZonePreset = {
+            ...preset,
+            id: "operator-a",
+            defaultColor: "#009BBF",
+            routes: [
+                {
+                    color: "#FF0000",
+                    geometry: {
+                        coordinates: [
+                            [
+                                [139.76, 35.68],
+                                [139.77, 35.69],
+                            ],
+                        ],
+                        type: "MultiLineString",
+                    },
+                    id: "cross-preset:route:line-l",
+                    name: "Line L",
+                    sourceId: "line-l",
+                },
+            ],
+            stations: [],
+        };
+
+        // Operator B is selected and has a station that references line L.
+        const operatorB: HidingZonePreset = {
+            ...preset,
+            id: "operator-b",
+            defaultColor: "#40E0D0",
+            routes: [
+                {
+                    color: "#0000FF",
+                    geometry: {
+                        coordinates: [
+                            [
+                                [139.76, 35.68],
+                                [139.78, 35.7],
+                            ],
+                        ],
+                        type: "MultiLineString",
+                    },
+                    id: "cross-preset:route:line-m",
+                    name: "Line M",
+                    sourceId: "line-m",
+                },
+            ],
+            stations: [
+                {
+                    id: "cross-preset:stop:interchange",
+                    lat: 35.68,
+                    lon: 139.76,
+                    mergeKey: "interchange-merge",
+                    name: "Interchange",
+                    routeIds: [
+                        "cross-preset:route:line-l",
+                        "cross-preset:route:line-m",
+                    ],
+                    sourceId: "interchange",
+                },
+            ],
+        };
+
+        const stations = getSelectedStations(
+            [operatorB],
+            [operatorA, operatorB],
+        );
+        expect(stations).toHaveLength(1);
+        expect(stations[0].routeColors).toEqual(
+            expect.arrayContaining(["#FF0000", "#0000FF"]),
+        );
+        expect(stations[0].routeColors).not.toContain(operatorB.defaultColor);
+    });
+
     it("preserves route colors and falls back only when a route color is absent", () => {
         const presetWithFallbackRoute: HidingZonePreset = {
             ...preset,

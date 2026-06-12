@@ -63,20 +63,22 @@ export function getSelectedRoutes(presets: HidingZonePreset[]): TransitRoute[] {
 }
 
 export function getSelectedStations(
-    presets: HidingZonePreset[],
+    selectedPresets: HidingZonePreset[],
+    allPresets?: HidingZonePreset[],
 ): TransitStation[] {
     // Sort by source priority so higher-priority (GTFS) presets win
     // name / coords when the same mergeKey appears in multiple presets.
     // Stable sort keeps config order within the same priority kind.
-    const sorted = [...presets].sort(
+    const sorted = [...selectedPresets].sort(
         (a, b) => sourcePriority(a.source) - sourcePriority(b.source),
     );
 
     // Build a global routeId → color map across every preset in the bundle.
     // Route ids are globally unique, so a route owned by another operator's
     // preset still resolves to its real color at interchange stations.
+    const colorSourcePresets = allPresets ?? selectedPresets;
     const routeColorById = new Map<string, string>();
-    for (const preset of presets) {
+    for (const preset of colorSourcePresets) {
         for (const route of preset.routes) {
             if (!routeColorById.has(route.id)) {
                 routeColorById.set(
