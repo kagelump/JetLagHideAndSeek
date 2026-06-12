@@ -69,8 +69,7 @@ export async function buildCatalog({
               schemaVersion: CATALOG_SCHEMA_VERSION,
               generatedAt: new Date().toISOString(),
               attributionUrl:
-                  attributionUrl ??
-                  `https://jetlag.hinoka.org/packs/NOTICE`,
+                  attributionUrl ?? `https://jetlag.hinoka.org/packs/NOTICE`,
               packs: [],
           };
 

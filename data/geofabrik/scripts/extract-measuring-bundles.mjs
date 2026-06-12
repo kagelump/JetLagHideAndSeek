@@ -1,7 +1,12 @@
 /* global console, process, fetch */
 
 import { execFileSync } from "node:child_process";
-import { createReadStream, existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+    createReadStream,
+    existsSync,
+    readFileSync,
+    writeFileSync,
+} from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { dirname, join, resolve } from "node:path";
@@ -21,7 +26,6 @@ import {
     cleanPolygonFeature,
     simplifyPolygonFeature,
     bboxesIntersect,
-    simplifyCoords,
     simplifyFeature,
 } from "./lib/geometryCleanup.mjs";
 import {
@@ -30,7 +34,6 @@ import {
     bridgeCollinearGaps,
     validateLineContinuity,
     nodeKey,
-    haversineMeters,
     lineLengthMeters,
 } from "./lib/lineStitching.mjs";
 import {

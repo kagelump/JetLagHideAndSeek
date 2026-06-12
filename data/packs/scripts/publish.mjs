@@ -21,8 +21,8 @@
 /* global console, process */
 
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
-import { resolve, dirname, basename } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -63,7 +63,7 @@ export async function exec(cmd, options = {}) {
     }
 
     return new Promise((resolvePromise) => {
-        const child = execFile(
+        execFile(
             file,
             args,
             {
@@ -215,10 +215,7 @@ export async function publish({
     const resolvedFetch = fetchFn ?? fetchJson;
     const resolvedDistDir = distDir ?? distBase;
 
-    const githubUser = resolvedRepo.split("/")[0];
-    const githubRepo = resolvedRepo.split("/")[1];
-    const resolvedPagesUrl =
-        pagesUrl ?? `https://jetlag.hinoka.org`;
+    const resolvedPagesUrl = pagesUrl ?? `https://jetlag.hinoka.org`;
     const catalogUrl = `${resolvedPagesUrl}/packs/catalog.json`;
     const noticeUrl = `${resolvedPagesUrl}/packs/NOTICE`;
 

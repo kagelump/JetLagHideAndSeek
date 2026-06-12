@@ -305,8 +305,10 @@ async function buildRegion(region, distDir, cacheDir, cacheOnly) {
             );
             if (m) {
                 const [west, south, east, north] = [
-                    parseFloat(m[1]), parseFloat(m[2]),
-                    parseFloat(m[3]), parseFloat(m[4]),
+                    parseFloat(m[1]),
+                    parseFloat(m[2]),
+                    parseFloat(m[3]),
+                    parseFloat(m[4]),
                 ];
                 if ([west, south, east, north].every(Number.isFinite)) {
                     metaBbox = [west, south, east, north];
@@ -348,7 +350,10 @@ async function buildRegion(region, distDir, cacheDir, cacheOnly) {
     const metaGzipped = gzipSync(metaSerialized, { level: 9 });
     const metaGzPath = resolve(distDir, "meta.json.gz");
     await writeFile(metaGzPath, metaGzipped);
-    hashes.meta = computeHashes(metaGzipped, Buffer.from(metaSerialized, "utf8"));
+    hashes.meta = computeHashes(
+        metaGzipped,
+        Buffer.from(metaSerialized, "utf8"),
+    );
     console.log(
         `    meta.json.gz: ${(hashes.meta.bytes / 1024).toFixed(1)} KB gz`,
     );

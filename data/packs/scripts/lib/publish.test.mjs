@@ -108,7 +108,7 @@ describe("publish script", () => {
         /** @type {Array<string>} */
         const commands = [];
 
-        const mockExec = async (cmd, options = {}) => {
+        const mockExec = async (cmd) => {
             commands.push(cmd);
 
             if (cmd === "gh auth status") {
@@ -185,7 +185,7 @@ describe("publish script", () => {
         /** @type {Array<string>} */
         const commands = [];
 
-        const mockExec = async (cmd, options = {}) => {
+        const mockExec = async (cmd) => {
             commands.push(cmd);
 
             if (cmd === "gh auth status") {
@@ -276,10 +276,7 @@ describe("publish script", () => {
             if (cmd.startsWith("gh release")) {
                 return { stdout: "", stderr: "", exitCode: 0 };
             }
-            if (
-                cmd.startsWith("git -C") ||
-                cmd.startsWith("git remote")
-            ) {
+            if (cmd.startsWith("git -C") || cmd.startsWith("git remote")) {
                 return { stdout: "", stderr: "", exitCode: 0 };
             }
             return { stdout: "", stderr: "", exitCode: 0 };

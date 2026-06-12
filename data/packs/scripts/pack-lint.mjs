@@ -13,12 +13,11 @@
 /* global console, process */
 
 import { existsSync } from "node:fs";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 
-import { verifyHashes } from "./lib/hashing.mjs";
 import { validateMeta } from "./lib/metaSchema.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -139,11 +138,7 @@ export async function lintRegion(regionId) {
     // 3. Boundary-specific checks if boundaries.json.gz exists.
     const boundariesPath = resolve(distDir, "boundaries.json.gz");
     if (existsSync(boundariesPath)) {
-        const boundaryErrors = await lintBoundaries(
-            distDir,
-            distBase,
-            regionId,
-        );
+        const boundaryErrors = await lintBoundaries(distDir);
         errors.push(...boundaryErrors);
     }
 
@@ -158,7 +153,7 @@ export async function lintRegion(regionId) {
  * @param {string} regionId - region id for error messages
  * @returns {Promise<string[]>} error messages
  */
-async function lintBoundaries(distDir, distBase, regionId) {
+async function lintBoundaries(distDir) {
     const errors = [];
     const boundariesPath = resolve(distDir, "boundaries.json.gz");
 
@@ -203,8 +198,7 @@ async function lintBoundaries(distDir, distBase, regionId) {
             const levelCounts = {};
             for (const entry of artifact.index) {
                 const lv = entry.adminLevel;
-                if (lv != null)
-                    levelCounts[lv] = (levelCounts[lv] ?? 0) + 1;
+                if (lv != null) levelCounts[lv] = (levelCounts[lv] ?? 0) + 1;
             }
             console.log(
                 `  [boundaries] Per-level counts (matching levels: ${JSON.stringify(metaMatchingLevels)}):`,
@@ -259,8 +253,7 @@ async function lintBoundaries(distDir, distBase, regionId) {
                 // right shape.
                 const reencoded = encodeDeltaPolygon({
                     type: decoded.length > 1 ? "MultiPolygon" : "Polygon",
-                    coordinates:
-                        decoded.length > 1 ? decoded : decoded[0],
+                    coordinates: decoded.length > 1 ? decoded : decoded[0],
                 });
                 if (JSON.stringify(reencoded) !== JSON.stringify(encoded)) {
                     errors.push(

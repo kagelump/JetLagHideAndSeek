@@ -12,16 +12,12 @@
 /* global console */
 
 import { execFileSync } from "node:child_process";
-import { createReadStream, existsSync } from "node:fs";
-import { mkdir, readFile, rm } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { mkdir, rm } from "node:fs/promises";
 import { createInterface } from "node:readline";
-import { join, resolve, dirname } from "node:path";
+import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { gzipSync } from "node:zlib";
-import { fileURLToPath } from "node:url";
-
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const root = resolve(scriptDir, "..", "..", "..");
 
 /**
  * Build the transit artifact for a region.
@@ -42,7 +38,6 @@ export async function buildTransitArtifact({ region, pbfPath, distDir }) {
         "n/aerialway=station",
     ];
 
-    const cacheDir = join(distDir, "..", "..", "cache");
     const tmpDir = join(tmpdir(), `transit-pack-${region.id}-${Date.now()}`);
     await mkdir(tmpDir, { recursive: true });
 
@@ -133,7 +128,6 @@ export async function buildTransitArtifact({ region, pbfPath, distDir }) {
         // 7. Build bundle (same schema as committed transit bundles:
         //    top-level attribution + presets; stations are nested inside
         //    each preset).
-        const generatedAt = new Date().toISOString();
         const bundle = {
             attribution,
             presets,
