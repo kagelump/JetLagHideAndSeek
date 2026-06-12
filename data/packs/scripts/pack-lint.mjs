@@ -194,7 +194,7 @@ async function lintBoundaries(distDir, distBase, regionId) {
             }
         }
 
-        // Warn when a matching level has zero index rows (misconfiguration).
+        // Print per-level counts and warn on sparse matching levels.
         if (
             metaMatchingLevels &&
             Array.isArray(metaMatchingLevels) &&
@@ -206,13 +206,18 @@ async function lintBoundaries(distDir, distBase, regionId) {
                 if (lv != null)
                     levelCounts[lv] = (levelCounts[lv] ?? 0) + 1;
             }
-            for (const lv of metaMatchingLevels) {
-                if (!levelCounts[lv]) {
-                    console.warn(
-                        `  WARNING: matching level ${lv} has zero boundary index rows. ` +
-                            `Consider removing it from adminLevels.matching in regions.yaml.`,
-                    );
-                }
+            console.log(
+                `  [boundaries] Per-level counts (matching levels: ${JSON.stringify(metaMatchingLevels)}):`,
+            );
+            for (const lv of metaMatchingLevels.sort((a, b) => a - b)) {
+                const count = levelCounts[lv] ?? 0;
+                const flag =
+                    count === 0
+                        ? "  ⚠ ZERO — remove from matching"
+                        : count < 10
+                          ? `  ⚠ only ${count} — consider curating`
+                          : "";
+                console.log(`    Level ${lv}: ${count}${flag}`);
             }
         }
 

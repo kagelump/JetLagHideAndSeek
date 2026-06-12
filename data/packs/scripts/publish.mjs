@@ -9,7 +9,10 @@
  *   2. Create release if tag doesn't exist.
  *   3. Upload artifacts.
  *   4. Rebuild catalog.json (fetch published catalog from Pages as --base).
- *   5. Commit catalog.json + NOTICE.html + index.html to gh-pages branch.
+ *   5. Write catalog.json + NOTICE + index.html to site/packs/ and commit
+ *      to master. The pages.yml workflow deploys site/ atomically via
+ *      GitHub Actions (single deploy path for splash, deep links, viewer,
+ *      and catalog).
  *   6. Print catalog URL.
  *
  * @module publish
@@ -192,6 +195,7 @@ async function collectUploads(regionId, baseDistDir) {
  * @param {Function} [options.execFn] - exec wrapper (for tests)
  * @param {Function} [options.fetchFn] - fetch wrapper (for tests)
  * @param {boolean} [options.skipLint] - skip lint preflight (for testing)
+ * @param {string} [options.siteDir] - override site/ root directory (for testing)
  * @returns {Promise<{tag: string, catalogUrl: string}>}
  */
 export async function publish({
@@ -203,6 +207,7 @@ export async function publish({
     execFn,
     fetchFn,
     skipLint,
+    siteDir,
 }) {
     const resolvedTag = tag ?? `packs-${today()}`;
     const resolvedRepo = repo ?? "kagelump/JetLagHideAndSeek";
@@ -214,8 +219,8 @@ export async function publish({
     const githubRepo = resolvedRepo.split("/")[1];
     const resolvedPagesUrl =
         pagesUrl ?? `https://jetlag.hinoka.org`;
-    const catalogUrl = `${resolvedPagesUrl}/catalog.json`;
-    const noticeUrl = `${resolvedPagesUrl}/NOTICE`;
+    const catalogUrl = `${resolvedPagesUrl}/packs/catalog.json`;
+    const noticeUrl = `${resolvedPagesUrl}/packs/NOTICE`;
 
     console.log(`\n=== Publishing ${regionId} to ${resolvedTag} ===`);
 
@@ -353,122 +358,60 @@ export async function publish({
     await writeFile(catalogOutPath, JSON.stringify(catalog, null, 2) + "\n");
     console.log(`  Wrote ${catalogOutPath}`);
 
-    // Step 5: Commit to gh-pages branch.
-    console.log("\n[5/5] Publishing to gh-pages...");
+    // Step 5: Write catalog files to site/packs/ and commit to master.
+    // The site/ directory is deployed by pages.yml via GitHub Actions —
+    // a single deploy path for splash, deep links, viewer, and catalog.
+    console.log("\n[5/5] Committing catalog to site/packs/...");
 
-    const worktreeDir = resolve(packsDir, ".gh-pages-worktree");
+    const sitePacksDir = siteDir
+        ? resolve(siteDir, "packs")
+        : resolve(root, "site", "packs");
+    await mkdir(sitePacksDir, { recursive: true });
 
-    try {
-        // Ensure the orphan gh-pages branch exists.
-        // We try to check it out via worktree; if it fails, create it.
-        const worktreeCheck = await resolvedExec(`git worktree list`, {
-            silent: true,
-        });
-        const alreadyHasWorktree = worktreeCheck.stdout.includes(worktreeDir);
+    // catalog.json
+    await writeFile(
+        resolve(sitePacksDir, "catalog.json"),
+        JSON.stringify(catalog, null, 2) + "\n",
+    );
+    console.log(`  Wrote site/packs/catalog.json`);
 
-        if (!alreadyHasWorktree) {
-            // Check if gh-pages branch exists remotely.
-            const branchCheck = await resolvedExec(
-                `git show-ref refs/heads/gh-pages`,
-                { silent: true },
-            );
+    // NOTICE
+    const noticeContent = [
+        "JetLag Hide & Seek — Offline Data Packs",
+        "",
+        "This data is derived from OpenStreetMap, © OpenStreetMap contributors.",
+        "Licensed under the Open Database License (ODbL).",
+        "",
+        "Source: Geofabrik GmbH (download.geofabrik.de)",
+        "See https://www.openstreetmap.org/copyright for details.",
+        "",
+        `Generated: ${today()}`,
+        `Repository: https://github.com/${resolvedRepo}`,
+        "",
+    ].join("\n");
+    await writeFile(resolve(sitePacksDir, "NOTICE"), noticeContent);
 
-            if (branchCheck.exitCode === 0) {
-                // Branch exists locally.
-                await resolvedExec(`git worktree add ${worktreeDir} gh-pages`);
-            } else {
-                // Check on remote.
-                const remoteBranch = await resolvedExec(
-                    `git ls-remote --heads origin gh-pages`,
-                    { silent: true },
-                );
-                if (remoteBranch.exitCode === 0 && remoteBranch.stdout.trim()) {
-                    // Branch exists on remote; fetch and create local tracking branch.
-                    await resolvedExec(`git fetch origin gh-pages:gh-pages`);
-                    await resolvedExec(
-                        `git worktree add ${worktreeDir} gh-pages`,
-                    );
-                } else {
-                    // No branch exists anywhere — create orphan.
-                    await resolvedExec(
-                        `git worktree add --orphan gh-pages ${worktreeDir}`,
-                    );
-                }
-            }
-        }
+    // index.html (human-readable pack table).
+    const html = buildIndexHtml(catalog);
+    await writeFile(resolve(sitePacksDir, "index.html"), html);
 
-        // Copy files to worktree.
-        // Ensure the worktree directory exists (git worktree add creates it,
-        // but the test harness may not actually run git).
-        await mkdir(worktreeDir, { recursive: true });
-        // catalog.json
-        const worktreeDist = resolve(worktreeDir);
-        await resolvedExec(
-            `cp ${catalogOutPath} "${worktreeDist}/catalog.json"`,
-        );
-
-        // NOTICE.html - create if not exists.
-        const noticeHtmlPath = resolve(worktreeDist, "NOTICE");
-        if (!existsSync(resolve(worktreeDist, "NOTICE"))) {
-            const noticeContent = [
-                "JetLag Hide & Seek — Offline Data Packs",
-                "",
-                "This data is derived from OpenStreetMap, © OpenStreetMap contributors.",
-                "Licensed under the Open Database License (ODbL).",
-                "",
-                "Source: Geofabrik GmbH (download.geofabrik.de)",
-                "See https://www.openstreetmap.org/copyright for details.",
-                "",
-                `Generated: ${today()}`,
-                `Repository: https://github.com/${resolvedRepo}`,
-                "",
-            ].join("\n");
-            await writeFile(resolve(worktreeDist, "NOTICE"), noticeContent);
-        }
-
-        // index.html - create if not exists (human-readable pack table).
-        const indexPath = resolve(worktreeDist, "index.html");
-        if (!existsSync(indexPath)) {
-            const html = buildIndexHtml(catalog);
-            await writeFile(indexPath, html);
-        } else {
-            // Update index.html with current catalog data.
-            const html = buildIndexHtml(catalog);
-            await writeFile(indexPath, html);
-        }
-
-        // Commit and push.
-        await resolvedExec(
-            `git -C ${worktreeDir} add catalog.json NOTICE index.html`,
-        );
-        const commitResult = await resolvedExec(
-            `git -C ${worktreeDir} commit -m "Update packs catalog for ${regionId} [skip ci]"`,
-        );
-        if (commitResult.exitCode === 0) {
-            await resolvedExec(`git -C ${worktreeDir} push origin gh-pages`);
-            console.log("  Pushed gh-pages branch.");
-        } else if (
-            commitResult.stderr.includes("nothing to commit") ||
-            commitResult.stdout.includes("nothing to commit")
-        ) {
-            console.log("  No changes to commit.");
-        } else {
-            console.error(`  Commit failed: ${commitResult.stderr}`);
-            process.exitCode = 1;
-            return;
-        }
-    } finally {
-        // Clean up worktree (remove added worktree, not the branch).
-        const hasWorktree = await resolvedExec(`git worktree list`, {
-            silent: true,
-        });
-        if (hasWorktree.stdout.includes(worktreeDir)) {
-            await resolvedExec(`git worktree remove ${worktreeDir}`, {
-                silent: true,
-            }).catch(() => {
-                // Ignore cleanup errors.
-            });
-        }
+    // Commit and push master.
+    await resolvedExec(`git -C ${root} add site/packs/`);
+    const commitResult = await resolvedExec(
+        `git -C ${root} commit -m "Update packs catalog for ${regionId} [skip ci]"`,
+    );
+    if (commitResult.exitCode === 0) {
+        await resolvedExec(`git -C ${root} push origin master`);
+        console.log("  Pushed catalog to master (pages.yml will deploy).");
+    } else if (
+        commitResult.stderr.includes("nothing to commit") ||
+        commitResult.stdout.includes("nothing to commit")
+    ) {
+        console.log("  No changes to commit (catalog unchanged).");
+    } else {
+        console.error(`  Commit failed: ${commitResult.stderr}`);
+        process.exitCode = 1;
+        return;
     }
 
     // Step 6: Print catalog URL.

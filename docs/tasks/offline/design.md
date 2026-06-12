@@ -145,10 +145,10 @@ the repo are cosmetic for a solo project:
   (e.g. `europe-netherlands-measuring-coastline.json.gz`). Mark pack releases
   as pre-release (or keep app releases "latest") so the repo's Latest badge
   stays meaningful.
-- **GitHub Pages** serves from an orphan `gh-pages` branch:
-  `catalog.json`, a human-readable index page, and the attribution/NOTICE
-  page. One Pages site per repo — this claims it for packs, which is fine
-  (the app has no other Pages use).
+- **GitHub Pages** serves the `site/` directory via the `pages.yml` Actions
+  workflow (single deploy path for splash, deep links, bundle viewer, and
+  packs catalog). Pack catalog files live in `site/packs/`
+  (`catalog.json`, `NOTICE`, `index.html`) and are committed to master.
 - If release/tag clutter ever grates, splitting into a dedicated repo later
   is a catalog republish (URLs are absolute), zero app changes.
 
@@ -233,7 +233,7 @@ pnpm data:pack:publish                           # gh release upload + regenerat
    before upload.
 
 CI is out of scope for builds (decision), but a tiny CI check should validate
-`catalog.json` against its schema on every push to `gh-pages`.
+`catalog.json` against its schema on every push that touches `site/packs/`.
 
 ## App-side changes
 
@@ -312,7 +312,7 @@ Japan (OSM-only decision).
 
 ## Milestones
 
-1. **M1 — Pilot region, POI + measuring**: `gh-pages` branch + catalog
+1. **M1 — Pilot region, POI + measuring**: catalog in `site/packs/` + Pages deployment
    schema v2 + release publish tooling; `data/packs/` orchestrator;
    generalize POI/measuring extractors beyond Japan config; lazy measuring
    loader; point `MANIFEST_URL` at Pages; ship one small pilot region (e.g.

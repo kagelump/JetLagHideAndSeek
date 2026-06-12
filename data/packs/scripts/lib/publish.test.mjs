@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 /** @type {string} */
 let tmpDir;
 let distDir;
+let siteDir;
 
 /**
  * Create a minimal valid dist directory for a region.
@@ -70,7 +71,9 @@ describe("publish script", () => {
     before(async () => {
         tmpDir = resolve(tmpdir(), `packs-publish-test-${Date.now()}`);
         distDir = resolve(tmpDir, "dist");
+        siteDir = resolve(tmpDir, "site");
         await mkdir(distDir, { recursive: true });
+        await mkdir(siteDir, { recursive: true });
     });
 
     after(async () => {
@@ -85,6 +88,7 @@ describe("publish script", () => {
             tag: "packs-2026-06-12",
             repo: "test/JetLagHideAndSeek",
             distDir,
+            siteDir,
             skipLint: true,
             execFn: async () => ({
                 stdout: "",
@@ -122,26 +126,6 @@ describe("publish script", () => {
             if (cmd === "git status --porcelain") {
                 return { stdout: "", stderr: "", exitCode: 0 };
             }
-            if (cmd === "git worktree list") {
-                return { stdout: "", stderr: "", exitCode: 0 };
-            }
-            if (cmd === "git show-ref refs/heads/gh-pages") {
-                return { stdout: "", stderr: "", exitCode: 1 };
-            }
-            if (cmd === "git ls-remote --heads origin gh-pages") {
-                // Return a hash to simulate remote branch existing.
-                return {
-                    stdout: "abc1234567890abcdef1234567890abcdef12\trefs/heads/gh-pages",
-                    stderr: "",
-                    exitCode: 0,
-                };
-            }
-            if (cmd.startsWith("git fetch origin gh-pages")) {
-                return { stdout: "", stderr: "", exitCode: 0 };
-            }
-            if (cmd.startsWith("git worktree add")) {
-                return { stdout: "", stderr: "", exitCode: 0 };
-            }
             if (cmd === "git remote get-url origin") {
                 return {
                     stdout: "https://github.com/test/JetLagHideAndSeek.git",
@@ -150,9 +134,6 @@ describe("publish script", () => {
                 };
             }
             if (cmd.startsWith("git -C")) {
-                return { stdout: "", stderr: "", exitCode: 0 };
-            }
-            if (cmd.startsWith("cp ")) {
                 return { stdout: "", stderr: "", exitCode: 0 };
             }
 
@@ -168,6 +149,7 @@ describe("publish script", () => {
             tag: "packs-2026-06-12",
             repo: "test/JetLagHideAndSeek",
             distDir,
+            siteDir,
             skipLint: true,
             execFn: mockExec,
             fetchFn: mockFetch,
@@ -184,10 +166,14 @@ describe("publish script", () => {
             "should upload artifacts",
         );
 
-        // Should fetch gh-pages from origin to create tracking branch.
+        // Should commit to master via git -C <root> (site/packs/ flow).
         assert.ok(
-            cmdStr.includes("git fetch origin gh-pages:gh-pages"),
-            "should fetch gh-pages from origin",
+            cmdStr.includes("git -C") && cmdStr.includes("add site/packs/"),
+            "should add site/packs/ to git",
+        );
+        assert.ok(
+            cmdStr.includes("push origin master"),
+            "should push to master",
         );
 
         process.exitCode = 0;
@@ -218,23 +204,7 @@ describe("publish script", () => {
             if (cmd === "git status --porcelain") {
                 return { stdout: "", stderr: "", exitCode: 0 };
             }
-            if (cmd === "git worktree list") {
-                return { stdout: "", stderr: "", exitCode: 0 };
-            }
-            if (cmd === "git show-ref refs/heads/gh-pages") {
-                return {
-                    stdout: "abc123 refs/heads/gh-pages",
-                    stderr: "",
-                    exitCode: 0,
-                };
-            }
-            if (cmd.startsWith("git worktree add")) {
-                return { stdout: "", stderr: "", exitCode: 0 };
-            }
             if (cmd.startsWith("git -C")) {
-                return { stdout: "", stderr: "", exitCode: 0 };
-            }
-            if (cmd.startsWith("cp ")) {
                 return { stdout: "", stderr: "", exitCode: 0 };
             }
 
@@ -275,6 +245,7 @@ describe("publish script", () => {
             tag: "packs-2026-06-12",
             repo: "test/JetLagHideAndSeek",
             distDir,
+            siteDir,
             skipLint: true,
             execFn: mockExec,
             fetchFn: mockFetch,
@@ -306,16 +277,9 @@ describe("publish script", () => {
                 return { stdout: "", stderr: "", exitCode: 0 };
             }
             if (
-                cmd.startsWith("git worktree") ||
                 cmd.startsWith("git -C") ||
-                cmd.startsWith("git fetch") ||
-                cmd.startsWith("git show-ref") ||
-                cmd.startsWith("git ls-remote") ||
                 cmd.startsWith("git remote")
             ) {
-                return { stdout: "", stderr: "", exitCode: 0 };
-            }
-            if (cmd.startsWith("cp ")) {
                 return { stdout: "", stderr: "", exitCode: 0 };
             }
             return { stdout: "", stderr: "", exitCode: 0 };
@@ -330,6 +294,7 @@ describe("publish script", () => {
             tag: "packs-2026-06-12",
             repo: "test/JetLagHideAndSeek",
             distDir,
+            siteDir,
             skipLint: true,
             execFn: mockExec,
             fetchFn: mockFetch,
@@ -359,6 +324,7 @@ describe("publish script", () => {
             tag: "packs-2026-06-12",
             repo: "test/JetLagHideAndSeek",
             distDir,
+            siteDir,
             skipLint: true,
             execFn: mockExec,
             fetchFn: async () => null,
@@ -400,6 +366,7 @@ describe("publish script", () => {
             tag: "packs-2026-06-12",
             repo: "custom-org/JetLagHideAndSeek",
             distDir,
+            siteDir,
             skipLint: true,
             execFn: mockExec,
             fetchFn: mockFetch,
@@ -409,7 +376,7 @@ describe("publish script", () => {
         assert.equal(result.tag, "packs-2026-06-12");
         assert.equal(
             result.catalogUrl,
-            "https://jetlag.hinoka.org/catalog.json",
+            "https://jetlag.hinoka.org/packs/catalog.json",
         );
 
         process.exitCode = 0;

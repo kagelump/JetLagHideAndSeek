@@ -1,7 +1,11 @@
 name: Share Link Pages
 
-# Deploys the static app-link fallback site for jetlag.hinoka.org.
-# Also deploys the bundle-viewer data visualization tool.
+# Deploys the static site for jetlag.hinoka.org via GitHub Actions.
+# This is the single Pages deploy path — it atomically serves:
+#   1. Splash/home page (site/index.html, privacy.html, assets)
+#   2. App deep linking (site/.well-known/, site/i/)
+#   3. Bundle viewer (site/bundle-viewer/)
+#   4. Packs catalog (site/packs/catalog.json, NOTICE, index.html)
 # GitHub Pages must be enabled with GitHub Actions as the source.
 
 on:
@@ -15,6 +19,7 @@ on:
             - "assets/measuring/**"
             - "assets/poi/**"
             - "assets/default-zones/**"
+            - "data/packs/scripts/lib/catalogSchema.mjs"
             - ".github/workflows/pages.yml"
     workflow_dispatch:
 
@@ -49,6 +54,25 @@ jobs:
 
             - name: Build bundle viewer
               run: node tools/data-viewer/build.mjs
+
+            - name: Validate packs catalog (if present)
+              if: hashFiles('site/packs/catalog.json') != ''
+              run: |
+                  node --input-type=module -e "
+                  import { readFileSync } from 'node:fs';
+                  import { validateCatalog } from './data/packs/scripts/lib/catalogSchema.mjs';
+
+                  const catalog = JSON.parse(readFileSync('site/packs/catalog.json', 'utf8'));
+                  const errors = validateCatalog(catalog);
+                  if (errors.length > 0) {
+                      console.error('Catalog validation FAILED:');
+                      errors.forEach(e => console.error('  ' + e));
+                      process.exit(1);
+                  }
+                  const totalArtifacts = catalog.packs.reduce((s, p) => s + p.artifacts.length, 0);
+                  console.log('Catalog schema: OK (' + catalog.packs.length + ' packs, ' +
+                      totalArtifacts + ' artifacts)');
+                  "
 
             - uses: actions/configure-pages@v5
               with:

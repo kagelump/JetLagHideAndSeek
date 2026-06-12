@@ -1,16 +1,19 @@
 name: Packs Catalog Check
 
-# Validates catalog.json on gh-pages branch after every push.
+# Validates the packs catalog on every master push that touches it.
 # Verifies:
 #   - catalog.json matches the v2 schema
 #   - Every artifact URL returns HTTP 200 (HEAD request)
+#
+# Schema validation also runs inside pages.yml as a deploy gate; this
+# workflow provides the artifact-URL liveness check on every push.
 
 on:
     push:
         branches:
-            - gh-pages
+            - master
         paths:
-            - "catalog.json"
+            - "site/packs/catalog.json"
     workflow_dispatch:
 
 jobs:
@@ -18,29 +21,19 @@ jobs:
         name: Validate catalog
         runs-on: ubuntu-latest
         steps:
-            # Checkout default branch to get the validator script.
             - uses: actions/checkout@v4
-              with:
-                  path: repo
-
-            # Checkout gh-pages branch to get catalog.json.
-            - uses: actions/checkout@v4
-              with:
-                  ref: gh-pages
-                  path: pages
 
             - uses: actions/setup-node@v4
               with:
                   node-version: 24
 
             - name: Validate catalog schema
-              working-directory: pages
               run: |
                   node --input-type=module -e "
                   import { readFileSync } from 'node:fs';
-                  import { validateCatalog } from '../repo/data/packs/scripts/lib/catalogSchema.mjs';
+                  import { validateCatalog } from './data/packs/scripts/lib/catalogSchema.mjs';
 
-                  const catalog = JSON.parse(readFileSync('catalog.json', 'utf8'));
+                  const catalog = JSON.parse(readFileSync('site/packs/catalog.json', 'utf8'));
                   const errors = validateCatalog(catalog);
                   if (errors.length > 0) {
                       console.error('Catalog validation FAILED:');
@@ -52,13 +45,11 @@ jobs:
                   "
 
             - name: Verify artifact URLs (HEAD)
-              working-directory: pages
               run: |
                   node --input-type=module -e "
-                  import { validateCatalog } from '../repo/data/packs/scripts/lib/catalogSchema.mjs';
                   import { readFileSync } from 'node:fs';
 
-                  const catalog = JSON.parse(readFileSync('catalog.json', 'utf8'));
+                  const catalog = JSON.parse(readFileSync('site/packs/catalog.json', 'utf8'));
 
                   // Collect all artifact URLs.
                   const urls = [];
