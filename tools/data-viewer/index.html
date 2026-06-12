@@ -632,8 +632,23 @@
             // ── Shared paint / layout templates ─────────────────────────
             var STATION_DOT_PAINT = {
                 "circle-color": ["to-color", ["get", "color"], "#888"],
-                "circle-opacity": 0.95,
-                "circle-radius": STATION_CIRCLE_RADIUS,
+                "circle-opacity": [
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    10, 0.95,
+                    11, 0,
+                ],
+                "circle-radius": [
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    0, 0.5,
+                    6, 1.0,
+                    10, 3,
+                    11, 12,
+                    15, 16,
+                ],
                 "circle-stroke-color": "#fff",
                 "circle-stroke-width": 1,
             };
@@ -832,12 +847,27 @@
                     {
                         id: "transit-stations-dot",
                         type: "circle",
-                        maxzoom: STATION_WEDGE_MINZOOM,
                         layout: { visibility: "none" },
                         paint: STATION_DOT_PAINT,
                     },
                 ],
             };
+
+            // ── Normalise wedge-station API response ─────────────────────
+            // The API may return a single FeatureCollection (old server) or
+            // { large, medium, small } (new server).  Always produce the
+            // three-key object so downstream code is uniform.
+            function normaliseWedgeResponse(data) {
+                if (data && data.large) {
+                    // New multi-size response.
+                    return data;
+                }
+                // Old single-FC response — use it for all zoom tiers.
+                if (data && data.type === "FeatureCollection") {
+                    return { large: data, medium: data, small: data };
+                }
+                return null;
+            }
 
             async function loadLayers() {
                 var entries = Object.entries(SOURCES);
@@ -860,8 +890,7 @@
                         continue;
                     }
                     if (id === "transit-stations") {
-                        // Multi-size wedge response: { large, medium, small }
-                        transitWedgeSets = result.value;
+                        transitWedgeSets = normaliseWedgeResponse(result.value);
                         continue;
                     }
                     addSource(id, result.value);
@@ -1468,7 +1497,9 @@
                                         PACK_STATE.regionId +
                                         "/transit/stations",
                                 )
-                                    .then(function (data) {
+                                    .then(function (rawData) {
+                                        var data = normaliseWedgeResponse(rawData);
+                                        if (!data) return;
                                         // data = { large: FC, medium: FC, small: FC }
                                         for (var si = 0; si < sizeIds.length; si++) {
                                             var sz = sizeIds[si];
@@ -1494,7 +1525,6 @@
                                             id: "pack-transit-stations-dot",
                                             type: "circle",
                                             source: dotSourceId,
-                                            maxzoom: STATION_WEDGE_MINZOOM,
                                             paint: STATION_DOT_PAINT,
                                         });
                                         PACK_STATE.loadedLayers[baseId] = true;
