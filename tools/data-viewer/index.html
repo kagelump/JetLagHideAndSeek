@@ -1122,6 +1122,18 @@
                 });
                 labelEl.appendChild(cb);
                 labelEl.appendChild(document.createTextNode("Show all"));
+                // Defer: after DOM insertion, sync individual checkboxes
+                // to match the master without triggering lazy loads.
+                setTimeout(function () {
+                    var checkboxes = sectionEl.querySelectorAll(
+                        'input[type="checkbox"]',
+                    );
+                    for (var i = 0; i < checkboxes.length; i++) {
+                        if (checkboxes[i] !== cb) {
+                            checkboxes[i].checked = true;
+                        }
+                    }
+                }, 0);
                 return labelEl;
             }
 
