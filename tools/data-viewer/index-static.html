@@ -122,6 +122,24 @@
                 border-color: #2563eb;
                 background: rgba(37, 99, 235, 0.05);
             }
+            #toast {
+                position: fixed;
+                bottom: 24px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.8);
+                color: #fff;
+                padding: 8px 20px;
+                border-radius: 6px;
+                font-size: 13px;
+                z-index: 100;
+                opacity: 0;
+                transition: opacity 0.2s;
+                pointer-events: none;
+            }
+            #toast.visible {
+                opacity: 1;
+            }
             #pack-meta-info {
                 font-size: 10px;
                 color: #666;
@@ -148,6 +166,7 @@
     <body>
         <div id="map"></div>
         <div id="loading">Loading layers…</div>
+        <div id="toast"></div>
         <div id="legend">
             <div style="font-weight: 600; margin-bottom: 2px">
                 <label
@@ -470,6 +489,55 @@
                 maxWidth: "240px",
             });
 
+            var TOAST_TIMER = null;
+            function showToast(msg) {
+                var el = document.getElementById("toast");
+                el.textContent = msg;
+                el.classList.add("visible");
+                if (TOAST_TIMER) clearTimeout(TOAST_TIMER);
+                TOAST_TIMER = setTimeout(function () {
+                    el.classList.remove("visible");
+                }, 2000);
+            }
+
+            function copyNodeInfo(feature) {
+                var props = feature.properties;
+                var geom = feature.geometry;
+                var lines = [];
+                if (props.name) lines.push("Name: " + props.name);
+                if (props.id) lines.push("ID: " + props.id);
+                if (geom && geom.coordinates) {
+                    lines.push(
+                        "Location: " +
+                            geom.coordinates[1].toFixed(5) +
+                            ", " +
+                            geom.coordinates[0].toFixed(5),
+                    );
+                }
+                if (props.routeNames)
+                    lines.push("Routes: " + props.routeNames);
+                if (props.operators)
+                    lines.push("Operators: " + props.operators);
+                if (props.ringCount != null)
+                    lines.push("Rings: " + props.ringCount);
+                if (props.category)
+                    lines.push("Category: " + props.category);
+                if (props.osmId)
+                    lines.push(
+                        "OSM: " + (props.osmType || "") + " " + props.osmId,
+                    );
+                if (props.iata) lines.push("IATA: " + props.iata);
+                var text = lines.join("\n");
+                navigator.clipboard.writeText(text).then(
+                    function () {
+                        showToast("Copied to clipboard");
+                    },
+                    function () {
+                        showToast("Copy failed");
+                    },
+                );
+            }
+
             var CONFIG_LAYERS = {
                 coastline: [
                     {
@@ -756,6 +824,10 @@
                 POPUP.remove();
             });
 
+            map.on("click", "poi-circle", function (e) {
+                copyNodeInfo(e.features[0]);
+            });
+
             map.on("mouseenter", "transit-stations-ring-0", function (e) {
                 map.getCanvas().style.cursor = "pointer";
                 var p = e.features[0].properties;
@@ -778,6 +850,10 @@
             map.on("mouseleave", "transit-stations-ring-0", function () {
                 map.getCanvas().style.cursor = "";
                 POPUP.remove();
+            });
+
+            map.on("click", "transit-stations-ring-0", function (e) {
+                copyNodeInfo(e.features[0]);
             });
 
             function truncateList(str, max) {
@@ -1481,6 +1557,14 @@
                     function () {
                         map.getCanvas().style.cursor = "";
                         POPUP.remove();
+                    },
+                );
+
+                map.on(
+                    "click",
+                    "drop-transit-stations-ring-0",
+                    function (e) {
+                        copyNodeInfo(e.features[0]);
                     },
                 );
             }
