@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { searchBoundaries } from "@/features/offline/boundaryStore";
+
 export type PlayAreaSearchResult = {
     country?: string;
     label: string;
     osmId: number;
     state?: string;
+    /** Source of the result: "photon" (default) or "pack" (offline). */
+    source?: "photon" | "pack";
 };
 
 type PhotonFeature = {
@@ -44,7 +48,41 @@ export function usePlayAreaSearch(query: string) {
     const trimmed = query.trim();
     return useQuery({
         queryKey: ["play-area-search", normalizeQuery(trimmed)],
-        queryFn: ({ signal }) => fetchPhotonResults(trimmed, signal),
+        queryFn: async ({ signal }) => {
+            // Always compute local (pack) results synchronously.
+            const localResults = searchBoundaries(trimmed).map((hit) => ({
+                label: hit.name,
+                osmId: hit.relationId,
+                source: "pack" as const,
+            }));
+
+            // Try Photon; on failure or offline, local results are enough.
+            let photonResults: PlayAreaSearchResult[] = [];
+            try {
+                photonResults = await fetchPhotonResults(trimmed, signal);
+            } catch {
+                // Photon failed — local-only is fine when packs are installed.
+            }
+
+            // Merge: local results first, then Photon (dedupe by osmId).
+            const seen = new Set<number>();
+            const merged: PlayAreaSearchResult[] = [];
+
+            for (const r of localResults) {
+                if (!seen.has(r.osmId)) {
+                    seen.add(r.osmId);
+                    merged.push(r);
+                }
+            }
+            for (const r of photonResults) {
+                if (!seen.has(r.osmId)) {
+                    seen.add(r.osmId);
+                    merged.push(r);
+                }
+            }
+
+            return merged;
+        },
         enabled: trimmed.length > 0,
         staleTime: 60 * 60 * 1000, // place names are stable within a session
     });

@@ -33,7 +33,7 @@ import {
 import { QuestionsScreen } from "@/features/questions/QuestionsScreen";
 import { AdminDivisionScreen } from "@/features/sheet/AdminDivisionScreen";
 import { GeometryParityScreen } from "@/features/sheet/GeometryParityScreen";
-import { OfflineDataScreen } from "@/features/sheet/OfflineDataScreen";
+import { OfflineDataScreen } from "@/features/offline/OfflineDataScreen";
 import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";

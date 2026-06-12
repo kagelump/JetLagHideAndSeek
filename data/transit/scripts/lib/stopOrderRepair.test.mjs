@@ -167,15 +167,21 @@ describe("repairStopOrder", () => {
     });
 
     it("declines repair for a reversed mid-route block (R5)", () => {
-        // Correct order: A-B-C-D-E-F at positions 0,10,20,30,40,50.
-        // Stored as: A-D-C-B-E-F (middle block reversed).
-        const a = { id: "a", lat: 35.0, lon: 139.0 };
-        const d = { id: "d", lat: 35.0 + 0.27, lon: 139.0 }; // ~30 km
-        const c = { id: "c", lat: 35.0 + 0.18, lon: 139.0 }; // ~20 km
-        const b = { id: "b", lat: 35.0 + 0.09, lon: 139.0 }; // ~10 km
-        const e = { id: "e", lat: 35.0 + 0.36, lon: 139.0 }; // ~40 km
-        const f = { id: "f", lat: 35.0 + 0.45, lon: 139.0 }; // ~50 km
-        const stops = [a, d, c, b, e, f];
+        // Correct order: A-B-C-D-E-F-G-H at positions 0,1,2,3,4,5,6,7 km.
+        // Stored as: A-B-C-F-E-D-G-H — the middle block D-E-F is reversed to
+        // F-E-D and displaced to positions 28-30 km.  Boundary gaps (28 km and
+        // 22 km) exceed the 20 km absolute floor, so detection fires.  But any
+        // single reinsertion either recreates a gap or does not reduce total
+        // length, so repair declines and the atomic revert restores the original.
+        const a = { id: "a", lat: 35.0, lon: 139.0 }; // 0 km
+        const b = { id: "b", lat: 35.0 + 0.009, lon: 139.0 }; // 1 km
+        const c = { id: "c", lat: 35.0 + 0.018, lon: 139.0 }; // 2 km
+        const f = { id: "f", lat: 35.0 + 0.27, lon: 139.0 }; // 30 km (displaced!)
+        const e = { id: "e", lat: 35.0 + 0.261, lon: 139.0 }; // 29 km
+        const d = { id: "d", lat: 35.0 + 0.252, lon: 139.0 }; // 28 km
+        const g = { id: "g", lat: 35.0 + 0.054, lon: 139.0 }; // 6 km
+        const h = { id: "h", lat: 35.0 + 0.063, lon: 139.0 }; // 7 km
+        const stops = [a, b, c, f, e, d, g, h];
 
         const {
             stops: result,
@@ -191,7 +197,7 @@ describe("repairStopOrder", () => {
         assert.equal(repairsDone, 0);
         assert.deepEqual(
             result.map((s) => s.id),
-            ["a", "d", "c", "b", "e", "f"],
+            ["a", "b", "c", "f", "e", "d", "g", "h"],
             "Should revert to original order",
         );
         assert.ok(warnings.length > 0, "Should emit warnings");
@@ -228,19 +234,28 @@ describe("repairStopOrder", () => {
     });
 
     it("repairs duplicate consecutive ids without mis-identifying positions (R6)", () => {
-        // A-B-B-C where the second B is a duplicate and C is an outlier.
-        const a = { id: "a", lat: 35.0, lon: 139.0 };
-        const b1 = { id: "b", lat: 35.0 + 0.009, lon: 139.0 };
-        const b2 = { id: "b", lat: 35.0 + 0.009, lon: 139.0 }; // duplicate
-        const c = { id: "c", lat: 35.0, lon: 139.0 }; // outlier back at A
-        const stops = [a, b1, b2, c];
+        // 30 stops at ~1 km spacing, with a duplicate id pair mid-route and an
+        // outlier at the start position appended at the end.  The ~29 km final
+        // gap exceeds the 20 km absolute floor.  Object identity in the trial
+        // loop ensures the duplicate does not confuse the reinsertion search.
+        const stops = [];
+        for (let i = 0; i < 30; i++) {
+            stops.push({ id: `s${i}`, lat: 35.0 + i * 0.009, lon: 139.0 });
+        }
+        // Insert duplicate of s15 right after s15.
+        stops.splice(16, 0, {
+            id: "s15",
+            lat: stops[15].lat,
+            lon: stops[15].lon,
+        });
+        // Outlier at start position, appended at end.
+        stops.push({ id: "outlier", lat: 35.0, lon: 139.0 });
 
         const { stops: result, repaired, repairsDone } = repairStopOrder(stops);
         assert.equal(repaired, true);
         assert.equal(repairsDone, 1);
-        // C should move next to A (position 0 or 1).
-        const cIdx = result.findIndex((s) => s.id === "c");
-        assert.ok(cIdx <= 1, "Outlier C should be near the start");
+        // Outlier should move to the start.
+        assert.equal(result[0].id, "outlier");
         assert.equal(detectImplausibleJumps(result).length, 0);
     });
 });

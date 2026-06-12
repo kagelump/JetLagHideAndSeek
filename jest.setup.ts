@@ -387,3 +387,28 @@ jest.mock("@/state/queryClient", () => {
         setupPersister: jest.fn(() => Promise.resolve()),
     };
 });
+
+// Mock expo-file-system for measuring bundle tests.
+// Tests that need specific file content set up a global __fsCache.
+jest.mock("expo-file-system", () => {
+    const cache: Record<string, string> = {};
+    return {
+        __esModule: true,
+        readAsStringAsync: jest.fn((path: string) => {
+            const globalCache = (
+                globalThis as unknown as {
+                    __fsCache?: Record<string, string>;
+                }
+            ).__fsCache;
+            const resolved = globalCache?.[path] ?? cache[path];
+            if (resolved !== undefined) {
+                return Promise.resolve(resolved);
+            }
+            return Promise.reject(
+                new Error(`expo-file-system: file not found: ${path}`),
+            );
+        }),
+        documentDirectory: "/mock-documents/",
+        cacheDirectory: "/mock-cache/",
+    };
+});

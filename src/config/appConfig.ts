@@ -167,6 +167,22 @@ export const APP_CONFIG = {
             ? "geos"
             : "auto") as "auto" | "js" | "geos",
     },
+
+    offline: {
+        /**
+         * URL to the v2 packs catalog (GitHub Pages).
+         * This is deterministic even before the one-time Pages setup in T4:
+         * https://<github-user>.github.io/JetLagHideAndSeek/catalog.json
+         */
+        catalogUrl:
+            "https://ryantseng.github.io/JetLagHideAndSeek/catalog.json",
+        /** Catalog stale time (30 minutes). */
+        catalogStaleTimeMs: 30 * 60 * 1000,
+        /** Key for the AsyncStorage installed-packs index (v2). */
+        installedIndexKey: "installed-packs-v2",
+        /** Maximum inflate bytes for any single artifact (100 MB). */
+        inflateMaxBytes: 100 * 1024 * 1024,
+    },
 } as const;
 
 // ─── Convenience re-exports ──────────────────────────────────────────
@@ -181,6 +197,7 @@ export const TENTACLES = APP_CONFIG.tentacles;
 export const RADAR = APP_CONFIG.radar;
 export const VORONOI = APP_CONFIG.voronoi;
 export const GEOMETRY = APP_CONFIG.geometry;
+export const OFFLINE = APP_CONFIG.offline;
 
 // ─── Derived-value helpers ───────────────────────────────────────────
 

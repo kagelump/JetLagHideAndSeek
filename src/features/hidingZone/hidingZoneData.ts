@@ -14,6 +14,66 @@ import {
  */
 const bundleCache = new Map<string, HidingZonePreset[] | null>();
 
+// ─── Pack transit sources ──────────────────────────────────────────────────
+
+type TransitPresetSummary = {
+    id: string;
+    label: string;
+    bbox: [number, number, number, number];
+    kind?: string;
+};
+
+type PackTransitSource = {
+    packId: string;
+    path: string;
+    presetSummaries: TransitPresetSummary[];
+};
+
+const packTransitSources = new Map<string, PackTransitSource>();
+
+/**
+ * Register a transit source from an installed pack.
+ * Called by the pack installer (T5) after verifying the transit artifact.
+ * Preset IDs are prefixed with `${packId}:` to avoid collisions with
+ * bundled presets.
+ */
+export function registerTransitSource(
+    packId: string,
+    path: string,
+    presetSummaries: TransitPresetSummary[],
+): void {
+    // Safety: reject preset ids containing ':' (belt and braces).
+    for (const p of presetSummaries) {
+        if (p.id.includes(":")) {
+            throw new Error(
+                `registerTransitSource: preset id "${p.id}" contains ':' — ` +
+                    `this would make the prefix ambiguous.`,
+            );
+        }
+    }
+
+    packTransitSources.set(packId, { packId, path, presetSummaries });
+    // Clear any cached presets for this pack so they reload with new data.
+    bundleCache.delete(packId);
+}
+
+/**
+ * Unregister a transit source when a pack is removed.
+ * Also clears cached presets for that pack.
+ */
+export function unregisterTransitSource(packId: string): void {
+    packTransitSources.delete(packId);
+    bundleCache.delete(packId);
+}
+
+/** For testing. */
+export function __getPackTransitSourcesForTest(): Map<
+    string,
+    PackTransitSource
+> {
+    return packTransitSources;
+}
+
 // ─── Public API ────────────────────────────────────────────────────────────
 
 /**
@@ -43,6 +103,12 @@ export async function loadHidingZonePresets(
 
         const loader = transitBundleLoaders[bundle.id];
         if (!loader) {
+            // Pack source — load from filesystem via the pack path.
+            const packSource = findPackSourceByBundleId(bundle.id);
+            if (packSource) {
+                promises.push(loadPackTransitBundle(packSource));
+                continue;
+            }
             if (__DEV__) {
                 console.warn(
                     `[hidingZoneData] No loader for bundle "${bundle.id}" — skipping.`,
@@ -64,12 +130,17 @@ export async function loadHidingZonePresets(
 
     await Promise.all(promises);
 
-    // Collect all loaded presets (from ALL bundles — not just those matching
-    // the current bbox — so bundles loaded for a previous area are still
-    // available).
+    // Collect all loaded presets (from ALL bundles + pack sources — not just
+    // those matching the current bbox — so bundles loaded for a previous area
+    // are still available).
     const all: HidingZonePreset[] = [];
     for (const bundle of TRANSIT_MANIFEST.bundles) {
         const cached = bundleCache.get(bundle.id);
+        if (cached) all.push(...cached);
+    }
+    // Also collect from pack transit sources.
+    for (const [packId] of packTransitSources) {
+        const cached = bundleCache.get(packId);
         if (cached) all.push(...cached);
     }
 
@@ -84,6 +155,10 @@ export function getHidingZonePresets(): HidingZonePreset[] {
     const all: HidingZonePreset[] = [];
     for (const bundle of TRANSIT_MANIFEST.bundles) {
         const cached = bundleCache.get(bundle.id);
+        if (cached) all.push(...cached);
+    }
+    for (const [packId] of packTransitSources) {
+        const cached = bundleCache.get(packId);
         if (cached) all.push(...cached);
     }
     if (all.length === 0) {
@@ -123,18 +198,85 @@ export function clearTransitBundleCache(): void {
     bundleCache.clear();
 }
 
+/** Clear pack transit sources (for testing). */
+export function __clearPackTransitSourcesForTest(): void {
+    packTransitSources.clear();
+    bundleCache.clear();
+}
+
 // ─── Internals ─────────────────────────────────────────────────────────────
 
 /**
+ * Find a pack transit source by its synthetic bundle ID
+ * (format: `${packId}:${presetId}`).
+ */
+function findPackSourceByBundleId(bundleId: string): PackTransitSource | null {
+    // Parse packId from the bundle ID.
+    const colonIdx = bundleId.indexOf(":");
+    if (colonIdx < 0) return null;
+    const packId = bundleId.slice(0, colonIdx);
+    return packTransitSources.get(packId) ?? null;
+}
+
+/**
+ * Load a transit bundle from a pack's filesystem path.
+ * Prefixes all preset IDs with `${packId}:`.
+ */
+async function loadPackTransitBundle(
+    source: PackTransitSource,
+): Promise<HidingZonePreset[]> {
+    try {
+        const { readAsStringAsync } = await import("expo-file-system");
+        const raw = await readAsStringAsync(source.path, {
+            encoding: "utf8",
+        });
+        const bundle = JSON.parse(raw);
+        const presets: HidingZonePreset[] =
+            bundle.presets?.map((p: { id: string }) => ({
+                ...p,
+                id: `${source.packId}:${p.id}`,
+            })) ?? [];
+
+        // Cache under the packId (not per-preset) since one file = all presets.
+        bundleCache.set(source.packId, presets);
+        return presets;
+    } catch {
+        bundleCache.set(source.packId, []);
+        return [];
+    }
+}
+
+/**
  * Pick bundles whose bbox intersects the play-area bbox.
- * Returns all bundles when playAreaBbox is null/undefined.
+ * Also includes registered pack transit sources.
+ * Returns all bundles + pack sources when playAreaBbox is null/undefined.
  */
 function pickBundles(playAreaBbox?: Bbox | null) {
-    if (!playAreaBbox) {
-        // Fresh install — load all bundles (acceptable this phase per T3 spec).
-        return TRANSIT_MANIFEST.bundles;
+    const bundles = [...TRANSIT_MANIFEST.bundles];
+
+    // Add pack transit sources as synthetic bundle entries.
+    for (const [packId, source] of packTransitSources) {
+        for (const summary of source.presetSummaries) {
+            if (!playAreaBbox || bboxIntersects(summary.bbox, playAreaBbox)) {
+                bundles.push({
+                    id: `${packId}:${summary.id}`,
+                    bbox: summary.bbox,
+                    file: source.path,
+                    presets: [
+                        {
+                            id: `${packId}:${summary.id}`,
+                            label: summary.label,
+                            bbox: summary.bbox,
+                            kind: summary.kind,
+                        },
+                    ],
+                });
+            }
+        }
     }
-    return TRANSIT_MANIFEST.bundles.filter((b) =>
-        bboxIntersects(b.bbox, playAreaBbox),
-    );
+
+    if (!playAreaBbox) {
+        return bundles;
+    }
+    return bundles.filter((b) => bboxIntersects(b.bbox, playAreaBbox));
 }

@@ -27,6 +27,10 @@ data/transit/report/
 # Geofabrik POI pack artifacts (downloaded on demand, not shipped in binary)
 data/geofabrik/dist/
 
+# Pack pipeline build artifacts (downloaded on demand, not shipped in binary)
+data/packs/cache/
+data/packs/dist/
+
 # jetbrains setting folder
 .idea/
 

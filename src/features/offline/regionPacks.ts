@@ -1,0 +1,637 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { digestStringAsync } from "expo-crypto";
+import { CryptoDigestAlgorithm } from "expo-crypto";
+import { gunzipSync, strFromU8 } from "fflate";
+import { Directory, File, Paths, type InfoOptions } from "expo-file-system";
+import {
+    registerRegion,
+    unregisterRegion,
+} from "@/features/questions/matching/bundledPois";
+import {
+    registerMeasuringSource,
+    unregisterMeasuringSources,
+} from "@/features/questions/measuring/lineBundleLoader";
+import { OFFLINE } from "@/config/appConfig";
+import type { Artifact, ArtifactKind, CatalogPack } from "./packCatalog";
+import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export type InstalledArtifact = {
+    kind: ArtifactKind;
+    category?: string;
+    bytes: number;
+    status: "installed" | "failed";
+};
+
+export type InstalledPack = {
+    id: string;
+    osmSnapshot: string;
+    installedAt: string;
+    artifacts: InstalledArtifact[];
+};
+
+type InstalledIndex = Record<string, InstalledPack>;
+
+// ─── Constants ────────────────────────────────────────────────────────────
+
+const INSTALLED_INDEX_KEY = OFFLINE.installedIndexKey;
+const MD5_INFO_OPTS: InfoOptions = { md5: true };
+
+// Lazy — defers the expo-file-system module access so tests that don't
+// exercise region packs don't need to mock expo-file-system.
+let _packsDir: Directory | null = null;
+function packsDir(): Directory {
+    if (!_packsDir) {
+        _packsDir = new Directory(Paths.document, "packs");
+    }
+    return _packsDir;
+}
+
+// ─── Safety validation ────────────────────────────────────────────────────
+
+/** Pack IDs must be alphanumeric + hyphens, starting with a letter or digit. */
+const VALID_PACK_ID = /^[a-z0-9][a-z0-9-]*$/i;
+
+function validatePackId(id: string): void {
+    if (!VALID_PACK_ID.test(id)) {
+        throw new Error(
+            `Invalid pack id "${id}" — must match ${VALID_PACK_ID}`,
+        );
+    }
+}
+
+// ─── File helpers ─────────────────────────────────────────────────────────
+
+function packDir(id: string): Directory {
+    return new Directory(packsDir(), id);
+}
+
+function gzFileName(kind: ArtifactKind, category?: string): string {
+    return category ? `${kind}-${category}.json.gz` : `${kind}.json.gz`;
+}
+
+function jsonFileName(kind: ArtifactKind, category?: string): string {
+    return category ? `${kind}-${category}.json` : `${kind}.json`;
+}
+
+function gzFile(id: string, kind: ArtifactKind, category?: string): File {
+    return new File(packDir(id), gzFileName(kind, category));
+}
+
+function jsonFile(id: string, kind: ArtifactKind, category?: string): File {
+    return new File(packDir(id), jsonFileName(kind, category));
+}
+
+// ─── Installed-pack index (AsyncStorage) ──────────────────────────────────
+
+// Serializes index mutations — avoids lost-update races between concurrent
+// install/remove (low-likelihood but user-driven).
+let indexMutex: Promise<void> = Promise.resolve();
+
+function withIndexMutex<T>(fn: () => Promise<T>): Promise<T> {
+    const prev = indexMutex;
+    let release: () => void;
+    indexMutex = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    return prev.then(fn).finally(() => release!());
+}
+
+async function getInstalledIndex(): Promise<InstalledIndex> {
+    const raw = await AsyncStorage.getItem(INSTALLED_INDEX_KEY);
+    if (!raw) return {};
+    try {
+        return JSON.parse(raw) as InstalledIndex;
+    } catch {
+        return {};
+    }
+}
+
+async function setInstalledIndex(index: InstalledIndex): Promise<void> {
+    await AsyncStorage.setItem(INSTALLED_INDEX_KEY, JSON.stringify(index));
+}
+
+// ─── Per-kind registration ────────────────────────────────────────────────
+
+function registerArtifact(
+    packId: string,
+    kind: ArtifactKind,
+    category: string | undefined,
+    raw: unknown,
+): void {
+    switch (kind) {
+        case "poi": {
+            registerRegion(packId, raw as Parameters<typeof registerRegion>[1]);
+            break;
+        }
+        case "measuring": {
+            if (category) {
+                const metPath = jsonFile(packId, kind, category).uri;
+                registerMeasuringSource(
+                    packId,
+                    category as MeasuringCategory,
+                    metPath,
+                );
+            }
+            break;
+        }
+        case "boundaries": {
+            // TODO(T7): Parse boundaries artifact, write index + polygons,
+            // call registerBoundarySource.
+            break;
+        }
+        case "transit": {
+            // TODO(T9): Register transit presets from the artifact.
+            break;
+        }
+        case "meta": {
+            // meta is metadata only — no registration needed.
+            break;
+        }
+    }
+}
+
+function unregisterArtifacts(packId: string): void {
+    // Unregister POI region.
+    unregisterRegion(packId);
+    // Unregister measuring sources.
+    unregisterMeasuringSources(packId);
+    // TODO(T7): unregister boundaries.
+    // TODO(T9): unregister transit.
+}
+
+// ─── Install pack ─────────────────────────────────────────────────────────
+
+function ensurePackDir(id: string): void {
+    const dir = packDir(id);
+    if (!dir.exists) {
+        dir.create({ intermediates: true });
+    }
+}
+
+export type InstallProgress = {
+    done: number;
+    total: number;
+    currentKind: ArtifactKind;
+};
+
+/**
+ * Install all artifacts in a pack. Sequential loop for deterministic behavior.
+ * Returns the list of installed artifacts with their status.
+ */
+async function installPackInternal(
+    pack: CatalogPack,
+    progress?: (p: InstallProgress) => void,
+): Promise<InstalledArtifact[]> {
+    validatePackId(pack.id);
+    ensurePackDir(pack.id);
+
+    // Install meta first — later steps may want adminLevels.
+    const metaArtifact = pack.artifacts.find((a) => a.kind === "meta");
+    const otherArtifacts = pack.artifacts.filter((a) => a.kind !== "meta");
+    const ordered = metaArtifact
+        ? [metaArtifact, ...otherArtifacts]
+        : otherArtifacts;
+
+    const results: InstalledArtifact[] = [];
+    let done = 0;
+
+    for (const artifact of ordered) {
+        progress?.({ done, total: ordered.length, currentKind: artifact.kind });
+
+        try {
+            await installSingleArtifact(pack.id, artifact);
+            results.push({
+                kind: artifact.kind,
+                category: artifact.category,
+                bytes: artifact.bytes,
+                status: "installed",
+            });
+        } catch (err) {
+            console.warn(
+                `[regionPacks] Artifact ${artifact.kind}${artifact.category ? `-${artifact.category}` : ""} ` +
+                    `in pack "${pack.id}" failed:`,
+                err,
+            );
+            results.push({
+                kind: artifact.kind,
+                category: artifact.category,
+                bytes: artifact.bytes,
+                status: "failed",
+            });
+        }
+
+        done++;
+    }
+
+    progress?.({
+        done: ordered.length,
+        total: ordered.length,
+        currentKind: "meta",
+    });
+
+    // Persist installed-pack index (mutex-guarded).
+    await withIndexMutex(async () => {
+        const index = await getInstalledIndex();
+        index[pack.id] = {
+            id: pack.id,
+            osmSnapshot: pack.osmSnapshot,
+            installedAt: new Date().toISOString(),
+            artifacts: results,
+        };
+        await setInstalledIndex(index);
+    });
+
+    return results;
+}
+
+async function installSingleArtifact(
+    packId: string,
+    artifact: Artifact,
+): Promise<void> {
+    const dest = gzFile(packId, artifact.kind, artifact.category);
+
+    // 1. Download .gz via the v19 File API (writes directly to disk).
+    const downloaded = await File.downloadFileAsync(artifact.url, dest, {
+        idempotent: true,
+    });
+
+    // 2. Verify byte length.
+    const info = downloaded.info(MD5_INFO_OPTS);
+    if (info.size !== artifact.bytes) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Size mismatch for ${packId}/${artifact.kind}: expected ${artifact.bytes}, got ${info.size ?? "N/A"}`,
+        );
+    }
+
+    // 3. Verify MD5 hash of the compressed file.
+    if (!artifact.md5) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Integrity check failed for ${packId}/${artifact.kind}: manifest missing md5`,
+        );
+    }
+    if (!info.md5 || info.md5.toLowerCase() !== artifact.md5.toLowerCase()) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Integrity check failed for ${packId}/${artifact.kind}: MD5 mismatch ` +
+                `(expected ${artifact.md5}, got ${info.md5 ?? "N/A"})`,
+        );
+    }
+
+    // 4. Read raw bytes and inflate with fflate.
+    const gzBytes = await downloaded.bytes();
+
+    // Decompression bomb guard.
+    const INFLATE_MAX_BYTES = OFFLINE.inflateMaxBytes;
+    const inflateLimit = Math.min(INFLATE_MAX_BYTES, gzBytes.length * 20);
+    const inflated = gunzipSync(gzBytes);
+    if (inflated.length > inflateLimit) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Decompressed size ${(inflated.length / 1024 / 1024).toFixed(1)} MB ` +
+                `exceeds limit of ${(inflateLimit / 1024 / 1024).toFixed(1)} MB ` +
+                `for ${packId}/${artifact.kind}`,
+        );
+    }
+    const jsonStr = strFromU8(inflated);
+
+    // 4a. Verify SHA-256 of the uncompressed JSON.
+    if (!artifact.sha256) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Integrity check failed for ${packId}/${artifact.kind}: manifest missing sha256`,
+        );
+    }
+    const givenSha256 = await digestStringAsync(
+        CryptoDigestAlgorithm.SHA256,
+        jsonStr,
+    );
+    if (givenSha256.toLowerCase() !== artifact.sha256.toLowerCase()) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+        throw new Error(
+            `Integrity check failed for ${packId}/${artifact.kind}: SHA-256 mismatch ` +
+                `(expected ${artifact.sha256}, got ${givenSha256})`,
+        );
+    }
+
+    const raw = JSON.parse(jsonStr) as Record<string, unknown>;
+
+    // 5. Schema version guard.
+    if (
+        typeof raw.schemaVersion !== "number" ||
+        raw.schemaVersion !== artifact.schemaVersion
+    ) {
+        throw new Error(
+            `Pack ${packId}/${artifact.kind} schemaVersion mismatch: ` +
+                `payload has ${raw.schemaVersion}, expected ${artifact.schemaVersion}`,
+        );
+    }
+
+    // 6. Write plain .json.
+    const plain = jsonFile(packId, artifact.kind, artifact.category);
+    plain.create({ overwrite: true });
+    plain.write(jsonStr);
+
+    // 7. Delete the .gz.
+    try {
+        downloaded.delete();
+    } catch {
+        /* best-effort */
+    }
+
+    // 8. Register artifact.
+    registerArtifact(packId, artifact.kind, artifact.category, raw);
+}
+
+// ─── Retry pack ───────────────────────────────────────────────────────────
+
+/**
+ * Retry a pack: re-download only non-installed artifacts.
+ */
+async function retryPackInternal(
+    pack: CatalogPack,
+    progress?: (p: InstallProgress) => void,
+): Promise<InstalledArtifact[]> {
+    validatePackId(pack.id);
+
+    // Get current installed state.
+    const currentIndex = await getInstalledIndex();
+    const current = currentIndex[pack.id];
+
+    if (!current) {
+        // Nothing to retry — do a full install.
+        return installPackInternal(pack, progress);
+    }
+
+    // Determine which artifacts need re-download.
+    const failedKinds = new Map<string, ArtifactKind>();
+    for (const a of current.artifacts) {
+        if (a.status === "failed") {
+            const key = a.category ? `${a.kind}-${a.category}` : a.kind;
+            failedKinds.set(key, a.kind);
+        }
+    }
+
+    const toRetry = pack.artifacts.filter((a) => {
+        const key = a.category ? `${a.kind}-${a.category}` : a.kind;
+        return failedKinds.has(key);
+    });
+
+    if (toRetry.length === 0) {
+        return current.artifacts;
+    }
+
+    const results = [...current.artifacts];
+    let done = 0;
+
+    for (const artifact of toRetry) {
+        progress?.({
+            done,
+            total: toRetry.length,
+            currentKind: artifact.kind,
+        });
+
+        try {
+            await installSingleArtifact(pack.id, artifact);
+            // Replace the failed entry with an installed one.
+            const key = artifact.category
+                ? `${artifact.kind}-${artifact.category}`
+                : artifact.kind;
+            const idx = results.findIndex((a) => {
+                const ak = a.category ? `${a.kind}-${a.category}` : a.kind;
+                return ak === key;
+            });
+            if (idx >= 0) {
+                results[idx] = {
+                    kind: artifact.kind,
+                    category: artifact.category,
+                    bytes: artifact.bytes,
+                    status: "installed",
+                };
+            } else {
+                results.push({
+                    kind: artifact.kind,
+                    category: artifact.category,
+                    bytes: artifact.bytes,
+                    status: "installed",
+                });
+            }
+        } catch (err) {
+            console.warn(
+                `[regionPacks] Retry failed for ${pack.id}/${artifact.kind}:`,
+                err,
+            );
+        }
+
+        done++;
+    }
+
+    progress?.({
+        done: toRetry.length,
+        total: toRetry.length,
+        currentKind: "meta",
+    });
+
+    // Persist updated index.
+    await withIndexMutex(async () => {
+        const index = await getInstalledIndex();
+        if (index[pack.id]) {
+            index[pack.id].artifacts = results;
+            await setInstalledIndex(index);
+        }
+    });
+
+    return results;
+}
+
+// ─── Remove pack ──────────────────────────────────────────────────────────
+
+async function removeInstalledPack(packId: string): Promise<void> {
+    validatePackId(packId);
+
+    // 1. Unregister per-kind.
+    unregisterArtifacts(packId);
+
+    // 2. Delete pack directory recursively.
+    try {
+        const dir = packDir(packId);
+        if (dir.exists) {
+            dir.delete();
+        }
+    } catch {
+        /* best-effort */
+    }
+
+    // 3. Update installed-pack index (mutex-guarded).
+    await withIndexMutex(async () => {
+        const index = await getInstalledIndex();
+        delete index[packId];
+        await setInstalledIndex(index);
+    });
+}
+
+// ─── Init: load installed packs on app start ──────────────────────────────
+
+/**
+ * Reads the installed-pack index, and for each installed pack, re-registers
+ * POI (parsed) and measuring (path only) sources. Failures are logged and a
+ * partially-broken pack is skipped — the rest still load.
+ */
+export async function loadInstalledPacks(): Promise<void> {
+    let index: InstalledIndex;
+    try {
+        index = await getInstalledIndex();
+    } catch {
+        return;
+    }
+
+    for (const packId of Object.keys(index)) {
+        if (!VALID_PACK_ID.test(packId)) {
+            console.warn(
+                `[regionPacks] Skipping invalid pack id "${packId}" in installed index.`,
+            );
+            continue;
+        }
+
+        const entry = index[packId];
+        if (!entry) continue;
+
+        for (const artifact of entry.artifacts) {
+            if (artifact.status !== "installed") continue;
+
+            try {
+                const file = jsonFile(packId, artifact.kind, artifact.category);
+                if (!file.exists) continue;
+
+                switch (artifact.kind) {
+                    case "poi": {
+                        // Parse POI at startup (small and columnar).
+                        const jsonStr = await file.text();
+                        const raw = JSON.parse(jsonStr);
+                        registerRegion(packId, raw);
+                        break;
+                    }
+                    case "measuring": {
+                        // Register the file path only — lazy loading (T3 contract).
+                        if (artifact.category) {
+                            registerMeasuringSource(
+                                packId,
+                                artifact.category as MeasuringCategory,
+                                file.uri,
+                            );
+                        }
+                        break;
+                    }
+                    case "boundaries": {
+                        // TODO(T7): Parse boundaries index, register path for polygons.
+                        break;
+                    }
+                    case "transit": {
+                        // TODO(T9): Merge transit manifests.
+                        break;
+                    }
+                    case "meta": {
+                        // meta is metadata only.
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.warn(
+                    `[regionPacks] Failed to load artifact ${artifact.kind} ` +
+                        `from pack "${packId}":`,
+                    err,
+                );
+            }
+        }
+    }
+}
+
+// ─── Utility: list installed packs ────────────────────────────────────────
+
+export async function listInstalledPacks(): Promise<InstalledPack[]> {
+    const index = await getInstalledIndex();
+    return Object.values(index);
+}
+
+// ─── TanStack Query hooks ─────────────────────────────────────────────────
+
+export function useInstallPack() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({
+            pack,
+            onProgress,
+        }: {
+            pack: CatalogPack;
+            onProgress?: (p: InstallProgress) => void;
+        }) => installPackInternal(pack, onProgress),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["offline-catalog"] });
+        },
+    });
+}
+
+export function useRetryPack() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({
+            pack,
+            onProgress,
+        }: {
+            pack: CatalogPack;
+            onProgress?: (p: InstallProgress) => void;
+        }) => retryPackInternal(pack, onProgress),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["offline-catalog"] });
+        },
+    });
+}
+
+export function useRemovePack() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: removeInstalledPack,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["offline-catalog"] });
+        },
+    });
+}
+
+// ─── Deprecated v1 exports (for backward compat during migration) ─────────
+
+/** @deprecated Use useInstallPack with CatalogPack instead. */
+export const useDownloadPack = useInstallPack;
+
+/** @deprecated Use useRetryPack with CatalogPack instead. */
+export const usePackManifest = null as never;

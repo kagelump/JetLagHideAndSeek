@@ -221,8 +221,11 @@ focused feature/store and let the map render derived data.
 ## Play Area Rules
 
 - `loadPlayAreaByRelationId` resolves bundled Tokyo, bundled Osaka, memory cache,
-  AsyncStorage cache, then Overpass fetch, in that order.
-- `searchPlayAreas` queries Photon and keeps relation results only
+  AsyncStorage cache, **installed packs**, then Overpass fetch, in that order.
+  (Pack resolution decodes the delta-encoded boundary polygon from the installed
+  `boundaries` artifact — see T6/T7.)
+- `searchPlayAreas` queries Photon, merges local pack results (prefixed, ranked
+  by exact/prefix/substring, adminLevel, area), and keeps relation results only
   (`osm_type === "R"`). Exercise mapping/deduping without network in tests.
 - Accept direct relation IDs strictly: positive safe-integer strings only.
 - Store distances internally in meters, even when display units are km or mi.

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
@@ -16,6 +16,7 @@ import {
 } from "./measuringCategories";
 import { computeLineDistance } from "./lineMeasuringGeometry";
 import { computeNearestPoiDistance } from "./pointMeasuringGeometry";
+import { loadLineBundle } from "./lineBundleLoader";
 import { MeasuringCategoryModal } from "./MeasuringCategoryModal";
 import type { MeasuringCategory, MeasuringQuestion } from "./measuringTypes";
 
@@ -195,6 +196,19 @@ export function MeasuringQuestionDetailScreen({
     const categoryTitle = getMeasuringCategoryTitle(question.category);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
 
+    // Pre-load line bundles on mount and category changes so the bundle
+    // is usually warm before the map render state asks for it.
+    useEffect(() => {
+        if (isLineMeasuringCategory(question.category)) {
+            loadLineBundle(question.category).catch((err) => {
+                console.warn(
+                    `[MeasuringDetailScreen] loadLineBundle(${question.category}) failed:`,
+                    err,
+                );
+            });
+        }
+    }, [question.category]);
+
     const handleCategoryChange = useCallback(
         (category: MeasuringCategory) => {
             updateQuestion(question.id, (current) => {
@@ -205,6 +219,16 @@ export function MeasuringQuestionDetailScreen({
                     updatedAt: new Date().toISOString(),
                 };
             });
+
+            // Fire async pre-load for the new category.
+            if (isLineMeasuringCategory(category)) {
+                loadLineBundle(category).catch((err) => {
+                    console.warn(
+                        `[MeasuringDetailScreen] loadLineBundle(${category}) failed:`,
+                        err,
+                    );
+                });
+            }
         },
         [question.id, updateQuestion],
     );

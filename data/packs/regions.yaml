@@ -1,0 +1,20 @@
+# Offline data pack region definitions.
+# One entry per Geofabrik region.  id must match /^[a-z0-9][a-z0-9-]*$/.
+
+regions:
+    - id: europe-netherlands
+      label: Netherlands
+      regionPath: [Europe, Netherlands]
+      pbfUrl: https://download.geofabrik.de/europe/netherlands-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 9, 10] # admin-1st..4th
+          extract: [4, 7, 8, 9, 10] # superset
+      artifacts: [poi, measuring, boundaries, transit]
+    - id: asia-taiwan
+      label: Taiwan
+      regionPath: [Asia, Taiwan]
+      pbfUrl: https://download.geofabrik.de/asia/taiwan-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 9, 10]
+          extract: [4, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]

@@ -18,6 +18,11 @@ import {
     buildPlayAreaFromOverpass,
 } from "./playAreaBoundaryConversion";
 import { BOUNDARY_CACHE_TTL_MS, queryClient } from "@/state/queryClient";
+import {
+    findBoundaryRelation,
+    getBoundaryPolygon,
+} from "@/features/offline/boundaryStore";
+import { multiPolygonCoordsToGeoJSON } from "@/features/offline/deltaDecode";
 
 // Re-export for consumers that need the constant.
 export { BOUNDARY_CACHE_TTL_MS } from "@/state/queryClient";
@@ -96,22 +101,73 @@ export function usePlayAreaBoundary(relationId: number | null) {
 // ---------------------------------------------------------------------------
 
 /**
- * Load a play area by relation ID. Bundled boundaries resolve instantly;
- * otherwise the query cache is checked first, then Overpass is fetched.
+ * Load a play area by relation ID. Resolution order:
+ * 1. Bundled Tokyo/Osaka
+ * 2. Memory cache (React Query)
+ * 3. AsyncStorage cache
+ * 4. Installed packs (NEW — offline)
+ * 5. Overpass fetch (live)
  */
 export async function loadPlayAreaByRelationId(
     relationId: number,
 ): Promise<LoadedPlayArea> {
+    // 1. Bundled boundaries resolve instantly.
     const bundled = getBundledPlayArea(relationId);
     if (bundled) {
         return { cacheSource: "bundled", playArea: bundled };
     }
 
+    // 2. Check React Query cache.
     const wasCached = queryClient.getQueryData<PlayArea>([
         "play-area-boundary",
         relationId,
     ]);
 
+    // 3. Check AsyncStorage cache.
+    if (!wasCached) {
+        const persisted = await readPersistedBoundary(relationId);
+        if (persisted) {
+            queryClient.setQueryData(
+                ["play-area-boundary", relationId],
+                persisted,
+            );
+            return { cacheSource: "persisted", playArea: persisted };
+        }
+    }
+
+    // 4. Check installed packs (offline!).
+    const packMatch = findBoundaryRelation(relationId);
+    if (packMatch) {
+        const coords = await getBoundaryPolygon(packMatch.packId, relationId);
+        if (coords && coords.length > 0) {
+            const geometry = multiPolygonCoordsToGeoJSON(coords);
+            const label = packMatch.entry.nameEn ?? packMatch.entry.name;
+
+            // Build a GeoJSON FeatureCollection for the conversion helper.
+            const boundary: GeoJsonFeatureCollection = {
+                type: "FeatureCollection",
+                features: [
+                    {
+                        type: "Feature",
+                        geometry,
+                        properties: {
+                            osmId: relationId,
+                            name: label,
+                        },
+                    },
+                ],
+            };
+
+            const playArea = buildPlayAreaFromBoundary(relationId, boundary);
+
+            // Cache in AsyncStorage for subsequent loads.
+            await ensurePlayAreaBoundaryCached(playArea);
+
+            return { cacheSource: "bundled", playArea };
+        }
+    }
+
+    // 5. Fall back to Overpass (live).
     const playArea = await queryClient.fetchQuery<PlayArea>({
         queryKey: ["play-area-boundary", relationId],
         queryFn: ({ signal }) => fetchPlayAreaBoundary(relationId, signal),
@@ -130,8 +186,9 @@ export async function loadPlayAreaByRelationId(
 
 /**
  * Resolve a relation ID from the cache without triggering a fetch. Returns
- * null when the boundary is not cached. Used by app-state restoration to
- * check whether a boundary reference can be resolved offline.
+ * null when the boundary is not cached. Checks bundled, memory, persisted,
+ * and installed packs. Used by app-state restoration to check whether a
+ * boundary reference can be resolved offline.
  */
 export async function loadCachedPlayAreaByRelationId(
     relationId: number,
@@ -154,12 +211,38 @@ export async function loadCachedPlayAreaByRelationId(
     // rehydrated yet during app-startup restoration, so this guarantees the
     // boundary is resolvable without a network call.
     const persisted = await readPersistedBoundary(relationId);
-    if (!persisted) return null;
+    if (persisted) {
+        queryClient.setQueryData(["play-area-boundary", relationId], persisted);
+        return { cacheSource: "persisted", playArea: persisted };
+    }
 
-    // Seed the query cache so subsequent reads hit the in-memory layer.
-    queryClient.setQueryData(["play-area-boundary", relationId], persisted);
+    // Check installed packs — can resolve boundaries fully offline.
+    const packMatch = findBoundaryRelation(relationId);
+    if (packMatch) {
+        const coords = await getBoundaryPolygon(packMatch.packId, relationId);
+        if (coords && coords.length > 0) {
+            const geometry = multiPolygonCoordsToGeoJSON(coords);
+            const label = packMatch.entry.nameEn ?? packMatch.entry.name;
+            const boundary: GeoJsonFeatureCollection = {
+                type: "FeatureCollection",
+                features: [
+                    {
+                        type: "Feature",
+                        geometry,
+                        properties: {
+                            osmId: relationId,
+                            name: label,
+                        },
+                    },
+                ],
+            };
+            const playArea = buildPlayAreaFromBoundary(relationId, boundary);
+            await ensurePlayAreaBoundaryCached(playArea);
+            return { cacheSource: "bundled", playArea };
+        }
+    }
 
-    return { cacheSource: "persisted", playArea: persisted };
+    return null;
 }
 
 /**

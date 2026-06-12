@@ -338,6 +338,44 @@ describe("validateConfig", () => {
             ),
         );
     });
+
+    it("rejects null relation override (N4)", () => {
+        const cfg = {
+            locales: [
+                {
+                    id: "jp",
+                    maxClusterMeters: 150,
+                    overrides: {
+                        relations: { 123: null },
+                    },
+                },
+            ],
+        };
+        const errors = validateConfig(cfg);
+        assert.ok(
+            errors.some((e) => e.includes("must be an object")),
+            "Should reject null relation override",
+        );
+    });
+
+    it("rejects non-osm:node: stopOrder elements (N4)", () => {
+        const cfg = {
+            locales: [
+                {
+                    id: "jp",
+                    maxClusterMeters: 150,
+                    overrides: {
+                        relations: { 123: { stopOrder: [42] } },
+                    },
+                },
+            ],
+        };
+        const errors = validateConfig(cfg);
+        assert.ok(
+            errors.some((e) => e.includes('must be a string like "osm:node:')),
+            "Should reject numeric stopOrder element",
+        );
+    });
 });
 
 // ─── cache.mjs tests ─────────────────────────────────────────────────────────

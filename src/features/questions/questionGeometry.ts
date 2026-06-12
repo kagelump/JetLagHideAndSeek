@@ -17,6 +17,7 @@ import {
 import { usePlayArea } from "@/state/playAreaStore";
 import { useQuestions } from "@/state/questionStore";
 import { buildOsmMatchingRenderState } from "./matching/osmMatchingGeometry";
+import { useEnsureMeasuringBundles } from "./measuring/useEnsureMeasuringBundles";
 
 export function buildQuestionMapRenderState(
     questions: QuestionState[],
@@ -87,6 +88,12 @@ export function useQuestionMapRenderState(): QuestionMapRenderState {
     const { selectedStations } = useHidingZoneDerived();
     const { playArea } = usePlayArea();
 
+    const measuringQuestions = questions.filter(
+        (q): q is Extract<QuestionState, { type: "measuring" }> =>
+            q.type === "measuring",
+    );
+    const measuringRevision = useEnsureMeasuringBundles(measuringQuestions);
+
     return useMemo(() => {
         const measuringQs = questions.filter((q) => q.type === "measuring");
         if (measuringQs.length > 0) {
@@ -108,5 +115,6 @@ export function useQuestionMapRenderState(): QuestionMapRenderState {
         radiusMeters,
         playArea.bbox,
         playArea.boundary,
+        measuringRevision,
     ]);
 }

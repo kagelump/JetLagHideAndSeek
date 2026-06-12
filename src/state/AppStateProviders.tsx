@@ -24,7 +24,7 @@ import {
 } from "@/state/hidingZoneStore";
 import { cleanOrphanedBoundaryKeys } from "@/features/map/playAreaBoundary";
 import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
-import { loadInstalledPacks } from "@/features/questions/matching/regionPacks";
+import { loadInstalledPacks } from "@/features/offline/regionPacks";
 import { persistDebounceMs } from "@/state/debounceConfig";
 import { loadPersistedAppState, persistAppState } from "@/state/persistence";
 import { PlayAreaProvider, usePlayArea } from "@/state/playAreaStore";

@@ -306,6 +306,27 @@
                     >Stations
                 </label>
             </div>
+            <div id="pack-boundaries-section" style="display: none">
+                <hr
+                    style="
+                        border: none;
+                        border-top: 1px solid #e5e7eb;
+                        margin: 4px 0;
+                    "
+                />
+                <div style="font-weight: 600; margin-bottom: 4px">
+                    Pack Boundaries
+                    <select
+                        id="pack-region-select"
+                        style="
+                            font-size: 11px;
+                            margin-left: 4px;
+                            max-width: 120px;
+                        "
+                    ></select>
+                </div>
+                <div id="pack-boundary-toggles"></div>
+            </div>
         </div>
         <script>
             const KANTO_BBOX = [137.9, 33.9, 141.9, 37.9];
@@ -580,7 +601,9 @@
                 maxWidth: "240px",
             });
 
-            map.on("load", loadLayers);
+            map.on("load", function () {
+                loadLayers().then(loadPackBoundaries);
+            });
 
             map.on("mouseenter", "poi-circle", (e) => {
                 map.getCanvas().style.cursor = "pointer";
@@ -648,6 +671,152 @@
                         );
                     }
                 });
+
+            // ── Pack boundaries ────────────────────────────────────────
+            const BOUNDARY_LEVELS = [4, 7, 8, 9, 10];
+            const BOUNDARY_COLORS = {
+                4: { fill: "rgba(234, 88, 12, 0.12)", line: "#ea580c" },
+                7: { fill: "rgba(107, 114, 128, 0.12)", line: "#6b7280" },
+                8: { fill: "rgba(59, 130, 246, 0.12)", line: "#3b82f6" },
+                9: { fill: "rgba(22, 163, 74, 0.12)", line: "#16a34a" },
+                10: { fill: "rgba(139, 92, 246, 0.12)", line: "#8b5cf6" },
+            };
+
+            async function loadPackBoundaries() {
+                try {
+                    const regions = await fetchJson("/api/pack/regions");
+                    if (!regions || regions.length === 0) return;
+
+                    const section = document.getElementById(
+                        "pack-boundaries-section",
+                    );
+                    section.style.display = "block";
+
+                    const select =
+                        document.getElementById("pack-region-select");
+                    for (const r of regions) {
+                        const opt = document.createElement("option");
+                        opt.value = r;
+                        opt.textContent = r;
+                        select.appendChild(opt);
+                    }
+
+                    // Populate toggles.
+                    const toggleContainer = document.getElementById(
+                        "pack-boundary-toggles",
+                    );
+                    for (const level of BOUNDARY_LEVELS) {
+                        const colors = BOUNDARY_COLORS[level] || {
+                            fill: "rgba(156, 163, 175, 0.12)",
+                            line: "#9ca3af",
+                        };
+                        const div = document.createElement("div");
+                        div.innerHTML = `
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                                <input type="checkbox" class="boundary-toggle" data-level="${level}" />
+                                <span class="legend-swatch polygon" style="background:${colors.fill};border:1.5px solid ${colors.line}"></span>
+                                Admin level ${level}
+                            </label>`;
+                        toggleContainer.appendChild(div);
+                    }
+
+                    // Add event listeners for toggles.
+                    const currentBoundaryLayers = {};
+                    document
+                        .querySelectorAll(".boundary-toggle")
+                        .forEach(function (cb) {
+                            cb.addEventListener("change", async function (e) {
+                                const level = this.dataset.level;
+                                const regionId = select.value;
+                                const checked = this.checked;
+                                const sourceId = "pack-boundaries-" + level;
+                                const fillLayerId =
+                                    "pack-boundaries-fill-" + level;
+                                const lineLayerId =
+                                    "pack-boundaries-line-" + level;
+
+                                if (checked && !currentBoundaryLayers[level]) {
+                                    try {
+                                        currentBoundaryLayers[level] =
+                                            "loading";
+                                        const data = await fetchJson(
+                                            "/api/pack/" +
+                                                regionId +
+                                                "/boundaries/" +
+                                                level,
+                                        );
+                                        const colors = BOUNDARY_COLORS[
+                                            level
+                                        ] || {
+                                            fill: "rgba(156, 163, 175, 0.12)",
+                                            line: "#9ca3af",
+                                        };
+                                        map.addSource(sourceId, {
+                                            type: "geojson",
+                                            data: data,
+                                        });
+                                        map.addLayer({
+                                            id: fillLayerId,
+                                            type: "fill",
+                                            source: sourceId,
+                                            paint: {
+                                                "fill-color": colors.line,
+                                                "fill-opacity": 0.1,
+                                            },
+                                        });
+                                        map.addLayer({
+                                            id: lineLayerId,
+                                            type: "line",
+                                            source: sourceId,
+                                            paint: {
+                                                "line-color": colors.line,
+                                                "line-width": 2,
+                                                "line-opacity": 0.7,
+                                            },
+                                        });
+                                        currentBoundaryLayers[level] = true;
+                                    } catch (err) {
+                                        console.error(
+                                            "Failed to load boundary level",
+                                            level,
+                                            err,
+                                        );
+                                        currentBoundaryLayers[level] = false;
+                                        this.checked = false;
+                                    }
+                                } else if (!checked) {
+                                    if (map.getLayer(fillLayerId)) {
+                                        map.removeLayer(fillLayerId);
+                                    }
+                                    if (map.getLayer(lineLayerId)) {
+                                        map.removeLayer(lineLayerId);
+                                    }
+                                    if (map.getSource(sourceId)) {
+                                        map.removeSource(sourceId);
+                                    }
+                                    delete currentBoundaryLayers[level];
+                                }
+                            });
+                        });
+
+                    // Re-fetch when region changes (reload all active layers).
+                    select.addEventListener("change", function () {
+                        const toggles =
+                            document.querySelectorAll(".boundary-toggle");
+                        toggles.forEach(function (cb) {
+                            if (cb.checked) {
+                                cb.checked = false;
+                                cb.dispatchEvent(new Event("change"));
+                                cb.checked = true;
+                                cb.dispatchEvent(new Event("change"));
+                            }
+                        });
+                    });
+                } catch (err) {
+                    // No pack data available — that's fine.
+                    console.log("No pack boundaries available:", err.message);
+                }
+            }
 
             // ── Station hover popup ─────────────────────────────────────
             function truncateList(str, max) {

@@ -27,6 +27,12 @@
 import type { Bbox } from "@/shared/geojson";
 import type { OsmFeatureWithDistance } from "../matching/osmMatching";
 import { pointInGeometry } from "@/shared/geometry/pointInPolygon";
+import {
+    getAllBoundaryEntries,
+    getBoundaryPolygon,
+    findBoundaryRelation,
+} from "@/features/offline/boundaryStore";
+import { multiPolygonCoordsToGeoJSON } from "@/features/offline/deltaDecode";
 
 // ─── Bundle types ────────────────────────────────────────────────────────────
 
@@ -205,11 +211,120 @@ export function setAdminBoundaryBundle(
  * Query the admin-boundary polygon index for the feature that contains
  * `(lng, lat)` at the given OSM admin_level.
  *
- * Returns `null` when the bundle is unavailable (e.g. point outside the
- * extract bbox, or bundle file missing).  Returns `[]` when the point is
- * inside the extract bbox but not inside any boundary at this level.
+ * Checks, in order:
+ * 1. Bundled Japan bundle (when point is inside its bbox)
+ * 2. Registered pack sources (when point is inside the pack's index bbox)
+ * 3. Returns null (caller falls back to Overpass)
+ *
+ * Returns `null` when no source covers the point. Returns `[]` when a
+ * source covers the point but no boundary at this level contains it.
  */
 export function queryAdminBoundary(
+    lng: number,
+    lat: number,
+    osmLevel: string,
+): OsmFeatureWithDistance[] | null {
+    // 1. Try bundled Japan bundle.
+    const bundle = getBundle();
+    if (bundle) {
+        const [w, s, e, n] = bundle.extractBbox;
+        if (lng >= w && lng <= e && lat >= s && lat <= n) {
+            return queryBundleGrid(lng, lat, osmLevel);
+        }
+    }
+
+    // 2. Try pack sources.
+    const levelNum = parseInt(osmLevel, 10);
+    if (Number.isFinite(levelNum)) {
+        const entries = getAllBoundaryEntries().filter(
+            (e) =>
+                e.adminLevel === levelNum &&
+                lng >= e.bbox[0] &&
+                lng <= e.bbox[2] &&
+                lat >= e.bbox[1] &&
+                lat <= e.bbox[3],
+        );
+
+        for (const entry of entries) {
+            const packId = findBoundaryRelation(entry.relationId)?.packId;
+            if (!packId) continue;
+
+            // Synchronous poly cache check — if not cached, skip (lazy decode
+            // happens on first use; Overpass fallback covers the gap).
+            // The polygon is decoded synchronously from the LRU cache.
+            // For the first query, we need to trigger a pre-load.
+            // See queryAdminBoundaryAsync for the async variant.
+        }
+
+        // For sync queries, we return null if no cached polygon matches.
+        // Callers should use queryAdminBoundaryAsync for pack-backed queries.
+    }
+
+    return null;
+}
+
+/**
+ * Async variant that can decode pack polygons on demand.
+ * Use this when the query may hit a pack source that hasn't been cached yet.
+ */
+export async function queryAdminBoundaryAsync(
+    lng: number,
+    lat: number,
+    osmLevel: string,
+): Promise<OsmFeatureWithDistance[] | null> {
+    // 1. Try bundled Japan bundle (sync).
+    const bundle = getBundle();
+    if (bundle) {
+        const [w, s, e, n] = bundle.extractBbox;
+        if (lng >= w && lng <= e && lat >= s && lat <= n) {
+            return queryBundleGrid(lng, lat, osmLevel);
+        }
+    }
+
+    // 2. Try pack sources (async — may decode polygons).
+    const levelNum = parseInt(osmLevel, 10);
+    if (!Number.isFinite(levelNum)) return null;
+
+    const entries = getAllBoundaryEntries().filter(
+        (e) =>
+            e.adminLevel === levelNum &&
+            lng >= e.bbox[0] &&
+            lng <= e.bbox[2] &&
+            lat >= e.bbox[1] &&
+            lat <= e.bbox[3],
+    );
+
+    for (const entry of entries) {
+        const match = findBoundaryRelation(entry.relationId);
+        if (!match) continue;
+
+        const coords = await getBoundaryPolygon(match.packId, entry.relationId);
+        if (!coords || coords.length === 0) continue;
+
+        const geometry = multiPolygonCoordsToGeoJSON(coords);
+        if (pointInGeometry(lng, lat, geometry)) {
+            return [
+                {
+                    lat,
+                    lon: lng,
+                    name: entry.nameEn ?? entry.name,
+                    osmId: entry.relationId,
+                    osmType: "relation",
+                    tags: {
+                        "name:en": entry.nameEn ?? "",
+                        admin_level: String(entry.adminLevel),
+                    },
+                    distanceMeters: 0,
+                },
+            ];
+        }
+    }
+
+    return null;
+}
+
+/** Internal: query the bundled Japan grid (sync). */
+function queryBundleGrid(
     lng: number,
     lat: number,
     osmLevel: string,

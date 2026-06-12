@@ -8,12 +8,20 @@ Difficulty: **[E]** easy (≤half day), **[M]** medium (1–2 days), **[H]** har
 ### Play Area
 
 - **[M]** Admin level should default to country of play area
+    - ✅ **Resolved for pack-covered regions (T8).** When the play area bbox
+      falls inside an installed pack, `meta.adminLevels.matching` drives the
+      admin-division level mapping automatically. Non-pack regions still
+      default to the generic 4/7/9/10.
     - Direction: play-area metadata (Overpass relation tags / Photon
       `countrycode`) → map to the admin pack in
       `src/features/questions/matching/adminDivisionConfig.ts`. Wire the
       default in `AdminDivisionScreen` / `playAreaStore` when the play area
       changes; keep manual override sticky.
 - **[M]** Should automatic find and download offline data pack for the play area (or loudly error if it doesn't exist)
+    - ✅ **Resolved (T10).** `getCoverageStatus()` computes per-play-area coverage
+      from the catalog + installed index. Red (!) badge on Settings when
+      `uncovered`/`available`/`partial`. Download prompt on play-area change.
+      See `src/features/offline/coverage.ts`.
     - Error can be like a permanent red (!) on the settings when offline pack isn't downloaded for play area
     - Direction: pack coverage is already bbox-keyed
       (`regionPacks.ts`, `assets/transit/manifest.json`, `bundledPois.ts`
