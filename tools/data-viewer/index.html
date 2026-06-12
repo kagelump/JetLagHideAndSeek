@@ -52,6 +52,10 @@
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
                 z-index: 5;
                 line-height: 1.8;
+                max-height: calc(100vh - 20px);
+                overflow-y: auto;
+                min-width: 190px;
+                max-width: 260px;
             }
             .legend-swatch {
                 display: inline-block;
@@ -66,271 +70,322 @@
                 width: 12px;
                 border-radius: 2px;
             }
+            #legend details {
+                margin: 2px 0;
+            }
+            #legend summary {
+                cursor: pointer;
+                font-weight: 600;
+                user-select: none;
+                padding: 2px 0;
+            }
+            #legend summary:hover {
+                color: #2563eb;
+            }
+            #legend hr {
+                border: none;
+                border-top: 1px solid #e5e7eb;
+                margin: 4px 0;
+            }
+            #japan-sections {
+                transition: opacity 0.2s;
+            }
+            #japan-sections.hidden-pack-active {
+                opacity: 0.3;
+                pointer-events: none;
+            }
+            #pack-section {
+                transition: opacity 0.2s;
+            }
         </style>
     </head>
     <body>
         <div id="map"></div>
         <div id="loading">Loading layers…</div>
         <div id="legend">
-            <div style="font-weight: 600; margin-bottom: 2px">
-                <label
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                    "
-                >
-                    <input type="checkbox" id="toggle-lines-polygons" checked />
-                    Lines &amp; Polygons
+            <div
+                id="pack-header"
+                style="font-weight:600;margin-bottom:4px;display:none"
+            >
+                <label style="display:flex;align-items:center;gap:4px">
+                    Pack
+                    <select
+                        id="pack-select"
+                        style="font-size:11px;max-width:150px"
+                    ></select>
                 </label>
-            </div>
-            <div>
-                <span class="legend-swatch" style="background: #2563eb"></span
-                >Coastline
-            </div>
-            <div>
-                <span
-                    class="legend-swatch"
-                    style="background: #dc2626; height: 3px"
-                ></span
-                >High-speed rail
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="
-                        background: rgba(56, 189, 248, 0.4);
-                        border: 1px solid #1d4ed8;
-                    "
-                ></span
-                >Body of water (polygon)
-            </div>
-            <div>
-                <span class="legend-swatch" style="background: #059669"></span
-                >Body of water (waterway)
-            </div>
-            <div>
-                <span
-                    class="legend-swatch"
-                    style="
-                        background: #ea580c;
-                        border-top: 2px dashed #ea580c;
-                        height: 0;
-                    "
-                ></span
-                >Admin 1st border
-            </div>
-            <div>
-                <span
-                    class="legend-swatch"
-                    style="
-                        background: #6b7280;
-                        border-top: 1.5px dashed #6b7280;
-                        height: 0;
-                    "
-                ></span
-                >Admin 2nd border
-            </div>
-            <div>
-                <span
-                    class="legend-swatch"
-                    style="background: #16a34a; height: 2px"
-                ></span
-                >Default zones
-            </div>
-            <hr
-                style="
-                    border: none;
-                    border-top: 1px solid #e5e7eb;
-                    margin: 4px 0;
-                "
-            />
-            <div style="font-weight: 600; margin-bottom: 2px">
-                <label
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                    "
-                >
-                    <input type="checkbox" id="toggle-pois" checked />
-                    POIs (33,757)
-                </label>
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #22c55e"
-                ></span
-                >Park
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #ef4444"
-                ></span
-                >Hospital
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #a855f7"
-                ></span
-                >Museum
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #78716c"
-                ></span
-                >Mountain
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #f59e0b"
-                ></span
-                >Landmark
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #3b82f6"
-                ></span
-                >Library
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #15803d"
-                ></span
-                >Golf course
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #ec4899"
-                ></span
-                >Movie theater
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #6366f1"
-                ></span
-                >Foreign consulate
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #f97316"
-                ></span
-                >Amusement park
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #14b8a6"
-                ></span
-                >Zoo
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #06b6d4"
-                ></span
-                >Aquarium
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #e11d48"
-                ></span
-                >Airport
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #8b5cf6"
-                ></span
-                >Station name length
-            </div>
-            <hr
-                style="
-                    border: none;
-                    border-top: 1px solid #e5e7eb;
-                    margin: 4px 0;
-                "
-            />
-            <div style="font-weight: 600; margin-bottom: 4px">Transit</div>
-            <div>
-                <label
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                    "
-                >
-                    <input type="checkbox" id="toggle-transit-routes" />
-                    <span
-                        class="legend-swatch"
-                        style="
-                            background: linear-gradient(
-                                90deg,
-                                #009bbf,
-                                #c9242f,
-                                #b1cb39
-                            );
-                        "
-                    ></span
-                    >Route lines
-                </label>
-            </div>
-            <div>
-                <label
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                    "
-                >
-                    <input type="checkbox" id="toggle-transit-stations" />
-                    <span
-                        class="legend-swatch polygon"
-                        style="background: #1f6f78; border: 1.5px solid #fff"
-                    ></span
-                    >Stations
-                </label>
-            </div>
-            <div id="pack-section" style="display: none">
-                <hr
-                    style="
-                        border: none;
-                        border-top: 1px solid #e5e7eb;
-                        margin: 4px 0;
-                    "
-                />
-                <div style="font-weight: 600; margin-bottom: 4px">
-                    <label style="display: flex; align-items: center; gap: 4px">
-                        Pack
-                        <select
-                            id="pack-select"
-                            style="font-size: 11px; max-width: 140px"
-                        ></select>
-                    </label>
-                </div>
                 <div
                     id="pack-meta-info"
-                    style="font-size: 10px; color: #666; margin-bottom: 4px"
+                    style="font-size:10px;color:#666"
                 ></div>
-                <div id="pack-poi-section" style="margin-top: 4px"></div>
-                <div id="pack-measuring-section" style="margin-top: 4px"></div>
-                <div id="pack-boundaries-section" style="margin-top: 4px"></div>
-                <div id="pack-transit-section" style="margin-top: 4px"></div>
+            </div>
+            <hr id="pack-header-hr" style="display:none" />
+            <div id="japan-sections">
+                <details open>
+                    <summary>Lines &amp; Polygons</summary>
+                    <label
+                        style="
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            cursor: pointer;
+                            font-weight: normal;
+                        "
+                    >
+                        <input
+                            type="checkbox"
+                            id="toggle-lines-polygons"
+                            checked
+                        />
+                        Show all
+                    </label>
+                    <div>
+                        <span
+                            class="legend-swatch"
+                            style="background: #2563eb"
+                        ></span
+                        >Coastline
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch"
+                            style="background: #dc2626"
+                        ></span
+                        >High-speed rail
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="
+                                background: rgba(56, 189, 248, 0.4);
+                                border: 1px solid #1d4ed8;
+                            "
+                        ></span
+                        >Body of water (polygon)
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch"
+                            style="background: #059669"
+                        ></span
+                        >Body of water (waterway)
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch"
+                            style="
+                                background: #ea580c;
+                                border-top: 2px dashed #ea580c;
+                                height: 0;
+                            "
+                        ></span
+                        >Admin 1st border
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch"
+                            style="
+                                background: #6b7280;
+                                border-top: 1.5px dashed #6b7280;
+                                height: 0;
+                            "
+                        ></span
+                        >Admin 2nd border
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch"
+                            style="background: #16a34a; height: 2px"
+                        ></span
+                        >Default zones
+                    </div>
+                </details>
+                <details open>
+                    <summary>POIs (33,757)</summary>
+                    <label
+                        style="
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            cursor: pointer;
+                            font-weight: normal;
+                        "
+                    >
+                        <input type="checkbox" id="toggle-pois" checked />
+                        Show all
+                    </label>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #22c55e"
+                        ></span
+                        >Park
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #ef4444"
+                        ></span
+                        >Hospital
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #a855f7"
+                        ></span
+                        >Museum
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #78716c"
+                        ></span
+                        >Mountain
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #f59e0b"
+                        ></span
+                        >Landmark
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #3b82f6"
+                        ></span
+                        >Library
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #15803d"
+                        ></span
+                        >Golf course
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #ec4899"
+                        ></span
+                        >Movie theater
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #6366f1"
+                        ></span
+                        >Foreign consulate
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #f97316"
+                        ></span
+                        >Amusement park
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #14b8a6"
+                        ></span
+                        >Zoo
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #06b6d4"
+                        ></span
+                        >Aquarium
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #e11d48"
+                        ></span
+                        >Airport
+                    </div>
+                    <div>
+                        <span
+                            class="legend-swatch polygon"
+                            style="background: #8b5cf6"
+                        ></span
+                        >Station name length
+                    </div>
+                </details>
+                <details open>
+                    <summary>Transit</summary>
+                    <div>
+                        <label
+                            style="
+                                display: flex;
+                                align-items: center;
+                                gap: 6px;
+                                cursor: pointer;
+                                font-weight: normal;
+                            "
+                        >
+                            <input
+                                type="checkbox"
+                                id="toggle-transit-routes"
+                            />
+                            <span
+                                class="legend-swatch"
+                                style="
+                                    background: linear-gradient(
+                                        90deg,
+                                        #009bbf,
+                                        #c9242f,
+                                        #b1cb39
+                                    );
+                                "
+                            ></span
+                            >Route lines
+                        </label>
+                    </div>
+                    <div>
+                        <label
+                            style="
+                                display: flex;
+                                align-items: center;
+                                gap: 6px;
+                                cursor: pointer;
+                                font-weight: normal;
+                            "
+                        >
+                            <input
+                                type="checkbox"
+                                id="toggle-transit-stations"
+                            />
+                            <span
+                                class="legend-swatch polygon"
+                                style="
+                                    background: #1f6f78;
+                                    border: 1.5px solid #fff;
+                                "
+                            ></span
+                            >Stations
+                        </label>
+                    </div>
+                </details>
+            </div>
+            <div id="pack-section" style="display:none">
+                <details id="pack-poi-details" open>
+                    <summary>Matching (POI)</summary>
+                    <div id="pack-poi-section"></div>
+                </details>
+                <details id="pack-measuring-details" open>
+                    <summary>Measuring</summary>
+                    <div id="pack-measuring-section"></div>
+                </details>
+                <details id="pack-boundaries-details" open>
+                    <summary>Boundaries</summary>
+                    <div id="pack-boundaries-section"></div>
+                </details>
+                <details id="pack-transit-details" open>
+                    <summary>Transit</summary>
+                    <div id="pack-transit-section"></div>
+                </details>
             </div>
         </div>
         <script>
@@ -777,15 +832,6 @@
             });
 
             // ── Pack mode ──────────────────────────────────────────────
-            function makeSectionLabel(text) {
-                var div = document.createElement("div");
-                div.style.fontWeight = "600";
-                div.style.marginBottom = "2px";
-                div.style.fontSize = "11px";
-                div.textContent = text;
-                return div;
-            }
-
             function makeToggle(label, colorStyle, onChange) {
                 var labelEl = document.createElement("label");
                 labelEl.style.cssText =
@@ -1008,11 +1054,17 @@
             function switchPack(regionId) {
                 clearAllPackLayers();
                 PACK_STATE.regionId = regionId;
+                var packSection = document.getElementById("pack-section");
+                var japanSections = document.getElementById("japan-sections");
+
                 if (!regionId) {
-                    document.getElementById("pack-section").style.display =
-                        "none";
+                    packSection.style.display = "none";
+                    japanSections.classList.remove("hidden-pack-active");
                     return;
                 }
+
+                // Dim the built-in Japan layers — the pack has its own.
+                japanSections.classList.add("hidden-pack-active");
 
                 var infoEl = document.getElementById("pack-meta-info");
                 infoEl.textContent = "Loading meta...";
@@ -1044,12 +1096,13 @@
                 poiSection.innerHTML = "";
                 var matchingCats = meta.categories && meta.categories.matching;
                 if (matchingCats && matchingCats.length > 0) {
-                    poiSection.appendChild(makeSectionLabel("Matching (POI)"));
                     for (var i = 0; i < matchingCats.length; i++) {
                         poiSection.appendChild(
                             createPoiToggle(matchingCats[i]),
                         );
                     }
+                } else {
+                    document.getElementById("pack-poi-details").open = false;
                 }
 
                 // Measuring categories
@@ -1059,12 +1112,15 @@
                 measSection.innerHTML = "";
                 var measCats = meta.categories && meta.categories.measuring;
                 if (measCats && measCats.length > 0) {
-                    measSection.appendChild(makeSectionLabel("Measuring"));
                     for (var i = 0; i < measCats.length; i++) {
                         measSection.appendChild(
                             createMeasuringToggle(measCats[i]),
                         );
                     }
+                } else {
+                    document.getElementById(
+                        "pack-measuring-details",
+                    ).open = false;
                 }
 
                 // Boundaries
@@ -1074,12 +1130,15 @@
                 bndSection.innerHTML = "";
                 var bndLevels = meta.adminLevels && meta.adminLevels.extract;
                 if (bndLevels && bndLevels.length > 0) {
-                    bndSection.appendChild(makeSectionLabel("Boundaries"));
                     for (var i = 0; i < bndLevels.length; i++) {
                         bndSection.appendChild(
                             createBoundaryToggle(bndLevels[i]),
                         );
                     }
+                } else {
+                    document.getElementById(
+                        "pack-boundaries-details",
+                    ).open = false;
                 }
 
                 // Transit
@@ -1087,7 +1146,6 @@
                     "pack-transit-section",
                 );
                 trnSection.innerHTML = "";
-                trnSection.appendChild(makeSectionLabel("Transit"));
                 trnSection.appendChild(
                     makeToggle(
                         "Route lines",
@@ -1266,8 +1324,10 @@
                     var regions = await fetchJson("/api/pack/regions");
                     if (!regions || regions.length === 0) return;
 
-                    var section = document.getElementById("pack-section");
-                    section.style.display = "block";
+                    document.getElementById("pack-header").style.display =
+                        "block";
+                    document.getElementById("pack-header-hr").style.display =
+                        "block";
 
                     var select = document.getElementById("pack-select");
                     var blankOpt = document.createElement("option");
@@ -1283,7 +1343,14 @@
                     }
 
                     select.addEventListener("change", function () {
-                        switchPack(this.value);
+                        var section = document.getElementById("pack-section");
+                        if (!this.value) {
+                            section.style.display = "none";
+                            switchPack("");
+                        } else {
+                            section.style.display = "block";
+                            switchPack(this.value);
+                        }
                     });
                 } catch (err) {
                     console.log("No packs available:", err.message);
