@@ -361,7 +361,6 @@ function buildLine(
                 let bestRawDist = Infinity;
                 let secondBestEffectiveDist = Infinity;
                 let secondBestStationId = null;
-                const matchCandidates = [];
                 for (const station of stationById.values()) {
                     if (!station.name) continue;
                     const dist = haversineM(
@@ -379,11 +378,6 @@ function buildLine(
                               ? 25
                               : 50;
                     const effectiveDist = dist + penalty;
-                    matchCandidates.push({
-                        stationId: station.id,
-                        effectiveDist,
-                        dist,
-                    });
                     if (effectiveDist < bestEffectiveDist) {
                         secondBestEffectiveDist = bestEffectiveDist;
                         secondBestStationId = bestStationId;
@@ -501,6 +495,8 @@ function buildLine(
         if (variantStops.length >= 3) {
             const flagged = detectImplausibleJumps(variantStops);
             if (flagged.length > 0) {
+                // detectedJumps counts flagged gaps, not variants (one variant can
+                // have several flagged gaps).
                 if (!relOverride?.suppressJumpWarning) {
                     stats.detectedJumps += flagged.length;
                 }
