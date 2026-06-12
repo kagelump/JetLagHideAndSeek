@@ -38,6 +38,7 @@ export function processOsmRoutes(
         masterlessCount: 0,
         linesKept: 0,
         linesDroppedGtfs: 0,
+        linesDroppedUnopened: 0,
         unresolvedStops: 0,
         linesTooFewStations: 0,
         detectedJumps: 0,
@@ -58,6 +59,15 @@ export function processOsmRoutes(
         const isRoute = tags.route != null;
         if (!isRouteMaster && !isRoute) continue;
         stats.totalRelations++;
+
+        if (isUnopened(tags)) {
+            stats.linesDroppedUnopened++;
+            console.warn(
+                `  [osmRoutes] Dropping unopened relation ${rel.id ?? rel.properties?.["@id"] ?? "?"} ` +
+                    `(${tags.name || tags.ref || "unnamed"})`,
+            );
+            continue;
+        }
 
         if (isRouteMaster) {
             masters.push(rel);
@@ -372,6 +382,25 @@ export function processOsmRoutes(
 }
 
 // ─── Internals ─────────────────────────────────────────────────────────────
+
+/**
+ * Return true if a relation is tagged as not in service (under construction,
+ * proposed, or disused). These relations are dropped before line building.
+ *
+ * @param {object} tags
+ * @returns {boolean}
+ */
+function isUnopened(tags) {
+    if (tags["construction:route"] != null) return true;
+    if (tags.route === "construction") return true;
+    if (tags["proposed:route"] != null) return true;
+    if (tags.route === "proposed") return true;
+    if (tags["disused:route"] != null) return true;
+    if (tags.route === "disused") return true;
+    const state = tags.state;
+    if (state === "construction" || state === "proposed") return true;
+    return false;
+}
 
 function buildLine(
     primaryRel,

@@ -72,14 +72,26 @@ export function getSelectedStations(
         (a, b) => sourcePriority(a.source) - sourcePriority(b.source),
     );
 
+    // Build a global routeId → color map across every preset in the bundle.
+    // Route ids are globally unique, so a route owned by another operator's
+    // preset still resolves to its real color at interchange stations.
+    const routeColorById = new Map<string, string>();
+    for (const preset of presets) {
+        for (const route of preset.routes) {
+            if (!routeColorById.has(route.id)) {
+                routeColorById.set(
+                    route.id,
+                    route.color || preset.defaultColor,
+                );
+            } else if (route.color) {
+                // Prefer a real route color over a preset defaultColor fallback.
+                routeColorById.set(route.id, route.color);
+            }
+        }
+    }
+
     const stations = new Map<string, TransitStation>();
     for (const preset of sorted) {
-        const routeColorById = new Map(
-            preset.routes.map((route) => [
-                route.id,
-                route.color || preset.defaultColor,
-            ]),
-        );
         for (const station of preset.stations) {
             const routeColors = getStationRouteColors(
                 station.routeIds,

@@ -48,17 +48,28 @@
             return sourcePriority(a.source) - sourcePriority(b.source);
         });
 
+        // Build a global routeId → color map across every preset in the bundle
+        // so interchange stations can resolve colors for routes owned by other
+        // operators' presets.
+        var routeColorById = new Map();
+        for (var pxi = 0; pxi < presets.length; pxi++) {
+            var px = presets[pxi];
+            for (var ri = 0; ri < px.routes.length; ri++) {
+                var route = px.routes[ri];
+                if (!routeColorById.has(route.id)) {
+                    routeColorById.set(
+                        route.id,
+                        route.color || px.defaultColor,
+                    );
+                } else if (route.color) {
+                    routeColorById.set(route.id, route.color);
+                }
+            }
+        }
+
         var stations = new Map();
         for (var pi = 0; pi < sorted.length; pi++) {
             var preset = sorted[pi];
-            var routeColorById = new Map();
-            for (var ri = 0; ri < preset.routes.length; ri++) {
-                var route = preset.routes[ri];
-                routeColorById.set(
-                    route.id,
-                    route.color || preset.defaultColor,
-                );
-            }
             // Build routeId → route name lookup for this preset
             var routeNameById = new Map();
             for (var ri2 = 0; ri2 < preset.routes.length; ri2++) {
@@ -191,9 +202,9 @@
     }
 
     // ── Wedge radii (degrees) — sized per zoom tier ─────────────────
-    var WEDGE_RADIUS_LARGE  = 0.0008;  // ~80 m — good at z11-z12
+    var WEDGE_RADIUS_LARGE = 0.0008; // ~80 m — good at z11-z12
     var WEDGE_RADIUS_MEDIUM = 0.00035; // ~35 m — good at z13-z14
-    var WEDGE_RADIUS_SMALL  = 0.00015; // ~15 m — good at z15+
+    var WEDGE_RADIUS_SMALL = 0.00015; // ~15 m — good at z15+
 
     /**
      * Build a GeoJSON FeatureCollection of wedge-shaped polygons — one per
@@ -230,13 +241,11 @@
                 var ring = [[station.lon, station.lat]];
                 for (var ai = 0; ai <= arcPts; ai++) {
                     var angleRad =
-                        ((startDeg +
-                            (endDeg - startDeg) * (ai / arcPts)) *
+                        ((startDeg + (endDeg - startDeg) * (ai / arcPts)) *
                             Math.PI) /
                         180;
                     var dLat = radius * Math.cos(angleRad);
-                    var dLon =
-                        (radius * Math.sin(angleRad)) / cosLat;
+                    var dLon = (radius * Math.sin(angleRad)) / cosLat;
                     ring.push([station.lon + dLon, station.lat + dLat]);
                 }
                 ring.push([station.lon, station.lat]);
@@ -272,9 +281,18 @@
      */
     function buildAllWedgeFeatureCollections(stations) {
         return {
-            large:  buildStationWedgeFeatureCollection(stations, WEDGE_RADIUS_LARGE),
-            medium: buildStationWedgeFeatureCollection(stations, WEDGE_RADIUS_MEDIUM),
-            small:  buildStationWedgeFeatureCollection(stations, WEDGE_RADIUS_SMALL),
+            large: buildStationWedgeFeatureCollection(
+                stations,
+                WEDGE_RADIUS_LARGE,
+            ),
+            medium: buildStationWedgeFeatureCollection(
+                stations,
+                WEDGE_RADIUS_MEDIUM,
+            ),
+            small: buildStationWedgeFeatureCollection(
+                stations,
+                WEDGE_RADIUS_SMALL,
+            ),
         };
     }
 

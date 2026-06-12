@@ -624,6 +624,89 @@ describe("processOsmRoutes", () => {
             "臺中線 does not have station 90",
         );
     });
+
+    it("drops unopened relations and does not spatially attach their ways", () => {
+        // Relation 11122080-style: construction:route=subway but route=railway.
+        // It has 0 stops and only ways; without the unopened filter, T16 spatial
+        // attach would pull in a nearby station.
+        const relations = [
+            {
+                id: 1111,
+                properties: {
+                    tags: {
+                        route: "railway",
+                        "construction:route": "subway",
+                        name: "Circular Line Extension",
+                        operator: "TestRail",
+                    },
+                },
+                members: [{ type: "way", ref: 1112, role: "" }],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:100", name: "Nearby", lat: 35.05, lon: 139.05 },
+        ];
+
+        const nodeCoords = new Map([
+            [100, { lat: 35.05, lon: 139.05 }],
+            [101, { lat: 35.0, lon: 139.0 }],
+            [102, { lat: 35.1, lon: 139.1 }],
+        ]);
+
+        const ways = new Map([[1112, [101, 102]]]);
+
+        const { lines, stats } = processOsmRoutes(
+            relations,
+            stationRecords,
+            {
+                nameSuffixes: [],
+                operators: [],
+                useRailwayInfrastructure: true,
+                railwayAttachMeters: 500,
+            },
+            nodeCoords,
+            ways,
+        );
+
+        assert.equal(stats.linesDroppedUnopened, 1);
+        assert.equal(lines.length, 0);
+    });
+
+    it("does not drop opened route/railway relations", () => {
+        // Regression guard: normal in-service relations must not be filtered.
+        const relations = [
+            {
+                id: 1200,
+                properties: {
+                    tags: {
+                        route: "railway",
+                        name: "Open Line",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { type: "node", ref: 110, role: "stop" },
+                    { type: "node", ref: 111, role: "stop" },
+                ],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:110", name: "Open A", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:111", name: "Open B", lat: 35.1, lon: 139.1 },
+        ];
+
+        const { lines, stats } = processOsmRoutes(relations, stationRecords, {
+            nameSuffixes: [],
+            operators: [],
+            useRailwayInfrastructure: true,
+        });
+
+        assert.equal(stats.linesDroppedUnopened, 0);
+        assert.equal(lines.length, 1);
+        assert.equal(lines[0].name, "Open Line");
+    });
 });
 
 describe("lineNameKey", () => {

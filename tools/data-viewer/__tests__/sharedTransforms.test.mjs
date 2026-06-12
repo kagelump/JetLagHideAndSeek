@@ -231,4 +231,55 @@ describe("transit pass-through", () => {
         assert.equal(stationFeatures.type, "FeatureCollection");
         assert.equal(stationFeatures.features.length, 2);
     });
+
+    it("getSelectedStations resolves cross-preset route colors", () => {
+        const tg = require("../lib/transitGeojson.js");
+        const presets = [
+            {
+                id: "operator-a",
+                label: "Operator A",
+                defaultColor: "#009bbf",
+                routes: [
+                    {
+                        id: "line-l",
+                        name: "Line L",
+                        geometry: { type: "LineString", coordinates: [] },
+                        color: "#ff0000",
+                    },
+                ],
+                stations: [],
+            },
+            {
+                id: "operator-b",
+                label: "Operator B",
+                defaultColor: "#40e0d0",
+                routes: [
+                    {
+                        id: "line-m",
+                        name: "Line M",
+                        geometry: { type: "LineString", coordinates: [] },
+                        color: "#0000ff",
+                    },
+                ],
+                stations: [
+                    {
+                        id: "interchange",
+                        mergeKey: "interchange",
+                        lat: 35.7,
+                        lon: 139.7,
+                        name: "Interchange",
+                        routeIds: ["line-l", "line-m"],
+                    },
+                ],
+            },
+        ];
+
+        const stations = tg.getSelectedStations(presets);
+        assert.equal(stations.length, 1);
+        assert.deepEqual(
+            new Set(stations[0].routeColors),
+            new Set(["#ff0000", "#0000ff"]),
+        );
+        assert.ok(!stations[0].routeColors.includes("#40e0d0"));
+    });
 });
