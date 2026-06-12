@@ -206,6 +206,24 @@ export function validateConfig(cfg, configPath = "regions.yaml") {
                 errors.push(
                     `${prefix}: "transitOverrides" must be an object when present`,
                 );
+            } else {
+                if (region.transitOverrides.wayGeometry !== undefined) {
+                    if (typeof region.transitOverrides.wayGeometry !== "boolean") {
+                        errors.push(
+                            `${prefix}: "transitOverrides.wayGeometry" must be a boolean`,
+                        );
+                    }
+                }
+                if (region.transitOverrides.simplifyMeters !== undefined) {
+                    if (
+                        typeof region.transitOverrides.simplifyMeters !== "number" ||
+                        region.transitOverrides.simplifyMeters < 0
+                    ) {
+                        errors.push(
+                            `${prefix}: "transitOverrides.simplifyMeters" must be a non-negative number`,
+                        );
+                    }
+                }
             }
         }
     }

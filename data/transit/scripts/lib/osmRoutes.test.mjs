@@ -707,6 +707,66 @@ describe("processOsmRoutes", () => {
         assert.equal(lines.length, 1);
         assert.equal(lines[0].name, "Open Line");
     });
+
+    it("falls back to stop-position geometry when wayGeometry is false", () => {
+        const master = {
+            id: 900,
+            properties: {
+                "@id": 900,
+                tags: { route_master: "subway", name: "Wayless Fallback Line" },
+            },
+        };
+        const variant = {
+            id: 901,
+            properties: {
+                "@id": 901,
+                tags: { route: "subway", name: "Wayless Fallback Line Inbound" },
+            },
+            members: [
+                { type: "node", ref: 10, role: "stop" },
+                { type: "node", ref: 11, role: "stop" },
+                { type: "way", ref: 500, role: "" },
+            ],
+        };
+        const stationRecords = [
+            {
+                id: "osm:node:10",
+                name: "Alpha",
+                lat: 35.0,
+                lon: 139.0,
+                tags: { railway: "station" },
+            },
+            {
+                id: "osm:node:11",
+                name: "Beta",
+                lat: 35.2,
+                lon: 139.2,
+                tags: { railway: "station" },
+            },
+        ];
+        const nodeCoords = new Map([
+            [10, { lat: 35.0, lon: 139.0 }],
+            [11, { lat: 35.2, lon: 139.2 }],
+            [100, { lat: 35.05, lon: 139.05 }],
+            [101, { lat: 35.15, lon: 139.15 }],
+        ]);
+        const ways = new Map([[500, [100, 101]]]);
+
+        const { lines } = processOsmRoutes(
+            [master, variant],
+            stationRecords,
+            { maxClusterMeters: 150, wayGeometry: false },
+            nodeCoords,
+            ways,
+        );
+        assert.equal(lines.length, 1);
+        const line = lines[0];
+        assert.equal(line.geometry.type, "MultiLineString");
+        assert.equal(line.geometry.coordinates.length, 1);
+        // Stop-position fallback uses station coordinates, not way nodes.
+        assert.deepEqual(line.geometry.coordinates[0][0], [139.0, 35.0]);
+        assert.deepEqual(line.geometry.coordinates[0][1], [139.2, 35.2]);
+    });
 });
 
 describe("lineNameKey", () => {

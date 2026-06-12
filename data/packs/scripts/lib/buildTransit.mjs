@@ -190,6 +190,7 @@ export async function buildTransitArtifact({
                 region.transitOverrides?.railwayAttachMeters ?? 120,
             simplifyMeters:
                 region.transitOverrides?.simplifyMeters ?? 11,
+            wayGeometry: region.transitOverrides?.wayGeometry ?? true,
         };
 
         const includeRailway =

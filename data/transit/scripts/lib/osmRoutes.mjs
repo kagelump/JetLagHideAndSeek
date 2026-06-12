@@ -697,7 +697,7 @@ function buildLine(
         }
     }
 
-    if (ways && wayMembers.length > 0) {
+    if (ways && wayMembers.length > 0 && localeConfig.wayGeometry !== false) {
         const stitched = stitchWays(wayMembers, ways, nodeCoords);
         if (stitched.coordinates.length > 0) {
             const simplifyMeters =

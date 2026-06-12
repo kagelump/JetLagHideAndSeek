@@ -206,5 +206,24 @@ describe("validateConfig", () => {
             );
             assert.deepEqual(errors, []);
         });
+
+        it("rejects invalid transitOverrides option types", () => {
+            const errors = validateConfig(
+                baseConfig({
+                    transitOverrides: {
+                        wayGeometry: "yes",
+                        simplifyMeters: -5,
+                    },
+                }),
+            );
+            assert.ok(
+                errors.some((e) => e.includes("wayGeometry")),
+                "errors include wayGeometry type",
+            );
+            assert.ok(
+                errors.some((e) => e.includes("simplifyMeters")),
+                "errors include simplifyMeters type",
+            );
+        });
     });
 });
