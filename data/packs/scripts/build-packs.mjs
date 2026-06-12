@@ -152,9 +152,9 @@ function parseArgs(argv) {
 /**
  * Build the transit artifact for a region.
  */
-async function buildTransitArtifactFn({ region, pbfPath, distDir }) {
+async function buildTransitArtifactFn({ region, pbfPath, distDir, cacheDir }) {
     const { buildTransitArtifact } = await import("./lib/buildTransit.mjs");
-    return buildTransitArtifact({ region, pbfPath, distDir });
+    return buildTransitArtifact({ region, pbfPath, distDir, cacheDir });
 }
 
 /**
@@ -244,7 +244,7 @@ async function buildRegion(region, distDir, cacheDir, cacheOnly) {
         }
 
         console.log(`  [${kind}] building...`);
-        const result = await builder({ region, pbfPath, distDir });
+        const result = await builder({ region, pbfPath, distDir, cacheDir });
 
         if (result) {
             // Measuring: multi-artifact return (Map of "measuring-<cat>" → {gzPath, uncompressed}).
@@ -339,6 +339,7 @@ async function buildRegion(region, distDir, cacheDir, cacheOnly) {
             measuring: measuringCategories,
             matching: matchingCategories,
         },
+        artifacts: region.artifacts ?? Object.keys(BUILDERS),
         attribution: "© OpenStreetMap contributors, ODbL — via Geofabrik",
     };
 

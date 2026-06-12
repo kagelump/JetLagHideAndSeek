@@ -142,6 +142,26 @@ export async function lintRegion(regionId) {
         errors.push(...boundaryErrors);
     }
 
+    // 4. Transit-specific checks if transit.json.gz exists.
+    const transitPath = resolve(distDir, "transit.json.gz");
+    let meta = null;
+    if (existsSync(metaPath)) {
+        try {
+            meta = JSON.parse(await readFile(metaPath, "utf8"));
+        } catch {
+            /* ignore — meta validation already reported */
+        }
+    }
+    const declaresTransit =
+        meta?.artifacts?.includes("transit") || existsSync(transitPath);
+    if (declaresTransit) {
+        const transitErrors = await lintTransit({
+            distDir,
+            bbox: meta?.bbox ?? null,
+        });
+        errors.push(...transitErrors);
+    }
+
     return errors;
 }
 
@@ -294,6 +314,220 @@ async function lintBoundaries(distDir) {
         }
     } catch (err) {
         errors.push(`boundaries.json.gz: lint error: ${err.message}`);
+    }
+
+    return errors;
+}
+
+/**
+ * Lint the transit artifact for a region.
+ *
+ * @param {object} opts
+ * @param {string} opts.distDir - path to dist/<regionId>/
+ * @param {[number,number,number,number]|null} opts.bbox - region bbox [w,s,e,n]
+ * @returns {Promise<string[]>} error messages
+ */
+async function lintTransit({ distDir, bbox }) {
+    const errors = [];
+    const transitPath = resolve(distDir, "transit.json.gz");
+
+    if (!existsSync(transitPath)) {
+        errors.push(`transit.json.gz: missing`);
+        return errors;
+    }
+
+    let artifact;
+    try {
+        const gzBytes = await readFile(transitPath);
+        const uncompressed = gunzipSync(gzBytes);
+        artifact = JSON.parse(uncompressed.toString("utf8"));
+    } catch (err) {
+        errors.push(`transit.json.gz: ${err.message}`);
+        return errors;
+    }
+
+    if (!artifact || typeof artifact !== "object") {
+        errors.push(`transit.json.gz: must be a JSON object`);
+        return errors;
+    }
+
+    if (!Array.isArray(artifact.presets)) {
+        errors.push(`transit.json.gz: "presets" must be an array`);
+        return errors;
+    }
+
+    const regionBbox = Array.isArray(bbox) ? bbox : null;
+    const [west, south, east, north] = regionBbox ?? [-180, -90, 180, 90];
+    // Small slop to account for floating-point extraction boundaries.
+    const SLOP = 0.001;
+
+    const hexColorRe = /^#[0-9a-fA-F]{3,8}$/;
+
+    let anyRoute = false;
+    let anyRouteStation = false;
+
+    for (const preset of artifact.presets) {
+        if (!preset || typeof preset !== "object") {
+            errors.push(`transit.json.gz: preset must be an object`);
+            continue;
+        }
+
+        // Preset ids must not contain ':' (T9 invariant).
+        if (typeof preset.id === "string" && preset.id.includes(":")) {
+            errors.push(
+                `transit.json.gz: preset id "${preset.id}" contains ':'`,
+            );
+        }
+
+        if (Array.isArray(preset.routes)) {
+            for (const route of preset.routes) {
+                if (!route || typeof route !== "object") {
+                    errors.push(
+                        `transit.json.gz: route in preset "${preset.id}" must be an object`,
+                    );
+                    continue;
+                }
+
+                if (!route.id || typeof route.id !== "string") {
+                    errors.push(
+                        `transit.json.gz: route in preset "${preset.id}" has no id`,
+                    );
+                }
+
+                if (
+                    route.color != null &&
+                    (typeof route.color !== "string" ||
+                        !hexColorRe.test(route.color))
+                ) {
+                    errors.push(
+                        `transit.json.gz: route "${route.id}" color is not a valid hex color`,
+                    );
+                }
+
+                const geom = route.geometry;
+                if (!geom || typeof geom !== "object") {
+                    errors.push(
+                        `transit.json.gz: route "${route.id}" has no geometry`,
+                    );
+                    continue;
+                }
+
+                let parts = [];
+                if (geom.type === "LineString") {
+                    parts = [geom.coordinates];
+                } else if (geom.type === "MultiLineString") {
+                    parts = geom.coordinates;
+                } else {
+                    errors.push(
+                        `transit.json.gz: route "${route.id}" geometry type must be LineString or MultiLineString`,
+                    );
+                    continue;
+                }
+
+                if (!Array.isArray(parts) || parts.length === 0) {
+                    errors.push(
+                        `transit.json.gz: route "${route.id}" geometry has no parts`,
+                    );
+                    continue;
+                }
+
+                for (let pi = 0; pi < parts.length; pi++) {
+                    const part = parts[pi];
+                    if (!Array.isArray(part) || part.length < 2) {
+                        errors.push(
+                            `transit.json.gz: route "${route.id}" part ${pi} has < 2 coordinates`,
+                        );
+                        continue;
+                    }
+
+                    for (let ci = 0; ci < part.length; ci++) {
+                        const coord = part[ci];
+                        if (
+                            !Array.isArray(coord) ||
+                            coord.length < 2 ||
+                            !Number.isFinite(coord[0]) ||
+                            !Number.isFinite(coord[1])
+                        ) {
+                            errors.push(
+                                `transit.json.gz: route "${route.id}" part ${pi} coord ${ci} is not a finite [lon,lat]`,
+                            );
+                            continue;
+                        }
+
+                        if (regionBbox) {
+                            const [lon, lat] = coord;
+                            if (
+                                lon < west - SLOP ||
+                                lon > east + SLOP ||
+                                lat < south - SLOP ||
+                                lat > north + SLOP
+                            ) {
+                                errors.push(
+                                    `transit.json.gz: route "${route.id}" part ${pi} coord ${ci} ${JSON.stringify(coord)} outside region bbox`,
+                                );
+                            }
+                        }
+                    }
+                }
+
+                anyRoute = true;
+            }
+        }
+
+        if (Array.isArray(preset.stations)) {
+            for (const station of preset.stations) {
+                if (!station || typeof station !== "object") {
+                    errors.push(
+                        `transit.json.gz: station in preset "${preset.id}" must be an object`,
+                    );
+                    continue;
+                }
+
+                if (!station.id || typeof station.id !== "string") {
+                    errors.push(
+                        `transit.json.gz: station in preset "${preset.id}" has no id`,
+                    );
+                }
+
+                if (regionBbox) {
+                    const { lon, lat } = station;
+                    if (
+                        typeof lon !== "number" ||
+                        typeof lat !== "number" ||
+                        !Number.isFinite(lon) ||
+                        !Number.isFinite(lat) ||
+                        lon < west - SLOP ||
+                        lon > east + SLOP ||
+                        lat < south - SLOP ||
+                        lat > north + SLOP
+                    ) {
+                        errors.push(
+                            `transit.json.gz: station "${station.id}" (${lon},${lat}) outside region bbox`,
+                        );
+                    }
+                }
+
+                if (
+                    Array.isArray(station.routeIds) &&
+                    station.routeIds.length > 0
+                ) {
+                    anyRouteStation = true;
+                }
+            }
+        }
+    }
+
+    // Linkage sanity: a transit-declaring region must have at least one route
+    // and at least one station linked to a route.
+    if (!anyRoute) {
+        errors.push(
+            `transit.json.gz: no preset has routes — expected at least one route`,
+        );
+    }
+    if (!anyRouteStation) {
+        errors.push(
+            `transit.json.gz: no station has routeIds — expected at least one station linked to a route`,
+        );
     }
 
     return errors;

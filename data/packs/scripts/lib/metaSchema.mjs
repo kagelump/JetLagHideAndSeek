@@ -193,5 +193,20 @@ export function validateMeta(meta, label = "meta.json") {
         errors.push(`${label}: "attribution" must be a non-empty string`);
     }
 
+    // artifacts (optional but validated if present)
+    if (meta.artifacts != null) {
+        if (!Array.isArray(meta.artifacts)) {
+            errors.push(`${label}: "artifacts" must be an array`);
+        } else {
+            for (const art of meta.artifacts) {
+                if (typeof art !== "string" || art.trim() === "") {
+                    errors.push(
+                        `${label}: every "artifacts" element must be a non-empty string`,
+                    );
+                }
+            }
+        }
+    }
+
     return errors;
 }

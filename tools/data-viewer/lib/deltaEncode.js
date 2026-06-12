@@ -24,17 +24,18 @@
             py = 0;
 
         for (var i = 1; i <= ringLen; i += 2) {
+            var x, y;
             if (i === 1) {
-                var x = encoded[i];
-                var y = encoded[i + 1];
+                x = encoded[i];
+                y = encoded[i + 1];
                 ring.push(unquantize(x, y));
                 px = x;
                 py = y;
             } else {
                 var dx = encoded[i];
                 var dy = encoded[i + 1];
-                var x = px + dx;
-                var y = py + dy;
+                x = px + dx;
+                y = py + dy;
                 ring.push(unquantize(x, y));
                 px = x;
                 py = y;

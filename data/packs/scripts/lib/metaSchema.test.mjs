@@ -18,6 +18,7 @@ function validMeta(overrides = {}) {
         osmSnapshot: "2026-06-08",
         adminLevels: { matching: [4, 7, 9, 10], extract: [4, 7, 8, 9, 10] },
         categories: { measuring: [], matching: [] },
+        artifacts: ["poi", "measuring", "boundaries", "transit"],
         attribution: "© OpenStreetMap contributors, ODbL — via Geofabrik",
         ...overrides,
     };
