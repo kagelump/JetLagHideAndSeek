@@ -10,6 +10,10 @@ regions:
           matching: [4, 8, 9, 10] # admin-1st..4th (level 7 has zero relations in NL)
           extract: [4, 7, 8, 9, 10] # superset
       artifacts: [poi, measuring, boundaries, transit]
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
     - id: asia-taiwan
       label: Taiwan
       regionPath: [Asia, Taiwan]
@@ -18,3 +22,14 @@ regions:
           matching: [4, 7, 8, 9] # admin-1st..4th (level 10 has only 3 relations)
           extract: [4, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
+      transitOverrides:
+          nameSuffixes: ["站", "車站"]
+          maxClusterMeters: 150
+          routeColors:
+              "台灣高鐵": "#E4002B"
+              "臺灣高鐵": "#E4002B"
+              "區間": "#0070BD"
+              "自強": "#0033A0"
+              "莒光": "#F58B1F"
+              "復興": "#C48C31"
+          operatorNames: {}

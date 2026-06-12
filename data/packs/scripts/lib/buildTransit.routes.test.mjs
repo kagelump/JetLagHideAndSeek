@@ -66,6 +66,16 @@ describe("buildTransit routes", { skip: !osmiumAvailable() }, () => {
     <tag k="name" v="Orphan Station"/>
     <tag k="operator" v="Test Operator"/>
   </node>
+  <node id="5" lat="52.4" lon="4.4">
+    <tag k="public_transport" v="station"/>
+    <tag k="name" v="Ferry Terminal"/>
+    <tag k="operator" v="Test Operator"/>
+  </node>
+  <node id="6" lat="52.05" lon="4.05">
+    <tag k="railway" v="station"/>
+    <tag k="name" v="Station X"/>
+    <tag k="operator" v="Other Operator"/>
+  </node>
 
   <relation id="100">
     <tag k="route_master" v="train"/>
@@ -97,6 +107,14 @@ describe("buildTransit routes", { skip: !osmiumAvailable() }, () => {
     <tag k="operator" v="Test Operator"/>
     <member type="node" ref="999" role="stop"/>
     <member type="node" ref="998" role="stop"/>
+  </relation>
+  <relation id="104">
+    <tag k="route" v="train"/>
+    <tag k="name" v="Other Line"/>
+    <tag k="colour" v="#0000FF"/>
+    <tag k="operator" v="Other Operator"/>
+    <member type="node" ref="6" role="stop"/>
+    <member type="node" ref="2" role="stop"/>
   </relation>
 </osm>`;
 
@@ -162,5 +180,35 @@ describe("buildTransit routes", { skip: !osmiumAvailable() }, () => {
             r.name.includes("Ghost"),
         );
         assert.ok(!ghostRoute, "route with no stops is dropped");
+
+        // Non-rail public_transport=station node should not appear.
+        const allStationIds = bundle.presets.flatMap((p) =>
+            p.stations.map((s) => s.id),
+        );
+        assert.ok(
+            !allStationIds.includes("osm:node:5"),
+            "non-rail ferry terminal is filtered out",
+        );
+
+        // A route in one operator preset should still color stations in another
+        // operator preset when its resolved member station is present there.
+        const otherPreset = bundle.presets.find(
+            (p) => p.operator === "Other Operator",
+        );
+        assert.ok(otherPreset, "other operator preset exists");
+        const otherRoute = otherPreset.routes.find(
+            (r) => r.name === "Other Line",
+        );
+        assert.ok(otherRoute, "other operator route exists");
+        assert.equal(otherRoute.color.toLowerCase(), "#0000ff");
+
+        const stationX = otherPreset.stations.find(
+            (s) => s.id === "osm:node:6",
+        );
+        assert.ok(stationX, "station X exists in other operator preset");
+        assert.ok(
+            stationX.routeIds.includes("osm:relation:104"),
+            "cross-operator routeId attaches to member station",
+        );
     });
 });

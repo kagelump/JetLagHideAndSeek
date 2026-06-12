@@ -33,7 +33,7 @@
         "data:geofabrik:packs": "node data/geofabrik/scripts/fetch-geofabrik.mjs --cache-only --packs",
         "data:geofabrik:packs:fetch": "node data/geofabrik/scripts/fetch-geofabrik.mjs --packs",
         "data:measuring": "node data/geofabrik/scripts/extract-measuring-bundles.mjs",
-        "data:pack": "node data/packs/scripts/build-packs.mjs",
+        "data:pack": "node --import tsx data/packs/scripts/build-packs.mjs",
         "data:pack:lint": "node data/packs/scripts/pack-lint.mjs",
         "data:pack:catalog": "node data/packs/scripts/build-catalog.mjs",
         "data:pack:publish": "node data/packs/scripts/publish.mjs",

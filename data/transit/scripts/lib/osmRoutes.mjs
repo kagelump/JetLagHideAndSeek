@@ -10,6 +10,7 @@ import { normalizeName } from "./names.mjs";
 import { createOsmElementId } from "./osmStations.mjs";
 import { haversineM } from "./grid.mjs";
 import { detectImplausibleJumps, repairStopOrder } from "./stopOrderRepair.mjs";
+import { buildOperatorNormalizer } from "./normalizeOperator.mjs";
 
 // ─── Route relation processing ─────────────────────────────────────────────
 
@@ -110,6 +111,7 @@ export function processOsmRoutes(
             localeConfig.overrides?.relations,
         );
         if (line) {
+            line.isMastered = true;
             masterLines.push(line);
         }
     }
@@ -270,6 +272,69 @@ export function processOsmRoutes(
         if (inferred) {
             line.operator = inferred;
         }
+    }
+
+    // ─── Collapse masterless variants into logical lines ─────────────────
+    const operatorNames = localeConfig.operatorNames || {};
+    const normalizeOp = buildOperatorNormalizer(operatorNames);
+    const directionTokens = localeConfig.directionTokens;
+
+    const collapsed = [];
+    /** @type {Map<string, object[]>} */
+    const masterlessGroups = new Map();
+
+    for (const line of keptLines) {
+        if (line.isMastered) {
+            collapsed.push(line);
+            continue;
+        }
+        const op = normalizeOp(line.operator) || line.operator || "_none";
+        const key = `${op}|${lineNameKey(line.name, directionTokens)}`;
+        if (!masterlessGroups.has(key)) masterlessGroups.set(key, []);
+        masterlessGroups.get(key).push(line);
+    }
+
+    for (const [, group] of masterlessGroups) {
+        if (group.length === 1) {
+            collapsed.push(group[0]);
+            continue;
+        }
+
+        // Prefer the variant with the most resolved stations; tie-break by OSM color.
+        const sorted = [...group].sort((a, b) => {
+            const diff = b.memberStationIds.length - a.memberStationIds.length;
+            if (diff !== 0) return diff;
+            if (a.color && !b.color) return -1;
+            if (!a.color && b.color) return 1;
+            return 0;
+        });
+        const representative = sorted[0];
+
+        // Union member station ids across all variants.
+        const memberSet = new Set();
+        for (const line of group) {
+            for (const sid of line.memberStationIds) memberSet.add(sid);
+        }
+
+        collapsed.push({
+            ...representative,
+            name:
+                lineDisplayName(representative.name, directionTokens) ||
+                representative.name,
+            memberStationIds: [...memberSet],
+            collapsedVariantIds: group.map((l) => l.id),
+        });
+        stats.collapsedGroups = (stats.collapsedGroups || 0) + 1;
+    }
+
+    keptLines.length = 0;
+    keptLines.push(...collapsed);
+
+    // Resolve final colors: OSM tag → transitOverrides.routeColors →
+    // deterministic hue fallback.
+    const routeColors = localeConfig.routeColors || {};
+    for (const line of keptLines) {
+        line.color = resolveLineColor(line, routeColors);
     }
 
     stats.linesKept = keptLines.length;
@@ -598,4 +663,217 @@ function isMemberOfMaster(route, master) {
     if (!rid) return false;
     const members = master.members ?? master.properties?.members ?? [];
     return members.some((m) => String(m.ref) === String(rid));
+}
+
+const DEFAULT_DIRECTION_TOKENS = [
+    "順向",
+    "逆向",
+    "上り",
+    "下り",
+    "往程",
+    "返程",
+    "西向",
+    "東向",
+    "北向",
+    "南向",
+    "順行",
+    "逆行",
+    "inbound",
+    "outbound",
+];
+
+/**
+ * Returns true if the string contains CJK characters.
+ *
+ * @param {string} s
+ * @returns {boolean}
+ */
+function hasCjk(s) {
+    return /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]/.test(s);
+}
+
+/**
+ * Normalizes a line name into a stable lookup key.
+ *
+ * Strips direction tokens, parenthetical notes, arrows, trailing dash
+ * suffixes, and stand-alone numbers. Collapses whitespace and removes
+ * leading/trailing dashes left behind by direction-token stripping
+ * (e.g. `"Red Line - Inbound"` → `"red line"`).
+ *
+ * Note: CJK direction tokens are stripped as substrings (no word boundaries),
+ * so multi-character tokens are safe but single-character tokens may over-strip.
+ *
+ * @param {string} name - raw line name
+ * @param {string[]} [tokens] - direction tokens to strip
+ * @returns {string}
+ */
+export function lineNameKey(name, tokens = DEFAULT_DIRECTION_TOKENS) {
+    if (!name || typeof name !== "string") return "";
+    let key = name.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+    key = key.replace(/[（(][^）)]+[）)]/gu, " ").trim();
+    // Strip trailing direction arrows. When an arrow is preceded by whitespace,
+    // remove that whole token too (station names like "南港→左營"); otherwise
+    // only remove the arrow and what follows (e.g. "A→B"). For dash suffixes
+    // like "-North", preserve the word before the dash.
+    const ARROW_RE = /(?:[→⇒←⇐↔]|->)/u;
+    key = key
+        .replace(new RegExp(`\\s+\\S*?${ARROW_RE.source}.*$`, "u"), " ")
+        .trim();
+    key = key.replace(new RegExp(`${ARROW_RE.source}.*$`, "u"), " ").trim();
+    for (const token of tokens) {
+        if (!token) continue;
+        const escaped = token
+            .toLowerCase()
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        if (hasCjk(token)) {
+            key = key.replace(new RegExp(escaped, "gu"), " ").trim();
+        } else {
+            key = key.replace(new RegExp(`\\b${escaped}\\b`, "gu"), " ").trim();
+        }
+    }
+
+    const DASH_DIRECTION_SUFFIXES = [
+        "north",
+        "south",
+        "east",
+        "west",
+        "inbound",
+        "outbound",
+        "北",
+        "南",
+        "東",
+        "西",
+    ];
+    const dashSuffixPattern = DASH_DIRECTION_SUFFIXES.map((s) =>
+        s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    ).join("|");
+    key = key
+        .replace(new RegExp(`\\s*-\\s*(${dashSuffixPattern})$`, "iu"), " ")
+        .trim();
+
+    key = key.replace(/\b\d+\b/gu, " ").trim();
+    // Remove leading/trailing standalone dashes left after token stripping
+    // (e.g. "Red Line - Inbound" would otherwise end as "red line -").
+    key = key.replace(/(^\s*-\s*|\s+-\s*$)/gu, " ").trim();
+    key = key.replace(/\s+/g, " ").trim();
+    return key;
+}
+
+/**
+ * Strip direction tokens, arrows, and train numbers from a line name while
+ * preserving the original casing. Used for the display name of a collapsed
+ * logical line.
+ *
+ * @param {string} name - raw line name
+ * @param {string[]} [tokens] - direction tokens to strip
+ * @returns {string}
+ */
+export function lineDisplayName(name, tokens = DEFAULT_DIRECTION_TOKENS) {
+    if (!name || typeof name !== "string") return "";
+    let key = name.replace(/\s+/g, " ").trim();
+    key = key.replace(/[（(][^）)]+[）)]/gu, " ").trim();
+
+    const ARROW_RE = /(?:[→⇒←⇐↔]|->)/u;
+    key = key
+        .replace(new RegExp(`\\s+\\S*?${ARROW_RE.source}.*$`, "u"), " ")
+        .trim();
+    key = key.replace(new RegExp(`${ARROW_RE.source}.*$`, "u"), " ").trim();
+
+    for (const token of tokens) {
+        if (!token) continue;
+        const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        if (hasCjk(token)) {
+            key = key.replace(new RegExp(escaped, "gu"), " ").trim();
+        } else {
+            key = key
+                .replace(new RegExp(`\\b${escaped}\\b`, "giu"), " ")
+                .trim();
+        }
+    }
+
+    const DASH_DIRECTION_SUFFIXES = [
+        "north",
+        "south",
+        "east",
+        "west",
+        "inbound",
+        "outbound",
+        "北",
+        "南",
+        "東",
+        "西",
+    ];
+    const dashSuffixPattern = DASH_DIRECTION_SUFFIXES.map((s) =>
+        s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    ).join("|");
+    key = key
+        .replace(new RegExp(`\\s*-\\s*(${dashSuffixPattern})$`, "iu"), " ")
+        .trim();
+
+    key = key.replace(/\b\d+\b/gu, " ").trim();
+    key = key.replace(/(^\s*-\s*|\s+-\s*$)/gu, " ").trim();
+    key = key.replace(/\s+/g, " ").trim();
+    return key;
+}
+
+/**
+ * Convert HSL values to a 6-digit hex color string.
+ *
+ * @param {number} h - hue in degrees [0, 360)
+ * @param {number} s - saturation in percent [0, 100]
+ * @param {number} l - lightness in percent [0, 100]
+ * @returns {string}
+ */
+function hslToHex(h, s, l) {
+    h = ((h % 360) + 360) % 360;
+    const c = (1 - Math.abs((2 * l) / 100 - 1)) * (s / 100);
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l / 100 - c / 2;
+    let r = 0,
+        g = 0,
+        b = 0;
+    if (h < 60) [r, g, b] = [c, x, 0];
+    else if (h < 120) [r, g, b] = [x, c, 0];
+    else if (h < 180) [r, g, b] = [0, c, x];
+    else if (h < 240) [r, g, b] = [0, x, c];
+    else if (h < 300) [r, g, b] = [x, 0, c];
+    else [r, g, b] = [c, 0, x];
+    const toHex = (v) =>
+        Math.round((v + m) * 255)
+            .toString(16)
+            .padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/**
+ * Deterministically map a string to a hue in degrees.
+ *
+ * @param {string} input
+ * @returns {number} hue in [0, 360)
+ */
+function hashHue(input) {
+    let hash = 5381;
+    for (let i = 0; i < input.length; i++) {
+        hash = ((hash << 5) + hash + input.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash) % 360;
+}
+
+/**
+ * Resolve a stable color for a transit line.
+ *
+ * Prefers the OSM `colour`/`color` tag, then a configured `routeColors`
+ * lookup (by line key or operator), then a deterministic HSL fallback.
+ *
+ * @param {object} line - line record with `name`, optional `color` and `operator`
+ * @param {Record<string, string>} [routeColors] - configured color overrides
+ * @returns {string} hex color string
+ */
+export function resolveLineColor(line, routeColors = {}) {
+    if (line.color) return line.color;
+    const key = lineNameKey(line.name);
+    if (routeColors[key]) return routeColors[key];
+    if (line.operator && routeColors[line.operator])
+        return routeColors[line.operator];
+    return hslToHex(hashHue(key || line.name || line.id || "x"), 65, 45);
 }

@@ -10,6 +10,7 @@ import {
     buildOperatorNormalizer,
     splitOperators,
 } from "./normalizeOperator.mjs";
+import { attachRoutesToPresets } from "./attachRoutes.mjs";
 
 /**
  * Run the conflation stage.
@@ -224,50 +225,19 @@ export async function conflateStage(ctx) {
         }
 
         // -- Small-operator + no-operator stations → "Other" coverage preset.
-        if (leftoverStations.length > 0) {
-            const otherPreset = buildOtherPreset(regionId, leftoverStations);
-            osmBaselinePresets.push(otherPreset);
-        }
+        const otherPreset =
+            leftoverStations.length > 0
+                ? buildOtherPreset(regionId, leftoverStations)
+                : null;
 
-        // -- Match osmRouteLines to presets.
-        for (const preset of mainOperatorPresets) {
-            const presetOpCanonical = normalizeOp(preset.operator);
-            if (!presetOpCanonical) continue;
-
-            // Build station id set for quick lookup (memberStationIds are
-            // "osm:node:<id>" format; standalone station ids are the same).
-            const stationIdSet = new Set(
-                preset.stations.map((s) => s.sourceId),
-            );
-
-            const matchingRoutes = (ctx.osmRouteLines || []).filter((line) => {
-                const lineOp = normalizeOp(line.operator);
-                return lineOp === presetOpCanonical;
-            });
-
-            for (const line of matchingRoutes) {
-                const routeEntry = {
-                    id: line.id,
-                    name: line.name,
-                    color: line.color || preset.defaultColor,
-                    sourceId: line.sourceId,
-                    geometry: line.geometry,
-                };
-                preset.routes.push(routeEntry);
-
-                // Add route ID to stations that are members of this route.
-                for (const memberId of line.memberStationIds) {
-                    if (stationIdSet.has(memberId)) {
-                        const station = preset.stations.find(
-                            (s) => s.sourceId === memberId,
-                        );
-                        if (station) {
-                            station.routeIds.push(line.id);
-                        }
-                    }
-                }
-            }
-        }
+        // -- Attach OSM routes to presets globally.
+        attachRoutesToPresets(
+            otherPreset
+                ? [...mainOperatorPresets, otherPreset]
+                : mainOperatorPresets,
+            ctx.osmRouteLines || [],
+            normalizeOp,
+        );
 
         // Detect and warn about duplicate preset ids within this region.
         const seenIds = new Set();
@@ -280,6 +250,9 @@ export async function conflateStage(ctx) {
                 seenIds.add(p.id);
                 osmBaselinePresets.push(p);
             }
+        }
+        if (otherPreset) {
+            osmBaselinePresets.push(otherPreset);
         }
 
         const totalPerOp = mainOperatorPresets.filter(

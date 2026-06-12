@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { processOsmRoutes } from "./osmRoutes.mjs";
+import {
+    processOsmRoutes,
+    lineNameKey,
+    lineDisplayName,
+    resolveLineColor,
+} from "./osmRoutes.mjs";
 
 describe("processOsmRoutes", () => {
     it("groups route variants under a route_master into one line", () => {
@@ -163,5 +168,277 @@ describe("processOsmRoutes", () => {
 
         assert.equal(stats.linesDroppedGtfs, 1);
         assert.equal(lines.length, 0);
+    });
+
+    it("collapses masterless per-train variants into one logical line", () => {
+        const relations = [
+            {
+                id: 501,
+                properties: {
+                    tags: {
+                        route: "train",
+                        name: "Express 101 Downtown→Uptown",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { ref: "40", role: "stop" },
+                    { ref: "41", role: "stop" },
+                ],
+            },
+            {
+                id: 502,
+                properties: {
+                    tags: {
+                        route: "train",
+                        name: "Express 202 Uptown→Downtown",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { ref: "41", role: "stop" },
+                    { ref: "42", role: "stop" },
+                ],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:40", name: "Downtown", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:41", name: "Midtown", lat: 35.1, lon: 139.1 },
+            { id: "osm:node:42", name: "Uptown", lat: 35.2, lon: 139.2 },
+        ];
+
+        const { lines, stats } = processOsmRoutes(relations, stationRecords, {
+            nameSuffixes: [],
+            operators: [],
+        });
+
+        assert.equal(lines.length, 1);
+        assert.equal(lines[0].name, "Express");
+        assert.deepEqual(
+            new Set(lines[0].memberStationIds),
+            new Set(["osm:node:40", "osm:node:41", "osm:node:42"]),
+        );
+        assert.ok(stats.collapsedGroups >= 1);
+    });
+
+    it("applies deterministic color fallback to uncolored lines", () => {
+        const relations = [
+            {
+                id: 600,
+                properties: {
+                    tags: {
+                        route: "train",
+                        name: "Uncolored Line",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { ref: "50", role: "stop" },
+                    { ref: "51", role: "stop" },
+                ],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:50", name: "Stop 50", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:51", name: "Stop 51", lat: 35.1, lon: 139.1 },
+        ];
+
+        const { lines } = processOsmRoutes(relations, stationRecords, {
+            nameSuffixes: [],
+            operators: [],
+        });
+
+        assert.equal(lines.length, 1);
+        assert.match(lines[0].color, /^#[0-9a-fA-F]{6}$/);
+        assert.notEqual(lines[0].color.toLowerCase(), "#1f6f78");
+    });
+
+    it("applies transitOverrides routeColors in processOsmRoutes", () => {
+        const relations = [
+            {
+                id: 601,
+                properties: {
+                    tags: {
+                        route: "train",
+                        name: "Special Service 123",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { ref: "52", role: "stop" },
+                    { ref: "53", role: "stop" },
+                ],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:52", name: "Stop 52", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:53", name: "Stop 53", lat: 35.1, lon: 139.1 },
+        ];
+
+        const { lines } = processOsmRoutes(relations, stationRecords, {
+            nameSuffixes: [],
+            operators: [],
+            routeColors: { "special service": "#AABBCC" },
+        });
+
+        assert.equal(lines.length, 1);
+        assert.equal(lines[0].color.toLowerCase(), "#aabbcc");
+    });
+});
+
+describe("lineNameKey", () => {
+    it("strips train numbers and direction arrows", () => {
+        assert.equal(lineNameKey("台灣高鐵 603 南港→左營"), "台灣高鐵");
+    });
+
+    it("strips parenthetical direction notes", () => {
+        assert.equal(
+            lineNameKey("臺北捷運環狀線（大坪林→新北產業園區）"),
+            "臺北捷運環狀線",
+        );
+    });
+
+    it("strips configured direction tokens", () => {
+        assert.equal(
+            lineNameKey("Red Line Inbound", ["inbound", "outbound"]),
+            "red line",
+        );
+    });
+
+    it("returns empty for missing names", () => {
+        assert.equal(lineNameKey(""), "");
+        assert.equal(lineNameKey(null), "");
+    });
+
+    it("strips bare arrow direction suffixes", () => {
+        assert.equal(lineNameKey("A→B"), "a");
+    });
+
+    it("strips CJK direction tokens as substrings", () => {
+        assert.equal(lineNameKey("快速上り"), "快速");
+    });
+
+    it("strips trailing dash direction suffixes", () => {
+        assert.equal(
+            lineNameKey("Red Line - Inbound", ["inbound", "outbound"]),
+            "red line",
+        );
+    });
+
+    it("strips whole name when only direction token remains", () => {
+        assert.equal(lineNameKey("101 Inbound", ["inbound", "outbound"]), "");
+    });
+
+    it("returns empty for undefined", () => {
+        assert.equal(lineNameKey(undefined), "");
+    });
+
+    it("matches caller tokens case-insensitively", () => {
+        assert.equal(lineNameKey("Mixed Inbound", ["inBound"]), "mixed");
+    });
+
+    it("documents compound dash + caller token suffix behavior", () => {
+        assert.equal(
+            lineNameKey("Red Line - North Inbound", ["inbound", "outbound"]),
+            "red line",
+        );
+    });
+
+    it("handles multiple arrow variants", () => {
+        assert.equal(lineNameKey("A -> B"), "a");
+        assert.equal(lineNameKey("Line A ⇒ B"), "line a");
+    });
+
+    it("preserves hyphenated core names", () => {
+        assert.equal(lineNameKey("A-B Line"), "a-b line");
+    });
+
+    it("strips dash + cardinal direction suffix", () => {
+        assert.equal(lineNameKey("Red Line-North"), "red line");
+    });
+
+    it("NFKC-normalizes fullwidth numbers", () => {
+        assert.equal(lineNameKey("Line １２３"), "line");
+    });
+
+    it("collapses varied whitespace", () => {
+        assert.equal(lineNameKey("Line　A　Inbound"), "line a");
+    });
+});
+
+describe("lineDisplayName", () => {
+    it("strips train numbers and arrows while preserving casing", () => {
+        assert.equal(lineDisplayName("台灣高鐵 603 南港→左營"), "台灣高鐵");
+    });
+
+    it("strips parenthetical direction notes while preserving casing", () => {
+        assert.equal(
+            lineDisplayName("臺北捷運環狀線（大坪林→新北產業園區）"),
+            "臺北捷運環狀線",
+        );
+    });
+
+    it("preserves JR/English casing", () => {
+        assert.equal(lineDisplayName("JR仙山線"), "JR仙山線");
+    });
+
+    it("removes direction tokens while preserving casing", () => {
+        assert.equal(
+            lineDisplayName("Red Line Inbound", ["inbound", "outbound"]),
+            "Red Line",
+        );
+    });
+});
+
+describe("resolveLineColor", () => {
+    it("preserves OSM color when present", () => {
+        assert.equal(
+            resolveLineColor({ color: "#FF0000", name: "X" }),
+            "#FF0000",
+        );
+    });
+
+    it("uses transitOverrides routeColors", () => {
+        assert.equal(
+            resolveLineColor({ name: "台灣高鐵 603" }, { 台灣高鐵: "#C41230" }),
+            "#C41230",
+        );
+    });
+
+    it("falls back to a deterministic hue", () => {
+        const a = resolveLineColor({ name: "Uncolored A" });
+        const b = resolveLineColor({ name: "Uncolored B" });
+        assert.match(a, /^#[0-9a-fA-F]{6}$/);
+        assert.match(b, /^#[0-9a-fA-F]{6}$/);
+        assert.notEqual(a.toLowerCase(), b.toLowerCase());
+    });
+
+    it("looks up color by operator when no line key match", () => {
+        assert.equal(
+            resolveLineColor(
+                { name: "Local 101", operator: "TRA" },
+                { TRA: "#0033A0" },
+            ),
+            "#0033A0",
+        );
+    });
+
+    it("prefers routeColors line key over operator", () => {
+        assert.equal(
+            resolveLineColor(
+                { name: "Special Line", operator: "Op" },
+                { "special line": "#111111", op: "#222222" },
+            ),
+            "#111111",
+        );
+    });
+
+    it("deterministic fallback is stable", () => {
+        const a = resolveLineColor({ name: "Same" });
+        const b = resolveLineColor({ name: "Same" });
+        assert.equal(a, b);
     });
 });

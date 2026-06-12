@@ -517,6 +517,19 @@ async function lintTransit({ distDir, bbox }) {
         }
     }
 
+    // Per-operator route-count sanity bound (guards per-train proliferation).
+    const maxRoutesPerOperator = 250;
+    for (const preset of artifact.presets) {
+        if (
+            preset.kind === "operator" &&
+            preset.routes.length > maxRoutesPerOperator
+        ) {
+            errors.push(
+                `transit.json.gz: operator preset "${preset.id}" has ${preset.routes.length} routes (> ${maxRoutesPerOperator}) — possible per-train proliferation`,
+            );
+        }
+    }
+
     // Linkage sanity: a transit-declaring region must have at least one route
     // and at least one station linked to a route.
     if (!anyRoute) {

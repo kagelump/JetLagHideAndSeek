@@ -20,9 +20,16 @@ import { tmpdir } from "node:os";
 import { gzipSync } from "node:zlib";
 
 import { processOsmRoutes } from "../../../transit/scripts/lib/osmRoutes.mjs";
-import { buildOperatorNormalizer } from "../../../transit/scripts/lib/normalizeOperator.mjs";
-import { createOsmElementId } from "../../../transit/scripts/lib/osmStations.mjs";
+import {
+    buildOperatorNormalizer,
+    splitOperators,
+} from "../../../transit/scripts/lib/normalizeOperator.mjs";
+import {
+    mapOsmNode,
+    dedupeOsmStations,
+} from "../../../transit/scripts/lib/osmStations.mjs";
 import { extractRouteRelationsFromPbf } from "../../../transit/scripts/lib/extractOsmRoutes.mjs";
+import { attachRoutesToPresets } from "../../../transit/scripts/lib/attachRoutes.mjs";
 
 /**
  * Build the transit artifact for a region.
@@ -84,6 +91,12 @@ export async function buildTransitArtifact({
         // 3. Stream, map, collect records.
         console.log(`  Mapping station records...`);
         const records = [];
+        const stats = {
+            skippedNoName: 0,
+            skippedNoId: 0,
+            skippedNonRailway: 0,
+        };
+        const suffixes = region.transitOverrides?.nameSuffixes ?? [];
         const rl = createInterface({
             input: createReadStream(seqPath, { encoding: "utf8" }),
             crlfDelay: Infinity,
@@ -106,19 +119,40 @@ export async function buildTransitArtifact({
             // Only nodes.
             if (feature.properties?.["@type"] !== "node") continue;
 
-            const rec = mapStationRecord(feature);
+            const rec = mapOsmNode(feature, region.id, suffixes, stats);
             if (rec) records.push(rec);
         }
 
         console.log(`  Mapped ${records.length} station records`);
+        if (stats.skippedNonRailway > 0) {
+            console.log(
+                `  Skipped ${stats.skippedNonRailway} non-railway node(s)`,
+            );
+        }
 
         if (records.length === 0) {
             console.log(`  No stations found — skipping transit artifact.`);
             return null;
         }
 
-        // 4. Deduplicate by (name, rounded lat/lon).
-        const deduped = dedupeStations(records);
+        // 4. Deduplicate using the shared transit pipeline dedup.
+        const maxClusterMeters =
+            region.transitOverrides?.maxClusterMeters ?? 150;
+        const { kept: deduped, stats: dedupStats } = dedupeOsmStations(
+            records,
+            maxClusterMeters,
+        );
+        const totalDedupDropped =
+            dedupStats.droppedById +
+            dedupStats.droppedByWikidata +
+            dedupStats.droppedByNameDist;
+        if (totalDedupDropped > 0) {
+            console.log(
+                `  Dedup dropped: ${dedupStats.droppedById} by id, ` +
+                    `${dedupStats.droppedByWikidata} by wikidata, ` +
+                    `${dedupStats.droppedByNameDist} by name+dist`,
+            );
+        }
 
         // Drop stations that fall outside the PBF bbox (with a small slop).
         // Geofabrik extracts occasionally include outlying nodes tagged with
@@ -136,20 +170,20 @@ export async function buildTransitArtifact({
         // 5. Extract and process OSM route relations.
         const routeCacheDir = join(cacheDir, "transit-routes", region.id);
         const stationRecords = recordsInBbox.map((rec) => ({
-            id: createOsmElementId("node", rec.osmId),
+            id: rec.id,
             name: rec.name,
             nameEn: rec.nameEn,
             lat: rec.lat,
             lon: rec.lon,
-            tags: {
-                railway: rec.railway ?? undefined,
-                public_transport: rec.publicTransport ?? undefined,
-            },
+            tags: rec.tags,
         }));
         const localeConfig = {
             nameSuffixes: region.transitOverrides?.nameSuffixes ?? [],
             aliases: region.transitOverrides?.aliases ?? [],
-            maxClusterMeters: region.transitOverrides?.maxClusterMeters ?? 150,
+            maxClusterMeters,
+            routeColors: region.transitOverrides?.routeColors ?? {},
+            operatorNames: region.transitOverrides?.operatorNames ?? {},
+            directionTokens: region.transitOverrides?.directionTokens,
         };
 
         const { relations, nodeCoords } = await extractRouteRelationsFromPbf({
@@ -226,58 +260,6 @@ export async function buildTransitArtifact({
 import { writeFile } from "node:fs/promises";
 
 /**
- * Map an OSM GeoJSON feature to a station record.
- * Simplified version of mapOsmNode from osmStations.mjs.
- */
-function mapStationRecord(feature) {
-    const props = feature.properties ?? {};
-    const geom = feature.geometry;
-
-    if (!geom || (geom.type !== "Point" && !geom.coordinates)) return null;
-
-    const [lon, lat] =
-        geom.type === "Point"
-            ? geom.coordinates
-            : [props.lon ?? 0, props.lat ?? 0];
-
-    const name = props.name?.trim();
-    if (!name) return null;
-
-    const osmId = Number(props["@id"]);
-    if (!Number.isFinite(osmId)) return null;
-
-    // Extract operator from tags.
-    const operator = props.operator?.trim() ?? "other";
-
-    return {
-        osmId,
-        name,
-        nameEn: props["name:en"]?.trim() ?? null,
-        lat,
-        lon,
-        operator,
-        railway: props.railway ?? null,
-        station: props.station ?? null,
-        publicTransport: props.public_transport ?? null,
-    };
-}
-
-/**
- * Deduplicate station records by (name, rounded lat/lon).
- */
-function dedupeStations(records) {
-    const seen = new Set();
-    const result = [];
-    for (const rec of records) {
-        const key = `${rec.name}|${rec.lat.toFixed(4)}|${rec.lon.toFixed(4)}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        result.push(rec);
-    }
-    return result;
-}
-
-/**
  * Build per-operator presets with nested stations, matching the
  * committed transit bundle schema. Each preset is a self-contained
  * HidingZonePreset: it owns its stations, routes, colors, and source.
@@ -288,36 +270,15 @@ function dedupeStations(records) {
  * @param {(raw: string | null | undefined) => string | null} normalizeOp - operator normalizer
  */
 function buildPresets(records, regionId, lines, normalizeOp) {
-    // Map records to station contributions (committed bundle format).
-    const toStationContribution = (rec) => {
-        const sourceId = createOsmElementId("node", rec.osmId);
-        return {
-            id: sourceId,
-            lat: rec.lat,
-            lon: rec.lon,
-            mergeKey: sourceId,
-            name: rec.name,
-            // nameEn is not part of TransitStationContribution; omit.
-            routeIds: [],
-            sourceId,
-        };
-    };
-
     // Group records by normalized operator.
     const byOperator = new Map();
     for (const rec of records) {
-        const op = normalizeOp(rec.operator) || rec.operator || "other";
-        if (!byOperator.has(op)) byOperator.set(op, []);
-        byOperator.get(op).push(rec);
-    }
-
-    // Index routes by normalized operator.
-    const linesByOperator = new Map();
-    for (const line of lines) {
-        const op = normalizeOp(line.operator);
-        if (!op) continue;
-        if (!linesByOperator.has(op)) linesByOperator.set(op, []);
-        linesByOperator.get(op).push(line);
+        const ops = rec.operator
+            ? splitOperators(rec.operator, normalizeOp)
+            : [];
+        const primaryOp = ops[0] || "other";
+        if (!byOperator.has(primaryOp)) byOperator.set(primaryOp, []);
+        byOperator.get(primaryOp).push(rec);
     }
 
     const presets = [];
@@ -326,71 +287,57 @@ function buildPresets(records, regionId, lines, normalizeOp) {
     for (const [operator, opRecords] of byOperator) {
         if (opRecords.length === 0) continue;
 
-        const stations = opRecords.map(toStationContribution);
-        const stationBySourceId = new Map(stations.map((s) => [s.sourceId, s]));
-        const bbox = computeRecordsBbox(opRecords);
-        const defaultColor = operatorColor(operator);
-
-        const preset = {
+        presets.push({
             id: `osm-${regionId}-${slugify(operator)}`,
             label: operator,
             operator,
             kind: "operator",
-            bbox,
-            defaultColor,
+            bbox: computeRecordsBbox(opRecords),
+            defaultColor: "#1f6f78",
             source: {
                 kind: "osm-pack",
                 namespace: `pack:${regionId}`,
             },
             routes: [],
-            stations,
-        };
-
-        // Attach matching routes and populate station routeIds.
-        const matchingLines = linesByOperator.get(operator) || [];
-        for (const line of matchingLines) {
-            preset.routes.push({
-                id: line.id,
-                name: line.name,
-                color: line.color || preset.defaultColor,
-                sourceId: line.sourceId,
-                geometry: line.geometry,
-            });
-
-            for (const memberId of line.memberStationIds) {
-                const station = stationBySourceId.get(memberId);
-                if (station) {
-                    station.routeIds.push(line.id);
-                }
-            }
-        }
-
-        presets.push(preset);
+            stations: opRecords.map(toStationContribution),
+        });
     }
 
     // Coverage preset (all stations, no operator filter).
     if (records.length > 0) {
-        const allStations = records.map(toStationContribution);
-        const allBbox = computeRecordsBbox(records);
-        const defaultColor = "#1f6f78";
-
         presets.push({
             id: `osm-${regionId}-coverage`,
             label: `Other stations (${regionId})`,
             operator: "other",
             kind: "coverage",
-            bbox: allBbox,
-            defaultColor,
+            bbox: computeRecordsBbox(records),
+            defaultColor: "#1f6f78",
             source: {
                 kind: "osm-pack",
                 namespace: `pack:${regionId}`,
             },
             routes: [],
-            stations: allStations,
+            stations: records.map(toStationContribution),
         });
     }
 
+    // Attach routes globally across presets.
+    attachRoutesToPresets(presets, lines, normalizeOp);
+
     return presets;
+}
+
+function toStationContribution(rec) {
+    const sourceId = rec.id;
+    return {
+        id: sourceId,
+        lat: rec.lat,
+        lon: rec.lon,
+        mergeKey: sourceId,
+        name: rec.name,
+        routeIds: [],
+        sourceId,
+    };
 }
 
 /**
@@ -412,11 +359,6 @@ function slugify(name) {
     }
     const hashPart = (hash >>> 0).toString(36);
     return slug ? `${slug}-${hashPart}` : `op${hashPart}`;
-}
-
-function operatorColor() {
-    // Station fallback color, matching the Japan OSM baseline presets.
-    return "#1f6f78";
 }
 
 function computeRecordsBbox(records) {

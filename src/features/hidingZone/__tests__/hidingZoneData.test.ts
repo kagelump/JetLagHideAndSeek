@@ -13,9 +13,11 @@ describe("generated hiding-zone preset data", () => {
 
     it("contains canonical source-adapter transit ids", () => {
         const presets = getHidingZonePresets();
-        for (const preset of presets) {
-            const routeIds = new Set(preset.routes.map((route) => route.id));
+        const allRouteIds = new Set(
+            presets.flatMap((preset) => preset.routes.map((route) => route.id)),
+        );
 
+        for (const preset of presets) {
             expect(["gtfs", "osm"]).toContain(preset.source.kind);
             for (const route of preset.routes) {
                 expect(isCanonicalTransitRouteId(route.id)).toBe(true);
@@ -29,7 +31,7 @@ describe("generated hiding-zone preset data", () => {
                     station.routeIds.every(
                         (routeId) =>
                             isCanonicalTransitRouteId(routeId) &&
-                            routeIds.has(routeId),
+                            allRouteIds.has(routeId),
                     ),
                 ).toBe(true);
             }

@@ -42,12 +42,6 @@ export const TRANSIT_MANIFEST = {
                     kind: "operator",
                 },
                 {
-                    id: "osm-japan-kanto-other",
-                    label: "Other stations in japan-kanto",
-                    bbox: [138.4190544, 35.1276923, 140.8402233, 37.0972316],
-                    kind: "coverage",
-                },
-                {
                     id: "osm-japan-kanto-jr-east",
                     label: "JR East",
                     bbox: [138.4094028, 34.8170415, 140.8921829, 37.0947862],
@@ -413,6 +407,12 @@ export const TRANSIT_MANIFEST = {
                     bbox: [139.6894, 35.738175, 139.737362, 35.75447],
                     kind: "operator",
                 },
+                {
+                    id: "osm-japan-kanto-other",
+                    label: "Other stations in japan-kanto",
+                    bbox: [138.4190544, 35.1276923, 140.8402233, 37.0972316],
+                    kind: "coverage",
+                },
             ],
         },
         {
@@ -420,12 +420,6 @@ export const TRANSIT_MANIFEST = {
             bbox: [134.5, 33.5, 136.5, 35.8],
             file: "japan-kansai.json",
             presets: [
-                {
-                    id: "osm-japan-kansai-other",
-                    label: "Other stations in japan-kansai",
-                    bbox: [134.5064514, 33.5010952, 136.4995209, 35.7735746],
-                    kind: "coverage",
-                },
                 {
                     id: "osm-japan-kansai-opivr2z",
                     label: "四国旅客鉄道",
@@ -630,6 +624,12 @@ export const TRANSIT_MANIFEST = {
                     bbox: [135.1334698, 34.6510241, 135.5645484, 34.7726284],
                     kind: "operator",
                 },
+                {
+                    id: "osm-japan-kansai-other",
+                    label: "Other stations in japan-kansai",
+                    bbox: [134.5064514, 33.5010952, 136.4995209, 35.7735746],
+                    kind: "coverage",
+                },
             ],
         },
         {
@@ -637,12 +637,6 @@ export const TRANSIT_MANIFEST = {
             bbox: [136.2, 34.6, 138.6, 37.8],
             file: "japan-chubu.json",
             presets: [
-                {
-                    id: "osm-japan-chubu-other",
-                    label: "Other stations in japan-chubu",
-                    bbox: [136.2024226, 34.6146895, 138.5932758, 37.3926436],
-                    kind: "coverage",
-                },
                 {
                     id: "osm-japan-chubu-jr-east",
                     label: "JR East",
@@ -817,6 +811,12 @@ export const TRANSIT_MANIFEST = {
                     bbox: [136.849133, 35.0488985, 136.8839367, 35.16942],
                     kind: "operator",
                 },
+                {
+                    id: "osm-japan-chubu-other",
+                    label: "Other stations in japan-chubu",
+                    bbox: [136.2024226, 34.6146895, 138.5932758, 37.3926436],
+                    kind: "coverage",
+                },
             ],
         },
         {
@@ -824,12 +824,6 @@ export const TRANSIT_MANIFEST = {
             bbox: [139.5, 36.9, 142, 41.6],
             file: "japan-tohoku.json",
             presets: [
-                {
-                    id: "osm-japan-tohoku-other",
-                    label: "Other stations in japan-tohoku",
-                    bbox: [139.5175571, 37.3695415, 141.9123209, 41.4422046],
-                    kind: "coverage",
-                },
                 {
                     id: "osm-japan-tohoku-jr-east",
                     label: "JR East",
@@ -920,6 +914,12 @@ export const TRANSIT_MANIFEST = {
                     bbox: [140.8353433, 38.2144503, 140.9484215, 38.3232105],
                     kind: "operator",
                 },
+                {
+                    id: "osm-japan-tohoku-other",
+                    label: "Other stations in japan-tohoku",
+                    bbox: [139.5175571, 37.3695415, 141.9123209, 41.4422046],
+                    kind: "coverage",
+                },
             ],
         },
         {
@@ -927,12 +927,6 @@ export const TRANSIT_MANIFEST = {
             bbox: [130.7, 33.3, 134.5, 36],
             file: "japan-chugoku.json",
             presets: [
-                {
-                    id: "osm-japan-chugoku-other",
-                    label: "Other stations in japan-chugoku",
-                    bbox: [130.8796162, 33.3669866, 134.4441605, 35.6195566],
-                    kind: "coverage",
-                },
                 {
                     id: "osm-japan-chugoku-opivr2z",
                     label: "四国旅客鉄道",
@@ -1047,6 +1041,12 @@ export const TRANSIT_MANIFEST = {
                     bbox: [132.3049223, 34.3117771, 132.304935, 34.3143211],
                     kind: "operator",
                 },
+                {
+                    id: "osm-japan-chugoku-other",
+                    label: "Other stations in japan-chugoku",
+                    bbox: [130.8796162, 33.3669866, 134.4441605, 35.6195566],
+                    kind: "coverage",
+                },
             ],
         },
         {
@@ -1054,12 +1054,6 @@ export const TRANSIT_MANIFEST = {
             bbox: [129.3, 30.9, 132.5, 34.2],
             file: "japan-kyushu.json",
             presets: [
-                {
-                    id: "osm-japan-kyushu-other",
-                    label: "Other stations in japan-kyushu",
-                    bbox: [129.5827639, 31.3433715, 132.1952113, 34.1939059],
-                    kind: "coverage",
-                },
                 {
                     id: "osm-japan-kyushu-op1clvlry",
                     label: "九州旅客鉄道",
@@ -1168,6 +1162,12 @@ export const TRANSIT_MANIFEST = {
                     bbox: [130.1963782, 31.8137835, 130.6217417, 32.504005],
                     kind: "operator",
                 },
+                {
+                    id: "osm-japan-kyushu-other",
+                    label: "Other stations in japan-kyushu",
+                    bbox: [129.5827639, 31.3433715, 132.1952113, 34.1939059],
+                    kind: "coverage",
+                },
             ],
         },
         {
@@ -1175,12 +1175,6 @@ export const TRANSIT_MANIFEST = {
             bbox: [131.9, 32.5, 134.8, 34.5],
             file: "japan-shikoku.json",
             presets: [
-                {
-                    id: "osm-japan-shikoku-other",
-                    label: "Other stations in japan-shikoku",
-                    bbox: [131.919179, 33.161476, 134.5186716, 34.3915286],
-                    kind: "coverage",
-                },
                 {
                     id: "osm-japan-shikoku-opivr2z",
                     label: "四国旅客鉄道",
@@ -1241,6 +1235,12 @@ export const TRANSIT_MANIFEST = {
                     bbox: [132.713119, 32.9325416, 133.1162041, 33.1880575],
                     kind: "operator",
                 },
+                {
+                    id: "osm-japan-shikoku-other",
+                    label: "Other stations in japan-shikoku",
+                    bbox: [131.919179, 33.161476, 134.5186716, 34.3915286],
+                    kind: "coverage",
+                },
             ],
         },
         {
@@ -1248,12 +1248,6 @@ export const TRANSIT_MANIFEST = {
             bbox: [139.5, 41.3, 146, 45.7],
             file: "japan-hokkaido.json",
             presets: [
-                {
-                    id: "osm-japan-hokkaido-other",
-                    label: "Other stations in japan-hokkaido",
-                    bbox: [140.2394631, 41.4422046, 144.6614523, 45.2592524],
-                    kind: "coverage",
-                },
                 {
                     id: "osm-japan-hokkaido-op1n29wec",
                     label: "北海道旅客鉄道",
@@ -1277,6 +1271,12 @@ export const TRANSIT_MANIFEST = {
                     label: "空知鉄道",
                     bbox: [141.7059485, 43.2522774, 141.7061728, 43.2525144],
                     kind: "operator",
+                },
+                {
+                    id: "osm-japan-hokkaido-other",
+                    label: "Other stations in japan-hokkaido",
+                    bbox: [140.2394631, 41.4422046, 144.6614523, 45.2592524],
+                    kind: "coverage",
                 },
             ],
         },

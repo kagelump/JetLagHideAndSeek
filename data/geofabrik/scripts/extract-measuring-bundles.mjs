@@ -38,6 +38,7 @@ import {
 } from "./lib/lineStitching.mjs";
 import {
     polygonDissolve,
+    geosUnaryUnionCoords,
     unionAllCoords,
     buildPolygonGrid,
     clipLineAtPolygon,
@@ -797,7 +798,7 @@ async function main() {
             let mergedPolyCoords = null;
             if (features.length > 1) {
                 const tMerge = Date.now();
-                const mergedCoords = unionAllCoords(
+                const mergedCoords = geosUnaryUnionCoords(
                     features.map((f) => f.geometry.coordinates),
                 );
                 if (mergedCoords.length > 0) {

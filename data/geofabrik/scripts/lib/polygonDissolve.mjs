@@ -16,6 +16,92 @@ import {
     simplifyPolygonFeature,
 } from "./geometryCleanup.mjs";
 
+// ─── GEOS-backed union (used by the packs pipeline; falls back to polyclip-ts) ─
+
+let geosModule = null;
+let wkbModule = null;
+let geosReady = false;
+
+async function initGeosUnion() {
+    if (geosReady) return;
+    try {
+        const [{ initGeosWasm, unaryUnionWKB }, wkb] = await Promise.all([
+            import("../../../../src/shared/geometry/geosWasmNode.ts"),
+            import("../../../../src/shared/geometry/wkb.ts"),
+        ]);
+        await initGeosWasm();
+        geosModule = { unaryUnionWKB };
+        wkbModule = wkb;
+        geosReady = true;
+    } catch (err) {
+        // Under plain Node (no tsx loader) the .ts dynamic imports will fail;
+        // keep polyclip-ts as the fallback.
+        console.warn(
+            `[polygonDissolve] GEOS wasm unavailable (${err.message}); falling back to polyclip-ts`,
+        );
+        geosReady = false;
+    }
+}
+
+await initGeosUnion();
+
+function flattenPolygonCoords(coordsList) {
+    const polygons = [];
+    for (const coords of coordsList) {
+        if (!coords || coords.length === 0) continue;
+        if (
+            Array.isArray(coords[0][0][0]) &&
+            typeof coords[0][0][0][0] === "number"
+        ) {
+            // MultiPolygon coordinates: an array of polygons.
+            for (const poly of coords) polygons.push(poly);
+        } else if (typeof coords[0][0][0] === "number") {
+            // Polygon coordinates: an array of rings.
+            polygons.push(coords);
+        }
+    }
+    return polygons;
+}
+
+/**
+ * Unary-union a list of GeoJSON Polygon/MultiPolygon coordinate arrays using
+ * GEOS (when available) and returns a list of merged coordinate groups.
+ *
+ * Falls back to `unionAllCoords` (polyclip-ts) if GEOS is not available or
+ * the GEOS operation fails.
+ *
+ * @param {number[][][][]|number[][][][][]} coordsList
+ * @returns {number[][][][]} list of MultiPolygon coordinate groups
+ */
+export function geosUnaryUnionCoords(coordsList) {
+    if (coordsList.length <= 1) return coordsList.slice();
+    if (!geosReady || !geosModule || !wkbModule) {
+        return unionAllCoords(coordsList);
+    }
+
+    try {
+        const polygons = flattenPolygonCoords(coordsList);
+        if (polygons.length === 0) return [];
+
+        const wkb = wkbModule.encodeWkb({
+            type: "MultiPolygon",
+            coordinates: polygons,
+        });
+        const outWkb = geosModule.unaryUnionWKB(wkb);
+        if (!outWkb) return unionAllCoords(coordsList);
+
+        const out = wkbModule.decodeWkb(outWkb);
+        if (!out) return unionAllCoords(coordsList);
+
+        return [out.type === "Polygon" ? [out.coordinates] : out.coordinates];
+    } catch (err) {
+        console.warn(
+            `[geosUnaryUnionCoords] GEOS union failed (${err.message}); falling back to polyclip-ts`,
+        );
+        return unionAllCoords(coordsList);
+    }
+}
+
 // ─── Line-at-polygon clipping ────────────────────────────────────────────────
 //
 // Clips LineStrings at dissolved-polygon boundaries so centerlines end
@@ -337,7 +423,8 @@ export function polygonDissolve(
     let emptyTiles = 0;
     let unionTimeMs = 0;
 
-    for (const tileBbox of tiles) {
+    for (let tileIdx = 0; tileIdx < tiles.length; tileIdx++) {
+        const tileBbox = tiles[tileIdx];
         // Find polygons whose bbox intersects this tile.
         const tilePolys = inputFeatures.filter((f) =>
             bboxesIntersect(f.bbox, tileBbox),
@@ -355,10 +442,20 @@ export function polygonDissolve(
         // itself into its own merge group instead of dropping out, so every
         // input polygon still contributes.
         const tUnion = Date.now();
-        const groups = unionAllCoords(
+        const groups = geosUnaryUnionCoords(
             tilePolys.map((f) => f.geometry.coordinates),
         );
-        unionTimeMs += Date.now() - tUnion;
+        const thisUnionMs = Date.now() - tUnion;
+        unionTimeMs += thisUnionMs;
+
+        if (tileIdx % 25 === 0 || thisUnionMs > 1000) {
+            console.log(
+                `  [dissolve] tile ${tileIdx + 1}/${tiles.length} ` +
+                    `[${tileBbox[0].toFixed(2)},${tileBbox[1].toFixed(2)}] ` +
+                    `${tilePolys.length.toLocaleString()} polys → ` +
+                    `${groups.length} group(s) (${thisUnionMs}ms)`,
+            );
+        }
 
         if (groups.length > 1) {
             console.log(

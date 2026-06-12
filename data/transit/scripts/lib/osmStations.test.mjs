@@ -258,4 +258,64 @@ describe("dedupeOsmStations", () => {
         const { kept } = dedupeOsmStations(records);
         assert.equal(kept.length, 2);
     });
+
+    it("strips Taiwan name suffixes for normalization", () => {
+        const feature = {
+            id: 10,
+            geometry: { type: "Point", coordinates: [121.5, 25.05] },
+            properties: {
+                tags: {
+                    name: "中山站",
+                    railway: "station",
+                },
+            },
+        };
+        const st = { skippedNoName: 0, skippedNoId: 0, skippedNonRailway: 0 };
+        const rec = mapOsmNode(feature, "asia-taiwan", ["站", "車站"], st);
+        assert.equal(rec.normalizedName, "中山");
+    });
+
+    it("does not merge different stations sharing a suffix", () => {
+        const records = [
+            {
+                id: "osm:node:100",
+                name: "中山",
+                lat: 25.05,
+                lon: 121.5,
+                normalizedName: "中山",
+            },
+            {
+                id: "osm:node:101",
+                name: "中山路",
+                lat: 25.05,
+                lon: 121.5,
+                normalizedName: "中山路",
+            },
+        ];
+        const { kept } = dedupeOsmStations(records);
+        assert.equal(kept.length, 2);
+    });
+
+    it("merges co-located same-name nodes across operators", () => {
+        const records = [
+            {
+                id: "osm:node:200",
+                name: "New Taipei Industrial Park",
+                lat: 25.06,
+                lon: 121.45,
+                normalizedName: "new taipei industrial park",
+                operator: "Operator A",
+            },
+            {
+                id: "osm:node:201",
+                name: "New Taipei Industrial Park",
+                lat: 25.0601,
+                lon: 121.4501,
+                normalizedName: "new taipei industrial park",
+                operator: "Operator B",
+            },
+        ];
+        const { kept } = dedupeOsmStations(records);
+        assert.equal(kept.length, 1);
+    });
 });

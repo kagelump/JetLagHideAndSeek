@@ -51,7 +51,7 @@ import {
 } from "../../../geofabrik/scripts/lib/lineStitching.mjs";
 import {
     polygonDissolve,
-    unionAllCoords,
+    geosUnaryUnionCoords,
     buildPolygonGrid,
     clipLineAtPolygon,
 } from "../../../geofabrik/scripts/lib/polygonDissolve.mjs";
@@ -795,7 +795,7 @@ export async function buildMeasuringArtifact({
                 let mergedPolyCoords = null;
                 if (features.length > 1) {
                     const tMerge = Date.now();
-                    const mergedCoords = unionAllCoords(
+                    const mergedCoords = geosUnaryUnionCoords(
                         features.map((f) => f.geometry.coordinates),
                     );
                     if (mergedCoords.length > 0) {
