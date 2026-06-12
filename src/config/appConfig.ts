@@ -173,7 +173,7 @@ export const APP_CONFIG = {
          * URL to the v2 packs catalog (GitHub Pages).
          * Served from the custom domain configured on the gh-pages branch.
          */
-        catalogUrl: "https://hinoka.jetlag.org/catalog.json",
+        catalogUrl: "https://jetlag.hinoka.org/catalog.json",
         /** Catalog stale time (30 minutes). */
         catalogStaleTimeMs: 30 * 60 * 1000,
         /** Key for the AsyncStorage installed-packs index (v2). */

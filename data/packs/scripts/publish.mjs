@@ -213,7 +213,7 @@ export async function publish({
     const githubUser = resolvedRepo.split("/")[0];
     const githubRepo = resolvedRepo.split("/")[1];
     const resolvedPagesUrl =
-        pagesUrl ?? `https://hinoka.jetlag.org`;
+        pagesUrl ?? `https://jetlag.hinoka.org`;
     const catalogUrl = `${resolvedPagesUrl}/catalog.json`;
     const noticeUrl = `${resolvedPagesUrl}/NOTICE`;
 

@@ -70,7 +70,7 @@ export async function buildCatalog({
               generatedAt: new Date().toISOString(),
               attributionUrl:
                   attributionUrl ??
-                  `https://hinoka.jetlag.org/NOTICE`,
+                  `https://jetlag.hinoka.org/NOTICE`,
               packs: [],
           };
 
