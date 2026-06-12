@@ -6,7 +6,10 @@ import { haversineDistanceMeters } from "@/shared/geojson";
 import type { AdminDivisionNamePack } from "./adminDivisionConfig";
 import { ADMIN_CATEGORY_INDEX } from "./adminDivisionConfig";
 import type { FetchDebugInfo } from "./fetchDebug";
-import { queryAdminBoundary } from "./adminBoundaryLoader";
+import {
+    queryAdminBoundary,
+    queryAdminBoundaryAsync,
+} from "./adminBoundaryLoader";
 import { regionCoveringPoint } from "./bundledPois";
 import { getCategoryConfig } from "./matchingCategories";
 import {
@@ -634,7 +637,9 @@ export async function findMatchingFeaturesWithIndex(
         const adminLevel =
             options.adminDivisionPack[ADMIN_CATEGORY_INDEX[category]].osmLevel;
         const qT0 = Date.now();
-        const candidates = queryAdminBoundary(lon, lat, adminLevel);
+        const candidates =
+            (await queryAdminBoundaryAsync(lon, lat, adminLevel)) ??
+            queryAdminBoundary(lon, lat, adminLevel);
         const qDurationMs = Date.now() - qT0;
 
         if (candidates !== null) {

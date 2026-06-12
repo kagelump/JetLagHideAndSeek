@@ -24,6 +24,9 @@ export type LineBundle = {
 
 const cache = new Map<string, LineBundle | null>();
 
+/** Categories whose cached result is a full merge (set by loadLineBundle). */
+const mergedCache = new Set<string>();
+
 /**
  * Registered measuring sources from installed packs.
  * Map: category -> [{ packId, path }]
@@ -58,6 +61,7 @@ export function registerMeasuringSource(
         // Invalidate cache entry so next load re-merges.
         if (cache.has(category)) {
             cache.delete(category);
+            mergedCache.delete(category);
             console.log(
                 `[lineBundle] invalidated cache for ${category} due to pack source registration`,
             );
@@ -82,6 +86,7 @@ export function unregisterMeasuringSources(packId: string): void {
             // Invalidate cache entry.
             if (cache.has(category)) {
                 cache.delete(category);
+                mergedCache.delete(category);
                 console.log(
                     `[lineBundle] invalidated cache for ${category} after unregistering ${packId}`,
                 );
@@ -106,6 +111,7 @@ export function __setLineBundleForTest(
 /** Test seam: drop all injected/loaded bundles. */
 export function __clearLineBundlesForTest(): void {
     cache.clear();
+    mergedCache.clear();
 }
 
 /** Test seam: get current pack sources (for assertions). */
@@ -176,11 +182,15 @@ export function getLineBundle(category: MeasuringCategory): LineBundle | null {
 export async function loadLineBundle(
     category: MeasuringCategory,
 ): Promise<LineBundle | null> {
-    // Check if there are pack sources — these need merging even if the
-    // bundled version is cached.
     const hasSources = hasPackSources(category);
 
-    // If no pack sources and already cached, return cached value.
+    // Return cached merge when present (only if set by a previous
+    // loadLineBundle call, not by getLineBundle). The cache is invalidated
+    // by registerMeasuringSource / unregisterMeasuringSources when pack
+    // sources change, so a cache hit here is always fresh.
+    if (hasSources && mergedCache.has(category) && cache.has(category)) {
+        return cache.get(category) ?? null;
+    }
     if (!hasSources && cache.has(category)) {
         return cache.get(category) ?? null;
     }
@@ -192,11 +202,14 @@ export async function loadLineBundle(
         return bundled;
     }
 
-    // Step 1: start from the bundled require() bundle.
+    // Build merged bundle from pristine sources.
+    // Use requirePristineBundle to get the raw bundled data (never the
+    // cached merged result) so that if this is a rebuild after cache
+    // invalidation, we don't duplicate already-merged features.
     let merged: LineBundle | null = null;
 
     if (!isPackOnlyCategory(category)) {
-        const bundled = getLineBundle(category);
+        const bundled = requirePristineBundle(category);
         if (bundled) {
             merged = {
                 ...bundled,
@@ -205,7 +218,7 @@ export async function loadLineBundle(
         }
     }
 
-    // Step 2: merge registered pack sources.
+    // Merge registered pack sources.
     const sources = packSources.get(category);
     if (sources && sources.length > 0) {
         for (const source of sources) {
@@ -252,12 +265,35 @@ export async function loadLineBundle(
 
     // Cache the result (even null — no sources at all).
     cache.set(category, merged);
+    mergedCache.add(category);
     if (merged) {
         console.log(
             `[lineBundle] loadLineBundle(${category}): ${merged.features.length} features after merge`,
         );
     }
     return merged;
+}
+
+/**
+ * Return the pristine bundled bundle for a category — always a fresh
+ * `require()`, never the cached merge. Used by loadLineBundle as the
+ * base for rebuilding after cache invalidation.
+ */
+function requirePristineBundle(category: MeasuringCategory): LineBundle | null {
+    switch (category) {
+        case "coastline":
+            return require("../../../../assets/measuring/coastline.json");
+        case "high-speed-rail":
+            return require("../../../../assets/measuring/high-speed-rail.json");
+        case "body-of-water":
+            return require("../../../../assets/measuring/body-of-water.json");
+        case "admin-1st-border":
+            return require("../../../../assets/measuring/admin-1st-border.json");
+        case "admin-2nd-border":
+            return require("../../../../assets/measuring/admin-2nd-border.json");
+        default:
+            return null;
+    }
 }
 
 /**
@@ -285,15 +321,17 @@ function isPackOnlyCategory(category: MeasuringCategory): boolean {
 }
 
 /**
- * Read a file as text. Uses the platform-native File API in React Native
- * (expo-file-system) or the polyfill in tests.
+ * Read a file as text using the Expo SDK 54 File API.
  */
-async function readFileText(path: string): Promise<string> {
-    // In Jest tests, use fs-like polyfill. In production, expo-file-system.
-    // The actual implementation is injected by the pack installer (T5).
-    // For now, this is a thin wrapper that the test harness can mock.
-    const { readAsStringAsync } = require("expo-file-system");
-    return readAsStringAsync(path, { encoding: "utf8" });
+async function readFileText(fullPath: string): Promise<string> {
+    // Expo SDK 54: use File from expo-file-system (not the legacy entry).
+    // The main entry's readAsStringAsync is a stub that throws.
+    const { File } = require("expo-file-system");
+    // Split fullPath into parent directory + filename for the File constructor.
+    const lastSep = fullPath.lastIndexOf("/");
+    const dir = fullPath.slice(0, lastSep);
+    const name = fullPath.slice(lastSep + 1);
+    return new File(dir, name).text();
 }
 
 /** Categories whose measuring calc draws from additional source bundles. */

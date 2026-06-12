@@ -226,10 +226,12 @@ async function loadPackTransitBundle(
     source: PackTransitSource,
 ): Promise<HidingZonePreset[]> {
     try {
-        const { readAsStringAsync } = await import("expo-file-system");
-        const raw = await readAsStringAsync(source.path, {
-            encoding: "utf8",
-        });
+        const { File } = await import("expo-file-system");
+        const fullPath = source.path;
+        const lastSep = fullPath.lastIndexOf("/");
+        const dir = fullPath.slice(0, lastSep);
+        const name = fullPath.slice(lastSep + 1);
+        const raw = await new File(dir, name).text();
         const bundle = JSON.parse(raw);
         const presets: HidingZonePreset[] =
             bundle.presets?.map((p: { id: string }) => ({

@@ -116,13 +116,13 @@ export function getRegisteredBoundaryPackIds(): string[] {
 
 /**
  * Normalize a string for search: lowercase + NFKD + strip combining marks.
- * Port of the pipeline normalizer in data/packs/scripts/lib/normalizeNames.mjs.
+ * Must exactly match the pipeline normalizer in
+ * data/packs/scripts/lib/normalizeNames.mjs so queries match indexed variants.
+ * Strips only U+0300–U+036F (Combining Diacritical Marks block), not all
+ * \p{Mark} — Japanese dakuten/handakuten (U+3099/U+309A) are preserved.
  */
 export function normalizeForSearch(input: string): string {
-    return input
-        .normalize("NFKD")
-        .replace(/\p{Mark}/gu, "")
-        .toLowerCase();
+    return input.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 // ─── Search ───────────────────────────────────────────────────────────────
@@ -210,11 +210,12 @@ export async function getBoundaryPolygon(
 
     // Lazy-load the polygons JSON file.
     try {
-        // Use expo-file-system to read the polygons file.
-        const { readAsStringAsync } = await import("expo-file-system");
-        const raw = await readAsStringAsync(source.polygonsPath, {
-            encoding: "utf8",
-        });
+        const { File } = await import("expo-file-system");
+        const fullPath = source.polygonsPath;
+        const lastSep = fullPath.lastIndexOf("/");
+        const dir = fullPath.slice(0, lastSep);
+        const name = fullPath.slice(lastSep + 1);
+        const raw = await new File(dir, name).text();
 
         const polygons: Record<string, number[]> = JSON.parse(raw);
         const encoded = polygons[String(relationId)];

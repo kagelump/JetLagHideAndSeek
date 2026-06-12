@@ -7,6 +7,12 @@ const mockRegisterRegion = jest.fn();
 const mockUnregisterRegion = jest.fn();
 const mockRegisterMeasuringSource = jest.fn();
 const mockUnregisterMeasuringSources = jest.fn();
+const mockRegisterBoundarySource = jest.fn();
+const mockUnregisterBoundarySource = jest.fn();
+const mockRegisterTransitSource = jest.fn();
+const mockUnregisterTransitSource = jest.fn();
+const mockRegisterPackAdminLevels = jest.fn();
+const mockUnregisterPackAdminLevels = jest.fn();
 
 jest.mock("../../questions/matching/bundledPois", () => ({
     registerRegion: (...args: unknown[]) => mockRegisterRegion(...args),
@@ -18,6 +24,27 @@ jest.mock("../../questions/measuring/lineBundleLoader", () => ({
         mockRegisterMeasuringSource(...args),
     unregisterMeasuringSources: (...args: unknown[]) =>
         mockUnregisterMeasuringSources(...args),
+}));
+
+jest.mock("../../offline/boundaryStore", () => ({
+    registerBoundarySource: (...args: unknown[]) =>
+        mockRegisterBoundarySource(...args),
+    unregisterBoundarySource: (...args: unknown[]) =>
+        mockUnregisterBoundarySource(...args),
+}));
+
+jest.mock("../../hidingZone/hidingZoneData", () => ({
+    registerTransitSource: (...args: unknown[]) =>
+        mockRegisterTransitSource(...args),
+    unregisterTransitSource: (...args: unknown[]) =>
+        mockUnregisterTransitSource(...args),
+}));
+
+jest.mock("../../offline/adminLevelDefaults", () => ({
+    registerPackAdminLevels: (...args: unknown[]) =>
+        mockRegisterPackAdminLevels(...args),
+    unregisterPackAdminLevels: (...args: unknown[]) =>
+        mockUnregisterPackAdminLevels(...args),
 }));
 
 // fflate: mock gunzipSync; strFromU8 is a pure portable decoder (kept real).
@@ -551,6 +578,9 @@ describe("useRemovePack", () => {
 
         expect(mockUnregisterRegion).toHaveBeenCalledWith(REGION_ID);
         expect(mockUnregisterMeasuringSources).toHaveBeenCalledWith(REGION_ID);
+        expect(mockUnregisterBoundarySource).toHaveBeenCalledWith(REGION_ID);
+        expect(mockUnregisterTransitSource).toHaveBeenCalledWith(REGION_ID);
+        expect(mockUnregisterPackAdminLevels).toHaveBeenCalledWith(REGION_ID);
 
         // Directory delete should have been called.
         expect(MockFile._mockDirDeleteImpl).toHaveBeenCalledWith(PACK_DIR_URI);

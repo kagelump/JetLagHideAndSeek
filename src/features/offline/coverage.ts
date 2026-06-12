@@ -40,6 +40,7 @@ export type CatalogPackInfo = {
 export type InstalledPackInfo = {
     id: string;
     osmSnapshot: string;
+    bbox?: Bbox;
     artifactKinds: ArtifactKind[];
     missingKinds: ArtifactKind[];
 };
@@ -110,15 +111,23 @@ export function getCoverageStatus(
     // 2. Check installed packs.
     const installedCandidates = installedPacks
         .filter((p) => {
-            // We need the pack bbox from catalog or index.
-            // The catalog has bboxes; installed packs may not.
+            // Use catalog bbox first, fall back to installed bbox.
             const catPack = catalogPacks?.find((c) => c.id === p.id);
-            if (!catPack) return false;
-            return bboxesIntersect(playAreaBbox, catPack.bbox);
+            const packBbox = catPack?.bbox ?? p.bbox;
+            if (!packBbox) return false;
+            return bboxesIntersect(playAreaBbox, packBbox);
         })
         .sort((a, b) => {
-            const aArea = packArea(catalogPacks?.find((c) => c.id === a.id));
-            const bArea = packArea(catalogPacks?.find((c) => c.id === b.id));
+            const aCat = catalogPacks?.find((c) => c.id === a.id);
+            const bCat = catalogPacks?.find((c) => c.id === b.id);
+            const aBbox = aCat?.bbox ?? a.bbox;
+            const bBbox = bCat?.bbox ?? b.bbox;
+            const aArea = aBbox
+                ? (aBbox[2] - aBbox[0]) * (aBbox[3] - aBbox[1])
+                : Infinity;
+            const bArea = bBbox
+                ? (bBbox[2] - bBbox[0]) * (bBbox[3] - bBbox[1])
+                : Infinity;
             return aArea - bArea;
         });
 

@@ -93,7 +93,7 @@ async function buildPoiArtifact({ region, pbfPath, distDir }) {
 
     // Import the shared extraction lib from the geofabrik pipeline.
     const { extractPoisFromPbf } = await import(
-        "../../data/geofabrik/scripts/lib/extractPois.mjs"
+        "../../../data/geofabrik/scripts/lib/extractPois.mjs"
     );
 
     const { serialized, columnar } = await extractPoisFromPbf({
@@ -155,14 +155,6 @@ function parseArgs(argv) {
 async function buildTransitArtifactFn({ region, pbfPath, distDir }) {
     const { buildTransitArtifact } = await import("./lib/buildTransit.mjs");
     return buildTransitArtifact({ region, pbfPath, distDir });
-}
-
-/**
- * Stub builder — logs and skips.
- * @returns {Promise<null>}
- */
-async function notImplemented() {
-    return null;
 }
 
 /**
@@ -268,7 +260,9 @@ async function buildRegion(region, distDir, cacheDir, cacheOnly) {
                         `    ${name}.json.gz: ${(h.bytes / 1024).toFixed(1)} KB gz`,
                     );
                 }
-                hashes.measuring = measHashes;
+                // Flatten measuring-X keys into the top-level hashes object.
+                // Consumers (pack-lint, build-catalog, publish) expect flat keys.
+                Object.assign(hashes, measHashes);
 
                 // Record emitted categories for meta.json.
                 if (Array.isArray(result.categories)) {
@@ -294,7 +288,35 @@ async function buildRegion(region, distDir, cacheDir, cacheOnly) {
 
     // Build meta.json.
     const snapshot = await osmSnapshot(pbfPath);
-    const metaBbox = poiColumnar?.bbox ?? region.bbox ?? [0, 0, 0, 0];
+
+    // Derive bbox from POI columnar, config, or osmium fileinfo.
+    let metaBbox = poiColumnar?.bbox ?? region.bbox ?? null;
+    if (!metaBbox || metaBbox.every((v) => v === 0)) {
+        try {
+            const { execFileSync } = await import("node:child_process");
+            const fileinfo = execFileSync("osmium", [
+                "fileinfo",
+                pbfPath,
+                "--no-progress",
+            ]);
+            const text = fileinfo.toString("utf8");
+            const m = text.match(
+                /Bounding box(?:es)?:\s*\(([\d.-]+),\s*([\d.-]+),\s*([\d.-]+),\s*([\d.-]+)\)/,
+            );
+            if (m) {
+                const [west, south, east, north] = [
+                    parseFloat(m[1]), parseFloat(m[2]),
+                    parseFloat(m[3]), parseFloat(m[4]),
+                ];
+                if ([west, south, east, north].every(Number.isFinite)) {
+                    metaBbox = [west, south, east, north];
+                }
+            }
+        } catch {
+            // osmium unavailable — keep fallback.
+        }
+    }
+    if (!metaBbox) metaBbox = [0, 0, 0, 0];
     const matchingCategories = poiColumnar
         ? Object.keys(poiColumnar.categories).sort()
         : [];
@@ -319,7 +341,17 @@ async function buildRegion(region, distDir, cacheDir, cacheOnly) {
     };
 
     const metaPath = resolve(distDir, "meta.json");
-    await writeFile(metaPath, JSON.stringify(meta, null, 2) + "\n");
+    const metaSerialized = JSON.stringify(meta, null, 2) + "\n";
+    await writeFile(metaPath, metaSerialized);
+
+    // Also write gzipped meta so the catalog can reference it.
+    const metaGzipped = gzipSync(metaSerialized, { level: 9 });
+    const metaGzPath = resolve(distDir, "meta.json.gz");
+    await writeFile(metaGzPath, metaGzipped);
+    hashes.meta = computeHashes(metaGzipped, Buffer.from(metaSerialized, "utf8"));
+    console.log(
+        `    meta.json.gz: ${(hashes.meta.bytes / 1024).toFixed(1)} KB gz`,
+    );
     console.log(`  Wrote meta.json`);
 
     // Write hashes.json.

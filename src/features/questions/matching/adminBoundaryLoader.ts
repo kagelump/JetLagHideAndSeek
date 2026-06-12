@@ -234,6 +234,10 @@ export function queryAdminBoundary(
     }
 
     // 2. Try pack sources.
+    // Sync path: only checks entries already in the LRU polygon cache.
+    // For pack-backed queries, callers should use queryAdminBoundaryAsync
+    // which can decode polygons on demand. This sync path exists so the
+    // matching cache can fall back gracefully.
     const levelNum = parseInt(osmLevel, 10);
     if (Number.isFinite(levelNum)) {
         const entries = getAllBoundaryEntries().filter(
@@ -245,19 +249,8 @@ export function queryAdminBoundary(
                 lat <= e.bbox[3],
         );
 
-        for (const entry of entries) {
-            const packId = findBoundaryRelation(entry.relationId)?.packId;
-            if (!packId) continue;
-
-            // Synchronous poly cache check — if not cached, skip (lazy decode
-            // happens on first use; Overpass fallback covers the gap).
-            // The polygon is decoded synchronously from the LRU cache.
-            // For the first query, we need to trigger a pre-load.
-            // See queryAdminBoundaryAsync for the async variant.
-        }
-
-        // For sync queries, we return null if no cached polygon matches.
-        // Callers should use queryAdminBoundaryAsync for pack-backed queries.
+        // Return null to signal "not in cache — call async variant".
+        if (entries.length > 0) return null;
     }
 
     return null;

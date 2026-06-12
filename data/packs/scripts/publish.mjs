@@ -30,14 +30,35 @@ const distBase = resolve(packsDir, "dist");
 /**
  * Thin exec wrapper — replaced in tests.
  *
- * @param {string} cmd - command line
+ * Accepts either a command string (run through the shell for proper
+ * quoting) or an args array ([file, ...args]).
+ *
+ * @param {string | string[]} cmd - command line or args array
  * @param {object} [options]
  * @param {boolean} [options.silent] - suppress stdout
  * @returns {Promise<{stdout: string, stderr: string, exitCode: number}>}
  */
 export async function exec(cmd, options = {}) {
     const { execFile } = await import("node:child_process");
-    const [file, ...args] = cmd.split(/\s+/);
+
+    /** @type {[string, string[]]} */
+    let file, args;
+    if (Array.isArray(cmd)) {
+        [file, ...args] = cmd;
+    } else {
+        // Match shell tokens: handles quoted strings and bare words.
+        const tokens = [];
+        const tokenRe = /"([^"]*)"|'([^']*)'|(\S+)/g;
+        let m;
+        while ((m = tokenRe.exec(cmd)) !== null) {
+            tokens.push(m[1] ?? m[2] ?? m[3]);
+        }
+        if (tokens.length === 0) {
+            throw new Error(`Empty command: ${JSON.stringify(cmd)}`);
+        }
+        [file, ...args] = tokens;
+    }
+
     return new Promise((resolvePromise) => {
         const child = execFile(
             file,
@@ -369,30 +390,17 @@ export async function publish({
                     );
                 } else {
                     // No branch exists anywhere — create orphan.
-                    await mkdir(worktreeDir, { recursive: true });
-                    // Init a new git repo in the worktree dir.
-                    await resolvedExec(`git init ${worktreeDir}`);
-                    // Set up the remote.
-                    const remoteUrl = await resolvedExec(
-                        `git remote get-url origin`,
-                        { silent: true },
-                    );
                     await resolvedExec(
-                        `git -C ${worktreeDir} remote add origin ${remoteUrl.stdout}`,
+                        `git worktree add --orphan gh-pages ${worktreeDir}`,
                     );
-                    // Create an orphan branch.
-                    await resolvedExec(
-                        `git -C ${worktreeDir} checkout --orphan gh-pages`,
-                    );
-                    // Remove any staged files from the empty init.
-                    await resolvedExec(`git -C ${worktreeDir} rm -rf .`, {
-                        silent: true,
-                    });
                 }
             }
         }
 
         // Copy files to worktree.
+        // Ensure the worktree directory exists (git worktree add creates it,
+        // but the test harness may not actually run git).
+        await mkdir(worktreeDir, { recursive: true });
         // catalog.json
         const worktreeDist = resolve(worktreeDir);
         await resolvedExec(

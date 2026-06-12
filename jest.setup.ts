@@ -388,26 +388,68 @@ jest.mock("@/state/queryClient", () => {
     };
 });
 
-// Mock expo-file-system for measuring bundle tests.
+// Mock expo-file-system for offline pack tests.
 // Tests that need specific file content set up a global __fsCache.
 jest.mock("expo-file-system", () => {
     const cache: Record<string, string> = {};
+
+    function resolveFromCache(
+        pathLike: string,
+        name?: string,
+    ): string | undefined {
+        const fullPath = name !== undefined ? `${pathLike}/${name}` : pathLike;
+        const globalCache = (
+            globalThis as unknown as {
+                __fsCache?: Record<string, string>;
+            }
+        ).__fsCache;
+        return globalCache?.[fullPath] ?? cache[fullPath];
+    }
+
     return {
         __esModule: true,
+        // Expo SDK 54 File API — this is the canonical file read path.
+        File: jest
+            .fn()
+            .mockImplementation((dirOrPath: string, name?: string) => {
+                const fullPath =
+                    name !== undefined ? `${dirOrPath}/${name}` : dirOrPath;
+                return {
+                    get exists(): boolean {
+                        return resolveFromCache(fullPath) !== undefined;
+                    },
+                    text: jest.fn(() => {
+                        const content = resolveFromCache(fullPath);
+                        if (content !== undefined) {
+                            return Promise.resolve(content);
+                        }
+                        return Promise.reject(
+                            new Error(
+                                `expo-file-system: file not found: ${fullPath}`,
+                            ),
+                        );
+                    }),
+                    uri: fullPath,
+                };
+            }),
+        // Legacy API kept for backward compat with any remaining callers.
         readAsStringAsync: jest.fn((path: string) => {
-            const globalCache = (
-                globalThis as unknown as {
-                    __fsCache?: Record<string, string>;
-                }
-            ).__fsCache;
-            const resolved = globalCache?.[path] ?? cache[path];
-            if (resolved !== undefined) {
-                return Promise.resolve(resolved);
+            const content = resolveFromCache(path);
+            if (content !== undefined) {
+                return Promise.resolve(content);
             }
             return Promise.reject(
                 new Error(`expo-file-system: file not found: ${path}`),
             );
         }),
+        Directory: {
+            document: "/mock-documents/",
+            cache: "/mock-cache/",
+        },
+        Paths: {
+            document: ["/mock-documents/"],
+            cache: ["/mock-cache/"],
+        },
         documentDirectory: "/mock-documents/",
         cacheDirectory: "/mock-cache/",
     };

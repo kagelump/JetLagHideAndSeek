@@ -13,21 +13,46 @@ import { renderHook } from "@testing-library/react-native";
 import type { LineBundle } from "../lineBundleLoader";
 
 // We must set up the expo-file-system mock before importing the module.
-jest.mock("expo-file-system", () => ({
-    readAsStringAsync: jest.fn(
-        (path: string, _encoding: { encoding?: string }) => {
-            void _encoding;
-            const cache = (
-                globalThis as unknown as { __fsCache?: Record<string, string> }
-            ).__fsCache;
-            if (cache && cache[path] !== undefined) {
-                return Promise.resolve(cache[path]);
+jest.mock("expo-file-system", () => {
+    function resolveFromCache(fullPath: string): string | undefined {
+        const cache = (
+            globalThis as unknown as { __fsCache?: Record<string, string> }
+        ).__fsCache;
+        return cache?.[fullPath];
+    }
+    return {
+        __esModule: true,
+        File: jest
+            .fn()
+            .mockImplementation((dirOrPath: string, name?: string) => {
+                const fullPath =
+                    name !== undefined ? `${dirOrPath}/${name}` : dirOrPath;
+                return {
+                    uri: fullPath,
+                    get exists(): boolean {
+                        return resolveFromCache(fullPath) !== undefined;
+                    },
+                    text: jest.fn(() => {
+                        const content = resolveFromCache(fullPath);
+                        if (content !== undefined) {
+                            return Promise.resolve(content);
+                        }
+                        return Promise.reject(
+                            new Error(`File not found: ${fullPath}`),
+                        );
+                    }),
+                };
+            }),
+        readAsStringAsync: jest.fn((path: string) => {
+            const content = resolveFromCache(path);
+            if (content !== undefined) {
+                return Promise.resolve(content);
             }
             return Promise.reject(new Error(`File not found: ${path}`));
-        },
-    ),
-    documentDirectory: "/mock-documents/",
-}));
+        }),
+        documentDirectory: "/mock-documents/",
+    };
+});
 
 // Set up a global FS cache that the mock reads from.
 const fsCache: Record<string, string> = {};

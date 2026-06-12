@@ -30,6 +30,7 @@ data/geofabrik/dist/
 # Pack pipeline build artifacts (downloaded on demand, not shipped in binary)
 data/packs/cache/
 data/packs/dist/
+data/packs/.gh-pages-worktree/
 
 # jetbrains setting folder
 .idea/

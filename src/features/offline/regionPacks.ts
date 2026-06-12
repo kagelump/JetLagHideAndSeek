@@ -12,7 +12,21 @@ import {
     registerMeasuringSource,
     unregisterMeasuringSources,
 } from "@/features/questions/measuring/lineBundleLoader";
+import {
+    registerBoundarySource,
+    unregisterBoundarySource,
+} from "@/features/offline/boundaryStore";
+import type { BoundaryIndexEntry } from "@/features/offline/boundaryStore";
+import {
+    registerTransitSource,
+    unregisterTransitSource,
+} from "@/features/hidingZone/hidingZoneData";
+import {
+    registerPackAdminLevels,
+    unregisterPackAdminLevels,
+} from "@/features/offline/adminLevelDefaults";
 import { OFFLINE } from "@/config/appConfig";
+import type { Bbox } from "@/shared/geojson";
 import type { Artifact, ArtifactKind, CatalogPack } from "./packCatalog";
 import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
 
@@ -29,6 +43,8 @@ export type InstalledPack = {
     id: string;
     osmSnapshot: string;
     installedAt: string;
+    /** Pack bbox from meta.json — persisted so coverage works without catalog. */
+    bbox?: Bbox;
     artifacts: InstalledArtifact[];
 };
 
@@ -138,16 +154,97 @@ function registerArtifact(
             break;
         }
         case "boundaries": {
-            // TODO(T7): Parse boundaries artifact, write index + polygons,
-            // call registerBoundarySource.
+            // Split the combined artifact: write boundaries-index.json
+            // (small, fast read for search) and boundaries-polygons.json
+            // (large, delta-encoded, lazy-loaded), then delete the combined file.
+            const data = raw as {
+                schemaVersion: number;
+                regionId: string;
+                index: BoundaryIndexEntry[];
+                polygons: Record<string, number[]>;
+                levels: number[];
+            };
+
+            // Write boundaries-index.json.
+            const indexPath = jsonFile(packId, kind, "index");
+            indexPath.create({ overwrite: true });
+            indexPath.write(
+                JSON.stringify({
+                    schemaVersion: data.schemaVersion,
+                    regionId: data.regionId,
+                    levels: data.levels,
+                    index: data.index,
+                }),
+            );
+
+            // Write boundaries-polygons.json.
+            const polygonsPath = jsonFile(packId, kind, "polygons");
+            polygonsPath.create({ overwrite: true });
+            polygonsPath.write(
+                JSON.stringify({
+                    schemaVersion: data.schemaVersion,
+                    regionId: data.regionId,
+                    polygons: data.polygons,
+                }),
+            );
+
+            // Delete the combined boundaries.json (no longer needed).
+            try {
+                jsonFile(packId, kind).delete();
+            } catch {
+                /* best-effort */
+            }
+
+            registerBoundarySource(
+                packId,
+                indexPath.uri,
+                polygonsPath.uri,
+                data.index,
+                data.levels,
+            );
             break;
         }
         case "transit": {
-            // TODO(T9): Register transit presets from the artifact.
+            const data = raw as {
+                presets: {
+                    id: string;
+                    label: string;
+                    bbox: [number, number, number, number];
+                    kind?: string;
+                }[];
+            };
+            const presetSummaries = data.presets.map((p) => ({
+                id: p.id,
+                label: p.label,
+                bbox: p.bbox,
+                kind: p.kind,
+            }));
+            registerTransitSource(
+                packId,
+                jsonFile(packId, kind).uri,
+                presetSummaries,
+            );
             break;
         }
         case "meta": {
-            // meta is metadata only — no registration needed.
+            const data = raw as {
+                label: string;
+                bbox: [number, number, number, number];
+                adminLevels: { matching: number[]; extract: number[] };
+            };
+            if (data.adminLevels?.matching && data.bbox) {
+                registerPackAdminLevels({
+                    packId,
+                    label: data.label ?? packId,
+                    bbox: data.bbox,
+                    matchingLevels: data.adminLevels.matching.slice(0, 4) as [
+                        number,
+                        number,
+                        number,
+                        number,
+                    ],
+                });
+            }
             break;
         }
     }
@@ -158,8 +255,12 @@ function unregisterArtifacts(packId: string): void {
     unregisterRegion(packId);
     // Unregister measuring sources.
     unregisterMeasuringSources(packId);
-    // TODO(T7): unregister boundaries.
-    // TODO(T9): unregister transit.
+    // Unregister boundaries.
+    unregisterBoundarySource(packId);
+    // Unregister transit.
+    unregisterTransitSource(packId);
+    // Unregister admin levels.
+    unregisterPackAdminLevels(packId);
 }
 
 // ─── Install pack ─────────────────────────────────────────────────────────
@@ -233,12 +334,31 @@ async function installPackInternal(
     });
 
     // Persist installed-pack index (mutex-guarded).
+    // Include the pack bbox from meta so coverage works without catalog.
+    let packBbox: Bbox | undefined;
+    try {
+        const metaFile = jsonFile(pack.id, "meta");
+        if (metaFile.exists) {
+            const metaJson = JSON.parse(await metaFile.text());
+            if (
+                Array.isArray(metaJson.bbox) &&
+                metaJson.bbox.length === 4 &&
+                metaJson.bbox.every((v: unknown) => typeof v === "number")
+            ) {
+                packBbox = metaJson.bbox as Bbox;
+            }
+        }
+    } catch {
+        // Best-effort — coverage will fall back to catalog bbox.
+    }
+
     await withIndexMutex(async () => {
         const index = await getInstalledIndex();
         index[pack.id] = {
             id: pack.id,
             osmSnapshot: pack.osmSnapshot,
             installedAt: new Date().toISOString(),
+            bbox: packBbox,
             artifacts: results,
         };
         await setInstalledIndex(index);
@@ -551,15 +671,68 @@ export async function loadInstalledPacks(): Promise<void> {
                         break;
                     }
                     case "boundaries": {
-                        // TODO(T7): Parse boundaries index, register path for polygons.
+                        // Read the index file (small) and register the polygons
+                        // path for lazy loading.
+                        const indexPath = jsonFile(
+                            packId,
+                            artifact.kind,
+                            "index",
+                        );
+                        if (!indexPath.exists) continue;
+                        const indexJson = await indexPath.text();
+                        const indexData = JSON.parse(indexJson);
+                        const polygonsPath = jsonFile(
+                            packId,
+                            artifact.kind,
+                            "polygons",
+                        );
+                        registerBoundarySource(
+                            packId,
+                            indexPath.uri,
+                            polygonsPath.uri,
+                            indexData.index as BoundaryIndexEntry[],
+                            indexData.levels as number[],
+                        );
                         break;
                     }
                     case "transit": {
-                        // TODO(T9): Merge transit manifests.
+                        // Parse the transit artifact to extract preset summaries.
+                        const jsonStr = await file.text();
+                        const data = JSON.parse(jsonStr);
+                        const presetSummaries = (data.presets ?? []).map(
+                            (p: {
+                                id: string;
+                                label: string;
+                                bbox: [number, number, number, number];
+                                kind?: string;
+                            }) => ({
+                                id: p.id,
+                                label: p.label,
+                                bbox: p.bbox,
+                                kind: p.kind,
+                            }),
+                        );
+                        registerTransitSource(
+                            packId,
+                            file.uri,
+                            presetSummaries,
+                        );
                         break;
                     }
                     case "meta": {
-                        // meta is metadata only.
+                        const jsonStr = await file.text();
+                        const data = JSON.parse(jsonStr);
+                        if (data.adminLevels?.matching && data.bbox) {
+                            registerPackAdminLevels({
+                                packId,
+                                label: data.label ?? packId,
+                                bbox: data.bbox,
+                                matchingLevels: data.adminLevels.matching.slice(
+                                    0,
+                                    4,
+                                ) as [number, number, number, number],
+                            });
+                        }
                         break;
                     }
                 }
@@ -627,11 +800,3 @@ export function useRemovePack() {
         },
     });
 }
-
-// ─── Deprecated v1 exports (for backward compat during migration) ─────────
-
-/** @deprecated Use useInstallPack with CatalogPack instead. */
-export const useDownloadPack = useInstallPack;
-
-/** @deprecated Use useRetryPack with CatalogPack instead. */
-export const usePackManifest = null as never;

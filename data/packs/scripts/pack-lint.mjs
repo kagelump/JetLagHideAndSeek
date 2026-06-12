@@ -31,7 +31,7 @@ const distBase = resolve(packsDir, "dist");
  * @param {string} regionId
  * @returns {Promise<string[]>} error messages (empty = valid)
  */
-async function lintRegion(regionId) {
+export async function lintRegion(regionId) {
     const errors = [];
     const distDir = resolve(distBase, regionId);
 
