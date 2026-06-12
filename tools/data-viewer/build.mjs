@@ -7,7 +7,9 @@
  */
 import { mkdirSync, readFileSync, writeFileSync, cpSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { createRequire } from "node:module";
 
+const require = createRequire(import.meta.url);
 const ROOT = resolve(import.meta.dirname, "../..");
 const OUT = join(ROOT, "site/bundle-viewer");
 const DATA_OUT = join(OUT, "data");
@@ -66,8 +68,6 @@ writeJson("poi/japan-kanto.json", poiFeatures);
 console.log(`  poi/japan-kanto.json — ${poiFeatures.features.length} features`);
 
 // --- Transit routes & stations ---
-import { createRequire } from "node:module";
-const require = createRequire(import.meta.url);
 const transitGeojson = require("./lib/transitGeojson.js");
 
 mkdirSync(join(DATA_OUT, "transit"), { recursive: true });
@@ -92,5 +92,9 @@ console.log(
 // --- HTML ---
 cpSync(join(import.meta.dirname, "index-static.html"), join(OUT, "index.html"));
 console.log(`  index.html`);
+
+// --- Shared lib scripts ---
+cpSync(join(import.meta.dirname, "lib"), join(OUT, "lib"), { recursive: true });
+console.log(`  lib/`);
 
 console.log(`\nBuilt to ${OUT}`);

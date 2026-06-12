@@ -10,6 +10,7 @@
         />
         <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
         <script src="lib/columnarToGeojson.js"></script>
+        <script src="lib/sniffKind.js"></script>
         <script src="lib/deltaEncode.js"></script>
         <script src="lib/transitGeojson.js"></script>
         <style>
@@ -905,21 +906,6 @@
 
                     el.appendChild(packDiv);
                 }
-            }
-
-            // ── Payload kind sniffing ─────────────────────────────────────
-
-            function sniffKind(payload) {
-                if (payload == null || typeof payload !== "object") return null;
-                if (payload.categories && payload.totalCount !== undefined)
-                    return "poi";
-                if (payload.category && Array.isArray(payload.features))
-                    return "measuring";
-                if (payload.index && payload.polygons) return "boundaries";
-                if (payload.presets && Array.isArray(payload.presets))
-                    return "transit";
-                if (payload.regionId && payload.adminLevels) return "meta";
-                return null;
             }
 
             // ── Drag-drop ─────────────────────────────────────────────────

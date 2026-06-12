@@ -10,6 +10,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const columnarToGeojson = require("../lib/columnarToGeojson.js");
+const { sniffKind } = require("../lib/sniffKind.js");
 
 // ── Columnar → GeoJSON ─────────────────────────────────────────────────────
 
@@ -103,24 +104,6 @@ describe("columnarToGeojson", () => {
 // ── Payload kind sniffing (for drag-drop) ───────────────────────────────────
 
 describe("payload kind sniffing", () => {
-    /**
-     * Sniff the artifact kind from a parsed JSON payload based on its fields.
-     *
-     * @param {object} payload - parsed JSON
-     * @returns {string} one of: "poi", "measuring", "boundaries", "transit", "meta"
-     */
-    function sniffKind(payload) {
-        if (payload == null || typeof payload !== "object") return null;
-        if (payload.categories && payload.totalCount !== undefined)
-            return "poi";
-        if (payload.category && Array.isArray(payload.features))
-            return "measuring";
-        if (payload.index && payload.polygons) return "boundaries";
-        if (payload.presets && Array.isArray(payload.presets)) return "transit";
-        if (payload.regionId && payload.adminLevels) return "meta";
-        return null;
-    }
-
     it("sniffs POI bundle", () => {
         const kind = sniffKind({
             categories: {

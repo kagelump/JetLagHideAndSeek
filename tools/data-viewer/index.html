@@ -105,21 +105,21 @@
         <div id="legend">
             <div
                 id="pack-header"
-                style="font-weight:600;margin-bottom:4px;display:none"
+                style="font-weight: 600; margin-bottom: 4px; display: none"
             >
-                <label style="display:flex;align-items:center;gap:4px">
+                <label style="display: flex; align-items: center; gap: 4px">
                     Pack
                     <select
                         id="pack-select"
-                        style="font-size:11px;max-width:150px"
+                        style="font-size: 11px; max-width: 150px"
                     ></select>
                 </label>
                 <div
                     id="pack-meta-info"
-                    style="font-size:10px;color:#666"
+                    style="font-size: 10px; color: #666"
                 ></div>
             </div>
-            <hr id="pack-header-hr" style="display:none" />
+            <hr id="pack-header-hr" style="display: none" />
             <div id="japan-sections">
                 <details open>
                     <summary>Lines &amp; Polygons</summary>
@@ -325,10 +325,7 @@
                                 font-weight: normal;
                             "
                         >
-                            <input
-                                type="checkbox"
-                                id="toggle-transit-routes"
-                            />
+                            <input type="checkbox" id="toggle-transit-routes" />
                             <span
                                 class="legend-swatch"
                                 style="
@@ -369,7 +366,7 @@
                     </div>
                 </details>
             </div>
-            <div id="pack-section" style="display:none">
+            <div id="pack-section" style="display: none">
                 <details id="pack-poi-details" open>
                     <summary>Matching (POI)</summary>
                     <div id="pack-poi-section"></div>
@@ -1167,9 +1164,8 @@
                         );
                     }
                 } else {
-                    document.getElementById(
-                        "pack-measuring-details",
-                    ).open = false;
+                    document.getElementById("pack-measuring-details").open =
+                        false;
                 }
 
                 // Boundaries
@@ -1186,9 +1182,8 @@
                         );
                     }
                 } else {
-                    document.getElementById(
-                        "pack-boundaries-details",
-                    ).open = false;
+                    document.getElementById("pack-boundaries-details").open =
+                        false;
                 }
 
                 // Transit
