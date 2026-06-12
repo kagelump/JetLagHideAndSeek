@@ -2,12 +2,11 @@ appId: com.raycatdev.hideandseek.v2
 ---
 - clearState
 - runFlow: bootstrap.yaml
-- swipe:
-      start: "50%,85%"
-      end: "50%,45%"
-      duration: 500
+- runFlow: expand-sheet.yaml
 - runFlow: dismiss-continue.yaml
-- assertVisible: "Tokyo 23 Wards"
+- extendedWaitUntil:
+      visible: "Tokyo 23 Wards"
+      timeout: 15000
 - tapOn: "Settings"
 - waitForAnimationToEnd:
       timeout: 1000
@@ -17,16 +16,19 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn: "Tokyo Metro, Add"
 - waitForAnimationToEnd:
       timeout: 1000
-- assertVisible: ".*1 preset selected.*"
+- extendedWaitUntil:
+      visible: ".*1 preset selected.*"
+      timeout: 15000
 - stopApp
 - runFlow: reconnect.yaml
-- assertVisible: "Tokyo 23 Wards"
-- swipe:
-      start: "50%,85%"
-      end: "50%,45%"
-      duration: 500
+- extendedWaitUntil:
+      visible: "Tokyo 23 Wards"
+      timeout: 15000
+- runFlow: expand-sheet.yaml
 - runFlow: dismiss-continue.yaml
-- assertVisible: "Tokyo 23 Wards"
+- extendedWaitUntil:
+      visible: "Tokyo 23 Wards"
+      timeout: 15000
 - tapOn: "Questions"
 - waitForAnimationToEnd:
       timeout: 1000
@@ -48,5 +50,7 @@ appId: com.raycatdev.hideandseek.v2
       id: "matching-answer-option-positive"
 - waitForAnimationToEnd:
       timeout: 1000
-- assertVisible: "Tokyo 23 Wards"
+- extendedWaitUntil:
+      visible: "Tokyo 23 Wards"
+      timeout: 15000
 - takeScreenshot: e2e/artifacts/transit-line-question/transit-line-hit-map

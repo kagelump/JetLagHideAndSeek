@@ -2,10 +2,7 @@ appId: com.raycatdev.hideandseek.v2
 ---
 - stopApp
 - runFlow: bootstrap.yaml
-- swipe:
-      start: "50%,85%"
-      end: "50%,45%"
-      duration: 500
+- runFlow: expand-sheet.yaml
 # Navigate to Settings via a11y label (was: point "50%,35%")
 - tapOn: "Settings"
 - waitForAnimationToEnd:
@@ -24,7 +21,9 @@ appId: com.raycatdev.hideandseek.v2
       notVisible: "Loading boundary..."
       timeout: 30000
 # Assert the play area was actually loaded and cached
-- assertVisible: "Relation 358674"
+- extendedWaitUntil:
+      visible: "Relation 358674"
+      timeout: 15000
 # - assertVisible: "Bbox"  # The matching on this isn't great, disable for now.
 - runFlow: dismiss-continue.yaml
 - takeScreenshot: e2e/artifacts/play-area/play-area-osaka

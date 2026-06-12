@@ -1,0 +1,6 @@
+appId: com.raycatdev.hideandseek.v2
+---
+- swipe:
+      start: "50%,85%"
+      end: "50%,45%"
+      duration: 500

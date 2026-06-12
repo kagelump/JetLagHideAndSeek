@@ -2,10 +2,7 @@ appId: com.raycatdev.hideandseek.v2
 ---
 - clearState
 - runFlow: bootstrap.yaml
-- swipe:
-      start: "50%,85%"
-      end: "50%,45%"
-      duration: 500
+- runFlow: expand-sheet.yaml
 - tapOn:
       point: "50%,45%"
 - takeScreenshot: e2e/artifacts/smoke/smoke-ios-loaded

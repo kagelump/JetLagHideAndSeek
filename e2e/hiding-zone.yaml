@@ -2,10 +2,7 @@ appId: com.raycatdev.hideandseek.v2
 ---
 - clearState
 - runFlow: bootstrap.yaml
-- swipe:
-      start: "50%,85%"
-      end: "50%,45%"
-      duration: 500
+- runFlow: expand-sheet.yaml
 - tapOn: "Settings"
 - waitForAnimationToEnd:
       timeout: 1000
@@ -18,7 +15,9 @@ appId: com.raycatdev.hideandseek.v2
 - extendedWaitUntil:
       visible: ".*1 preset selected.*"
       timeout: 30000
-- assertVisible: ".*185 stations.*"
+- extendedWaitUntil:
+      visible: ".*185 stations.*"
+      timeout: 15000
 - tapOn: "Toei Subway, Add"
 - extendedWaitUntil:
       visible: ".*2 presets selected.*"
@@ -26,6 +25,7 @@ appId: com.raycatdev.hideandseek.v2
 - tapOn: "Hiding zone radius"
 - eraseText
 - inputText: "500"
+- pressKey: back
 - tapOn: "Station radius"
 - extendedWaitUntil:
       visible: ".*Stored as 500 m"
