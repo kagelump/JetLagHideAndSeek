@@ -518,7 +518,9 @@
                     lines.push("Routes: " + props.routeNames);
                 if (props.operators)
                     lines.push("Operators: " + props.operators);
-                if (props.ringCount != null)
+                if (props.wedgeCount != null)
+                    lines.push("Routes: " + props.wedgeCount);
+                else if (props.ringCount != null)
                     lines.push("Rings: " + props.ringCount);
                 if (props.category)
                     lines.push("Category: " + props.category);
@@ -536,6 +538,34 @@
                         showToast("Copy failed");
                     },
                 );
+            }
+
+            function buildDotsFromWedges(wedgeFc) {
+                var seen = {};
+                var features = [];
+                for (var i = 0; i < wedgeFc.features.length; i++) {
+                    var f = wedgeFc.features[i];
+                    var p = f.properties;
+                    if (p.wedgeIndex === 0 && !seen[p.id]) {
+                        seen[p.id] = true;
+                        features.push({
+                            type: "Feature",
+                            geometry: {
+                                type: "Point",
+                                coordinates: [p.stationLon, p.stationLat],
+                            },
+                            properties: {
+                                color: p.color,
+                                id: p.id,
+                                name: p.name,
+                                routeNames: p.routeNames,
+                                operators: p.operators,
+                                wedgeCount: p.wedgeCount,
+                            },
+                        });
+                    }
+                }
+                return { type: "FeatureCollection", features: features };
             }
 
             var CONFIG_LAYERS = {
@@ -708,11 +738,28 @@
                         },
                     },
                 ],
-                "transit-stations": Array.from({ length: 6 }, function (_, i) {
-                    return {
-                        id: "transit-stations-ring-" + (5 - i),
+                "transit-stations": [
+                    {
+                        id: "transit-stations-wedge",
+                        type: "fill",
+                        minzoom: 11,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "fill-color": [
+                                "to-color",
+                                ["get", "color"],
+                                "#888",
+                            ],
+                            "fill-opacity": 0.9,
+                            "fill-antialias": true,
+                        },
+                    },
+                ],
+                "transit-stations-dot": [
+                    {
+                        id: "transit-stations-dot",
                         type: "circle",
-                        filter: ["==", ["get", "ringIndex"], 5 - i],
+                        maxzoom: 11,
                         layout: { visibility: "none" },
                         paint: {
                             "circle-color": [
@@ -721,12 +768,20 @@
                                 "#888",
                             ],
                             "circle-opacity": 0.95,
-                            "circle-radius": 5 + (5 - i) * 3,
+                            "circle-radius": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                6,
+                                1.5,
+                                10,
+                                3,
+                            ],
                             "circle-stroke-color": "#fff",
-                            "circle-stroke-width": 1.5,
+                            "circle-stroke-width": 1,
                         },
-                    };
-                }),
+                    },
+                ],
             };
 
             async function fetchJson(url) {
@@ -781,6 +836,7 @@
                     }),
                 );
                 var loaded = 0;
+                var transitWedgeData = null;
                 for (var i = 0; i < entries.length; i++) {
                     var id = entries[i][0];
                     var result = results[i];
@@ -791,9 +847,21 @@
                         );
                         continue;
                     }
+                    if (id === "transit-stations") {
+                        transitWedgeData = result.value;
+                    }
                     addSource(id, result.value);
                     addLayers(id, CONFIG_LAYERS[id]);
                     loaded++;
+                }
+                // Derive simple dots from wedge features for low-zoom use.
+                if (transitWedgeData) {
+                    var dotData = buildDotsFromWedges(transitWedgeData);
+                    addSource("transit-stations-dot", dotData);
+                    addLayers(
+                        "transit-stations-dot",
+                        CONFIG_LAYERS["transit-stations-dot"],
+                    );
                 }
                 document.getElementById("loading").classList.add("hidden");
                 console.log(
@@ -828,33 +896,42 @@
                 copyNodeInfo(e.features[0]);
             });
 
-            map.on("mouseenter", "transit-stations-ring-0", function (e) {
-                map.getCanvas().style.cursor = "pointer";
-                var p = e.features[0].properties;
-                var html = "<strong>" + p.name + "</strong>";
-                if (p.operators)
-                    html += "<br><em>" + truncateList(p.operators, 3) + "</em>";
-                if (p.routeNames)
-                    html +=
-                        '<br><span style="color:#666">' +
-                        truncateList(p.routeNames, 4) +
-                        "</span>";
-                html +=
-                    '<br><span style="color:#999;font-size:11px">Ring ' +
-                    (p.ringIndex + 1) +
-                    "/" +
-                    p.ringCount +
-                    "</span>";
-                POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
-            });
-            map.on("mouseleave", "transit-stations-ring-0", function () {
-                map.getCanvas().style.cursor = "";
-                POPUP.remove();
-            });
+            function addStationHover(layerId) {
+                map.on("mouseenter", layerId, function (e) {
+                    map.getCanvas().style.cursor = "pointer";
+                    var p = e.features[0].properties;
+                    var html = "<strong>" + p.name + "</strong>";
+                    if (p.operators)
+                        html +=
+                            "<br><em>" +
+                            truncateList(p.operators, 3) +
+                            "</em>";
+                    if (p.routeNames)
+                        html +=
+                            '<br><span style="color:#666">' +
+                            truncateList(p.routeNames, 4) +
+                            "</span>";
+                    if (p.wedgeCount && p.wedgeCount > 1) {
+                        html +=
+                            '<br><span style="color:#999;font-size:11px">' +
+                            p.wedgeCount +
+                            " routes</span>";
+                    }
+                    POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
+                });
 
-            map.on("click", "transit-stations-ring-0", function (e) {
-                copyNodeInfo(e.features[0]);
-            });
+                map.on("mouseleave", layerId, function () {
+                    map.getCanvas().style.cursor = "";
+                    POPUP.remove();
+                });
+
+                map.on("click", layerId, function (e) {
+                    copyNodeInfo(e.features[0]);
+                });
+            }
+
+            addStationHover("transit-stations-wedge");
+            addStationHover("transit-stations-dot");
 
             function truncateList(str, max) {
                 if (!str) return "";
@@ -915,13 +992,16 @@
                 .getElementById("toggle-transit-stations")
                 .addEventListener("change", function (e) {
                     var vis = e.target.checked ? "visible" : "none";
-                    for (var i = 0; i < 6; i++) {
-                        map.setLayoutProperty(
-                            "transit-stations-ring-" + i,
-                            "visibility",
-                            vis,
-                        );
-                    }
+                    map.setLayoutProperty(
+                        "transit-stations-wedge",
+                        "visibility",
+                        vis,
+                    );
+                    map.setLayoutProperty(
+                        "transit-stations-dot",
+                        "visibility",
+                        vis,
+                    );
                 });
 
             // ── Pack catalog ──────────────────────────────────────────────
@@ -1477,58 +1557,73 @@
                 stationLabel.appendChild(document.createTextNode("Stations"));
                 stationCb.addEventListener("change", function () {
                     var sourceId = "drop-transit-stations";
+                    var dotSourceId = "drop-transit-stations-dot";
                     if (this.checked && !PACK_LOADED_LAYERS[sourceId]) {
                         var stations =
                             window.transitGeojson.getSelectedStations(presets);
                         var fc =
-                            window.transitGeojson.buildStationFeatureCollection(
+                            window.transitGeojson.buildStationWedgeFeatureCollection(
                                 stations,
                             );
+                        // Wedge fill layer (high zoom).
                         addSource(sourceId, fc);
-                        for (var ri = 0; ri < 6; ri++) {
-                            map.addLayer({
-                                id: "drop-transit-stations-ring-" + ri,
-                                type: "circle",
-                                source: sourceId,
-                                filter: ["==", ["get", "ringIndex"], ri],
-                                paint: {
-                                    "circle-color": [
-                                        "to-color",
-                                        ["get", "color"],
-                                        "#888",
-                                    ],
-                                    "circle-opacity": 0.95,
-                                    "circle-radius": [
-                                        "interpolate",
-                                        ["linear"],
-                                        ["zoom"],
-                                        6,
-                                        1.5 + (5 - ri) * 0.6,
-                                        10,
-                                        2.5 + (5 - ri) * 1.0,
-                                        14,
-                                        4 + (5 - ri) * 1.6,
-                                        18,
-                                        6 + (5 - ri) * 2.5,
-                                    ],
-                                    "circle-stroke-color": "#fff",
-                                    "circle-stroke-width": 1.5,
-                                },
-                            });
-                        }
+                        map.addLayer({
+                            id: "drop-transit-stations-wedge",
+                            type: "fill",
+                            source: sourceId,
+                            minzoom: 11,
+                            paint: {
+                                "fill-color": [
+                                    "to-color",
+                                    ["get", "color"],
+                                    "#888",
+                                ],
+                                "fill-opacity": 0.9,
+                                "fill-antialias": true,
+                            },
+                        });
+                        // Dot circle layer (low zoom), derived from wedges.
+                        var dotData = buildDotsFromWedges(fc);
+                        addSource(dotSourceId, dotData);
+                        map.addLayer({
+                            id: "drop-transit-stations-dot",
+                            type: "circle",
+                            source: dotSourceId,
+                            maxzoom: 11,
+                            paint: {
+                                "circle-color": [
+                                    "to-color",
+                                    ["get", "color"],
+                                    "#888",
+                                ],
+                                "circle-opacity": 0.95,
+                                "circle-radius": [
+                                    "interpolate",
+                                    ["linear"],
+                                    ["zoom"],
+                                    6,
+                                    1.5,
+                                    10,
+                                    3,
+                                ],
+                                "circle-stroke-color": "#fff",
+                                "circle-stroke-width": 1,
+                            },
+                        });
                         PACK_LOADED_LAYERS[sourceId] = true;
+                        PACK_LOADED_LAYERS[dotSourceId] = true;
                     } else if (!this.checked) {
                         removeSourceAndLayers(sourceId);
+                        removeSourceAndLayers(dotSourceId);
                         delete PACK_LOADED_LAYERS[sourceId];
+                        delete PACK_LOADED_LAYERS[dotSourceId];
                     }
                 });
                 container.appendChild(stationLabel);
 
-                // Station hover
-                map.on(
-                    "mouseenter",
-                    "drop-transit-stations-ring-0",
-                    function (e) {
+                // Station hover + click for dropped transit.
+                function addDropStationHover(layerId) {
+                    map.on("mouseenter", layerId, function (e) {
                         map.getCanvas().style.cursor = "pointer";
                         var p = e.features[0].properties;
                         var html = "<strong>" + p.name + "</strong>";
@@ -1542,31 +1637,27 @@
                                 '<br><span style="color:#666">' +
                                 truncateList(p.routeNames, 4) +
                                 "</span>";
-                        html +=
-                            '<br><span style="color:#999;font-size:11px">Ring ' +
-                            (p.ringIndex + 1) +
-                            "/" +
-                            p.ringCount +
-                            "</span>";
+                        if (p.wedgeCount && p.wedgeCount > 1) {
+                            html +=
+                                '<br><span style="color:#999;font-size:11px">' +
+                                p.wedgeCount +
+                                " routes</span>";
+                        }
                         POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
-                    },
-                );
-                map.on(
-                    "mouseleave",
-                    "drop-transit-stations-ring-0",
-                    function () {
+                    });
+
+                    map.on("mouseleave", layerId, function () {
                         map.getCanvas().style.cursor = "";
                         POPUP.remove();
-                    },
-                );
+                    });
 
-                map.on(
-                    "click",
-                    "drop-transit-stations-ring-0",
-                    function (e) {
+                    map.on("click", layerId, function (e) {
                         copyNodeInfo(e.features[0]);
-                    },
-                );
+                    });
+                }
+
+                addDropStationHover("drop-transit-stations-wedge");
+                addDropStationHover("drop-transit-stations-dot");
             }
 
             function renderDroppedMeta(payload) {

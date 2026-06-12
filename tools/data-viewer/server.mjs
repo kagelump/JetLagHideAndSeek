@@ -210,7 +210,7 @@ const server = createServer((req, res) => {
                 bundle.presets ?? [],
             );
             const geojson =
-                transitGeojson.buildStationFeatureCollection(stations);
+                transitGeojson.buildAllWedgeFeatureCollections(stations);
             res.writeHead(200, {
                 "Content-Type": "application/json",
                 "Cache-Control": "no-cache",
@@ -392,7 +392,7 @@ const server = createServer((req, res) => {
                     const stations =
                         transitGeojson.getSelectedStations(presets);
                     geojson =
-                        transitGeojson.buildStationFeatureCollection(stations);
+                        transitGeojson.buildAllWedgeFeatureCollections(stations);
                 }
                 res.writeHead(200, {
                     "Content-Type": "application/json",

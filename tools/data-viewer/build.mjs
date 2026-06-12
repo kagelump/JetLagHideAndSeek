@@ -83,7 +83,7 @@ console.log(
 
 const mergedStations = transitGeojson.getSelectedStations(presets);
 const stationFeatures =
-    transitGeojson.buildStationFeatureCollection(mergedStations);
+    transitGeojson.buildStationWedgeFeatureCollection(mergedStations);
 writeJson("transit/stations.json", stationFeatures);
 console.log(
     `  transit/stations.json — ${stationFeatures.features.length} features (${mergedStations.length} stations)`,

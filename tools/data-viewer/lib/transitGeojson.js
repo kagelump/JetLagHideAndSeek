@@ -190,14 +190,149 @@
         return { type: "FeatureCollection", features: features };
     }
 
+    // ── Wedge radii (degrees) — sized per zoom tier ─────────────────
+    var WEDGE_RADIUS_LARGE  = 0.0008;  // ~80 m — good at z11-z12
+    var WEDGE_RADIUS_MEDIUM = 0.00035; // ~35 m — good at z13-z14
+    var WEDGE_RADIUS_SMALL  = 0.00015; // ~15 m — good at z15+
+
+    /**
+     * Build a GeoJSON FeatureCollection of wedge-shaped polygons — one per
+     * route color per station.  Render with a fill layer to produce a
+     * pie-chart effect.  Each wedge carries stationLon/stationLat so
+     * callers can derive a simple dot FeatureCollection from wedgeIndex 0.
+     *
+     * @param {object[]} stations — merged station array from getSelectedStations
+     * @param {number} [radiusDeg] — WEDGE_RADIUS_MEDIUM by default
+     * @returns {{ type: "FeatureCollection", features: object[] }}
+     */
+    function buildStationWedgeFeatureCollection(stations, radiusDeg) {
+        var radius = radiusDeg != null ? radiusDeg : WEDGE_RADIUS_MEDIUM;
+        var features = [];
+
+        for (var si = 0; si < stations.length; si++) {
+            var station = stations[si];
+            var routeColors =
+                station.routeColors && station.routeColors.length > 0
+                    ? station.routeColors
+                    : [STATION_FALLBACK_COLOR];
+            var wedgeAngle = 360 / routeColors.length;
+            var cosLat = Math.cos((station.lat * Math.PI) / 180);
+
+            for (var wi = 0; wi < routeColors.length; wi++) {
+                var startDeg = wi * wedgeAngle;
+                var endDeg = (wi + 1) * wedgeAngle;
+                var arcPts = Math.max(
+                    4,
+                    Math.min(12, Math.ceil(wedgeAngle / 22.5)),
+                );
+
+                // Build a closed polygon ring: center → arc → center.
+                var ring = [[station.lon, station.lat]];
+                for (var ai = 0; ai <= arcPts; ai++) {
+                    var angleRad =
+                        ((startDeg +
+                            (endDeg - startDeg) * (ai / arcPts)) *
+                            Math.PI) /
+                        180;
+                    var dLat = radius * Math.cos(angleRad);
+                    var dLon =
+                        (radius * Math.sin(angleRad)) / cosLat;
+                    ring.push([station.lon + dLon, station.lat + dLat]);
+                }
+                ring.push([station.lon, station.lat]);
+
+                features.push({
+                    type: "Feature",
+                    geometry: { type: "Polygon", coordinates: [ring] },
+                    properties: {
+                        color: routeColors[wi],
+                        id: station.id,
+                        name: station.name,
+                        routeNames: (station.routeNames || []).join(", "),
+                        operators: (station.operators || []).join(", "),
+                        wedgeCount: routeColors.length,
+                        wedgeIndex: wi,
+                        stationLon: station.lon,
+                        stationLat: station.lat,
+                    },
+                });
+            }
+        }
+
+        return { type: "FeatureCollection", features: features };
+    }
+
+    /**
+     * Build all three wedge sizes at once so the client can layer them
+     * with staggered minzoom/maxzoom for consistent on-screen sizing.
+     *
+     * @param {object[]} stations
+     * @returns {{ large: FeatureCollection, medium: FeatureCollection,
+     *             small: FeatureCollection }}
+     */
+    function buildAllWedgeFeatureCollections(stations) {
+        return {
+            large:  buildStationWedgeFeatureCollection(stations, WEDGE_RADIUS_LARGE),
+            medium: buildStationWedgeFeatureCollection(stations, WEDGE_RADIUS_MEDIUM),
+            small:  buildStationWedgeFeatureCollection(stations, WEDGE_RADIUS_SMALL),
+        };
+    }
+
+    /**
+     * Build a GeoJSON FeatureCollection of simple point dots — one per
+     * station, using the first route color.  Intended for low-zoom use
+     * where wedge polygons would be sub-pixel.
+     *
+     * @param {object[]} stations — merged station array from getSelectedStations
+     * @returns {{ type: "FeatureCollection", features: object[] }}
+     */
+    function buildStationDotFeatureCollection(stations) {
+        var features = [];
+
+        for (var si = 0; si < stations.length; si++) {
+            var station = stations[si];
+            var color =
+                station.routeColors && station.routeColors.length > 0
+                    ? station.routeColors[0]
+                    : STATION_FALLBACK_COLOR;
+
+            features.push({
+                type: "Feature",
+                geometry: {
+                    type: "Point",
+                    coordinates: [station.lon, station.lat],
+                },
+                properties: {
+                    color: color,
+                    id: station.id,
+                    name: station.name,
+                    routeNames: (station.routeNames || []).join(", "),
+                    operators: (station.operators || []).join(", "),
+                    wedgeCount:
+                        station.routeColors && station.routeColors.length > 0
+                            ? station.routeColors.length
+                            : 1,
+                },
+            });
+        }
+
+        return { type: "FeatureCollection", features: features };
+    }
+
     // ── Exports ──────────────────────────────────────────────────────────
     var api = {
         STATION_FALLBACK_COLOR: STATION_FALLBACK_COLOR,
+        WEDGE_RADIUS_LARGE: WEDGE_RADIUS_LARGE,
+        WEDGE_RADIUS_MEDIUM: WEDGE_RADIUS_MEDIUM,
+        WEDGE_RADIUS_SMALL: WEDGE_RADIUS_SMALL,
         sourcePriority: sourcePriority,
         getStationRouteColors: getStationRouteColors,
         getSelectedStations: getSelectedStations,
         buildRouteFeatureCollection: buildRouteFeatureCollection,
         buildStationFeatureCollection: buildStationFeatureCollection,
+        buildStationWedgeFeatureCollection: buildStationWedgeFeatureCollection,
+        buildAllWedgeFeatureCollections: buildAllWedgeFeatureCollections,
+        buildStationDotFeatureCollection: buildStationDotFeatureCollection,
     };
 
     // Node.js / CommonJS
