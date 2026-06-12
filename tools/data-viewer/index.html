@@ -1120,14 +1120,15 @@
                 labelEl.appendChild(cb);
                 labelEl.appendChild(document.createTextNode("Show all"));
                 // Defer: after DOM insertion, sync individual checkboxes
-                // to match the master without triggering lazy loads.
+                // to match the master and fire change events so layers load.
                 setTimeout(function () {
                     var checkboxes = sectionEl.querySelectorAll(
                         'input[type="checkbox"]',
                     );
                     for (var i = 0; i < checkboxes.length; i++) {
-                        if (checkboxes[i] !== cb) {
+                        if (checkboxes[i] !== cb && !checkboxes[i].checked) {
                             checkboxes[i].checked = true;
+                            checkboxes[i].dispatchEvent(new Event("change"));
                         }
                     }
                 }, 0);
