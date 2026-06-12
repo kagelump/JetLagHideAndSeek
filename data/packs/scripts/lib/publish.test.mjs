@@ -409,7 +409,7 @@ describe("publish script", () => {
         assert.equal(result.tag, "packs-2026-06-12");
         assert.equal(
             result.catalogUrl,
-            "https://custom-org.github.io/JetLagHideAndSeek/catalog.json",
+            "https://hinoka.jetlag.org/catalog.json",
         );
 
         process.exitCode = 0;

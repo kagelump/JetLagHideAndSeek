@@ -171,10 +171,12 @@ async function lintBoundaries(distDir, distBase, regionId) {
         // Read meta to get expected levels.
         const metaPath = resolve(distDir, "meta.json");
         let metaLevels = null;
+        let metaMatchingLevels = null;
         if (existsSync(metaPath)) {
             try {
                 const meta = JSON.parse(await readFile(metaPath, "utf8"));
                 metaLevels = meta.adminLevels?.extract ?? null;
+                metaMatchingLevels = meta.adminLevels?.matching ?? null;
             } catch {
                 /* ignore */
             }
@@ -187,6 +189,28 @@ async function lintBoundaries(distDir, distBase, regionId) {
                 if (!extractSet.has(lv)) {
                     errors.push(
                         `boundaries.json.gz: level ${lv} not in adminLevels.extract (${JSON.stringify(metaLevels)})`,
+                    );
+                }
+            }
+        }
+
+        // Warn when a matching level has zero index rows (misconfiguration).
+        if (
+            metaMatchingLevels &&
+            Array.isArray(metaMatchingLevels) &&
+            Array.isArray(artifact.index)
+        ) {
+            const levelCounts = {};
+            for (const entry of artifact.index) {
+                const lv = entry.adminLevel;
+                if (lv != null)
+                    levelCounts[lv] = (levelCounts[lv] ?? 0) + 1;
+            }
+            for (const lv of metaMatchingLevels) {
+                if (!levelCounts[lv]) {
+                    console.warn(
+                        `  WARNING: matching level ${lv} has zero boundary index rows. ` +
+                            `Consider removing it from adminLevels.matching in regions.yaml.`,
                     );
                 }
             }

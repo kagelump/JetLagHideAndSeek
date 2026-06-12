@@ -7,7 +7,7 @@ regions:
       regionPath: [Europe, Netherlands]
       pbfUrl: https://download.geofabrik.de/europe/netherlands-latest.osm.pbf
       adminLevels:
-          matching: [4, 7, 9, 10] # admin-1st..4th
+          matching: [4, 8, 9, 10] # admin-1st..4th (level 7 has zero relations in NL)
           extract: [4, 7, 8, 9, 10] # superset
       artifacts: [poi, measuring, boundaries, transit]
     - id: asia-taiwan

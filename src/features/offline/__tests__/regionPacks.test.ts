@@ -77,14 +77,18 @@ jest.mock("expo-file-system", () => {
     const mockDirDeleteImpl = jest.fn();
 
     const dirExistsStore = new Map<string, boolean>();
+    const fileExistsStore = new Map<string, boolean>();
 
     function makeFileInstance(
         uri: string,
         overrides?: Record<string, unknown>,
     ) {
+        const exists = fileExistsStore.has(uri)
+            ? fileExistsStore.get(uri)
+            : true;
         return {
             uri,
-            exists: true,
+            exists,
             info: (opts?: unknown) => mockFileInfoFn(uri, opts),
             bytes: () => mockFileBytesFn(uri),
             text: () => mockFileTextFn(uri),
@@ -137,6 +141,7 @@ jest.mock("expo-file-system", () => {
         _mockDirCreateImpl: jest.Mock;
         _mockDirDeleteImpl: jest.Mock;
         _dirExistsStore: Map<string, boolean>;
+        _fileExistsStore: Map<string, boolean>;
     };
 
     FakeFile.downloadFileAsync = jest.fn();
@@ -150,6 +155,7 @@ jest.mock("expo-file-system", () => {
     FakeFile._mockDirCreateImpl = mockDirCreateImpl;
     FakeFile._mockDirDeleteImpl = mockDirDeleteImpl;
     FakeFile._dirExistsStore = dirExistsStore;
+    FakeFile._fileExistsStore = fileExistsStore;
 
     const FakeDir = jest.fn((...args: (string | { uri: string })[]) => {
         const parts = args.map((a) => (typeof a === "string" ? a : a.uri));
@@ -266,6 +272,7 @@ type MockFile = jest.Mock & {
     _mockDirCreateImpl: jest.Mock;
     _mockDirDeleteImpl: jest.Mock;
     _dirExistsStore: Map<string, boolean>;
+    _fileExistsStore: Map<string, boolean>;
 };
 const MockFile = File as any as MockFile;
 
@@ -287,6 +294,7 @@ beforeEach(async () => {
     await AsyncStorage.clear();
 
     MockFile._dirExistsStore.clear();
+    MockFile._fileExistsStore.clear();
 
     // Pre-create so pack dir doesn't need explicit creation.
     MockFile._dirExistsStore.set(PACK_DIR_URI, false);
@@ -781,5 +789,69 @@ describe("loadInstalledPacks", () => {
         await loadInstalledPacks();
         expect(mockRegisterRegion).not.toHaveBeenCalled();
         expect(mockRegisterMeasuringSource).not.toHaveBeenCalled();
+    });
+
+    // N1: After install, boundaries.json is deleted (split into index +
+    // polygons). On restart the exists guard must not skip boundaries.
+    it("loads boundaries on restart after split (N1)", async () => {
+        const BOUNDARIES_INDEX_URI = `${PACK_DIR_URI}/boundaries-index.json`;
+        const BOUNDARIES_POLYGONS_URI = `${PACK_DIR_URI}/boundaries-polygons.json`;
+        const BOUNDARIES_JSON_URI = `${PACK_DIR_URI}/boundaries.json`;
+
+        const boundaryIndex = {
+            schemaVersion: 1,
+            regionId: REGION_ID,
+            levels: [4, 8, 9, 10],
+            index: [
+                {
+                    relationId: 12345,
+                    name: "Test Boundary",
+                    adminLevel: 8,
+                    centroid: [5.0, 52.0],
+                    bbox: [4.0, 51.0, 6.0, 53.0],
+                    areaKm2: 1000,
+                },
+            ],
+        };
+
+        await seedInstalledIndex({
+            [REGION_ID]: {
+                id: REGION_ID,
+                osmSnapshot: "2026-06-08",
+                installedAt: "2026-06-10T00:00:00Z",
+                artifacts: [
+                    {
+                        kind: "boundaries",
+                        bytes: 5000,
+                        status: "installed",
+                    },
+                ],
+            },
+        });
+
+        // Simulate post-split state: boundaries.json does NOT exist,
+        // but boundaries-index.json + boundaries-polygons.json DO exist.
+        MockFile._fileExistsStore.set(BOUNDARIES_JSON_URI, false);
+        MockFile._fileExistsStore.set(BOUNDARIES_INDEX_URI, true);
+        MockFile._fileExistsStore.set(BOUNDARIES_POLYGONS_URI, true);
+
+        // text() returns index data for the index file.
+        MockFile._mockFileTextFn.mockImplementation((uri: string) => {
+            if (uri === BOUNDARIES_INDEX_URI) {
+                return Promise.resolve(JSON.stringify(boundaryIndex));
+            }
+            return Promise.resolve(JSON.stringify(RAW_REGION));
+        });
+
+        await loadInstalledPacks();
+
+        // Boundaries should be registered from the split files.
+        expect(mockRegisterBoundarySource).toHaveBeenCalledWith(
+            REGION_ID,
+            BOUNDARIES_INDEX_URI,
+            BOUNDARIES_POLYGONS_URI,
+            boundaryIndex.index,
+            boundaryIndex.levels,
+        );
     });
 });

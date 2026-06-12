@@ -213,7 +213,7 @@ export async function publish({
     const githubUser = resolvedRepo.split("/")[0];
     const githubRepo = resolvedRepo.split("/")[1];
     const resolvedPagesUrl =
-        pagesUrl ?? `https://${githubUser}.github.io/${githubRepo}`;
+        pagesUrl ?? `https://hinoka.jetlag.org`;
     const catalogUrl = `${resolvedPagesUrl}/catalog.json`;
     const noticeUrl = `${resolvedPagesUrl}/NOTICE`;
 
@@ -348,8 +348,8 @@ export async function publish({
         distDir: resolvedDistDir,
     });
 
-    const catalogOutPath = resolve(packsDir, "dist", "catalog.json");
-    await mkdir(resolve(packsDir, "dist"), { recursive: true });
+    const catalogOutPath = resolve(resolvedDistDir, "catalog.json");
+    await mkdir(resolvedDistDir, { recursive: true });
     await writeFile(catalogOutPath, JSON.stringify(catalog, null, 2) + "\n");
     console.log(`  Wrote ${catalogOutPath}`);
 

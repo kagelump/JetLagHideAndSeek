@@ -111,11 +111,17 @@ export async function buildTransitArtifact({ region, pbfPath, distDir }) {
             return null;
         }
 
-        // 4. Deduplicate by mergeKey.
+        // 4. Deduplicate by (name, rounded lat/lon).
         const deduped = dedupeStations(records);
 
-        // 5. Build presets per operator.
-        const { presets, stations, routes } = buildPresets(deduped, region.id);
+        // 5. Build per-operator presets with nested stations (matching
+        //    the committed transit bundle schema, not manifest summaries).
+        const presets = buildPresets(deduped, region.id);
+
+        const totalStations = presets.reduce(
+            (sum, p) => sum + p.stations.length,
+            0,
+        );
 
         // 6. Build attribution.
         const attribution = {
@@ -124,16 +130,12 @@ export async function buildTransitArtifact({ region, pbfPath, distDir }) {
             url: "https://www.openstreetmap.org/copyright",
         };
 
-        // 7. Build bundle (same schema as committed transit bundles).
+        // 7. Build bundle (same schema as committed transit bundles:
+        //    top-level attribution + presets; stations are nested inside
+        //    each preset).
         const generatedAt = new Date().toISOString();
         const bundle = {
-            schemaVersion: 1,
-            regionId: region.id,
-            generatedAt,
-            source: region.pbfUrl ?? `packs:${region.id}`,
             attribution,
-            stations,
-            routes,
             presets,
         };
 
@@ -144,7 +146,7 @@ export async function buildTransitArtifact({ region, pbfPath, distDir }) {
 
         console.log(
             `    transit.json.gz: ${(gzipped.length / 1024).toFixed(1)} KB gz, ` +
-                `${stations.length} stations, ${presets.length} presets`,
+                `${totalStations} stations, ${presets.length} presets`,
         );
 
         return {
@@ -213,62 +215,79 @@ function dedupeStations(records) {
 }
 
 /**
- * Build per-operator presets and a coverage preset from station records.
+ * Build per-operator presets with nested stations, matching the
+ * committed transit bundle schema. Each preset is a self-contained
+ * HidingZonePreset: it owns its stations, routes, colors, and source.
  */
 function buildPresets(records, regionId) {
-    // Map stations to bundle format.
-    const stations = records.map((rec, i) => ({
-        mergeKey: `osm-${rec.osmId}`,
-        routeIds: [],
-        // Derive color from operator name (simple hash).
-        color: operatorColor(rec.operator),
+    // Map records to station contributions (committed bundle format).
+    const toStationContribution = (rec) => ({
+        id: `osm:${rec.osmId}`,
         lat: rec.lat,
         lon: rec.lon,
+        mergeKey: `osm:${rec.osmId}`,
         name: rec.name,
-        nameEn: rec.nameEn,
-        railway: rec.railway,
-    }));
+        // nameEn is not part of TransitStationContribution; omit.
+        routeIds: [],
+    });
 
-    // Group by operator.
+    // Group records by operator.
     const byOperator = new Map();
-    for (const st of stations) {
-        const op =
-            records.find((r) => `osm-${r.osmId}` === st.mergeKey)?.operator ??
-            "other";
+    for (const rec of records) {
+        const op = rec.operator ?? "other";
         if (!byOperator.has(op)) byOperator.set(op, []);
-        byOperator.get(op).push(st);
+        byOperator.get(op).push(rec);
     }
 
-    // Build per-operator presets.
     const presets = [];
-    for (const [operator, opStations] of byOperator) {
-        if (opStations.length === 0) continue;
 
-        const bbox = computeStationsBbox(opStations);
+    // Per-operator presets.
+    for (const [operator, opRecords] of byOperator) {
+        if (opRecords.length === 0) continue;
+
+        const stations = opRecords.map(toStationContribution);
+        const bbox = computeRecordsBbox(opRecords);
+        const defaultColor = operatorColor(operator);
+
         presets.push({
-            id: `osm-${operatorSlug(operator)}`,
+            id: `osm:${operatorSlug(operator)}`,
             label: operator,
+            operator,
             kind: "operator",
             bbox,
-            stationCount: opStations.length,
-            routeCount: 0,
+            defaultColor,
+            source: {
+                kind: "osm-pack",
+                namespace: `pack:${regionId}`,
+            },
+            routes: [],
+            stations,
         });
     }
 
-    // Coverage preset (all stations).
-    if (stations.length > 0) {
-        const allBbox = computeStationsBbox(stations);
+    // Coverage preset (all stations, no operator filter).
+    if (records.length > 0) {
+        const allStations = records.map(toStationContribution);
+        const allBbox = computeRecordsBbox(records);
+        const defaultColor = "#888888";
+
         presets.push({
-            id: "osm-coverage",
+            id: `osm:${regionId}-coverage`,
             label: `Other stations (${regionId})`,
+            operator: "other",
             kind: "coverage",
             bbox: allBbox,
-            stationCount: stations.length,
-            routeCount: 0,
+            defaultColor,
+            source: {
+                kind: "osm-pack",
+                namespace: `pack:${regionId}`,
+            },
+            routes: [],
+            stations: allStations,
         });
     }
 
-    return { presets, stations, routes: [] };
+    return presets;
 }
 
 function operatorSlug(name) {
@@ -288,16 +307,16 @@ function operatorColor(operator) {
     return `hsl(${h}, 60%, 45%)`;
 }
 
-function computeStationsBbox(stations) {
+function computeRecordsBbox(records) {
     let west = Infinity,
         south = Infinity,
         east = -Infinity,
         north = -Infinity;
-    for (const st of stations) {
-        if (st.lon < west) west = st.lon;
-        if (st.lon > east) east = st.lon;
-        if (st.lat < south) south = st.lat;
-        if (st.lat > north) north = st.lat;
+    for (const r of records) {
+        if (r.lon < west) west = r.lon;
+        if (r.lon > east) east = r.lon;
+        if (r.lat < south) south = r.lat;
+        if (r.lat > north) north = r.lat;
     }
     return [west, south, east, north];
 }

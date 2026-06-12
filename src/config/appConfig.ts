@@ -171,11 +171,9 @@ export const APP_CONFIG = {
     offline: {
         /**
          * URL to the v2 packs catalog (GitHub Pages).
-         * This is deterministic even before the one-time Pages setup in T4:
-         * https://<github-user>.github.io/JetLagHideAndSeek/catalog.json
+         * Served from the custom domain configured on the gh-pages branch.
          */
-        catalogUrl:
-            "https://ryantseng.github.io/JetLagHideAndSeek/catalog.json",
+        catalogUrl: "https://hinoka.jetlag.org/catalog.json",
         /** Catalog stale time (30 minutes). */
         catalogStaleTimeMs: 30 * 60 * 1000,
         /** Key for the AsyncStorage installed-packs index (v2). */

@@ -91,30 +91,35 @@ export async function loadHidingZonePresets(
     // Load any bundles not yet fetched.
     const promises: Promise<HidingZonePreset[]>[] = [];
     for (const bundle of bundles) {
-        if (bundleCache.has(bundle.id)) {
-            const cached = bundleCache.get(bundle.id);
+        // Pack sources share one file per pack — use packId as the cache
+        // key so in-flight markers and results are consistent (N5).
+        const packSource = findPackSourceByBundleId(bundle.id);
+        const cacheKey = packSource ? packSource.packId : bundle.id;
+
+        if (bundleCache.has(cacheKey)) {
+            const cached = bundleCache.get(cacheKey);
             if (cached) promises.push(Promise.resolve(cached));
             // null = in-flight; skip.
             continue;
         }
 
-        // Mark in-flight.
-        bundleCache.set(bundle.id, null);
+        // Mark in-flight (all pack presets share one marker).
+        bundleCache.set(cacheKey, null);
+
+        if (packSource) {
+            // Load all presets for this pack once.
+            promises.push(loadPackTransitBundle(packSource));
+            continue;
+        }
 
         const loader = transitBundleLoaders[bundle.id];
         if (!loader) {
-            // Pack source — load from filesystem via the pack path.
-            const packSource = findPackSourceByBundleId(bundle.id);
-            if (packSource) {
-                promises.push(loadPackTransitBundle(packSource));
-                continue;
-            }
             if (__DEV__) {
                 console.warn(
                     `[hidingZoneData] No loader for bundle "${bundle.id}" — skipping.`,
                 );
             }
-            bundleCache.set(bundle.id, []);
+            bundleCache.set(cacheKey, []);
             continue;
         }
 
@@ -122,7 +127,7 @@ export async function loadHidingZonePresets(
             loader().then((mod) => {
                 const presets =
                     (mod as { presets: HidingZonePreset[] }).presets ?? [];
-                bundleCache.set(bundle.id, presets);
+                bundleCache.set(cacheKey, presets);
                 return presets;
             }),
         );

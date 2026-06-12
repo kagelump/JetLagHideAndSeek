@@ -648,12 +648,26 @@ export async function loadInstalledPacks(): Promise<void> {
             if (artifact.status !== "installed") continue;
 
             try {
-                const file = jsonFile(packId, artifact.kind, artifact.category);
-                if (!file.exists) continue;
+                // Boundaries are split into index + polygons files during
+                // install; the combined file is intentionally deleted.
+                // The case handler below checks for the index file instead.
+                if (artifact.kind !== "boundaries") {
+                    const checkFile = jsonFile(
+                        packId,
+                        artifact.kind,
+                        artifact.category,
+                    );
+                    if (!checkFile.exists) continue;
+                }
 
                 switch (artifact.kind) {
                     case "poi": {
                         // Parse POI at startup (small and columnar).
+                        const file = jsonFile(
+                            packId,
+                            artifact.kind,
+                            artifact.category,
+                        );
                         const jsonStr = await file.text();
                         const raw = JSON.parse(jsonStr);
                         registerRegion(packId, raw);
@@ -662,6 +676,11 @@ export async function loadInstalledPacks(): Promise<void> {
                     case "measuring": {
                         // Register the file path only — lazy loading (T3 contract).
                         if (artifact.category) {
+                            const file = jsonFile(
+                                packId,
+                                artifact.kind,
+                                artifact.category,
+                            );
                             registerMeasuringSource(
                                 packId,
                                 artifact.category as MeasuringCategory,
@@ -697,7 +716,12 @@ export async function loadInstalledPacks(): Promise<void> {
                     }
                     case "transit": {
                         // Parse the transit artifact to extract preset summaries.
-                        const jsonStr = await file.text();
+                        const transitFile = jsonFile(
+                            packId,
+                            artifact.kind,
+                            artifact.category,
+                        );
+                        const jsonStr = await transitFile.text();
                         const data = JSON.parse(jsonStr);
                         const presetSummaries = (data.presets ?? []).map(
                             (p: {
@@ -714,13 +738,18 @@ export async function loadInstalledPacks(): Promise<void> {
                         );
                         registerTransitSource(
                             packId,
-                            file.uri,
+                            transitFile.uri,
                             presetSummaries,
                         );
                         break;
                     }
                     case "meta": {
-                        const jsonStr = await file.text();
+                        const metaFile = jsonFile(
+                            packId,
+                            artifact.kind,
+                            artifact.category,
+                        );
+                        const jsonStr = await metaFile.text();
                         const data = JSON.parse(jsonStr);
                         if (data.adminLevels?.matching && data.bbox) {
                             registerPackAdminLevels({

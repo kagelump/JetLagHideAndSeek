@@ -2,7 +2,8 @@ import type { MultiLineString } from "geojson";
 
 export type TransitSource =
     | { kind: "gtfs"; namespace: string }
-    | { kind: "osm"; namespace: "openstreetmap" };
+    | { kind: "osm"; namespace: "openstreetmap" }
+    | { kind: "osm-pack"; namespace: string };
 
 export type TransitRoute = {
     color: string;
@@ -44,4 +45,5 @@ export type TransitStation = {
  */
 export function sourcePriority(source: TransitSource): number {
     return source.kind === "gtfs" ? 0 : 1;
+    // osm-pack and osm both get priority 1 (GTFS wins over OSM data)
 }
