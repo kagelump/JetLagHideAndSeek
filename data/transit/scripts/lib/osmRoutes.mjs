@@ -12,6 +12,7 @@ import { haversineM } from "./grid.mjs";
 import { detectImplausibleJumps, repairStopOrder } from "./stopOrderRepair.mjs";
 import { buildOperatorNormalizer } from "./normalizeOperator.mjs";
 import { stitchWays, attachStationsAlongLine } from "./wayStitch.mjs";
+import { simplifyGeometry } from "./simplifyGeometry.mjs";
 
 // ─── Route relation processing ─────────────────────────────────────────────
 
@@ -699,7 +700,14 @@ function buildLine(
     if (ways && wayMembers.length > 0) {
         const stitched = stitchWays(wayMembers, ways, nodeCoords);
         if (stitched.coordinates.length > 0) {
-            geometry = stitched;
+            const simplifyMeters =
+                localeConfig.simplifyMeters != null
+                    ? localeConfig.simplifyMeters
+                    : localeConfig.transitOverrides?.simplifyMeters ?? 11;
+            geometry =
+                simplifyMeters > 0
+                    ? simplifyGeometry(stitched, simplifyMeters)
+                    : stitched;
 
             // Spatial attach: pull in stations near the stitched track that
             // aren't already resolved as stop members. This is what gives
