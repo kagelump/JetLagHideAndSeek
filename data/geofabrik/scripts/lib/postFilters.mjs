@@ -52,6 +52,14 @@ export function applyPostFilter(category, tags) {
                 tags.admin_level.length > 0
             );
         default:
+            // Handle parameterized admin-<N> post-filters
+            // (e.g. "admin-8" for Dutch municipalities).
+            if (category.postFilter?.startsWith("admin-")) {
+                const level = parseInt(category.postFilter.slice(6), 10);
+                if (Number.isFinite(level)) {
+                    return adminLevelPostFilter(tags, level);
+                }
+            }
             return true;
     }
 }

@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-12T05:17:43.940Z",
+    "generatedAt": "2026-06-12T05:37:03.810Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -109,15 +109,15 @@
             "regionPath": ["Europe", "Netherlands"],
             "bbox": [2.936095, 50.74753, 7.230455, 54.01786],
             "osmSnapshot": "2026-06-12",
-            "totalBytes": 8030907,
+            "totalBytes": 8555638,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-poi.json.gz",
                     "bytes": 207400,
-                    "md5": "f8aa8a8dc3b6802785fe60fbfac8185d",
-                    "sha256": "c3fc5cf3e4dabc146f81bb2a3a25d95c5711a25e4011c54f26d79ac3b051f3dd",
+                    "md5": "024f9375c68d7829c6299fae4eece3bf",
+                    "sha256": "39ed6ab20fa787faa723a77573b3822858e298467583864f4ec4bf3449d2d1c1",
                     "schemaVersion": 1
                 },
                 {
@@ -125,8 +125,8 @@
                     "category": "coastline",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-coastline.json.gz",
                     "bytes": 145281,
-                    "md5": "cfd7d0bb97fa350b4a40fb4fc68ee693",
-                    "sha256": "e33c96869a0af3ecb4a899c41390485d3fe983edc8962c0f57ce2f33c49e4578",
+                    "md5": "a35502b63143e342f4019c48ae9e7499",
+                    "sha256": "dfb37b967232e6004aee6226992d00d42c5085617cd6821f5a9ddb336d012531",
                     "schemaVersion": 1
                 },
                 {
@@ -134,17 +134,17 @@
                     "category": "high-speed-rail",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-high-speed-rail.json.gz",
                     "bytes": 2824,
-                    "md5": "b42db47d4097ea59f1630a1a5998068a",
-                    "sha256": "2135b2afb04743d3606c6c1e57714766abea67e4a0e3974922acd249945a46db",
+                    "md5": "065ccf3a71f1db669482381cbfedc21f",
+                    "sha256": "2afa4f757d00ebaf87b02b5041ffab8bd56a3e593ff1c43c8e39e84cd7214782",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "body-of-water",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-body-of-water.json.gz",
-                    "bytes": 4434345,
-                    "md5": "d3b7b5c6341c2f8fe8d25c55cc2bc077",
-                    "sha256": "bdc9e3ec6f462c65573a33242d5be6327559c5fe6bb31a71dc3bd5b455f0c278",
+                    "bytes": 4434344,
+                    "md5": "ec82cd6029945806c6058fd2cd449a4b",
+                    "sha256": "758b9303f726799eac79494f5e46ad10ba2a6cfadb5836cf3f0ffd24e107305a",
                     "schemaVersion": 1
                 },
                 {
@@ -152,8 +152,17 @@
                     "category": "admin-1st-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-admin-1st-border.json.gz",
                     "bytes": 109045,
-                    "md5": "bb781fedad97847208d6ccb3abee1232",
-                    "sha256": "c398b6cfce16394fb8a7c7e0176c080a749c394b800a8636cd2c50b446f24f6a",
+                    "md5": "b6540dd982244799adcb0c0f982f8eae",
+                    "sha256": "cbda4656bbb305130fe5c3b4954aa97db8e9e6ceef7e190e69ecc5478cba97a7",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-admin-2nd-border.json.gz",
+                    "bytes": 524727,
+                    "md5": "be7d9a93e8204679c3acda332064ed58",
+                    "sha256": "9aeac476aaa75fc998d469c4d1650152e8678d3f0eea723d727c59f95c781c27",
                     "schemaVersion": 1
                 },
                 {
@@ -161,8 +170,8 @@
                     "category": "admin-boundaries",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-admin-boundaries.json.gz",
                     "bytes": 1983544,
-                    "md5": "49cf6f9be72526ebf88303b43660b428",
-                    "sha256": "5994092719dede595e12d94756809e968efe806c144f51b8cdce8ba6414e0553",
+                    "md5": "9a303427f4a8403340eeea22ca550d7d",
+                    "sha256": "7950f44bc20013fbaa2a0815f7cf02a8db109d0274578ce20c74d7ba7c1ffd7d",
                     "schemaVersion": 1
                 },
                 {
@@ -170,8 +179,8 @@
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-boundaries.json.gz",
                     "bytes": 1044575,
-                    "md5": "e9fdf345ccffdee6960c7ea03094468e",
-                    "sha256": "4b48114275f8a4d6db3ee60456c2838112b03f81440410b8d3ddc77de452519e",
+                    "md5": "4602de3ac8c55c68967d60d40a84755d",
+                    "sha256": "6058ccdcfafcda3ca6d5d0ece01c8e216594c0dcc2c2310d77398c3c387e0c2f",
                     "schemaVersion": 1
                 },
                 {
@@ -187,9 +196,9 @@
                     "kind": "meta",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-meta.json.gz",
-                    "bytes": 472,
-                    "md5": "1d824cd775992d121e7965b2f3e327c8",
-                    "sha256": "df1df9a8771481d7f0bbb39750d8a57c264df1a46ae80e2839d91df2c8ebc185",
+                    "bytes": 477,
+                    "md5": "a2defa6545392b3c6c22cebaea296fa8",
+                    "sha256": "73faf599b3259e02736eeb78fa5417518ad516e882c5992bb07ee0ba70cc8c97",
                     "schemaVersion": 1
                 }
             ]

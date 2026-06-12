@@ -226,8 +226,19 @@ export async function buildMeasuringArtifact({
             // Determine osmium filter expression.
             const osmiumFilter = overrides.osmiumFilter ?? catDef.osmiumFilter;
 
-            // Determine post-filter.
-            const postFilterName = overrides.postFilter ?? catDef.postFilter;
+            // Determine post-filter.  Admin-border categories use the
+            // region's actual matching levels, not hardcoded 4/7 (R3).
+            let postFilterName = overrides.postFilter ?? catDef.postFilter;
+            if (catDef.key === "admin-1st-border" && !overrides.postFilter) {
+                const lv = region.adminLevels?.matching?.[0];
+                if (lv != null) postFilterName = `admin-${lv}`;
+            } else if (
+                catDef.key === "admin-2nd-border" &&
+                !overrides.postFilter
+            ) {
+                const lv = region.adminLevels?.matching?.[1];
+                if (lv != null) postFilterName = `admin-${lv}`;
+            }
             const effectiveCatDef = { ...catDef, postFilter: postFilterName };
 
             // --- Step 1: osmium tags-filter ---
