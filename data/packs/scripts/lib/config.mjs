@@ -227,6 +227,18 @@ export function validateConfig(cfg, configPath = "regions.yaml") {
                         );
                     }
                 }
+                if (region.transitOverrides.excludeUsage !== undefined) {
+                    if (
+                        !Array.isArray(region.transitOverrides.excludeUsage) ||
+                        region.transitOverrides.excludeUsage.some(
+                            (u) => typeof u !== "string" || u.trim() === "",
+                        )
+                    ) {
+                        errors.push(
+                            `${prefix}: "transitOverrides.excludeUsage" must be an array of non-empty strings`,
+                        );
+                    }
+                }
             }
         }
     }

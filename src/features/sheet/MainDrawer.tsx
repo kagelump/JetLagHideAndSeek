@@ -266,7 +266,7 @@ function renderRouteContent(
         case "play-area":
             return (
                 <ChildSheetShell onBack={() => onNavigate("settings")}>
-                    <PlayAreaScreen />
+                    <PlayAreaScreen onNavigate={onNavigate} />
                 </ChildSheetShell>
             );
         case "hiding-zone":

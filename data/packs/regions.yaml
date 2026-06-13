@@ -25,6 +25,7 @@ regions:
       transitOverrides:
           nameSuffixes: ["站", "車站"]
           maxClusterMeters: 150
+          excludeUsage: [tourism]
           useRailwayInfrastructure: true
           railwayAttachMeters: 120
           routeColors:

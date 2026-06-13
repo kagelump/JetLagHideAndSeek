@@ -4,7 +4,7 @@ import {
     setAccessToken,
     UserLocation,
 } from "@maplibre/maplibre-react-native";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ComponentType } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
@@ -178,6 +178,16 @@ export function NativeMap({
         fitPlayArea();
         markAppMapReady();
     }, [fitPlayArea, markAppMapReady]);
+
+    // Auto-fit the camera when the play area changes (user selects a new area).
+    const isFirstRender = useRef(true);
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        fitPlayArea();
+    }, [playArea.osmId, fitPlayArea]);
 
     const pinDrag = usePinDrag({
         activePinKey,

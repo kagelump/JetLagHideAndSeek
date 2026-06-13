@@ -88,13 +88,25 @@ export async function buildTransitArtifact({
             { stdio: "inherit" },
         );
 
-        // 3. Stream, map, collect records.
+        // 3. Build a set of station node ids that belong to ways/relations
+        // tagged with an excluded usage (e.g., usage=tourism for museum-only
+        // lines like the Taiwan Railway Museum track). The excluded tag lives
+        // on the way/relation, not on the station node, so we discover it by
+        // reading member refs.
+        const excludeUsage = region.transitOverrides?.excludeUsage ?? [];
+        const excludedNodeIds =
+            excludeUsage.length > 0
+                ? await loadExcludedNodeIds(pbfPath, tmpDir, excludeUsage)
+                : new Set();
+
+        // 4. Stream, map, collect records.
         console.log(`  Mapping station records...`);
         const records = [];
         const stats = {
             skippedNoName: 0,
             skippedNoId: 0,
             skippedNonRailway: 0,
+            skippedExcludedUsage: 0,
         };
         const suffixes = region.transitOverrides?.nameSuffixes ?? [];
         const rl = createInterface({
@@ -119,6 +131,12 @@ export async function buildTransitArtifact({
             // Only nodes.
             if (feature.properties?.["@type"] !== "node") continue;
 
+            const nodeId = feature.properties?.["@id"];
+            if (excludedNodeIds.has(nodeId)) {
+                stats.skippedExcludedUsage++;
+                continue;
+            }
+
             const rec = mapOsmNode(feature, region.id, suffixes, stats);
             if (rec) records.push(rec);
         }
@@ -127,6 +145,11 @@ export async function buildTransitArtifact({
         if (stats.skippedNonRailway > 0) {
             console.log(
                 `  Skipped ${stats.skippedNonRailway} non-railway node(s)`,
+            );
+        }
+        if (stats.skippedExcludedUsage > 0) {
+            console.log(
+                `  Skipped ${stats.skippedExcludedUsage} station node(s) on excluded-usage ways/relations`,
             );
         }
 
@@ -465,6 +488,81 @@ function filterRecordsByBbox(records, bbox) {
             r.lat >= south - SLOP &&
             r.lat <= north + SLOP,
     );
+}
+
+/**
+ * Build a set of OSM node ids that are members of ways or relations whose
+ * `usage` tag matches one of the excluded values (e.g., `tourism`).
+ *
+ * Station nodes on museum/tourism-only tracks are otherwise indistinguishable
+ * from real stations, so we look at the way/relation they belong to.
+ *
+ * @param {string} pbfPath - source PBF
+ * @param {string} tmpDir - temp directory for intermediates
+ * @param {string[]} excludeUsage - usage values to exclude
+ * @returns {Promise<Set<number>>} numeric OSM node ids
+ */
+async function loadExcludedNodeIds(pbfPath, tmpDir, excludeUsage) {
+    const filters = [];
+    for (const usage of excludeUsage) {
+        filters.push(`w/usage=${usage}`, `r/usage=${usage}`);
+    }
+
+    const tourismPbf = join(tmpDir, "excluded-usage.osm.pbf");
+    console.log(`  Finding stations on excluded-usage ways/relations...`);
+    execFileSync(
+        "osmium",
+        ["tags-filter", pbfPath, ...filters, "-o", tourismPbf, "-O"],
+        { stdio: "inherit" },
+    );
+
+    const oplPath = join(tmpDir, "excluded-usage.opl");
+    execFileSync(
+        "osmium",
+        ["cat", tourismPbf, "-f", "opl", "-o", oplPath, "-O"],
+        {
+            stdio: "inherit",
+        },
+    );
+
+    const ids = new Set();
+    const rl = createInterface({
+        input: createReadStream(oplPath, { encoding: "utf8" }),
+        crlfDelay: Infinity,
+    });
+
+    // OPL member refs for ways:  Nn1,n2,n3
+    // OPL member refs for relations:  Mn1@role,n2@role,w3@role,...
+    const wayRefRe = /\bN((?:n\d+,?)+)/;
+    const relRefRe = /\bM((?:[nw]\d+(?:@[^,]*)?,?)+)/;
+
+    for await (const line of rl) {
+        if (!line.startsWith("w") && !line.startsWith("r")) continue;
+
+        const wayMatch = wayRefRe.exec(line);
+        if (wayMatch) {
+            for (const ref of wayMatch[1].split(",")) {
+                if (ref.startsWith("n")) {
+                    ids.add(parseInt(ref.slice(1), 10));
+                }
+            }
+        }
+
+        const relMatch = relRefRe.exec(line);
+        if (relMatch) {
+            for (const ref of relMatch[1].split(",")) {
+                // Each ref looks like n123@role or w123@role
+                const type = ref[0];
+                const idPart = ref.slice(1).split("@", 1)[0];
+                if (type === "n") {
+                    ids.add(parseInt(idPart, 10));
+                }
+            }
+        }
+    }
+
+    console.log(`    excluded ${ids.size} station node(s)`);
+    return ids;
 }
 
 /**

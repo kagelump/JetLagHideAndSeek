@@ -9,6 +9,7 @@ import {
     AppBottomSheet,
     type BottomSheetHandle,
 } from "@/features/sheet/AppBottomSheet";
+import { SheetSnapProvider } from "@/features/sheet/SheetSnapContext";
 import { FabButton } from "@/features/sheet/FabButton";
 import {
     SHEET_SNAP_INDEX,
@@ -78,6 +79,10 @@ export function MapAppScreen() {
         bottomSheetRef.current?.snapToIndex(SHEET_SNAP_INDEX.medium);
     }, []);
 
+    const handleSheetSnap = useCallback((index: number) => {
+        bottomSheetRef.current?.snapToIndex(index);
+    }, []);
+
     return (
         <View style={styles.screen}>
             <StatusBar style="dark" />
@@ -95,11 +100,13 @@ export function MapAppScreen() {
                 accessibilityHidden={sheetIndex !== -1}
                 onPress={handleFabPress}
             />
-            <AppBottomSheet
-                ref={bottomSheetRef}
-                onIndexChange={handleSheetIndexChange}
-                onRouteChange={handleSheetRouteChange}
-            />
+            <SheetSnapProvider snapToIndex={handleSheetSnap}>
+                <AppBottomSheet
+                    ref={bottomSheetRef}
+                    onIndexChange={handleSheetIndexChange}
+                    onRouteChange={handleSheetRouteChange}
+                />
+            </SheetSnapProvider>
         </View>
     );
 }

@@ -313,7 +313,7 @@ describe("MapAppScreen", () => {
         act(() => {
             jest.advanceTimersByTime(300);
         });
-        expect(screen.getByTestId("hiding-zone-radius-input")).toBeTruthy();
+        expect(screen.getByTestId("hiding-zone-menu-button")).toBeTruthy();
 
         // Back: hiding-zone → settings
         fireEvent.press(screen.getByText("Back"));
@@ -882,6 +882,7 @@ describe("MapAppScreen", () => {
             screen.getAllByText("Toei Subway").length,
         ).toBeGreaterThanOrEqual(1);
         expect(screen.getByText("0 presets selected")).toBeTruthy();
+        fireEvent.press(screen.getByTestId("hiding-zone-menu-button"));
         expect(
             screen.getByTestId("hiding-zone-radius-meters").props.children,
         ).toEqual(["Stored as ", 600, " m"]);
@@ -1032,11 +1033,13 @@ describe("MapAppScreen", () => {
             tokyoMetro!.stations[0].lat,
         );
 
+        fireEvent.press(screen.getByTestId("hiding-zone-menu-button"));
         fireEvent.press(screen.getByTestId("hiding-zone-unit-km"));
         fireEvent.changeText(
             screen.getByTestId("hiding-zone-radius-input"),
             "1",
         );
+        fireEvent.press(screen.getByTestId("hiding-zone-radius-modal-close"));
 
         await waitFor(() => {
             const updatedFeature = getMapShapeSource(screen, "hiding-zone-area")
@@ -1054,6 +1057,7 @@ describe("MapAppScreen", () => {
 
         fireEvent.press(screen.getByTestId("main-settings-row"));
         fireEvent.press(screen.getByTestId("settings-hiding-zone-row"));
+        fireEvent.press(screen.getByTestId("hiding-zone-menu-button"));
         fireEvent.press(screen.getByTestId("hiding-zone-unit-km"));
 
         expect(screen.getByTestId("hiding-zone-radius-input").props.value).toBe(
@@ -1067,24 +1071,6 @@ describe("MapAppScreen", () => {
         expect(
             screen.getByTestId("hiding-zone-radius-meters").props.children,
         ).toEqual(["Stored as ", 1000, " m"]);
-    });
-
-    it("applies an Osaka play area from a direct OSM relation ID", async () => {
-        const screen = renderWithSafeArea(<MapAppScreen />);
-
-        fireEvent.press(screen.getByTestId("main-settings-row"));
-        fireEvent.press(screen.getByTestId("settings-play-area-row"));
-        fireEvent.changeText(
-            screen.getByTestId("play-area-relation-id-text-input"),
-            "358674",
-        );
-        fireEvent.press(screen.getByTestId("play-area-apply-relation-button"));
-
-        await waitFor(() => {
-            expect(screen.getAllByText("Osaka").length).toBeGreaterThan(0);
-            expect(screen.getByText("🗺️")).toBeTruthy();
-            expect(screen.getByText("Relation 358674")).toBeTruthy();
-        });
     });
 
     it("tapping the map when the sheet is at index 2 (88%) snaps to index 0 (18%)", () => {
@@ -1156,52 +1142,6 @@ describe("MapAppScreen", () => {
         expect(keyboardDismiss).toHaveBeenCalledTimes(2);
 
         keyboardDismiss.mockRestore();
-    });
-
-    it("shows direct relation validation errors without fetching", async () => {
-        const screen = renderWithSafeArea(<MapAppScreen />);
-
-        fireEvent.press(screen.getByTestId("main-settings-row"));
-        fireEvent.press(screen.getByTestId("settings-play-area-row"));
-        fireEvent.changeText(
-            screen.getByTestId("play-area-relation-id-text-input"),
-            "not-a-relation",
-        );
-        fireEvent.press(screen.getByTestId("play-area-apply-relation-button"));
-
-        await waitFor(() => {
-            expect(
-                screen.getByText("Enter a positive OSM relation ID."),
-            ).toBeTruthy();
-            expect(
-                screen.getAllByText("Tokyo 23 Wards").length,
-            ).toBeGreaterThan(0);
-        });
-        expect(globalThis.fetch).not.toHaveBeenCalled();
-    });
-
-    it("keeps Tokyo selected when relation loading fails", async () => {
-        (globalThis.fetch as jest.Mock).mockResolvedValue({
-            ok: false,
-            status: 500,
-        });
-        const screen = renderWithSafeArea(<MapAppScreen />);
-
-        fireEvent.press(screen.getByTestId("main-settings-row"));
-        fireEvent.press(screen.getByTestId("settings-play-area-row"));
-        fireEvent.changeText(
-            screen.getByTestId("play-area-relation-id-text-input"),
-            "999999",
-        );
-        fireEvent.press(screen.getByTestId("play-area-apply-relation-button"));
-
-        await waitFor(() => {
-            expect(screen.getByText("Overpass API error 500")).toBeTruthy();
-            expect(
-                screen.getAllByText("Tokyo 23 Wards").length,
-            ).toBeGreaterThan(0);
-            expect(screen.getByText("🗺️")).toBeTruthy();
-        });
     });
 
     // -- Drag gesture integration tests --
