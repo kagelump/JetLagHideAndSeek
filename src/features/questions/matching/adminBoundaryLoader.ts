@@ -1,16 +1,11 @@
 /**
- * Lazy-loader and grid-accelerated point-in-polygon index for the offline
- * admin-boundaries bundle (`assets/measuring/admin-boundaries.json`).
- *
- * The bundle contains ALL `boundary=administrative` relations (levels 2–11)
- * from the Kantō+margin extract.  At query time we filter by a single OSM
- * admin_level (e.g. "7" for admin-2nd / municipalities) so the index only
- * tests polygons that could match.
+ * Grid-accelerated point-in-polygon index for admin-boundary polygons.
  *
  * ## Architecture
  *
- * 1. Bundle is lazy-loaded via `require()` on first call (Metro bundles it
- *    with the app; no network needed).
+ * 1. Polygons come from installed offline packs via the boundary store.
+ *    The legacy bundled `require()` path has been removed — only the
+ *    test-injection seam (`setAdminBoundaryBundle`) remains for unit tests.
  * 2. A lightweight uniform grid index is built per requested `admin_level`
  *    and cached.  Each cell stores the indices of polygons whose outer bbox
  *    overlaps that cell.
@@ -19,8 +14,8 @@
  *
  * ## Return convention
  *
- * - `null`   — bundle unavailable (e.g. point outside extract bbox)
- * - `[]`     — no containing boundary found at this level
+ * - `null`   — no source covers the point (caller falls back to Overpass)
+ * - `[]`     — source covers the point but no boundary at this level contains it
  * - `[...]`  — one or more containing features as `OsmFeatureWithDistance[]`
  */
 
@@ -89,7 +84,8 @@ type PolygonGrid = {
 
 // ─── Module-level state ──────────────────────────────────────────────────────
 
-let _bundle: AdminBoundaryBundle | null | undefined; // undefined = not loaded yet
+/** Test-only bundle injection. Production queries go through the pack boundary store. */
+let _testBundle: AdminBoundaryBundle | null = null;
 
 /** Per-admin_level grid cache.  Keyed by osmLevel string (e.g. "7"). */
 const gridCache = new Map<string, PolygonGrid | null>();
@@ -187,21 +183,14 @@ function ringBbox(ring: Position[]): Bbox {
 // ─── Bundle loading ──────────────────────────────────────────────────────────
 
 function getBundle(): AdminBoundaryBundle | null {
-    if (_bundle !== undefined) return _bundle;
-    try {
-        _bundle =
-            require("../../../../assets/measuring/admin-boundaries.json") as AdminBoundaryBundle;
-    } catch {
-        _bundle = null;
-    }
-    return _bundle;
+    return _testBundle;
 }
 
 /** Inject a test bundle — call before any query.  Use `resetAdminBoundaryState` to restore. */
 export function setAdminBoundaryBundle(
     bundle: AdminBoundaryBundle | null,
 ): void {
-    _bundle = bundle;
+    _testBundle = bundle;
     gridCache.clear();
 }
 
@@ -212,9 +201,9 @@ export function setAdminBoundaryBundle(
  * `(lng, lat)` at the given OSM admin_level.
  *
  * Checks, in order:
- * 1. Bundled Japan bundle (when point is inside its bbox)
+ * 1. Test bundle (when injected via setAdminBoundaryBundle)
  * 2. Registered pack sources (when point is inside the pack's index bbox)
- * 3. Returns null (caller falls back to Overpass)
+ * 3. Returns null (caller falls back to Overpass / async variant)
  *
  * Returns `null` when no source covers the point. Returns `[]` when a
  * source covers the point but no boundary at this level contains it.
@@ -224,7 +213,7 @@ export function queryAdminBoundary(
     lat: number,
     osmLevel: string,
 ): OsmFeatureWithDistance[] | null {
-    // 1. Try bundled Japan bundle.
+    // 1. Try test bundle (sync grid).
     const bundle = getBundle();
     if (bundle) {
         const [w, s, e, n] = bundle.extractBbox;
@@ -265,7 +254,7 @@ export async function queryAdminBoundaryAsync(
     lat: number,
     osmLevel: string,
 ): Promise<OsmFeatureWithDistance[] | null> {
-    // 1. Try bundled Japan bundle (sync).
+    // 1. Try test bundle (sync grid).
     const bundle = getBundle();
     if (bundle) {
         const [w, s, e, n] = bundle.extractBbox;
@@ -382,6 +371,6 @@ export function clearAdminBoundaryCache(): void {
  * Exposed for tests: reset all module state.
  */
 export function resetAdminBoundaryState(): void {
-    _bundle = undefined;
+    _testBundle = null;
     gridCache.clear();
 }

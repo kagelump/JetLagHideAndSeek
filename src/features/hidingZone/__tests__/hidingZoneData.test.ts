@@ -3,15 +3,12 @@ import {
     getHidingZonePresetsOrEmpty,
     loadHidingZonePresets,
 } from "@/features/hidingZone/hidingZoneData";
-import {
-    isCanonicalTransitRouteId,
-    isCanonicalTransitStationId,
-} from "@/features/transit/transitIdentity";
 
 // The real hidingZoneData module is globally mocked in jest.setup.ts.
 // The mock exposes these test-only helpers; they only exist on the mock.
 const mockMod = require("@/features/hidingZone/hidingZoneData") as {
     __addPackPresetForTest: (preset: any) => void;
+    __clearPackTransitSourcesForTest: () => void;
     registerTransitSource: (
         packId: string,
         path: string,
@@ -45,69 +42,39 @@ const PACK_PRESET = {
     ],
 };
 
-describe("generated hiding-zone preset data", () => {
-    beforeAll(() => loadHidingZonePresets());
-
-    // ── Existing tests ─────────────────────────────────────────────────
-
-    it("contains canonical source-adapter transit ids", () => {
-        const presets = getHidingZonePresets();
-        const allRouteIds = new Set(
-            presets.flatMap((preset) => preset.routes.map((route) => route.id)),
-        );
-
-        for (const preset of presets) {
-            expect(["gtfs", "osm"]).toContain(preset.source.kind);
-            for (const route of preset.routes) {
-                expect(isCanonicalTransitRouteId(route.id)).toBe(true);
-                expect(route.sourceId).not.toBe("");
-            }
-            for (const station of preset.stations) {
-                expect(isCanonicalTransitStationId(station.id)).toBe(true);
-                expect(station.mergeKey).not.toBe("");
-                expect(station.sourceId).not.toBe("");
-                expect(
-                    station.routeIds.every(
-                        (routeId) =>
-                            isCanonicalTransitRouteId(routeId) &&
-                            allRouteIds.has(routeId),
-                    ),
-                ).toBe(true);
-            }
-        }
+describe("hiding-zone preset data (pack-only)", () => {
+    beforeEach(() => {
+        mockMod.__clearPackTransitSourcesForTest();
     });
 
-    it("has at least the Tokyo Metro preset", () => {
-        const presets = getHidingZonePresets();
-        expect(presets.some((p) => p.id === "tokyo-metro")).toBe(true);
+    it("returns empty array when no pack sources are registered", async () => {
+        const presets = await loadHidingZonePresets();
+        expect(presets).toEqual([]);
+        expect(getHidingZonePresetsOrEmpty()).toEqual([]);
     });
 
-    it("returns the same cached presets on repeated calls", async () => {
-        const first = await loadHidingZonePresets();
-        const second = await loadHidingZonePresets();
-        expect(second).toBe(first);
-    });
-
-    it("getHidingZonePresetsOrEmpty returns presets after loading", () => {
-        const presets = getHidingZonePresetsOrEmpty();
-        expect(presets.length).toBeGreaterThan(0);
-        expect(presets.some((p) => p.id === "tokyo-metro")).toBe(true);
+    it("throws when presets not loaded and no pack presets exist", () => {
+        expect(() => getHidingZonePresets()).toThrow("Presets not loaded yet");
     });
 
     // ── Pack transit source coverage ────────────────────────────────────
 
     describe("pack transit sources", () => {
-        it("getHidingZonePresetsOrEmpty includes pack presets", () => {
+        it("returns pack presets after loading", async () => {
             mockMod.__addPackPresetForTest(PACK_PRESET);
-
-            const presets = getHidingZonePresetsOrEmpty();
+            const presets = await loadHidingZonePresets();
             expect(presets.some((p) => p.id === PACK_PRESET.id)).toBe(true);
         });
 
-        it("getHidingZonePresets includes pack presets after loading", () => {
+        it("getHidingZonePresets includes pack presets", () => {
             mockMod.__addPackPresetForTest(PACK_PRESET);
-
             const presets = getHidingZonePresets();
+            expect(presets.some((p) => p.id === PACK_PRESET.id)).toBe(true);
+        });
+
+        it("getHidingZonePresetsOrEmpty includes pack presets", () => {
+            mockMod.__addPackPresetForTest(PACK_PRESET);
+            const presets = getHidingZonePresetsOrEmpty();
             expect(presets.some((p) => p.id === PACK_PRESET.id)).toBe(true);
         });
 

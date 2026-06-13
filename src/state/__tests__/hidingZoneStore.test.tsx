@@ -227,6 +227,45 @@ describe("HidingZoneProvider app-state persistence", () => {
 });
 
 describe("HidingZoneProvider zone geometry updates", () => {
+    const mockHidingZoneData =
+        require("@/features/hidingZone/hidingZoneData") as {
+            __addPackPresetForTest: (preset: any) => void;
+            __clearPackTransitSourcesForTest: () => void;
+        };
+
+    const TOKYO_METRO_PRESET = {
+        id: "tokyo-metro",
+        label: "Tokyo Metro",
+        operator: "Tokyo Metro",
+        kind: "operator",
+        bbox: [139.6, 35.6, 140.0, 35.8],
+        defaultColor: "#00a1e4",
+        source: { kind: "gtfs", namespace: "jp-tokyo-metro" },
+        routes: [
+            {
+                id: "gtfs:jp-tokyo-metro:G",
+                shortName: "Ginza",
+                color: "#f39800",
+            },
+        ],
+        stations: [
+            {
+                id: "gtfs:jp-tokyo-metro:station-1",
+                lat: 35.6855,
+                lon: 139.6922,
+                name: "Shibuya",
+                routeIds: ["gtfs:jp-tokyo-metro:G"],
+                sourceId: "gtfs:jp-tokyo-metro:station-1",
+                mergeKey: "gtfs:jp-tokyo-metro:station-1",
+            },
+        ],
+    };
+
+    beforeEach(() => {
+        mockHidingZoneData.__clearPackTransitSourcesForTest();
+        mockHidingZoneData.__addPackPresetForTest(TOKYO_METRO_PRESET);
+    });
+
     afterEach(() => {
         jest.useRealTimers();
     });

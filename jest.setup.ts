@@ -299,60 +299,23 @@ jest.mock("qrcode/lib/core/qrcode", () => ({
     }),
 }));
 
-// In tests, load the transit preset JSON synchronously via require() so
-// tests don't need dynamic import support. In the real app, the module uses
-// the generated require-map (transitBundles.generated.ts) for lazy loading.
+// Mock hiding-zone preset data so tests don't need dynamic import support.
+// All transit data comes from installed packs; no bundled presets remain.
 jest.mock("@/features/hidingZone/hidingZoneData", () => {
-    let cached: any[] | null = null;
-    let loadPromise: Promise<any[]> | null = null;
     const packPresets: any[] = [];
     const packSourcesListeners = new Set<() => void>();
 
-    function loadPresets(_bbox?: unknown) {
-        void _bbox;
-        if (!loadPromise) {
-            loadPromise = Promise.resolve().then(() => {
-                const raw = require("./assets/transit/japan-kanto.json");
-                cached = raw.presets;
-                return cached;
-            });
-        }
-        return loadPromise;
-    }
-
     return {
         __esModule: true,
-        loadHidingZonePresets: (bbox?: any) => loadPresets(bbox),
+        loadHidingZonePresets: jest.fn(() => Promise.resolve([...packPresets])),
         getHidingZonePresets: () => {
-            if (!cached) throw new Error("Presets not loaded yet");
-            return [...cached, ...packPresets];
+            if (packPresets.length === 0)
+                throw new Error("Presets not loaded yet");
+            return [...packPresets];
         },
-        getHidingZonePresetsOrEmpty: () => [...(cached ?? []), ...packPresets],
-        getTransitManifest: () => ({
-            version: 1,
-            bundles: [
-                {
-                    id: "japan-kanto",
-                    bbox: [138.4, 34.8, 140.9, 37.1],
-                    file: "japan-kanto.json",
-                    presets: [
-                        {
-                            id: "tokyo-metro",
-                            label: "Tokyo Metro",
-                            bbox: [139.6, 35.6, 140.0, 35.8],
-                        },
-                        {
-                            id: "toei-subway",
-                            label: "Toei Subway",
-                            bbox: [139.6, 35.5, 140.0, 35.9],
-                        },
-                    ],
-                },
-            ],
-        }),
+        getHidingZonePresetsOrEmpty: () => [...packPresets],
+        getTransitManifest: () => ({ version: 1, bundles: [] }),
         clearTransitBundleCache: () => {
-            cached = null;
-            loadPromise = null;
             packPresets.length = 0;
         },
         registerTransitSource: (..._args: any[]) => {
@@ -367,10 +330,11 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
                 packSourcesListeners.delete(listener);
             };
         },
-        // For tests: pre-populate pack presets to appear in
-        // getHidingZonePresets / getHidingZonePresetsOrEmpty.
         __addPackPresetForTest: (preset: any) => {
             packPresets.push(preset);
+        },
+        __clearPackTransitSourcesForTest: () => {
+            packPresets.length = 0;
         },
     };
 });

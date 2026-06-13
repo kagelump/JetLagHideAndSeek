@@ -1,10 +1,6 @@
 import type { HidingZonePreset } from "./hidingZoneTypes";
 import type { Bbox } from "@/shared/geojson";
 import { bboxIntersects } from "@/shared/geojson";
-import {
-    TRANSIT_MANIFEST,
-    transitBundleLoaders,
-} from "./transitBundles.generated";
 
 // ─── Module-level cache ────────────────────────────────────────────────────
 
@@ -116,59 +112,28 @@ export async function loadHidingZonePresets(
     // Load any bundles not yet fetched.
     const promises: Promise<HidingZonePreset[]>[] = [];
     for (const bundle of bundles) {
-        // Pack sources share one file per pack — use packId as the cache
-        // key so in-flight markers and results are consistent (N5).
         const packSource = findPackSourceByBundleId(bundle.id);
         const cacheKey = packSource ? packSource.packId : bundle.id;
 
         if (bundleCache.has(cacheKey)) {
             const cached = bundleCache.get(cacheKey);
             if (cached) promises.push(Promise.resolve(cached));
-            // null = in-flight; skip.
             continue;
         }
 
-        // Mark in-flight (all pack presets share one marker).
         bundleCache.set(cacheKey, null);
 
         if (packSource) {
-            // Load all presets for this pack once.
             promises.push(loadPackTransitBundle(packSource));
-            continue;
-        }
-
-        const loader = transitBundleLoaders[bundle.id];
-        if (!loader) {
-            if (__DEV__) {
-                console.warn(
-                    `[hidingZoneData] No loader for bundle "${bundle.id}" — skipping.`,
-                );
-            }
+        } else {
             bundleCache.set(cacheKey, []);
-            continue;
+            promises.push(Promise.resolve([]));
         }
-
-        promises.push(
-            loader().then((mod) => {
-                const presets =
-                    (mod as { presets: HidingZonePreset[] }).presets ?? [];
-                bundleCache.set(cacheKey, presets);
-                return presets;
-            }),
-        );
     }
 
     await Promise.all(promises);
 
-    // Collect all loaded presets (from ALL bundles + pack sources — not just
-    // those matching the current bbox — so bundles loaded for a previous area
-    // are still available).
     const all: HidingZonePreset[] = [];
-    for (const bundle of TRANSIT_MANIFEST.bundles) {
-        const cached = bundleCache.get(bundle.id);
-        if (cached) all.push(...cached);
-    }
-    // Also collect from pack transit sources.
     for (const [packId] of packTransitSources) {
         const cached = bundleCache.get(packId);
         if (cached) all.push(...cached);
@@ -183,10 +148,6 @@ export async function loadHidingZonePresets(
  */
 export function getHidingZonePresets(): HidingZonePreset[] {
     const all: HidingZonePreset[] = [];
-    for (const bundle of TRANSIT_MANIFEST.bundles) {
-        const cached = bundleCache.get(bundle.id);
-        if (cached) all.push(...cached);
-    }
     for (const [packId] of packTransitSources) {
         const cached = bundleCache.get(packId);
         if (cached) all.push(...cached);
@@ -206,10 +167,6 @@ export function getHidingZonePresets(): HidingZonePreset[] {
  */
 export function getHidingZonePresetsOrEmpty(): HidingZonePreset[] {
     const all: HidingZonePreset[] = [];
-    for (const bundle of TRANSIT_MANIFEST.bundles) {
-        const cached = bundleCache.get(bundle.id);
-        if (cached) all.push(...cached);
-    }
     for (const [packId] of packTransitSources) {
         const cached = bundleCache.get(packId);
         if (cached) all.push(...cached);
@@ -221,8 +178,16 @@ export function getHidingZonePresetsOrEmpty(): HidingZonePreset[] {
  * Returns the manifest for external consumers (e.g. settings UI counting
  * stations within the play area).
  */
-export function getTransitManifest() {
-    return TRANSIT_MANIFEST;
+export function getTransitManifest(): {
+    version: number;
+    bundles: {
+        id: string;
+        bbox: Bbox;
+        file: string;
+        presets: { id: string; label: string; bbox: Bbox; kind?: string }[];
+    }[];
+} {
+    return { version: 1, bundles: [] };
 }
 
 /**
@@ -299,10 +264,13 @@ async function loadPackTransitBundle(
  * Returns all bundles + pack sources when playAreaBbox is null/undefined.
  */
 function pickBundles(playAreaBbox?: Bbox | null) {
-    const bundles = [...TRANSIT_MANIFEST.bundles];
+    const bundles: {
+        id: string;
+        bbox: Bbox;
+        file: string;
+        presets: { id: string; label: string; bbox: Bbox; kind?: string }[];
+    }[] = [];
 
-    // Add pack transit sources as synthetic bundle entries.
-    let packPresetsAdded = 0;
     for (const [packId, source] of packTransitSources) {
         for (const summary of source.presetSummaries) {
             const match =
@@ -321,14 +289,9 @@ function pickBundles(playAreaBbox?: Bbox | null) {
                         },
                     ],
                 });
-                packPresetsAdded++;
             }
         }
     }
-    console.log(
-        `[hidingZoneData] pickBundles: ${bundles.length - packPresetsAdded} bundled + ${packPresetsAdded} pack presets ` +
-            `(playAreaBbox: ${playAreaBbox ? playAreaBbox.join(",") : "none"})`,
-    );
 
     if (!playAreaBbox) {
         return bundles;
