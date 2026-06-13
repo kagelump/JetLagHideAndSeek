@@ -515,16 +515,14 @@
                             geom.coordinates[0].toFixed(5),
                     );
                 }
-                if (props.routeNames)
-                    lines.push("Routes: " + props.routeNames);
+                if (props.routeNames) lines.push("Routes: " + props.routeNames);
                 if (props.operators)
                     lines.push("Operators: " + props.operators);
                 if (props.wedgeCount != null)
                     lines.push("Routes: " + props.wedgeCount);
                 else if (props.ringCount != null)
                     lines.push("Rings: " + props.ringCount);
-                if (props.category)
-                    lines.push("Category: " + props.category);
+                if (props.category) lines.push("Category: " + props.category);
                 if (props.osmId)
                     lines.push(
                         "OSM: " + (props.osmType || "") + " " + props.osmId,
@@ -595,38 +593,49 @@
             };
 
             // ── Wedge zoom tiers (dots → large → medium → small) ────────
-            var STATION_WEDGE_MINZOOM   = 11; // dots → large wedges
-            var STATION_WEDGE_MEDZOOM   = 13; // large → medium wedges
-            var STATION_WEDGE_HIGHZOOM  = 15; // medium → small wedges
+            var STATION_WEDGE_MINZOOM = 11; // dots → large wedges
+            var STATION_WEDGE_MEDZOOM = 13; // large → medium wedges
+            var STATION_WEDGE_HIGHZOOM = 15; // medium → small wedges
 
             // ── Shared zoom interpolation stops ────────────────────────
             var STATION_CIRCLE_RADIUS = [
                 "interpolate",
                 ["linear"],
                 ["zoom"],
-                0, 0.5,
-                6, 1.0,
-                10, 3,
-                15, 3,
+                0,
+                0.5,
+                6,
+                1.0,
+                10,
+                3,
+                15,
+                3,
             ];
 
             var POI_CIRCLE_RADIUS = [
                 "interpolate",
                 ["linear"],
                 ["zoom"],
-                6, 1.5,
-                10, 3,
-                14, 7,
+                6,
+                1.5,
+                10,
+                3,
+                14,
+                7,
             ];
 
             var TRANSIT_LINE_WIDTH = [
                 "interpolate",
                 ["linear"],
                 ["zoom"],
-                6, 1,
-                10, 2,
-                13, 4,
-                16, 7,
+                6,
+                1,
+                10,
+                2,
+                13,
+                4,
+                16,
+                7,
             ];
 
             // ── Shared paint / layout templates ─────────────────────────
@@ -636,18 +645,25 @@
                     "interpolate",
                     ["linear"],
                     ["zoom"],
-                    10, 0.95,
-                    11, 0,
+                    10,
+                    0.95,
+                    11,
+                    0,
                 ],
                 "circle-radius": [
                     "interpolate",
                     ["linear"],
                     ["zoom"],
-                    0, 0.5,
-                    6, 1.0,
-                    10, 3,
-                    11, 12,
-                    15, 16,
+                    0,
+                    0.5,
+                    6,
+                    1.0,
+                    10,
+                    3,
+                    11,
+                    12,
+                    15,
+                    16,
                 ],
                 "circle-stroke-color": "#fff",
                 "circle-stroke-width": 1,
@@ -1050,9 +1066,7 @@
                     var html = "<strong>" + p.name + "</strong>";
                     if (p.operators)
                         html +=
-                            "<br><em>" +
-                            truncateList(p.operators, 3) +
-                            "</em>";
+                            "<br><em>" + truncateList(p.operators, 3) + "</em>";
                     if (p.routeNames)
                         html +=
                             '<br><span style="color:#666">' +
@@ -1483,9 +1497,21 @@
                             var baseId = "pack-transit-stations";
                             var dotSourceId = baseId + "-dot";
                             var sizeIds = [
-                                { key: "large",  minzoom: STATION_WEDGE_MINZOOM,  maxzoom: STATION_WEDGE_MEDZOOM },
-                                { key: "medium", minzoom: STATION_WEDGE_MEDZOOM,  maxzoom: STATION_WEDGE_HIGHZOOM },
-                                { key: "small",  minzoom: STATION_WEDGE_HIGHZOOM, maxzoom: undefined },
+                                {
+                                    key: "large",
+                                    minzoom: STATION_WEDGE_MINZOOM,
+                                    maxzoom: STATION_WEDGE_MEDZOOM,
+                                },
+                                {
+                                    key: "medium",
+                                    minzoom: STATION_WEDGE_MEDZOOM,
+                                    maxzoom: STATION_WEDGE_HIGHZOOM,
+                                },
+                                {
+                                    key: "small",
+                                    minzoom: STATION_WEDGE_HIGHZOOM,
+                                    maxzoom: undefined,
+                                },
                             ];
                             if (
                                 e.target.checked &&
@@ -1498,28 +1524,39 @@
                                         "/transit/stations",
                                 )
                                     .then(function (rawData) {
-                                        var data = normaliseWedgeResponse(rawData);
+                                        var data =
+                                            normaliseWedgeResponse(rawData);
                                         if (!data) return;
                                         // data = { large: FC, medium: FC, small: FC }
-                                        for (var si = 0; si < sizeIds.length; si++) {
+                                        for (
+                                            var si = 0;
+                                            si < sizeIds.length;
+                                            si++
+                                        ) {
                                             var sz = sizeIds[si];
                                             var srcId = baseId + "-" + sz.key;
                                             if (!data[sz.key]) continue;
                                             addSource(srcId, data[sz.key]);
                                             var layerOpts = {
-                                                id: "pack-transit-stations-wedge-" + sz.key,
+                                                id:
+                                                    "pack-transit-stations-wedge-" +
+                                                    sz.key,
                                                 type: "fill",
                                                 source: srcId,
                                                 paint: STATION_WEDGE_PAINT,
                                             };
                                             layerOpts.minzoom = sz.minzoom;
-                                            if (sz.maxzoom != null) layerOpts.maxzoom = sz.maxzoom;
+                                            if (sz.maxzoom != null)
+                                                layerOpts.maxzoom = sz.maxzoom;
                                             map.addLayer(layerOpts);
-                                            PACK_STATE.loadedLayers[srcId] = true;
+                                            PACK_STATE.loadedLayers[srcId] =
+                                                true;
                                         }
                                         // Dot circle layer (low zoom),
                                         // derived from large wedge centers.
-                                        var dotData = buildDotsFromWedges(data.large);
+                                        var dotData = buildDotsFromWedges(
+                                            data.large,
+                                        );
                                         addSource(dotSourceId, dotData);
                                         map.addLayer({
                                             id: "pack-transit-stations-dot",
@@ -1528,7 +1565,8 @@
                                             paint: STATION_DOT_PAINT,
                                         });
                                         PACK_STATE.loadedLayers[baseId] = true;
-                                        PACK_STATE.loadedLayers[dotSourceId] = true;
+                                        PACK_STATE.loadedLayers[dotSourceId] =
+                                            true;
                                     })
                                     .catch(function (err) {
                                         console.error(

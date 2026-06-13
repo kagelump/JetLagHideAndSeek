@@ -392,7 +392,9 @@ const server = createServer((req, res) => {
                     const stations =
                         transitGeojson.getSelectedStations(presets);
                     geojson =
-                        transitGeojson.buildAllWedgeFeatureCollections(stations);
+                        transitGeojson.buildAllWedgeFeatureCollections(
+                            stations,
+                        );
                 }
                 res.writeHead(200, {
                     "Content-Type": "application/json",

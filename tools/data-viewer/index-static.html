@@ -514,16 +514,14 @@
                             geom.coordinates[0].toFixed(5),
                     );
                 }
-                if (props.routeNames)
-                    lines.push("Routes: " + props.routeNames);
+                if (props.routeNames) lines.push("Routes: " + props.routeNames);
                 if (props.operators)
                     lines.push("Operators: " + props.operators);
                 if (props.wedgeCount != null)
                     lines.push("Routes: " + props.wedgeCount);
                 else if (props.ringCount != null)
                     lines.push("Rings: " + props.ringCount);
-                if (props.category)
-                    lines.push("Category: " + props.category);
+                if (props.category) lines.push("Category: " + props.category);
                 if (props.osmId)
                     lines.push(
                         "OSM: " + (props.osmType || "") + " " + props.osmId,
@@ -903,9 +901,7 @@
                     var html = "<strong>" + p.name + "</strong>";
                     if (p.operators)
                         html +=
-                            "<br><em>" +
-                            truncateList(p.operators, 3) +
-                            "</em>";
+                            "<br><em>" + truncateList(p.operators, 3) + "</em>";
                     if (p.routeNames)
                         html +=
                             '<br><span style="color:#666">' +
