@@ -465,7 +465,12 @@
 
             function addLayers(id, config) {
                 for (var li = 0; li < config.length; li++) {
-                    map.addLayer(Object.assign({}, config[li], { source: id }));
+                    var layerDef = Object.assign({}, config[li], {
+                        source: id,
+                    });
+                    if (!map.getLayer(layerDef.id)) {
+                        map.addLayer(layerDef);
+                    }
                 }
             }
 
@@ -507,7 +512,12 @@
                 var lines = [];
                 if (props.name) lines.push("Name: " + props.name);
                 if (props.id) lines.push("ID: " + props.id);
-                if (geom && geom.coordinates) {
+                if (
+                    geom &&
+                    geom.coordinates &&
+                    geom.coordinates[0] != null &&
+                    geom.coordinates[1] != null
+                ) {
                     lines.push(
                         "Location: " +
                             geom.coordinates[1].toFixed(5) +
