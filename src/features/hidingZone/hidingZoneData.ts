@@ -31,6 +31,26 @@ type PackTransitSource = {
 
 const packTransitSources = new Map<string, PackTransitSource>();
 
+/** Listeners notified when pack transit sources are added or removed. */
+const packSourcesListeners = new Set<() => void>();
+
+/**
+ * Subscribe to pack transit source changes. Returns an unsubscribe function.
+ * Callers should reload hiding-zone presets when notified.
+ */
+export function onPackSourcesChanged(listener: () => void): () => void {
+    packSourcesListeners.add(listener);
+    return () => {
+        packSourcesListeners.delete(listener);
+    };
+}
+
+function notifyPackSourcesChanged(): void {
+    for (const listener of packSourcesListeners) {
+        listener();
+    }
+}
+
 /**
  * Register a transit source from an installed pack.
  * Called by the pack installer (T5) after verifying the transit artifact.
@@ -52,9 +72,13 @@ export function registerTransitSource(
         }
     }
 
+    console.log(
+        `[hidingZoneData] registerTransitSource: ${packId} with ${presetSummaries.length} preset summaries`,
+    );
     packTransitSources.set(packId, { packId, path, presetSummaries });
     // Clear any cached presets for this pack so they reload with new data.
     bundleCache.delete(packId);
+    notifyPackSourcesChanged();
 }
 
 /**
@@ -64,6 +88,7 @@ export function registerTransitSource(
 export function unregisterTransitSource(packId: string): void {
     packTransitSources.delete(packId);
     bundleCache.delete(packId);
+    notifyPackSourcesChanged();
 }
 
 /** For testing. */
@@ -185,6 +210,10 @@ export function getHidingZonePresetsOrEmpty(): HidingZonePreset[] {
         const cached = bundleCache.get(bundle.id);
         if (cached) all.push(...cached);
     }
+    for (const [packId] of packTransitSources) {
+        const cached = bundleCache.get(packId);
+        if (cached) all.push(...cached);
+    }
     return all;
 }
 
@@ -236,6 +265,9 @@ async function loadPackTransitBundle(
         const lastSep = fullPath.lastIndexOf("/");
         const dir = fullPath.slice(0, lastSep);
         const name = fullPath.slice(lastSep + 1);
+        console.log(
+            `[hidingZoneData] Loading pack transit bundle: ${source.packId} from ${dir}/${name}`,
+        );
         const raw = await new File(dir, name).text();
         const bundle = JSON.parse(raw);
         const presets: HidingZonePreset[] =
@@ -243,11 +275,19 @@ async function loadPackTransitBundle(
                 ...p,
                 id: `${source.packId}:${p.id}`,
             })) ?? [];
+        console.log(
+            `[hidingZoneData] ${source.packId}: ${presets.length} presets loaded, ` +
+                `total stations: ${presets.reduce((s, p) => s + (p.stations?.length ?? 0), 0)}`,
+        );
 
         // Cache under the packId (not per-preset) since one file = all presets.
         bundleCache.set(source.packId, presets);
         return presets;
-    } catch {
+    } catch (err) {
+        console.error(
+            `[hidingZoneData] Failed to load pack transit bundle ${source.packId}:`,
+            err,
+        );
         bundleCache.set(source.packId, []);
         return [];
     }
@@ -262,9 +302,12 @@ function pickBundles(playAreaBbox?: Bbox | null) {
     const bundles = [...TRANSIT_MANIFEST.bundles];
 
     // Add pack transit sources as synthetic bundle entries.
+    let packPresetsAdded = 0;
     for (const [packId, source] of packTransitSources) {
         for (const summary of source.presetSummaries) {
-            if (!playAreaBbox || bboxIntersects(summary.bbox, playAreaBbox)) {
+            const match =
+                !playAreaBbox || bboxIntersects(summary.bbox, playAreaBbox);
+            if (match) {
                 bundles.push({
                     id: `${packId}:${summary.id}`,
                     bbox: summary.bbox,
@@ -278,9 +321,14 @@ function pickBundles(playAreaBbox?: Bbox | null) {
                         },
                     ],
                 });
+                packPresetsAdded++;
             }
         }
     }
+    console.log(
+        `[hidingZoneData] pickBundles: ${bundles.length - packPresetsAdded} bundled + ${packPresetsAdded} pack presets ` +
+            `(playAreaBbox: ${playAreaBbox ? playAreaBbox.join(",") : "none"})`,
+    );
 
     if (!playAreaBbox) {
         return bundles;

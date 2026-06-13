@@ -12,6 +12,7 @@ import {
 import {
     getHidingZonePresetsOrEmpty,
     loadHidingZonePresets,
+    onPackSourcesChanged,
 } from "@/features/hidingZone/hidingZoneData";
 import {
     buildHidingZoneFeatureCollection,
@@ -162,6 +163,20 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
         return () => {
             cancelled = true;
         };
+    }, [playArea.bbox]);
+
+    // Reload presets when pack transit sources are registered or removed
+    // (e.g. after a pack install completes, or on app-start restore).
+    useEffect(() => {
+        const cancelled = false;
+        return onPackSourcesChanged(() => {
+            if (cancelled) return;
+            loadHidingZonePresets(playArea.bbox)
+                .then(() => {
+                    if (!cancelled) setPresetsRevision((n) => n + 1);
+                })
+                .catch(() => {});
+        });
     }, [playArea.bbox]);
 
     const presets = getHidingZonePresetsOrEmpty();

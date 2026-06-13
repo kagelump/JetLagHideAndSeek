@@ -17,7 +17,10 @@ const artifactKindSchema = z.enum([
 
 export const artifactSchema = z.object({
     kind: artifactKindSchema,
-    category: z.string().optional(),
+    category: z.preprocess(
+        (v) => (v === null ? undefined : v),
+        z.string().optional(),
+    ),
     url: z.string().min(1),
     bytes: z.number().positive().int(),
     md5: z.string().min(1),
@@ -52,14 +55,23 @@ export type Artifact = z.infer<typeof artifactSchema>;
 // ─── Fetch function ──────────────────────────────────────────────────────
 
 async function fetchCatalog(url: string): Promise<Catalog> {
+    console.log("[packCatalog] Fetching catalog from:", url);
     const response = await fetch(url);
     if (!response.ok) {
+        console.error(
+            `[packCatalog] Catalog fetch failed: HTTP ${response.status} from ${url}`,
+        );
         throw new Error(
             `Catalog fetch failed for ${url}: HTTP ${response.status}`,
         );
     }
     const raw = await response.json();
-    return catalogSchema.parse(raw);
+    try {
+        return catalogSchema.parse(raw);
+    } catch (err) {
+        console.error("[packCatalog] Catalog schema validation failed:", err);
+        throw err;
+    }
 }
 
 // ─── TanStack Query hook ─────────────────────────────────────────────────

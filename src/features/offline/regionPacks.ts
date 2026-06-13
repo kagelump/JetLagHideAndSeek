@@ -78,6 +78,11 @@ function validatePackId(id: string): void {
     }
 }
 
+/** Detect HTTP 404 from expo-file-system download errors. */
+function isHttpNotFound(err: Error): boolean {
+    return err.message.includes("status 404") || err.message.includes("404");
+}
+
 // ─── File helpers ─────────────────────────────────────────────────────────
 
 function packDir(id: string): Directory {
@@ -219,6 +224,11 @@ function registerArtifact(
                 bbox: p.bbox,
                 kind: p.kind,
             }));
+            console.log(
+                `[regionPacks] registerArtifact transit ${packId}: ` +
+                    `${presetSummaries.length} preset summaries ` +
+                    `(first bbox: ${presetSummaries[0]?.bbox?.join(",") ?? "none"})`,
+            );
             registerTransitSource(
                 packId,
                 jsonFile(packId, kind).uri,
@@ -374,9 +384,98 @@ async function installSingleArtifact(
     const dest = gzFile(packId, artifact.kind, artifact.category);
 
     // 1. Download .gz via the v19 File API (writes directly to disk).
-    const downloaded = await File.downloadFileAsync(artifact.url, dest, {
-        idempotent: true,
-    });
+    let downloaded: Awaited<ReturnType<typeof File.downloadFileAsync>>;
+    let isPlainJsonFallback = false;
+    try {
+        downloaded = await File.downloadFileAsync(artifact.url, dest, {
+            idempotent: true,
+        });
+    } catch (err) {
+        // TODO: remove this workaround once all published artifacts use .json.gz
+        // (publish.mjs now uploads meta.json.gz; old releases may still have
+        // uncompressed .json files).
+        if (
+            err instanceof Error &&
+            isHttpNotFound(err) &&
+            artifact.url.endsWith(".json.gz")
+        ) {
+            const plainUrl = artifact.url.replace(/\.json\.gz$/, ".json");
+            console.log(
+                `[regionPacks] ${packId}/${artifact.kind}: .gz 404, retrying plain ${plainUrl}`,
+            );
+            const plainDest = jsonFile(
+                packId,
+                artifact.kind,
+                artifact.category,
+            );
+            downloaded = await File.downloadFileAsync(plainUrl, plainDest, {
+                idempotent: true,
+            });
+            isPlainJsonFallback = true;
+        } else {
+            throw err;
+        }
+    }
+
+    if (isPlainJsonFallback) {
+        // Plain JSON fallback — skip compression checks, verify content directly.
+        const jsonStr = await downloaded.text();
+
+        // Verify SHA-256 of the JSON content.
+        if (!artifact.sha256) {
+            try {
+                downloaded.delete();
+            } catch {
+                /* best-effort */
+            }
+            throw new Error(
+                `Integrity check failed for ${packId}/${artifact.kind}: manifest missing sha256`,
+            );
+        }
+        const givenSha256 = await digestStringAsync(
+            CryptoDigestAlgorithm.SHA256,
+            jsonStr,
+        );
+        if (givenSha256.toLowerCase() !== artifact.sha256.toLowerCase()) {
+            try {
+                downloaded.delete();
+            } catch {
+                /* best-effort */
+            }
+            throw new Error(
+                `Integrity check failed for ${packId}/${artifact.kind}: SHA-256 mismatch ` +
+                    `(expected ${artifact.sha256}, got ${givenSha256})`,
+            );
+        }
+
+        const raw = JSON.parse(jsonStr) as Record<string, unknown>;
+
+        // Schema version guard — treat missing schemaVersion as matching
+        // (TODO: remove this leniency once all pipeline builders include schemaVersion).
+        const payloadSchemaVersion: unknown = raw.schemaVersion;
+        if (
+            payloadSchemaVersion !== undefined &&
+            (typeof payloadSchemaVersion !== "number" ||
+                payloadSchemaVersion !== artifact.schemaVersion)
+        ) {
+            try {
+                downloaded.delete();
+            } catch {
+                /* best-effort */
+            }
+            throw new Error(
+                `Pack ${packId}/${artifact.kind} schemaVersion mismatch: ` +
+                    `payload has ${payloadSchemaVersion}, expected ${artifact.schemaVersion}`,
+            );
+        }
+
+        // The file is already at the plain JSON path — register and exit.
+        console.log(
+            `[regionPacks] ${packId}/${artifact.kind}: installed via plain JSON fallback`,
+        );
+        registerArtifact(packId, artifact.kind, artifact.category, raw);
+        return;
+    }
 
     // 2. Verify byte length.
     const info = downloaded.info(MD5_INFO_OPTS);
@@ -465,7 +564,14 @@ async function installSingleArtifact(
     const raw = JSON.parse(jsonStr) as Record<string, unknown>;
 
     // 5. Schema version guard.
-    if (
+    // TODO: remove the undefined-skip leniency once all pipeline builders
+    // include schemaVersion (buildTransit.mjs now emits schemaVersion: 1).
+    if (raw.schemaVersion === undefined) {
+        console.log(
+            `[regionPacks] ${packId}/${artifact.kind}: schemaVersion absent in payload, ` +
+                `defaulting to expected ${artifact.schemaVersion}`,
+        );
+    } else if (
         typeof raw.schemaVersion !== "number" ||
         raw.schemaVersion !== artifact.schemaVersion
     ) {
@@ -798,6 +904,7 @@ export function useInstallPack() {
         }) => installPackInternal(pack, onProgress),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["offline-catalog"] });
+            queryClient.invalidateQueries({ queryKey: ["installed-packs-v2"] });
         },
     });
 }
@@ -815,6 +922,7 @@ export function useRetryPack() {
         }) => retryPackInternal(pack, onProgress),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["offline-catalog"] });
+            queryClient.invalidateQueries({ queryKey: ["installed-packs-v2"] });
         },
     });
 }
@@ -826,6 +934,7 @@ export function useRemovePack() {
         mutationFn: removeInstalledPack,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["offline-catalog"] });
+            queryClient.invalidateQueries({ queryKey: ["installed-packs-v2"] });
         },
     });
 }

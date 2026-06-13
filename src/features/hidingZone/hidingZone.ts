@@ -470,7 +470,7 @@ export function getPresetPlayAreaStats(
     presets: HidingZonePreset[],
     playAreaBbox: Bbox,
 ): PresetPlayAreaStats[] {
-    return presets.map((preset) => ({
+    const stats = presets.map((preset) => ({
         presetId: preset.id,
         stationsInArea: preset.stations.filter(
             (s) =>
@@ -480,6 +480,15 @@ export function getPresetPlayAreaStats(
                 s.lat <= playAreaBbox[3],
         ).length,
     }));
+    const totalInArea = stats.reduce((sum, s) => sum + s.stationsInArea, 0);
+    const totalStations = presets.reduce(
+        (sum, p) => sum + p.stations.length,
+        0,
+    );
+    console.log(
+        `[hidingZone] getPresetPlayAreaStats: ${totalInArea}/${totalStations} stations in play area bbox across ${presets.length} presets`,
+    );
+    return stats;
 }
 
 /**
