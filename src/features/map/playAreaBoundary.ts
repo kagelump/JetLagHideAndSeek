@@ -1,8 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 
-import osakaBoundaryJson from "../../../assets/default-zones/osaka.json";
-
 import type { GeoJsonFeatureCollection } from "./geojsonTypes";
 import {
     defaultPlayArea,
@@ -30,9 +28,10 @@ export { BOUNDARY_CACHE_TTL_MS } from "@/state/queryClient";
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
 const CACHE_PREFIX = "play-area-boundary:";
 
-const BUNDLED_BOUNDARIES: Partial<Record<number, GeoJsonFeatureCollection>> = {
-    358674: osakaBoundaryJson as unknown as GeoJsonFeatureCollection,
-};
+// Kept as an empty placeholder for future bundled boundaries.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const BUNDLED_BOUNDARIES: Partial<Record<number, GeoJsonFeatureCollection>> =
+    {};
 
 export type LoadedPlayArea = {
     cacheSource: PlayAreaCacheSource;
@@ -54,9 +53,7 @@ export function parseRelationId(value: string): number | null {
 }
 
 export function isBundledPlayAreaId(relationId: number): boolean {
-    return (
-        relationId === defaultPlayArea.osmId || relationId in BUNDLED_BOUNDARIES
-    );
+    return relationId === defaultPlayArea.osmId;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,7 +99,7 @@ export function usePlayAreaBoundary(relationId: number | null) {
 
 /**
  * Load a play area by relation ID. Resolution order:
- * 1. Bundled Tokyo/Osaka
+ * 1. Bundled Tokyo placeholder
  * 2. Memory cache (React Query)
  * 3. AsyncStorage cache
  * 4. Installed packs (NEW — offline)
@@ -330,12 +327,7 @@ export async function cleanOrphanedBoundaryKeys(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function getBundledPlayArea(relationId: number): PlayArea | null {
-    if (relationId === defaultPlayArea.osmId) return defaultPlayArea;
-
-    const bundledBoundary = BUNDLED_BOUNDARIES[relationId];
-    return bundledBoundary
-        ? buildPlayAreaFromBoundary(relationId, bundledBoundary)
-        : null;
+    return relationId === defaultPlayArea.osmId ? defaultPlayArea : null;
 }
 
 async function readPersistedBoundary(
