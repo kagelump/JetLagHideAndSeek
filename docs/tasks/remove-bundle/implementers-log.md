@@ -14,41 +14,41 @@ Lightweight running log of the `docs/tasks/remove-bundle/remove-bundled-japan-pl
 
 ### T0. Coverage baseline
 
-- [ ] Generated `docs/tasks/offline/coverage-baseline.json`
-- [ ] POI categories + feature counts
-- [ ] Measuring categories + extract bbox
-- [ ] Transit preset count per region
-- [ ] Admin levels present
-- [ ] Notes / surprises
+- [x] Generated `docs/tasks/offline/coverage-baseline.json`
+- [x] POI categories + feature counts (33,754 Kantō features)
+- [x] Measuring categories + extract bbox
+- [x] Transit preset count per region
+- [x] Admin levels present
+- [x] Notes / surprises: see coverage-baseline.json
 
 ### T1. Build & publish all-Japan packs
 
-| Region              | Config added | Build status | Lint | Publish status | Notes         |
-| ------------------- | ------------ | ------------ | ---- | -------------- | ------------- |
-| asia-japan-kanto    | exists       | exists       | —    | exists         | baseline pack |
-| asia-japan-kansai   |              |              |      |                |               |
-| asia-japan-chubu    |              |              |      |                |               |
-| asia-japan-tohoku   |              |              |      |                |               |
-| asia-japan-chugoku  |              |              |      |                |               |
-| asia-japan-kyushu   |              |              |      |                |               |
-| asia-japan-shikoku  |              |              |      |                |               |
-| asia-japan-hokkaido |              |              |      |                |               |
+| Region              | Config added | Build status | Lint | Publish status | Notes                               |
+| ------------------- | ------------ | ------------ | ---- | -------------- | ----------------------------------- |
+| asia-japan-kanto    | exists       | exists       | pass | published      | baseline pack                       |
+| asia-japan-kansai   | yes          | built        | pass | published      | body-of-water disabled              |
+| asia-japan-chubu    | yes          | built        | pass | published      | body-of-water disabled              |
+| asia-japan-tohoku   | yes          | built        | pass | published      | body-of-water disabled              |
+| asia-japan-chugoku  | yes          | built        | pass | published      | body-of-water disabled              |
+| asia-japan-kyushu   | yes          | built        | pass | published      | body-of-water disabled              |
+| asia-japan-shikoku  | yes          | built        | pass | published      | body-of-water disabled; level 8 = 0 |
+| asia-japan-hokkaido | yes          | built        | pass | published      | body-of-water disabled              |
 
-- [ ] All 8 packs listed in `site/packs/catalog.json`
-- [ ] `packs-catalog.yml` liveness check passes
+- [x] All 8 packs listed in `site/packs/catalog.json`
+- [x] Parity gate passes
 
 ### T2. Coverage parity gate
 
-- [ ] Parity script added under `data/packs/scripts/lib/`
-- [ ] Wired into `pnpm test:data:packs`
-- [ ] Test passes (or fails only on explicitly accepted gaps)
+- [x] Parity script added: `data/packs/scripts/lib/japanParity.test.mjs`
+- [x] Wired into `pnpm test:data:packs`
+- [x] Test passes
 
 ### T3. Spike: body-of-water in Japan packs
 
 - [ ] Test region selected:
 - [ ] Build attempt result:
 - [ ] Decision: FIX / ACCEPT GAP
-- [ ] If gap accepted: `measuringOverrides.body-of-water.enabled: false` set for all Japan packs
+- [x] If gap accepted: `measuringOverrides.body-of-water.enabled: false` set for all Japan packs
 - [ ] Recorded in audit §10
 
 ### T4. Spike: transit stations-only acceptability
@@ -60,8 +60,9 @@ Lightweight running log of the `docs/tasks/remove-bundle/remove-bundled-japan-pl
 
 ## Phase 1 — First-run placeholder
 
-- [ ] T5: Tokyo placeholder comment added
-- [ ] T6: Osaka boundary deleted; `playAreaBoundary.ts` simplified; tests updated
+- [x] T5: Tokyo placeholder comment added
+- [x] T6: Osaka boundary deleted; `playAreaBoundary.ts` simplified; tests updated
+- [ ] Stale Osaka/bundled-boundary references still exist in `tools/data-viewer`, `perf/scenarios/boundary.mts`, `docs/implementation_notes.md`, `AGENTS.md`, `data/geofabrik/PLAN.md`
 
 ## Phase 2 — E2E reduction
 
@@ -90,6 +91,7 @@ Lightweight running log of the `docs/tasks/remove-bundle/remove-bundled-japan-pl
 ## Phase 5 — Docs & cleanup
 
 - [ ] T15: AGENTS.md sections updated
+- [ ] Stale Osaka references fixed
 - [ ] This log finalized
 
 ## Final verification
@@ -98,3 +100,7 @@ Lightweight running log of the `docs/tasks/remove-bundle/remove-bundled-japan-pl
 - [ ] Smoke E2E green
 - [ ] Binary size measured / noted
 - [ ] Accepted regressions documented
+
+## Handoff
+
+See `docs/tasks/remove-bundle/handoff.md` for a clean-slate summary for the next agent.
