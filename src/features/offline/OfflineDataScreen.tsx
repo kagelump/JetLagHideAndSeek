@@ -68,6 +68,7 @@ function getPackState(
 
 function getStateDescription(
     state: PackState,
+    pack: CatalogPack,
     installed: InstalledPack | undefined,
     progress?: InstallProgress,
 ): string {
@@ -86,7 +87,7 @@ function getStateDescription(
         case "incomplete":
             return "Incomplete — tap to retry";
         case "update-available":
-            return `Update available · installed ${installed?.osmSnapshot} → ${installed?.osmSnapshot}`;
+            return `Update available · installed ${installed?.osmSnapshot} → ${pack.osmSnapshot}`;
     }
 }
 
@@ -270,8 +271,8 @@ export function OfflineDataScreen() {
                                       const row = (
                                           <SheetListRow
                                               key={pack.id}
-                                              accessibilityLabel={`${pack.label} — ${getStateDescription(state, installedEntry, progress)}`}
-                                              description={`${formatBytes(pack.totalBytes)} · ${getStateDescription(state, installedEntry, downloading ? progress : undefined)}`}
+                                              accessibilityLabel={`${pack.label} — ${getStateDescription(state, pack, installedEntry, progress)}`}
+                                              description={`${formatBytes(pack.totalBytes)} · ${getStateDescription(state, pack, installedEntry, downloading ? progress : undefined)}`}
                                               destructive={
                                                   state === "installed" ||
                                                   state === "incomplete"

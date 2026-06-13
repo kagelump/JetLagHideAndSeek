@@ -158,9 +158,6 @@ export function OsmMatchingQuestionDetailScreen({
         osmId: number;
         osmType: "node" | "way" | "relation";
     }) => {
-        console.log(
-            `[detailTap] select: writing selectedOsmId=${candidate.osmId} selectedOsmType=${candidate.osmType}`,
-        );
         updateQuestion(question.id, (current) => {
             if (current.type !== "matching") return current;
             return {
@@ -244,12 +241,6 @@ export function OsmMatchingQuestionDetailScreen({
                                         const isSelected =
                                             selId === candId &&
                                             selType === candType;
-                                        console.log(
-                                            `[detailTap] top3: selected=${String(selId)}/${String(selType)} ` +
-                                                `candidate=${candId}/${candType} ` +
-                                                `isSelected=${isSelected} → ` +
-                                                `${isSelected ? "openDetail" : "select"}`,
-                                        );
                                         if (isSelected) {
                                             setDetailFeature(candidate);
                                             // Defer to next tick: presenting a
