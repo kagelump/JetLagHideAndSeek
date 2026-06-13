@@ -21,7 +21,8 @@
 /* global console, process */
 
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -306,18 +307,35 @@ export async function publish({
         return;
     }
 
-    for (const [assetName, localPath] of uploads) {
-        console.log(`  Uploading ${assetName}...`);
-        const result = await resolvedExec(
-            `gh release upload ${resolvedTag} "${localPath}" --clobber`,
-        );
-        if (result.exitCode !== 0) {
-            console.error(`  Failed to upload ${assetName}: ${result.stderr}`);
-            process.exitCode = 1;
-            return;
+    // Stage files with their intended release asset names.  `gh release
+    // upload` uses the local file's basename as the asset name, so we must
+    // copy each artifact to a temp directory named exactly as the catalog
+    // expects.
+    const uploadStagingDir = resolve(
+        tmpdir(),
+        `pack-publish-${regionId}-${Date.now()}`,
+    );
+    await mkdir(uploadStagingDir, { recursive: true });
+    try {
+        for (const [assetName, localPath] of uploads) {
+            console.log(`  Uploading ${assetName}...`);
+            const stagedPath = resolve(uploadStagingDir, assetName);
+            await copyFile(localPath, stagedPath);
+            const result = await resolvedExec(
+                `gh release upload ${resolvedTag} "${stagedPath}" --clobber`,
+            );
+            if (result.exitCode !== 0) {
+                console.error(
+                    `  Failed to upload ${assetName}: ${result.stderr}`,
+                );
+                process.exitCode = 1;
+                return;
+            }
         }
+        console.log(`  Uploaded ${uploads.size} artifact(s).`);
+    } finally {
+        await rm(uploadStagingDir, { recursive: true, force: true });
     }
-    console.log(`  Uploaded ${uploads.size} artifact(s).`);
 
     // Step 4: Rebuild catalog.json.
     console.log("\n[4/5] Rebuilding catalog...");
