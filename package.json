@@ -1,6 +1,11 @@
 {
     "name": "mobile_v2",
     "version": "0.1.2",
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "dtrace-provider"
+        ]
+    },
     "main": "expo-router/entry",
     "expo": {
         "autolinking": {
@@ -101,10 +106,12 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
+        "@react-native-community/cli": "latest",
         "@testing-library/react-native": "^13.0.0",
         "@types/d3-geo": "^1.12.7",
         "@types/jest": "^29.5.0",
         "@types/react": "~19.1.10",
+        "eas-cli": "^20.1.0",
         "eslint": "^9.19.0",
         "eslint-config-prettier": "^10.0.1",
         "eslint-plugin-react": "^7.37.5",
@@ -118,8 +125,7 @@
         "simple-git-hooks": "^2.13.1",
         "tsx": "^4.22.4",
         "typescript": "~5.9.3",
-        "typescript-eslint": "^8.59.3",
-        "@react-native-community/cli": "latest"
+        "typescript-eslint": "^8.59.3"
     },
     "private": true,
     "simple-git-hooks": {

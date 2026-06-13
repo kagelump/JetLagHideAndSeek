@@ -49,12 +49,7 @@ jobs:
             - name: Test
               run: pnpm test
 
-            - name: Setup EAS
-              uses: expo/expo-github-action@v8
-              with:
-                  eas-version: latest
-                  token: ${{ secrets.EXPO_TOKEN }}
-                  packager: pnpm
-
             - name: Build production apps
-              run: eas build --platform all --profile production --non-interactive --auto-submit
+              env:
+                  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+              run: pnpm exec eas build --platform all --profile production --non-interactive --auto-submit
