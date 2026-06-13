@@ -1,6 +1,5 @@
 import type { Bbox } from "@/shared/geojson";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
-import regionsJson from "../../../../assets/poi/regions.json";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -39,10 +38,9 @@ export type RegionMeta = {
 
 export const OSM_TYPES = ["node", "way", "relation"] as const;
 
-/** Parsed regions.json registry (small, eager import). */
-const REGIONS: RegionMeta[] = (
-    regionsJson as unknown as { regions: RegionMeta[] }
-).regions;
+/** Registry of regions with available POI data. Starts empty; populated by
+ *  registerRegion (installed packs and test fixtures). */
+const REGIONS: RegionMeta[] = [];
 
 /**
  * Injectable thunk registry: regionId → lazy loader function.
@@ -62,46 +60,6 @@ function bboxArea(b: Bbox): number {
 /** Sort REGIONS smallest-bbox-first so more specific packs win coverage. */
 function sortRegionsByArea(): void {
     REGIONS.sort((a, b) => bboxArea(a.bbox) - bboxArea(b.bbox));
-}
-
-// ─── Production loader registration ─────────────────────────────────────
-
-// Register bundled regions — add one `case` per region in regions.json.
-// The require() path is a literal so Metro can resolve and bundle it lazily.
-for (const region of REGIONS) {
-    switch (region.id) {
-        case "japan-kanto":
-            // Lazy thunk: require is not called until first access.
-            regionLoaders.set(region.id, () =>
-                require("../../../../assets/poi/japan-kanto.json"),
-            );
-            break;
-        // Future regions: add a case here.
-        default:
-            if (__DEV__) {
-                console.warn(
-                    `[bundledPois] No loader registered for region "${region.id}" — it will not resolve.`,
-                );
-            }
-    }
-}
-
-// Sort initially so bundled regions have deterministic precedence.
-sortRegionsByArea();
-
-// Guard: every entry in regions.json must have a loader registered above,
-// otherwise the region is "covered-but-empty" and matching silently returns
-// nothing instead of falling back to Overpass.
-if (__DEV__) {
-    for (const r of REGIONS) {
-        if (!regionLoaders.has(r.id)) {
-            console.error(
-                `[bundledPois] FATAL: region "${r.id}" listed in regions.json ` +
-                    `but no loader registered. Add a require() case in bundledPois.ts ` +
-                    `or remove the region from config.yaml's bundle list.`,
-            );
-        }
-    }
 }
 
 // ─── Region cache (memoized parsed results) ─────────────────────────────
