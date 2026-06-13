@@ -2,7 +2,7 @@
  * Tests for coverage status computation.
  *
  * Covers:
- * - Bundled Japan → always covered
+ * - Japan (pack-only) → available/covered via packs
  * - Installed pack intersecting → covered/partial
  * - Installed pack bbox fallback (no catalog needed)
  * - Catalog-available packs
@@ -45,18 +45,41 @@ function makeInstalledPack(
     };
 }
 
-// ─── Bundled Japan ──────────────────────────────────────────────────────
+// ─── Japan (pack-only) ──────────────────────────────────────────────────
 
-describe("getCoverageStatus — bundled Japan", () => {
-    it("returns covered for Japan Kantō bbox", () => {
-        const result = getCoverageStatus(JP_KANTO_BBOX, [], []);
-        expect(result.state).toBe("covered");
-        expect((result as { packId: string }).packId).toBe("japan-bundled");
+describe("getCoverageStatus — Japan (pack-only)", () => {
+    it("returns available for Japan when a catalog pack intersects but none installed", () => {
+        const catalog = [
+            makeCatalogPack({
+                id: "asia-japan-kanto",
+                label: "Kantō",
+                bbox: JP_KANTO_BBOX,
+            }),
+        ];
+        const result = getCoverageStatus(JP_KANTO_BBOX, catalog, []);
+        expect(result.state).toBe("available");
+        if (result.state === "available") {
+            expect(result.packId).toBe("asia-japan-kanto");
+        }
     });
 
-    it("returns covered even with no catalog and no installed packs", () => {
-        const result = getCoverageStatus(JP_KANTO_BBOX, undefined, []);
+    it("returns covered for Japan when the pack is installed", () => {
+        const installed = [
+            makeInstalledPack({
+                id: "asia-japan-kanto",
+                bbox: JP_KANTO_BBOX,
+            }),
+        ];
+        const result = getCoverageStatus(JP_KANTO_BBOX, [], installed);
         expect(result.state).toBe("covered");
+        if (result.state === "covered") {
+            expect(result.packId).toBe("asia-japan-kanto");
+        }
+    });
+
+    it("returns unknown for Japan with no catalog and no installed packs", () => {
+        const result = getCoverageStatus(JP_KANTO_BBOX, undefined, []);
+        expect(result.state).toBe("unknown");
     });
 });
 

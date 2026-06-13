@@ -1,8 +1,6 @@
 /**
  * Coverage status selector — drives the red (!) badge, download prompts,
  * and update check.  Pure function + hook.
- *
- * Bundled Japan regions count as "covered" regardless of catalog state.
  */
 
 import type { Bbox } from "@/shared/geojson";
@@ -45,41 +43,24 @@ export type InstalledPackInfo = {
     missingKinds: ArtifactKind[];
 };
 
-// ─── Bundled Japan region bboxes ────────────────────────────────────────
+// ─── Japan geographic check ─────────────────────────────────────────────
 
-/**
- * Bundled Japan regions from assets/poi/regions.json.
- * These are always "covered" — the badge must never show for Japan.
- */
-const BUNDLED_REGION_BBOXES: { id: string; bbox: Bbox }[] = [
-    { id: "japan-kanto", bbox: [138.4, 34.8, 140.3, 36.9] },
-    { id: "japan-chubu", bbox: [136.5, 34.5, 138.8, 37.6] },
-    { id: "japan-kansai", bbox: [134.6, 33.8, 136.9, 35.8] },
-    { id: "japan-chugoku", bbox: [130.7, 33.9, 134.6, 35.7] },
-    { id: "japan-shikoku", bbox: [131.9, 32.5, 134.8, 34.5] },
-    { id: "japan-kyushu", bbox: [128.6, 30.1, 132.4, 34.2] },
-    { id: "japan-tohoku", bbox: [139.4, 36.5, 142.2, 41.6] },
-    { id: "japan-hokkaido", bbox: [139.0, 40.9, 145.8, 45.6] },
+/** Japan region bboxes — used for geographic admin-division preset selection. */
+const JAPAN_BBOXES: Bbox[] = [
+    [138.4, 34.8, 140.3, 36.9], // Kantō
+    [136.5, 34.5, 138.8, 37.6], // Chūbu
+    [134.6, 33.8, 136.9, 35.8], // Kansai
+    [130.7, 33.9, 134.6, 35.7], // Chūgoku
+    [131.9, 32.5, 134.8, 34.5], // Shikoku
+    [128.6, 30.1, 132.4, 34.2], // Kyūshū
+    [139.4, 36.5, 142.2, 41.6], // Tōhoku
+    [139.0, 40.9, 145.8, 45.6], // Hokkaidō
 ];
 
-/**
- * Check if a bbox falls inside any bundled Japan region.
- * Japan must never show the offline badge.
- */
-export function isBboxInJapan(_bbox: Bbox): boolean {
-    return isCoveredByBundledJapan(_bbox);
-}
-
-function isCoveredByBundledJapan(_bbox: Bbox): boolean {
-    // For simplicity, we check if the play area bbox intersects any bundled
-    // Japan region. The actual Japan coverage is more nuanced (bundled Kantō
-    // covers matching + measuring), but for badge purposes, if the play area
-    // is in Japan we consider it covered.
-    //
-    // In practice, this is checked BEFORE pack-based coverage, so Japan
-    // play areas always show "covered".
-    for (const region of BUNDLED_REGION_BBOXES) {
-        if (bboxesIntersect(_bbox, region.bbox)) return true;
+/** Check if a bbox falls inside Japan (geographic utility for admin-division presets). */
+export function isBboxInJapan(bbox: Bbox): boolean {
+    for (const jpBbox of JAPAN_BBOXES) {
+        if (bboxesIntersect(bbox, jpBbox)) return true;
     }
     return false;
 }
@@ -90,11 +71,10 @@ function isCoveredByBundledJapan(_bbox: Bbox): boolean {
  * Compute the coverage status for a play-area bbox.
  *
  * Rules:
- * 1. Bundled Japan regions → `covered` (never show badge)
- * 2. Installed pack intersects → `covered` (or `partial` if incomplete)
- * 3. Catalog pack intersects but none installed → `available`
- * 4. Nothing intersects → `uncovered`
- * 5. No catalog data → `unknown`
+ * 1. Installed pack intersects → `covered` (or `partial` if incomplete)
+ * 2. Catalog pack intersects but none installed → `available`
+ * 3. Nothing intersects → `uncovered`
+ * 4. No catalog data → `unknown`
  *
  * For overlapping packs, prefers: installed over catalog, then smallest-area.
  */
@@ -103,16 +83,7 @@ export function getCoverageStatus(
     catalogPacks: CatalogPackInfo[] | undefined,
     installedPacks: InstalledPackInfo[],
 ): CoverageStatus {
-    // 1. Bundled Japan regions are always covered.
-    if (isCoveredByBundledJapan(playAreaBbox)) {
-        return {
-            state: "covered",
-            packId: "japan-bundled",
-            updateAvailable: false,
-        };
-    }
-
-    // 2. Check installed packs.
+    // 1. Check installed packs.
     const installedCandidates = installedPacks
         .filter((p) => {
             // Use catalog bbox first, fall back to installed bbox.
@@ -155,7 +126,7 @@ export function getCoverageStatus(
         };
     }
 
-    // 3. Check catalog for available packs.
+    // 2. Check catalog for available packs.
     if (catalogPacks && catalogPacks.length > 0) {
         const catalogCandidates = catalogPacks
             .filter((p) => bboxesIntersect(playAreaBbox, p.bbox))
@@ -172,12 +143,12 @@ export function getCoverageStatus(
         }
     }
 
-    // 4. No catalog data at all.
+    // 3. No catalog data at all.
     if (!catalogPacks) {
         return { state: "unknown" };
     }
 
-    // 5. Nothing covers this area.
+    // 4. Nothing covers this area.
     return { state: "uncovered" };
 }
 
