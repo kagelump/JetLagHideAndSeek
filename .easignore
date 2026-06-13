@@ -1,0 +1,39 @@
+# EAS Build ignore — keep the upload under 2 GB by excluding
+# data pipeline artifacts, docs, and tooling not needed at build time.
+
+# Data pipeline caches and intermediates (multi-GB PBF files)
+data/packs/cache/
+data/geofabrik/cache/
+data/geofabrik/generated/
+data/transit/cache/
+data/transit/report/
+
+# Built pack artifacts (dist) — published to Releases, not needed for builds
+data/packs/dist/
+
+# Legacy ODPT pipeline
+data/odpt/generated/
+
+# Documentation (dozens of MB of markdown + images)
+docs/
+
+# Performance test harness
+perf/
+
+# E2E test artifacts
+e2e/artifacts/
+
+# Claude Code
+.claude/
+
+# GitHub Pages content
+site/
+
+# Web-based data viewer
+tools/data-viewer/
+
+# Git metadata (excluded by EAS by default, but be explicit)
+.git/
+
+# Node modules (excluded by EAS by default)
+node_modules/

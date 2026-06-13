@@ -52,4 +52,4 @@ jobs:
             - name: Build production apps
               env:
                   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-              run: pnpm exec eas build --platform all --profile production --non-interactive --auto-submit
+              run: pnpm exec eas build --platform all --profile production --non-interactive
