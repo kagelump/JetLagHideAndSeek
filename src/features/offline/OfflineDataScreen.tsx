@@ -1,36 +1,26 @@
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import {
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { SheetListRow } from "@/components/SheetListRow";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import { colors } from "@/theme/colors";
 import { usePackCatalog, type CatalogPack } from "./packCatalog";
 import {
-    listInstalledPacks,
+    formatBytes,
     useInstallPack,
+    useInstalledPacks,
     useRemovePack,
     useRetryPack,
 } from "./regionPacks";
 import type { InstalledPack, InstallProgress } from "./regionPacks";
-import { useQuery } from "@tanstack/react-query";
-
-// ─── Installed packs query ───────────────────────────────────────────────
-
-function useInstalledPacks() {
-    return useQuery({
-        queryKey: ["installed-packs-v2"],
-        queryFn: listInstalledPacks,
-        staleTime: 0, // always re-read after mutations
-    });
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function formatDate(iso: string): string {
     try {
@@ -192,6 +182,13 @@ export function OfflineDataScreen() {
         [removeMutation],
     );
 
+    const handleSwipeRemove = useCallback(
+        (packId: string) => {
+            removeMutation.mutate(packId);
+        },
+        [removeMutation],
+    );
+
     const isDownloading = (packId: string) =>
         (installMutation.isPending &&
             (installMutation.variables as { pack: { id: string } } | undefined)
@@ -265,7 +262,12 @@ export function OfflineDataScreen() {
                                       const removing = isRemoving(pack.id);
                                       const progress = installProgress[pack.id];
 
-                                      return (
+                                      const isSwipeable =
+                                          state === "installed" ||
+                                          state === "incomplete" ||
+                                          state === "update-available";
+
+                                      const row = (
                                           <SheetListRow
                                               key={pack.id}
                                               accessibilityLabel={`${pack.label} — ${getStateDescription(state, installedEntry, progress)}`}
@@ -308,6 +310,52 @@ export function OfflineDataScreen() {
                                               }
                                           />
                                       );
+
+                                      if (isSwipeable) {
+                                          return (
+                                              <Swipeable
+                                                  key={pack.id}
+                                                  overshootRight={false}
+                                                  renderRightActions={() => (
+                                                      <View
+                                                          style={
+                                                              styles.deleteActionWrapper
+                                                          }
+                                                      >
+                                                          <Pressable
+                                                              accessibilityLabel={`Delete ${pack.label}`}
+                                                              accessibilityRole="button"
+                                                              onPress={() =>
+                                                                  handleSwipeRemove(
+                                                                      pack.id,
+                                                                  )
+                                                              }
+                                                              style={({
+                                                                  pressed,
+                                                              }) => [
+                                                                  styles.deleteAction,
+                                                                  pressed
+                                                                      ? styles.actionPressed
+                                                                      : null,
+                                                              ]}
+                                                          >
+                                                              <Text
+                                                                  style={
+                                                                      styles.deleteActionText
+                                                                  }
+                                                              >
+                                                                  Delete
+                                                              </Text>
+                                                          </Pressable>
+                                                      </View>
+                                                  )}
+                                              >
+                                                  {row}
+                                              </Swipeable>
+                                          );
+                                      }
+
+                                      return row;
                                   })}
                               </View>
                           ),
@@ -403,5 +451,25 @@ const styles = StyleSheet.create({
         color: colors.ink,
         fontSize: 22,
         fontWeight: "700",
+    },
+    actionPressed: {
+        opacity: 0.72,
+    },
+    deleteAction: {
+        alignItems: "center",
+        backgroundColor: "#d92d20",
+        justifyContent: "center",
+        minHeight: 58,
+        paddingHorizontal: 20,
+    },
+    deleteActionText: {
+        color: colors.white,
+        fontSize: 15,
+        fontWeight: "800",
+    },
+    deleteActionWrapper: {
+        borderRadius: 8,
+        marginLeft: 8,
+        overflow: "hidden",
     },
 });

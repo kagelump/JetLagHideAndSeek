@@ -66,6 +66,10 @@ const BUNDLED_REGION_BBOXES: { id: string; bbox: Bbox }[] = [
  * Check if a bbox falls inside any bundled Japan region.
  * Japan must never show the offline badge.
  */
+export function isBboxInJapan(_bbox: Bbox): boolean {
+    return isCoveredByBundledJapan(_bbox);
+}
+
 function isCoveredByBundledJapan(_bbox: Bbox): boolean {
     // For simplicity, we check if the play area bbox intersects any bundled
     // Japan region. The actual Japan coverage is more nuanced (bundled Kantō

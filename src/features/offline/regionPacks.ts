@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { digestStringAsync } from "expo-crypto";
 import { CryptoDigestAlgorithm } from "expo-crypto";
 import { gunzipSync, strFromU8 } from "fflate";
@@ -937,4 +937,20 @@ export function useRemovePack() {
             queryClient.invalidateQueries({ queryKey: ["installed-packs-v2"] });
         },
     });
+}
+
+export function useInstalledPacks() {
+    return useQuery({
+        queryKey: ["installed-packs-v2"],
+        queryFn: listInstalledPacks,
+        staleTime: 0, // always re-read after mutations
+    });
+}
+
+// ─── Utility ────────────────────────────────────────────────────────────────
+
+export function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
