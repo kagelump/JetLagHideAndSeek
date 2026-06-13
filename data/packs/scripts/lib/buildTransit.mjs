@@ -243,6 +243,7 @@ export async function buildTransitArtifact({
         //    top-level attribution + presets; stations are nested inside
         //    each preset).
         const bundle = {
+            schemaVersion: 1,
             attribution,
             presets,
         };

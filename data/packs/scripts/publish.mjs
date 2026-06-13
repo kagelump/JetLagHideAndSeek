@@ -174,10 +174,10 @@ async function collectUploads(regionId, baseDistDir) {
         files.set(assetName, resolve(regionDistDir, `${key}.json.gz`));
     }
 
-    // Also upload meta.json (not gzipped).
-    const metaPath = resolve(regionDistDir, "meta.json");
-    if (existsSync(metaPath)) {
-        files.set(`${regionId}-meta.json`, metaPath);
+    // Upload meta.json.gz (gzipped — matches catalog expectation).
+    const metaGzPath = resolve(regionDistDir, "meta.json.gz");
+    if (existsSync(metaGzPath)) {
+        files.set(`${regionId}-meta.json.gz`, metaGzPath);
     }
 
     return files;
