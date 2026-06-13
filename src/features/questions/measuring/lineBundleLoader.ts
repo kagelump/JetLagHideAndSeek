@@ -123,52 +123,16 @@ export function __getPackSourcesForTest(): Map<
 }
 
 /**
- * Returns the bundle for a line/polygon category, lazily `require()`-ing and
- * caching it on first use. Returns null for point categories.
- *
- * After this task: returns what's cached (includes merged pack sources if
- * loadLineBundle has been called). Does NOT trigger FS reads — call
- * `loadLineBundle` first for pack-only categories.
+ * Returns the cached bundle for a line/polygon category, or null.
+ * Does NOT trigger FS reads — call `loadLineBundle` first for pack sources.
  */
 export function getLineBundle(category: MeasuringCategory): LineBundle | null {
-    if (cache.has(category)) return cache.get(category) ?? null;
-
-    const t0 = performance.now();
-    let bundle: LineBundle | null = null;
-    switch (category) {
-        case "coastline":
-            bundle = require("../../../../assets/measuring/coastline.json");
-            break;
-        case "high-speed-rail":
-            bundle = require("../../../../assets/measuring/high-speed-rail.json");
-            break;
-        case "body-of-water":
-            bundle = require("../../../../assets/measuring/body-of-water.json");
-            break;
-        case "admin-1st-border":
-            bundle = require("../../../../assets/measuring/admin-1st-border.json");
-            break;
-        case "admin-2nd-border":
-            bundle = require("../../../../assets/measuring/admin-2nd-border.json");
-            break;
-        default:
-            bundle = null; // point category
-    }
-    const tMs = performance.now() - t0;
-    if (bundle) {
-        console.log(
-            `[lineBundle] require(${category}): ${bundle.features.length} features ` +
-                `in ${tMs.toFixed(0)}ms`,
-        );
-    }
-    cache.set(category, bundle);
-    return bundle;
+    return cache.get(category) ?? null;
 }
 
 /**
- * Load a measuring line bundle for a category, merging the bundled `require()`
- * source with any registered pack sources. Reads and parses each registered
- * pack file lazily.
+ * Load a measuring line bundle for a category from registered pack sources.
+ * Reads and parses each registered pack file lazily, merging them.
  *
  * The merged result is cached in the existing `cache` map so the sync
  * `getLineBundle` returns it from then on.
@@ -182,43 +146,14 @@ export function getLineBundle(category: MeasuringCategory): LineBundle | null {
 export async function loadLineBundle(
     category: MeasuringCategory,
 ): Promise<LineBundle | null> {
-    const hasSources = hasPackSources(category);
-
-    // Return cached merge when present (only if set by a previous
-    // loadLineBundle call, not by getLineBundle). The cache is invalidated
-    // by registerMeasuringSource / unregisterMeasuringSources when pack
-    // sources change, so a cache hit here is always fresh.
-    if (hasSources && mergedCache.has(category) && cache.has(category)) {
-        return cache.get(category) ?? null;
-    }
-    if (!hasSources && cache.has(category)) {
+    // Return cached merge when present.
+    if (mergedCache.has(category) && cache.has(category)) {
         return cache.get(category) ?? null;
     }
 
-    // If no pack sources and we have a bundled require(), cache and return it.
-    if (!hasSources && !isPackOnlyCategory(category)) {
-        const bundled = getLineBundle(category);
-        cache.set(category, bundled);
-        return bundled;
-    }
-
-    // Build merged bundle from pristine sources.
-    // Use requirePristineBundle to get the raw bundled data (never the
-    // cached merged result) so that if this is a rebuild after cache
-    // invalidation, we don't duplicate already-merged features.
+    // Build merged bundle from registered pack sources.
     let merged: LineBundle | null = null;
 
-    if (!isPackOnlyCategory(category)) {
-        const bundled = requirePristineBundle(category);
-        if (bundled) {
-            merged = {
-                ...bundled,
-                features: [...bundled.features],
-            };
-        }
-    }
-
-    // Merge registered pack sources.
     const sources = packSources.get(category);
     if (sources && sources.length > 0) {
         for (const source of sources) {
@@ -227,16 +162,13 @@ export async function loadLineBundle(
                 const packBundle: LineBundle = JSON.parse(text);
 
                 if (!merged) {
-                    // First source: initialize from pack bundle.
                     merged = {
                         ...packBundle,
                         features: [...packBundle.features],
                     };
                 } else {
-                    // Merge: concatenate features, union bbox, join source.
                     merged.features.push(...packBundle.features);
 
-                    // Union extractBbox.
                     const a = merged.extractBbox;
                     const b = packBundle.extractBbox;
                     merged.extractBbox = [
@@ -246,7 +178,6 @@ export async function loadLineBundle(
                         Math.max(a[3], b[3]),
                     ];
 
-                    // Append source attribution.
                     merged.source += `; ${packBundle.source}`;
                     console.log(
                         `[lineBundle] merged pack ${source.packId} into ${category}: ` +
@@ -263,7 +194,6 @@ export async function loadLineBundle(
         }
     }
 
-    // Cache the result (even null — no sources at all).
     cache.set(category, merged);
     mergedCache.add(category);
     if (merged) {
@@ -275,49 +205,11 @@ export async function loadLineBundle(
 }
 
 /**
- * Return the pristine bundled bundle for a category — always a fresh
- * `require()`, never the cached merge. Used by loadLineBundle as the
- * base for rebuilding after cache invalidation.
- */
-function requirePristineBundle(category: MeasuringCategory): LineBundle | null {
-    switch (category) {
-        case "coastline":
-            return require("../../../../assets/measuring/coastline.json");
-        case "high-speed-rail":
-            return require("../../../../assets/measuring/high-speed-rail.json");
-        case "body-of-water":
-            return require("../../../../assets/measuring/body-of-water.json");
-        case "admin-1st-border":
-            return require("../../../../assets/measuring/admin-1st-border.json");
-        case "admin-2nd-border":
-            return require("../../../../assets/measuring/admin-2nd-border.json");
-        default:
-            return null;
-    }
-}
-
-/**
  * Returns true if a category has registered pack sources.
  */
 export function hasPackSources(category: MeasuringCategory): boolean {
     const sources = packSources.get(category);
     return sources !== undefined && sources.length > 0;
-}
-
-/**
- * Returns true if a category has only pack sources (no bundled require()).
- */
-function isPackOnlyCategory(category: MeasuringCategory): boolean {
-    switch (category) {
-        case "coastline":
-        case "high-speed-rail":
-        case "body-of-water":
-        case "admin-1st-border":
-        case "admin-2nd-border":
-            return false;
-        default:
-            return true;
-    }
 }
 
 /**
