@@ -83,12 +83,6 @@ export function OsmMatchingCandidatesModal({
                                         const isSelected =
                                             selectedOsmId === candId &&
                                             selectedOsmType === candType;
-                                        console.log(
-                                            `[detailTap] modal: selected=${String(selectedOsmId)}/${String(selectedOsmType)} ` +
-                                                `candidate=${candId}/${candType} ` +
-                                                `isSelected=${isSelected} hasShowDetail=${!!onShowDetail} → ` +
-                                                `${isSelected && onShowDetail ? "openDetail" : "select"}`,
-                                        );
                                         if (isSelected && onShowDetail) {
                                             onShowDetail(candidate);
                                         } else {
