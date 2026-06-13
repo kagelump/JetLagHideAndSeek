@@ -608,20 +608,6 @@
             var STATION_WEDGE_HIGHZOOM = 15; // medium → small wedges
 
             // ── Shared zoom interpolation stops ────────────────────────
-            var STATION_CIRCLE_RADIUS = [
-                "interpolate",
-                ["linear"],
-                ["zoom"],
-                0,
-                0.5,
-                6,
-                1.0,
-                10,
-                3,
-                15,
-                3,
-            ];
-
             var POI_CIRCLE_RADIUS = [
                 "interpolate",
                 ["linear"],
@@ -671,9 +657,7 @@
                     10,
                     3,
                     11,
-                    12,
-                    15,
-                    16,
+                    5,
                 ],
                 "circle-stroke-color": "#fff",
                 "circle-stroke-width": 1,
@@ -877,6 +861,83 @@
                         paint: STATION_DOT_PAINT,
                     },
                 ],
+                // White circle outlines behind wedge fills — one per zoom
+                // tier so the outline tracks the wedge's on-screen size.
+                // These share the same dot source as transit-stations-dot.
+                "transit-stations-outline-large": [
+                    {
+                        id: "transit-stations-outline-large",
+                        type: "circle",
+                        minzoom: STATION_WEDGE_MINZOOM,
+                        maxzoom: STATION_WEDGE_MEDZOOM,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "circle-opacity": 0,
+                            "circle-stroke-color": "#fff",
+                            "circle-stroke-width": 1.5,
+                            "circle-radius": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                11,
+                                1.5,
+                                12,
+                                3,
+                                13,
+                                6,
+                            ],
+                        },
+                    },
+                ],
+                "transit-stations-outline-medium": [
+                    {
+                        id: "transit-stations-outline-medium",
+                        type: "circle",
+                        minzoom: STATION_WEDGE_MEDZOOM,
+                        maxzoom: STATION_WEDGE_HIGHZOOM,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "circle-opacity": 0,
+                            "circle-stroke-color": "#fff",
+                            "circle-stroke-width": 1.5,
+                            "circle-radius": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                13,
+                                2.5,
+                                14,
+                                5,
+                                15,
+                                10,
+                            ],
+                        },
+                    },
+                ],
+                "transit-stations-outline-small": [
+                    {
+                        id: "transit-stations-outline-small",
+                        type: "circle",
+                        minzoom: STATION_WEDGE_HIGHZOOM,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "circle-opacity": 0,
+                            "circle-stroke-color": "#fff",
+                            "circle-stroke-width": 1.5,
+                            "circle-radius": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                15,
+                                4.5,
+                                16,
+                                9,
+                                18,
+                                34,
+                            ],
+                        },
+                    },
+                ],
             };
 
             // ── Normalise wedge-station API response ─────────────────────
@@ -924,23 +985,42 @@
                     loaded++;
                 }
 
-                // Add three wedge fill layers (large / medium / small radius)
-                // with staggered zoom ranges so on-screen size stays sensible.
+                // Multi-size wedge tiers + dot-derived layers.
+                // Layer order matters: outlines → wedges → dots so
+                // white strokes render under coloured fills at z11+.
                 if (transitWedgeSets) {
                     var sizes = ["large", "medium", "small"];
+                    // Add all wedge GeoJSON sources first (no layers yet).
                     for (var si = 0; si < sizes.length; si++) {
                         var size = sizes[si];
                         if (transitWedgeSets[size]) {
                             var srcId = "transit-stations-" + size;
                             addSource(srcId, transitWedgeSets[size]);
-                            addLayers(srcId, LAYER_CONFIGS[srcId]);
                             loaded++;
                         }
                     }
-                    // Derive simple dots from the large wedge set (shared
-                    // station centers, just need the first-wedge points).
+                    // Dot source (station centres) — shared by the
+                    // low-zoom dot layer and the white outline rings.
                     var dotData = buildDotsFromWedges(transitWedgeSets.large);
                     addSource("transit-stations-dot", dotData);
+                    // White circle outlines — behind wedges.
+                    var outlineSizes = ["large", "medium", "small"];
+                    for (var oi = 0; oi < outlineSizes.length; oi++) {
+                        var osz = outlineSizes[oi];
+                        addLayers(
+                            "transit-stations-dot",
+                            LAYER_CONFIGS["transit-stations-outline-" + osz],
+                        );
+                    }
+                    // Wedge fill layers — on top of outlines.
+                    for (var si = 0; si < sizes.length; si++) {
+                        var size = sizes[si];
+                        var srcId = "transit-stations-" + size;
+                        if (map.getSource(srcId)) {
+                            addLayers(srcId, LAYER_CONFIGS[srcId]);
+                        }
+                    }
+                    // Dot circle layer — low zoom (maxzoom 11 via opacity).
                     addLayers(
                         "transit-stations-dot",
                         LAYER_CONFIGS["transit-stations-dot"],
@@ -1034,26 +1114,18 @@
                 .getElementById("toggle-transit-stations")
                 .addEventListener("change", function (e) {
                     var vis = e.target.checked ? "visible" : "none";
-                    map.setLayoutProperty(
+                    var ids = [
                         "transit-stations-wedge-large",
-                        "visibility",
-                        vis,
-                    );
-                    map.setLayoutProperty(
                         "transit-stations-wedge-medium",
-                        "visibility",
-                        vis,
-                    );
-                    map.setLayoutProperty(
                         "transit-stations-wedge-small",
-                        "visibility",
-                        vis,
-                    );
-                    map.setLayoutProperty(
+                        "transit-stations-outline-large",
+                        "transit-stations-outline-medium",
+                        "transit-stations-outline-small",
                         "transit-stations-dot",
-                        "visibility",
-                        vis,
-                    );
+                    ];
+                    for (var i = 0; i < ids.length; i++) {
+                        map.setLayoutProperty(ids[i], "visibility", vis);
+                    }
                 });
 
             // ── Station hover popup ─────────────────────────────────────
@@ -1565,6 +1637,9 @@
                                             normaliseWedgeResponse(rawData);
                                         if (!data) return;
                                         // data = { large: FC, medium: FC, small: FC }
+                                        // Layer order: outlines → wedges → dots
+                                        // so white strokes are under fills.
+                                        // 1. Add all wedge sources (no layers).
                                         for (
                                             var si = 0;
                                             si < sizeIds.length;
@@ -1574,6 +1649,86 @@
                                             var srcId = baseId + "-" + sz.key;
                                             if (!data[sz.key]) continue;
                                             addSource(srcId, data[sz.key]);
+                                        }
+                                        // 2. Dot source (shared by low-zoom
+                                        //    dots and white outline rings).
+                                        var dotData = buildDotsFromWedges(
+                                            data.large,
+                                        );
+                                        addSource(dotSourceId, dotData);
+                                        // 3. White circle outlines — behind wedges.
+                                        var outlineDefs = [
+                                            {
+                                                id: "pack-transit-stations-outline-large",
+                                                minzoom: STATION_WEDGE_MINZOOM,
+                                                maxzoom: STATION_WEDGE_MEDZOOM,
+                                                radius: [
+                                                    "interpolate",
+                                                    ["linear"],
+                                                    ["zoom"],
+                                                    11, 1.5,
+                                                    12, 3,
+                                                    13, 6,
+                                                ],
+                                            },
+                                            {
+                                                id: "pack-transit-stations-outline-medium",
+                                                minzoom: STATION_WEDGE_MEDZOOM,
+                                                maxzoom: STATION_WEDGE_HIGHZOOM,
+                                                radius: [
+                                                    "interpolate",
+                                                    ["linear"],
+                                                    ["zoom"],
+                                                    13, 2.5,
+                                                    14, 5,
+                                                    15, 10,
+                                                ],
+                                            },
+                                            {
+                                                id: "pack-transit-stations-outline-small",
+                                                minzoom: STATION_WEDGE_HIGHZOOM,
+                                                radius: [
+                                                    "interpolate",
+                                                    ["linear"],
+                                                    ["zoom"],
+                                                    15, 4.5,
+                                                    16, 9,
+                                                    18, 34,
+                                                ],
+                                            },
+                                        ];
+                                        for (
+                                            var oi = 0;
+                                            oi < outlineDefs.length;
+                                            oi++
+                                        ) {
+                                            var od = outlineDefs[oi];
+                                            var outlineOpts = {
+                                                id: od.id,
+                                                type: "circle",
+                                                source: dotSourceId,
+                                                minzoom: od.minzoom,
+                                                paint: {
+                                                    "circle-opacity": 0,
+                                                    "circle-stroke-color": "#fff",
+                                                    "circle-stroke-width": 1.5,
+                                                    "circle-radius": od.radius,
+                                                },
+                                            };
+                                            if (od.maxzoom != null)
+                                                outlineOpts.maxzoom =
+                                                    od.maxzoom;
+                                            map.addLayer(outlineOpts);
+                                        }
+                                        // 4. Wedge fill layers — on top of outlines.
+                                        for (
+                                            var si = 0;
+                                            si < sizeIds.length;
+                                            si++
+                                        ) {
+                                            var sz = sizeIds[si];
+                                            var srcId = baseId + "-" + sz.key;
+                                            if (!map.getSource(srcId)) continue;
                                             var layerOpts = {
                                                 id:
                                                     "pack-transit-stations-wedge-" +
@@ -1581,20 +1736,15 @@
                                                 type: "fill",
                                                 source: srcId,
                                                 paint: STATION_WEDGE_PAINT,
+                                                minzoom: sz.minzoom,
                                             };
-                                            layerOpts.minzoom = sz.minzoom;
                                             if (sz.maxzoom != null)
                                                 layerOpts.maxzoom = sz.maxzoom;
                                             map.addLayer(layerOpts);
                                             PACK_STATE.loadedLayers[srcId] =
                                                 true;
                                         }
-                                        // Dot circle layer (low zoom),
-                                        // derived from large wedge centers.
-                                        var dotData = buildDotsFromWedges(
-                                            data.large,
-                                        );
-                                        addSource(dotSourceId, dotData);
+                                        // 5. Dot circle layer — low zoom.
                                         map.addLayer({
                                             id: "pack-transit-stations-dot",
                                             type: "circle",
@@ -1618,6 +1768,21 @@
                                     var srcId = baseId + "-" + sizeIds[si].key;
                                     removeSourceAndLayers(srcId);
                                     delete PACK_STATE.loadedLayers[srcId];
+                                }
+                                // Remove outline layers (share dotSourceId
+                                // but have distinct layer ids).
+                                var outlineIds = [
+                                    "pack-transit-stations-outline-large",
+                                    "pack-transit-stations-outline-medium",
+                                    "pack-transit-stations-outline-small",
+                                ];
+                                for (
+                                    var oi = 0;
+                                    oi < outlineIds.length;
+                                    oi++
+                                ) {
+                                    if (map.getLayer(outlineIds[oi]))
+                                        map.removeLayer(outlineIds[oi]);
                                 }
                                 removeSourceAndLayers(dotSourceId);
                                 delete PACK_STATE.loadedLayers[baseId];

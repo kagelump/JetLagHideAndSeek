@@ -741,11 +741,47 @@
                         },
                     },
                 ],
-                "transit-stations": [
+                "transit-stations-large": [
                     {
-                        id: "transit-stations-wedge",
+                        id: "transit-stations-wedge-large",
                         type: "fill",
                         minzoom: 11,
+                        maxzoom: 13,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "fill-color": [
+                                "to-color",
+                                ["get", "color"],
+                                "#888",
+                            ],
+                            "fill-opacity": 0.9,
+                            "fill-antialias": true,
+                        },
+                    },
+                ],
+                "transit-stations-medium": [
+                    {
+                        id: "transit-stations-wedge-medium",
+                        type: "fill",
+                        minzoom: 13,
+                        maxzoom: 15,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "fill-color": [
+                                "to-color",
+                                ["get", "color"],
+                                "#888",
+                            ],
+                            "fill-opacity": 0.9,
+                            "fill-antialias": true,
+                        },
+                    },
+                ],
+                "transit-stations-small": [
+                    {
+                        id: "transit-stations-wedge-small",
+                        type: "fill",
+                        minzoom: 15,
                         layout: { visibility: "none" },
                         paint: {
                             "fill-color": [
@@ -770,18 +806,104 @@
                                 ["get", "color"],
                                 "#888",
                             ],
-                            "circle-opacity": 0.95,
+                            "circle-opacity": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                10,
+                                0.95,
+                                11,
+                                0,
+                            ],
                             "circle-radius": [
                                 "interpolate",
                                 ["linear"],
                                 ["zoom"],
+                                0,
+                                0.5,
                                 6,
                                 1.5,
                                 10,
                                 3,
+                                11,
+                                5,
                             ],
                             "circle-stroke-color": "#fff",
                             "circle-stroke-width": 1,
+                        },
+                    },
+                ],
+                "transit-stations-outline-large": [
+                    {
+                        id: "transit-stations-outline-large",
+                        type: "circle",
+                        minzoom: 11,
+                        maxzoom: 13,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "circle-opacity": 0,
+                            "circle-stroke-color": "#fff",
+                            "circle-stroke-width": 1.5,
+                            "circle-radius": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                11,
+                                1.5,
+                                12,
+                                3,
+                                13,
+                                6,
+                            ],
+                        },
+                    },
+                ],
+                "transit-stations-outline-medium": [
+                    {
+                        id: "transit-stations-outline-medium",
+                        type: "circle",
+                        minzoom: 13,
+                        maxzoom: 15,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "circle-opacity": 0,
+                            "circle-stroke-color": "#fff",
+                            "circle-stroke-width": 1.5,
+                            "circle-radius": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                13,
+                                2.5,
+                                14,
+                                5,
+                                15,
+                                10,
+                            ],
+                        },
+                    },
+                ],
+                "transit-stations-outline-small": [
+                    {
+                        id: "transit-stations-outline-small",
+                        type: "circle",
+                        minzoom: 15,
+                        layout: { visibility: "none" },
+                        paint: {
+                            "circle-opacity": 0,
+                            "circle-stroke-color": "#fff",
+                            "circle-stroke-width": 1.5,
+                            "circle-radius": [
+                                "interpolate",
+                                ["linear"],
+                                ["zoom"],
+                                15,
+                                4.5,
+                                16,
+                                9,
+                                18,
+                                34,
+                            ],
                         },
                     },
                 ],
@@ -857,15 +979,50 @@
                     }
                     if (id === "transit-stations") {
                         transitWedgeData = result.value;
+                        continue;
                     }
                     addSource(id, result.value);
                     addLayers(id, CONFIG_LAYERS[id]);
                     loaded++;
                 }
-                // Derive simple dots from wedge features for low-zoom use.
+                // Multi-size wedge tiers + dot-derived layers.
+                // Layer order matters: outlines → wedges → dots so
+                // white strokes render under coloured fills at z11+.
                 if (transitWedgeData) {
-                    var dotData = buildDotsFromWedges(transitWedgeData);
+                    var sizes = ["large", "medium", "small"];
+                    // Add all wedge GeoJSON sources first (no layers yet).
+                    for (var si = 0; si < sizes.length; si++) {
+                        var size = sizes[si];
+                        if (transitWedgeData[size]) {
+                            var srcId = "transit-stations-" + size;
+                            addSource(srcId, transitWedgeData[size]);
+                            loaded++;
+                        }
+                    }
+                    // Dot source (station centres) — shared by the
+                    // low-zoom dot layer and the white outline rings.
+                    var dotData = buildDotsFromWedges(
+                        transitWedgeData.large,
+                    );
                     addSource("transit-stations-dot", dotData);
+                    // White circle outlines — behind wedges.
+                    var outlineSizes = ["large", "medium", "small"];
+                    for (var oi = 0; oi < outlineSizes.length; oi++) {
+                        var osz = outlineSizes[oi];
+                        addLayers(
+                            "transit-stations-dot",
+                            CONFIG_LAYERS["transit-stations-outline-" + osz],
+                        );
+                    }
+                    // Wedge fill layers — on top of outlines.
+                    for (var si = 0; si < sizes.length; si++) {
+                        var size = sizes[si];
+                        var srcId = "transit-stations-" + size;
+                        if (map.getSource(srcId)) {
+                            addLayers(srcId, CONFIG_LAYERS[srcId]);
+                        }
+                    }
+                    // Dot circle layer — low zoom.
                     addLayers(
                         "transit-stations-dot",
                         CONFIG_LAYERS["transit-stations-dot"],
@@ -936,7 +1093,10 @@
                 });
             }
 
-            addStationHover("transit-stations-wedge");
+            addStationHover("transit-stations-wedge-large");
+            addStationHover("transit-stations-wedge-medium");
+            addStationHover("transit-stations-wedge-small");
+            addStationHover("transit-stations-dot");
 
             function addDropPoiHover(layerId) {
                 map.on("mouseenter", layerId, function (e) {
@@ -962,7 +1122,6 @@
                     copyNodeInfo(e.features[0]);
                 });
             }
-            addStationHover("transit-stations-dot");
 
             function truncateList(str, max) {
                 if (!str) return "";
@@ -1023,16 +1182,22 @@
                 .getElementById("toggle-transit-stations")
                 .addEventListener("change", function (e) {
                     var vis = e.target.checked ? "visible" : "none";
-                    map.setLayoutProperty(
-                        "transit-stations-wedge",
-                        "visibility",
-                        vis,
-                    );
-                    map.setLayoutProperty(
+                    var wedgeIds = [
+                        "transit-stations-wedge-large",
+                        "transit-stations-wedge-medium",
+                        "transit-stations-wedge-small",
+                        "transit-stations-outline-large",
+                        "transit-stations-outline-medium",
+                        "transit-stations-outline-small",
                         "transit-stations-dot",
-                        "visibility",
-                        vis,
-                    );
+                    ];
+                    for (var i = 0; i < wedgeIds.length; i++) {
+                        map.setLayoutProperty(
+                            wedgeIds[i],
+                            "visibility",
+                            vis,
+                        );
+                    }
                 });
 
             // ── Pack catalog ──────────────────────────────────────────────
@@ -1590,33 +1755,117 @@
                 stationCb.addEventListener("change", function () {
                     var sourceId = "drop-transit-stations";
                     var dotSourceId = "drop-transit-stations-dot";
+                    var sizeIds = [
+                        { key: "large", minzoom: 11, maxzoom: 13 },
+                        { key: "medium", minzoom: 13, maxzoom: 15 },
+                        { key: "small", minzoom: 15, maxzoom: undefined },
+                    ];
                     if (this.checked && !PACK_LOADED_LAYERS[sourceId]) {
                         var stations =
                             window.transitGeojson.getSelectedStations(presets);
-                        var fc =
-                            window.transitGeojson.buildStationWedgeFeatureCollection(
+                        var allWedges =
+                            window.transitGeojson.buildAllWedgeFeatureCollections(
                                 stations,
                             );
-                        // Wedge fill layer (high zoom).
-                        addSource(sourceId, fc);
-                        map.addLayer({
-                            id: "drop-transit-stations-wedge",
-                            type: "fill",
-                            source: sourceId,
-                            minzoom: 11,
-                            paint: {
-                                "fill-color": [
-                                    "to-color",
-                                    ["get", "color"],
-                                    "#888",
-                                ],
-                                "fill-opacity": 0.9,
-                                "fill-antialias": true,
-                            },
-                        });
-                        // Dot circle layer (low zoom), derived from wedges.
-                        var dotData = buildDotsFromWedges(fc);
+                        // Layer order: outlines → wedges → dots.
+                        // 1. Add all wedge GeoJSON sources (no layers).
+                        for (var si = 0; si < sizeIds.length; si++) {
+                            var sz = sizeIds[si];
+                            if (!allWedges[sz.key]) continue;
+                            var szSrcId = sourceId + "-" + sz.key;
+                            addSource(szSrcId, allWedges[sz.key]);
+                        }
+                        // 2. Dot source (shared by low-zoom dots and
+                        //    white outline rings).
+                        var dotData = buildDotsFromWedges(
+                            allWedges.large,
+                        );
                         addSource(dotSourceId, dotData);
+                        // 3. White circle outlines — behind wedges.
+                        var outlineDefs = [
+                            {
+                                id: "drop-transit-stations-outline-large",
+                                minzoom: 11,
+                                maxzoom: 13,
+                                radius: [
+                                    "interpolate",
+                                    ["linear"],
+                                    ["zoom"],
+                                    11, 1.5,
+                                    12, 3,
+                                    13, 6,
+                                ],
+                            },
+                            {
+                                id: "drop-transit-stations-outline-medium",
+                                minzoom: 13,
+                                maxzoom: 15,
+                                radius: [
+                                    "interpolate",
+                                    ["linear"],
+                                    ["zoom"],
+                                    13, 2.5,
+                                    14, 5,
+                                    15, 10,
+                                ],
+                            },
+                            {
+                                id: "drop-transit-stations-outline-small",
+                                minzoom: 15,
+                                radius: [
+                                    "interpolate",
+                                    ["linear"],
+                                    ["zoom"],
+                                    15, 4.5,
+                                    16, 9,
+                                    18, 34,
+                                ],
+                            },
+                        ];
+                        for (var oi = 0; oi < outlineDefs.length; oi++) {
+                            var od = outlineDefs[oi];
+                            var outlineOpts = {
+                                id: od.id,
+                                type: "circle",
+                                source: dotSourceId,
+                                minzoom: od.minzoom,
+                                paint: {
+                                    "circle-opacity": 0,
+                                    "circle-stroke-color": "#fff",
+                                    "circle-stroke-width": 1.5,
+                                    "circle-radius": od.radius,
+                                },
+                            };
+                            if (od.maxzoom != null)
+                                outlineOpts.maxzoom = od.maxzoom;
+                            map.addLayer(outlineOpts);
+                        }
+                        // 4. Wedge fill layers — on top of outlines.
+                        for (var si = 0; si < sizeIds.length; si++) {
+                            var sz = sizeIds[si];
+                            var szSrcId = sourceId + "-" + sz.key;
+                            if (!map.getSource(szSrcId)) continue;
+                            var layerOpts = {
+                                id: "drop-transit-stations-wedge-" + sz.key,
+                                type: "fill",
+                                source: szSrcId,
+                                minzoom: sz.minzoom,
+                                paint: {
+                                    "fill-color": [
+                                        "to-color",
+                                        ["get", "color"],
+                                        "#888",
+                                    ],
+                                    "fill-opacity": 0.9,
+                                    "fill-antialias": true,
+                                },
+                            };
+                            if (sz.maxzoom != null)
+                                layerOpts.maxzoom = sz.maxzoom;
+                            map.addLayer(layerOpts);
+                            PACK_LOADED_LAYERS[szSrcId] = true;
+                        }
+                        // 5. Dot circle layer — low zoom.
                         map.addLayer({
                             id: "drop-transit-stations-dot",
                             type: "circle",
@@ -1628,15 +1877,27 @@
                                     ["get", "color"],
                                     "#888",
                                 ],
-                                "circle-opacity": 0.95,
+                                "circle-opacity": [
+                                    "interpolate",
+                                    ["linear"],
+                                    ["zoom"],
+                                    10,
+                                    0.95,
+                                    11,
+                                    0,
+                                ],
                                 "circle-radius": [
                                     "interpolate",
                                     ["linear"],
                                     ["zoom"],
+                                    0,
+                                    0.5,
                                     6,
                                     1.5,
                                     10,
                                     3,
+                                    11,
+                                    5,
                                 ],
                                 "circle-stroke-color": "#fff",
                                 "circle-stroke-width": 1,
@@ -1645,10 +1906,26 @@
                         PACK_LOADED_LAYERS[sourceId] = true;
                         PACK_LOADED_LAYERS[dotSourceId] = true;
                     } else if (!this.checked) {
-                        removeSourceAndLayers(sourceId);
+                        for (var si = 0; si < sizeIds.length; si++) {
+                            var szSrcId =
+                                sourceId + "-" + sizeIds[si].key;
+                            removeSourceAndLayers(szSrcId);
+                            delete PACK_LOADED_LAYERS[szSrcId];
+                        }
                         removeSourceAndLayers(dotSourceId);
-                        delete PACK_LOADED_LAYERS[sourceId];
                         delete PACK_LOADED_LAYERS[dotSourceId];
+                        delete PACK_LOADED_LAYERS[sourceId];
+                        // Remove outline layers (they share dotSourceId
+                        // but have distinct layer ids).
+                        var outlineIds = [
+                            "drop-transit-stations-outline-large",
+                            "drop-transit-stations-outline-medium",
+                            "drop-transit-stations-outline-small",
+                        ];
+                        for (var oi = 0; oi < outlineIds.length; oi++) {
+                            if (map.getLayer(outlineIds[oi]))
+                                map.removeLayer(outlineIds[oi]);
+                        }
                     }
                 });
                 container.appendChild(stationLabel);
@@ -1688,7 +1965,9 @@
                     });
                 }
 
-                addDropStationHover("drop-transit-stations-wedge");
+                addDropStationHover("drop-transit-stations-wedge-large");
+                addDropStationHover("drop-transit-stations-wedge-medium");
+                addDropStationHover("drop-transit-stations-wedge-small");
                 addDropStationHover("drop-transit-stations-dot");
             }
 

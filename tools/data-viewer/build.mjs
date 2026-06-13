@@ -82,11 +82,11 @@ console.log(
 );
 
 const mergedStations = transitGeojson.getSelectedStations(presets);
-const stationFeatures =
-    transitGeojson.buildStationWedgeFeatureCollection(mergedStations);
-writeJson("transit/stations.json", stationFeatures);
+const allWedges =
+    transitGeojson.buildAllWedgeFeatureCollections(mergedStations);
+writeJson("transit/stations.json", allWedges);
 console.log(
-    `  transit/stations.json — ${stationFeatures.features.length} features (${mergedStations.length} stations)`,
+    `  transit/stations.json — large: ${allWedges.large.features.length}, medium: ${allWedges.medium.features.length}, small: ${allWedges.small.features.length} features (${mergedStations.length} stations)`,
 );
 
 // --- HTML ---
