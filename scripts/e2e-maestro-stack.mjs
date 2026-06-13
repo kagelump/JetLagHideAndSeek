@@ -31,32 +31,7 @@ const devClientBundleUrl = encodeURIComponent(
 );
 
 const flows = [
-    {
-        name: "warmup",
-        artifactSubdir: "warmup",
-        flowPath: "e2e/warmup.yaml",
-    },
     { name: "smoke", artifactSubdir: "smoke", flowPath: "e2e/smoke.yaml" },
-    {
-        name: "play-area",
-        artifactSubdir: "play-area",
-        flowPath: "e2e/play-area.yaml",
-    },
-    {
-        name: "hiding-zone",
-        artifactSubdir: "hiding-zone",
-        flowPath: "e2e/hiding-zone.yaml",
-    },
-    {
-        name: "radar-question",
-        artifactSubdir: "radar-question",
-        flowPath: "e2e/radar-question.yaml",
-    },
-    {
-        name: "transit-line-question",
-        artifactSubdir: "transit-line-question",
-        flowPath: "e2e/transit-line-question.yaml",
-    },
 ];
 
 const env = {

@@ -7,7 +7,7 @@ import {
     selectFlows,
 } from "./e2e-maestro-stack-config.mjs";
 
-const flows = [{ name: "warmup" }, { name: "smoke" }, { name: "hiding-zone" }];
+const flows = [{ name: "smoke" }];
 
 test("resolveE2ePlatform uses an explicit platform when provided", () => {
     assert.equal(resolveE2ePlatform("android", "darwin"), "android");
@@ -37,15 +37,8 @@ test("selectFlows keeps the full list for all", () => {
     assert.deepEqual(selectFlows(flows, "all"), flows);
 });
 
-test("selectFlows prepends warmup for a focused flow", () => {
-    assert.deepEqual(selectFlows(flows, "hiding-zone"), [
-        { name: "warmup" },
-        { name: "hiding-zone" },
-    ]);
-});
-
-test("selectFlows runs warmup only once when selected directly", () => {
-    assert.deepEqual(selectFlows(flows, "warmup"), [{ name: "warmup" }]);
+test("selectFlows returns smoke for smoke", () => {
+    assert.deepEqual(selectFlows(flows, "smoke"), [{ name: "smoke" }]);
 });
 
 test("selectFlows rejects unknown flow names", () => {

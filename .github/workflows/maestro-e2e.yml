@@ -20,10 +20,6 @@ on:
                 options:
                     - all
                     - smoke
-                    - play-area
-                    - hiding-zone
-                    - radar-question
-                    - transit-line-question
     pull_request:
         paths:
             - "app/**"

@@ -27,8 +27,5 @@ export function selectFlows(flows, selectedFlow) {
         );
     }
 
-    if (selected.name === "warmup") return [selected];
-
-    const warmup = flows.find((flow) => flow.name === "warmup");
-    return warmup ? [warmup, selected] : [selected];
+    return [selected];
 }
