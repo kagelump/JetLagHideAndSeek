@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-13T05:05:25.028Z",
+    "generatedAt": "2026-06-13T05:06:01.387Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1582,7 +1582,7 @@
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/north-america-us-california-norcal-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-california-norcal-poi.json.gz",
                     "bytes": 282752,
                     "md5": "bd430890ea29a34dedc475fc885e648a",
                     "sha256": "71277867f0a03eb9de5cef9b864f109b726ad9ecba3ceac1b820a6576e447d03",
@@ -1591,7 +1591,7 @@
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/north-america-us-california-norcal-measuring-coastline.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-california-norcal-measuring-coastline.json.gz",
                     "bytes": 272936,
                     "md5": "543b4769d81bb9be57838b2e393f32ab",
                     "sha256": "7428a24f5512e588d81abe5a1c1644c0a4aed929c535652d839e053fae9a977e",
@@ -1600,7 +1600,7 @@
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/north-america-us-california-norcal-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-california-norcal-measuring-admin-boundaries.json.gz",
                     "bytes": 894974,
                     "md5": "4536d8d5fcd08eccb89f34712d5635ed",
                     "sha256": "dfc22fc5b9ebaf69c34255604575183bf9fe31a3ee7c313dcb126ab6e515fedd",
@@ -1609,7 +1609,7 @@
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/north-america-us-california-norcal-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-california-norcal-boundaries.json.gz",
                     "bytes": 361391,
                     "md5": "cedd5bd1d26a1fa4bd1638ab66fffeff",
                     "sha256": "e5272990303b28ec943d1e0218799966daa79d7c469c2326917f2986b89bcad5",
@@ -1618,7 +1618,7 @@
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/north-america-us-california-norcal-transit.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-california-norcal-transit.json.gz",
                     "bytes": 104780,
                     "md5": "a4fdfc4b159c393d85a3f8f2b553fdbf",
                     "sha256": "08614b8cc00f1578ebea10bcdc53dbf9aba837a868e3a0b75ecbf64837514d3e",
@@ -1627,7 +1627,7 @@
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/north-america-us-california-norcal-meta.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-california-norcal-meta.json.gz",
                     "bytes": 495,
                     "md5": "4dd2dc1ac78c504e14d1305a4b44e260",
                     "sha256": "2ec51306bf4e62e6195be584e78d329beafe937b74e882fa9b8da6f655aa38e8",
