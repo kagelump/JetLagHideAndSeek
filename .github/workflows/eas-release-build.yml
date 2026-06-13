@@ -49,7 +49,10 @@ jobs:
             - name: Test
               run: pnpm test
 
+            - name: Install EAS CLI
+              run: npm install -g eas-cli
+
             - name: Build production apps
               env:
                   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-              run: pnpm exec eas build --platform all --profile production --non-interactive
+              run: eas build --platform all --profile production --non-interactive
