@@ -703,7 +703,7 @@ function buildLine(
             const simplifyMeters =
                 localeConfig.simplifyMeters != null
                     ? localeConfig.simplifyMeters
-                    : localeConfig.transitOverrides?.simplifyMeters ?? 11;
+                    : (localeConfig.transitOverrides?.simplifyMeters ?? 11);
             geometry =
                 simplifyMeters > 0
                     ? simplifyGeometry(stitched, simplifyMeters)
@@ -738,6 +738,24 @@ function buildLine(
             type: "MultiLineString",
             coordinates: branchLines,
         };
+    }
+
+    // Discard lines whose geometry collapsed to nothing. This can happen when
+    // stop-position resolution finds stations but every variant has fewer than
+    // two distinct coordinates (e.g. a long-distance route touching only one
+    // station inside the region).
+    const parts =
+        geometry.type === "LineString"
+            ? [geometry.coordinates]
+            : geometry.type === "MultiLineString"
+              ? geometry.coordinates
+              : [];
+    if (
+        parts.length === 0 ||
+        parts.every((part) => !Array.isArray(part) || part.length < 2)
+    ) {
+        stats.linesEmptyGeometry = (stats.linesEmptyGeometry || 0) + 1;
+        return null;
     }
 
     return {

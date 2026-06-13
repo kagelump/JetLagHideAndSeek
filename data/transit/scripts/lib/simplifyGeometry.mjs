@@ -86,7 +86,11 @@ function rdpSimplify(coords, toleranceDegrees) {
  * @returns {{type: "MultiLineString", coordinates: number[][][]}}
  */
 export function simplifyGeometry(geometry, meters) {
-    if (!geometry || geometry.type !== "MultiLineString" || !Array.isArray(geometry.coordinates)) {
+    if (
+        !geometry ||
+        geometry.type !== "MultiLineString" ||
+        !Array.isArray(geometry.coordinates)
+    ) {
         return geometry;
     }
     if (!Number.isFinite(meters) || meters <= 0) {

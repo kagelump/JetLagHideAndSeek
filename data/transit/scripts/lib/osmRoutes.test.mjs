@@ -720,7 +720,10 @@ describe("processOsmRoutes", () => {
             id: 901,
             properties: {
                 "@id": 901,
-                tags: { route: "subway", name: "Wayless Fallback Line Inbound" },
+                tags: {
+                    route: "subway",
+                    name: "Wayless Fallback Line Inbound",
+                },
             },
             members: [
                 { type: "node", ref: 10, role: "stop" },

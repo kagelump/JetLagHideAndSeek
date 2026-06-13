@@ -224,6 +224,8 @@ export async function osmStage(ctx) {
     const allRelations = [];
     /** @type {Map<number, {lat: number, lon: number}>} */
     const allNodeCoords = new Map();
+    /** @type {Map<number, number[]>} way id → ordered node refs */
+    const allWays = new Map();
 
     for (const region of targetRegions) {
         // Determine PBF path (same logic as station extraction above).
@@ -246,15 +248,19 @@ export async function osmStage(ctx) {
             continue;
         }
 
-        const { relations, nodeCoords } = await extractRouteRelationsFromPbf({
-            pbfPath,
-            cacheDir,
-            regionId: region.id,
-        });
+        const { relations, nodeCoords, ways } =
+            await extractRouteRelationsFromPbf({
+                pbfPath,
+                cacheDir,
+                regionId: region.id,
+            });
 
         allRelations.push(...relations);
         for (const [id, coords] of nodeCoords) {
             if (!allNodeCoords.has(id)) allNodeCoords.set(id, coords);
+        }
+        for (const [id, refs] of ways) {
+            if (!allWays.has(id)) allWays.set(id, refs);
         }
     }
 
@@ -292,6 +298,7 @@ export async function osmStage(ctx) {
             allStationRecords,
             ctx.locale,
             allNodeCoords,
+            allWays,
         );
         ctx.osmRouteLines = result.lines;
         ctx.osmRouteStats = result.stats;

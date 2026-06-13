@@ -6,17 +6,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { simplifyGeometry } from "./simplifyGeometry.mjs";
 
-function segmentLength([lon1, lat1], [lon2, lat2]) {
-    const toRad = (deg) => (deg * Math.PI) / 180;
-    const R = 6371000;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function pointToSegmentDistanceM([lon, lat], [lon1, lat1], [lon2, lat2]) {
     const toRad = (deg) => (deg * Math.PI) / 180;
     const R = 6371000;
@@ -85,7 +74,10 @@ describe("simplifyGeometry", () => {
             type: "MultiLineString",
             coordinates: [
                 [[139.0, 35.0]], // single point — dropped
-                [[139.1, 35.1], [139.2, 35.2]], // stays
+                [
+                    [139.1, 35.1],
+                    [139.2, 35.2],
+                ], // stays
             ],
         };
         const simplified = simplifyGeometry(geometry, 100);
@@ -100,7 +92,10 @@ describe("simplifyGeometry", () => {
         const coords = [];
         for (let i = 0; i <= 50; i++) {
             const t = i / 50;
-            coords.push([139.0 + t * 0.01, 35.0 + Math.sin(t * Math.PI) * 0.001]);
+            coords.push([
+                139.0 + t * 0.01,
+                35.0 + Math.sin(t * Math.PI) * 0.001,
+            ]);
         }
         const geometry = {
             type: "MultiLineString",
