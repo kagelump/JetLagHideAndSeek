@@ -938,8 +938,7 @@
                         "</strong><br>" +
                         p.category;
                     if (p.osmId)
-                        html +=
-                            "<br>osm " + (p.osmType || "") + " " + p.osmId;
+                        html += "<br>osm " + (p.osmType || "") + " " + p.osmId;
                     if (p.iata) html += " &middot; IATA " + p.iata;
                     POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
                 });
