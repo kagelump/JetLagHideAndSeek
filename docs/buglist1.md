@@ -16,42 +16,35 @@ Difficulty: **[E]** easy (≤half day), **[M]** medium (1–2 days), **[H]** har
 
 ### Play Area
 
-- **[M]** Admin level should default to country of play area
-    - 🚧 **In progress (T8).** `buildPackAdminDivisionPack` and
-      `registerPackAdminLevels` exist in `adminLevelDefaults.ts` and are
-      wired from the pack installer (regionPacks.ts). The app-side query
-      path (`queryAdminBoundaryAsync`) now feeds into the matching cache.
-      Remaining: wire `AdminDivisionScreen` to consume the pack-derived
-      defaults, add the sticky per-relation manual override, and add the
-      "(from <pack label>)" UI indicator.
-    - Direction: play-area metadata (Overpass relation tags / Photon
-      `countrycode`) → map to the admin pack in
-      `src/features/questions/matching/adminDivisionConfig.ts`. Wire the
-      default in `AdminDivisionScreen` / `playAreaStore` when the play area
-      changes; keep manual override sticky.
+- ✅ **Done.** Admin level defaults to country of play area.
+  `PlayAreaScreen` auto-selects on play-area change: pack-derived levels
+  (`findPackForPlayArea` → `buildPackAdminDivisionPack` →
+  `setAdminDivisionPack`) first, else geographic preset via `isBboxInJapan`
+  (`japan` / `generic`). `AdminDivisionScreen` exposes a Generic/Japan preset
+  picker; per-field edits clear the preset name. Shipped in 8a6f46b.
 - **[M]** Should automatic find and download offline data pack for the play area (or loudly error if it doesn't exist)
-    - 🚧 **In progress (T10).** `getCoverageStatus()` computes per-play-area
-      coverage using catalog + installed index (with persisted bbox for
-      offline resilience). `coverage.ts` module built. Remaining:
-      `useCoverageStatus()` hook, Settings/MainDrawer red (!) badge, play-area
-      download prompt, dismissed-prompt persistence, and update-flow UI.
-      See `src/features/offline/coverage.ts`.
+    - 🚧 **Mostly done (T10).** `getCoverageStatus()` computes per-play-area
+      coverage (catalog + installed index, persisted bbox for offline
+      resilience) and `PlayAreaScreen` now surfaces the download prompt via
+      `OfflinePackModal` with dismissed-prompt persistence
+      (`dismissedOsmId`). Remaining: Settings/MainDrawer red (!) badge and the
+      update-flow UI for stale installed packs. See
+      `src/features/offline/coverage.ts` + `PlayAreaScreen.tsx`.
 
 ### Hiding zones
 
 ## Train lines
 
-- **[H]** OSM based train lines (eg JR East) rendering is super broken.
-    - Direction: root cause is `buildLine` in
-      `data/transit/scripts/lib/osmRoutes.mjs` — geometry is a fallback
-      polyline through _stop positions_ in relation-member order, so
-      bidirectional relations and multi-operator hubs zigzag. Real fix is to
-      stitch the route relation's member **ways** into ordered linestrings
-      (sort segments by shared endpoints, respect `role=forward/backward`,
-      keep disconnected branches as separate MultiLineString parts), falling
-      back to stop polylines only when ways are missing. Working-tree diff
-      (closest-station matching + consecutive-coord dedup) only papers over
-      the worst artifacts.
+- 🚧 **Mostly done.** OSM-based train line (e.g. JR East) geometry.
+    - The way-stitching fix landed: `buildLine` in
+      `data/transit/scripts/lib/osmRoutes.mjs` now calls `stitchWays`
+      (`wayStitch.mjs`) to stitch route-relation member **ways** into ordered
+      linestrings (per-variant, deduped, RDP-simplified via
+      `simplifyGeometry.mjs`), falling back to stop polylines only when ways
+      are missing. Shipped across 97102d8 / d6e02d5 / 872c378.
+    - Remaining is conflation quality (see next item): operator
+      normalization, duplicate station complexes. Validate per region in the
+      data viewer.
 - **[M]** Add all of the other Tokyo transit lines, see if we can cover all Japan with some generic way (WIP, has bugs)
     - Status: national expansion landed (8 regional bundles + per-operator
       presets in `assets/transit/`). Remaining bugs are conflation quality:
@@ -61,11 +54,13 @@ Difficulty: **[E]** easy (≤half day), **[M]** medium (1–2 days), **[H]** har
 
 ### Offline data
 
-- **[H]** Actually support offline data packs
-    - Direction: map tiles are the hard part (`mapTileCache.ts` is the seam —
-      needs a download manager + MapLibre offline source); POI/measuring/
-      transit bundles are already shipped in `assets/`. Define a pack =
-      (tiles bbox+zoom range, admin boundaries, play-area boundary cache).
+- ✅ **Done (gameplay data).** Offline data packs ship. The pipeline
+  (`data/packs/`) builds per-Geofabrik-region poi/measuring/boundaries/transit
+  artifacts, publishes blobs to GitHub Releases, and the app discovers/installs
+  them via the Pages catalog (`site/packs/catalog.json`). 20+ regions live
+  (incl. Taiwan, NL, NorCal/SoCal). `loadPlayAreaByRelationId` and admin-level
+  defaults resolve from installed packs. Map tiles remain **permanently out of
+  scope** (basemap stays live raster + on-device cache).
 
 ### Other
 
@@ -149,8 +144,9 @@ Difficulty: **[E]** easy (≤half day), **[M]** medium (1–2 days), **[H]** har
 
 ## Viewer
 
-- Also support transit line rendering — **in progress** (working tree:
-  `tools/data-viewer/lib/transitGeojson.js` + server/index updates).
+- ✅ **Done.** Transit line rendering in the data viewer
+  (`tools/data-viewer/lib/transitGeojson.js`, committed; pack POI hover/click
+  added in 27b0a02).
 - **[E]** Add toggles for bundles (kanto, hokkaido, etc)
 - **[M]** Add toggles for turn on layers (also will need to cluster layers, eg POI, etc)
 
@@ -169,14 +165,10 @@ Correctness issues found in a code audit, ordered by gameplay impact.
 
 ### P0 — wrong eliminations
 
-- **[E] Station-name-length: negative answer eliminates the wrong region.**
-  `osmMatchingGeometry.ts` (~line 80): on a negative answer it pushes
-  `missMask` (cells whose name length ≠ selected) into `missFeatures`, which
-  `buildCombinedEligibilityMask` treats as _excluded_ area — so the map keeps
-  exactly the cells that match the seeker's name length, the inverse of the
-  truth. Fix: on negative, exclude `hitMask` (the matching cells) instead.
-  Add a polarity test at the `buildOsmMatchingRenderState` level (the
-  existing `buildNameLengthMasks` unit tests don't catch this).
+- ✅ **Fixed. Station-name-length negative answer.**
+  `osmMatchingGeometry.ts` now pushes the name-length `hitMask` (matching
+  cells) into `missFeatures` on a negative answer, correctly excluding the
+  cells that match the seeker's name length.
 
 - **[M] Tentacles: no "not within radius" answer.** `derivePoiAnswer` only
   yields `positive`/`unanswered`, and the detail screen only offers POI
@@ -248,13 +240,9 @@ Correctness issues found in a code audit, ordered by gameplay impact.
   silent; usually means a data-entry error. Surface a "no eligible area —
   check answers" banner.
 
-### Pre-existing test failures on master (2026-06-11)
+### Pre-existing test failures on master (2026-06-11) — ✅ resolved
 
-- `matchingSelectors.test.ts`: commercial-airport selector gained
-  `["landuse"!="military"]` but the test still expects the old QL string —
-  update the expectation and rerun `pnpm data:poi` so the drift guard and
-  bundles agree.
-- `lineMeasuringGeometry.test.ts`: "buffers the real body-of-water window
-  without softlocking" takes ~20 s against an 8 s budget on the JS backend —
-  either a real perf regression in the buffer budget path or a stale budget;
-  bisect against the recent transit commits.
+Both suites now pass (verified 2026-06-13: `matchingSelectors` +
+`lineMeasuringGeometry`, 130 tests green). The commercial-airport selector
+expectation was reconciled (military-airfield exclusion, 79b2ae1) and the
+body-of-water perf guard was de-flaked (da43936 / 9f03cec).
