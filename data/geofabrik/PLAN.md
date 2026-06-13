@@ -7,7 +7,7 @@ region — continents, countries, and sub-regions — in PBF and GeoPackage form
 This pipeline downloads those extracts, extracts OSM administrative boundary
 relations from them, converts the results to GeoJSON, and outputs checked-in
 boundary fixtures that can be bundled as default play-area zones (the same shape
-as `assets/default-zones/tokyo.json` and `assets/default-zones/osaka.json`).
+as `assets/default-zones/tokyo.json`).
 
 **Why Geofabrik instead of Overpass:**
 

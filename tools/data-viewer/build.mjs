@@ -48,14 +48,11 @@ for (const category of MEASURING) {
 mkdirSync(join(DATA_OUT, "zones"), { recursive: true });
 
 const tokyo = readJson("assets/default-zones/tokyo.json");
-const osaka = readJson("assets/default-zones/osaka.json");
 writeJson("zones/default.json", {
     type: "FeatureCollection",
-    features: [...(tokyo.features ?? []), ...(osaka.features ?? [])],
+    features: [...(tokyo.features ?? [])],
 });
-console.log(
-    `  zones/default.json — ${tokyo.features.length + osaka.features.length} features`,
-);
+console.log(`  zones/default.json — ${tokyo.features.length} features`);
 
 // --- POIs (columnar → GeoJSON) ---
 const columnarToGeojson = require("./lib/columnarToGeojson.js");

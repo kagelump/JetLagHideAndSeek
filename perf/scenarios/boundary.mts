@@ -1,14 +1,8 @@
-import osakaBoundary from "../../assets/default-zones/osaka.json";
-
 import {
     buildPlayAreaMask,
     buildPlayAreaMaskFromMetadata,
 } from "../../src/features/map/maskBuilder.ts";
-import type { GeoJsonFeatureCollection } from "../../src/features/map/geojsonTypes.ts";
-import {
-    calculateBbox,
-    defaultPlayArea,
-} from "../../src/features/map/playArea.ts";
+import { defaultPlayArea } from "../../src/features/map/playArea.ts";
 import { buildPlayAreaFromOverpass } from "../../src/features/map/playAreaBoundaryConversion.ts";
 import {
     fixtureHash,
@@ -78,17 +72,6 @@ export const boundaryScenarios: PerfScenario[] = [
             ),
         }),
         warmups: 3,
-    },
-    {
-        group: "boundary",
-        iterations: 30,
-        name: "boundary/osaka-bbox",
-        run: () => ({
-            output: calculateBbox(
-                osakaBoundary as unknown as GeoJsonFeatureCollection,
-            ),
-        }),
-        warmups: 5,
     },
     {
         group: "boundary",

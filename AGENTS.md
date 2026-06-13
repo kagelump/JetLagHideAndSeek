@@ -22,8 +22,9 @@ patterns wholesale.
   to AsyncStorage via `src/state/persistence.ts`. Share/import uses a versioned
   wire format (`src/sharing/`, incl. links + QR).
 - Default play area: Tokyo 23 Wards, OSM relation `19631009`
-  (`assets/default-zones/tokyo.json`). Deterministic E2E fixture: Osaka, OSM
-  relation `358674` (`assets/default-zones/osaka.json`).
+  (`assets/default-zones/tokyo.json`). Osaka (`358674`) is no longer bundled;
+  it resolves via installed packs or Overpass. E2E determinism uses the Tokyo
+  placeholder.
 - Hiding-zone presets: national coverage via eight regional bundles
   (`assets/transit/japan-{kanto,kansai,chubu,...}.json` + `manifest.json`),
   each exposing per-operator presets (GTFS-sourced Tokyo Metro / Toei plus

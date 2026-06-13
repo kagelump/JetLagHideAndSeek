@@ -42,7 +42,7 @@ E2E notes:
 
 Milestone 3 adds Settings → Play Area in the bottom sheet. The app still starts with Tokyo 23 Wards, but the current in-memory play area can now be changed by Photon relation search or by entering a direct OSM relation ID. The direct-ID acceptance path uses Osaka relation `358674`.
 
-Fetched relation boundaries are loaded from Overpass using `out geom`, converted with `osmtogeojson`, filtered to polygonal geometry, and cached in AsyncStorage under relation-specific boundary keys. Osaka relation `358674` is also checked in at `assets/default-zones/osaka.json` as a bundled boundary so the direct-ID path and Maestro flow can run deterministically without depending on Overpass. The selected play area is now also included in the app-state v1 snapshot restored by `AppStateProviders`.
+Fetched relation boundaries are loaded from Overpass using `out geom`, converted with `osmtogeojson`, filtered to polygonal geometry, and cached in AsyncStorage under relation-specific boundary keys. Only the Tokyo placeholder (`assets/default-zones/tokyo.json`) remains bundled; Osaka `358674` and all other regions resolve via installed offline packs or live Overpass. The selected play area is now also included in the app-state v1 snapshot restored by `AppStateProviders`.
 
 Map rendering now reads from the mobile play-area provider instead of hard-coded Tokyo metadata, so the map label, boundary source, camera fit target, and Fit button follow the applied area.
 

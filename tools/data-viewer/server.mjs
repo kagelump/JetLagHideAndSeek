@@ -39,10 +39,9 @@ function measuringGeojson(category) {
 
 function zonesGeojson() {
     const tokyo = readJson("assets/default-zones/tokyo.json");
-    const osaka = readJson("assets/default-zones/osaka.json");
     return {
         type: "FeatureCollection",
-        features: [...(tokyo.features ?? []), ...(osaka.features ?? [])],
+        features: [...(tokyo.features ?? [])],
     };
 }
 
