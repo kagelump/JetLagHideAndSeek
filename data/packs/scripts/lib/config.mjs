@@ -208,7 +208,9 @@ export function validateConfig(cfg, configPath = "regions.yaml") {
                 );
             } else {
                 if (region.transitOverrides.wayGeometry !== undefined) {
-                    if (typeof region.transitOverrides.wayGeometry !== "boolean") {
+                    if (
+                        typeof region.transitOverrides.wayGeometry !== "boolean"
+                    ) {
                         errors.push(
                             `${prefix}: "transitOverrides.wayGeometry" must be a boolean`,
                         );
@@ -216,7 +218,8 @@ export function validateConfig(cfg, configPath = "regions.yaml") {
                 }
                 if (region.transitOverrides.simplifyMeters !== undefined) {
                     if (
-                        typeof region.transitOverrides.simplifyMeters !== "number" ||
+                        typeof region.transitOverrides.simplifyMeters !==
+                            "number" ||
                         region.transitOverrides.simplifyMeters < 0
                     ) {
                         errors.push(

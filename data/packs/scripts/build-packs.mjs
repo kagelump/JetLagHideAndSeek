@@ -185,18 +185,72 @@ async function ensurePbf(region, cacheDir, cacheOnly) {
     }
 
     console.log(`  Downloading PBF: ${region.pbfUrl}`);
-    const response = await fetch(region.pbfUrl);
-    if (!response.ok) {
-        throw new Error(
-            `PBF download failed for ${region.id}: HTTP ${response.status}`,
-        );
+
+    // Retry on transient failures (Geofabrik occasionally returns 503/429
+    // when hot-linked or overloaded). Use a descriptive UA and a per-attempt
+    // timeout so a stuck connection does not hang forever.
+    const maxAttempts = 4;
+    const perAttemptTimeoutMs = 5 * 60 * 1000;
+    const headers = {
+        "User-Agent": "JetLagHideAndSeek-pack-builder/1.0",
+    };
+
+    let lastError;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(
+                () => controller.abort(),
+                perAttemptTimeoutMs,
+            );
+            const response = await fetch(region.pbfUrl, {
+                headers,
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const buf = Buffer.from(await response.arrayBuffer());
+                await writeFile(pbfPath, buf);
+                const mb = (buf.length / 1024 / 1024).toFixed(1);
+                console.log(`  Wrote ${mb} MB to ${pbfPath}`);
+                return pbfPath;
+            }
+
+            lastError = new Error(
+                `PBF download failed for ${region.id}: HTTP ${response.status}`,
+            );
+            const isTransient =
+                response.status === 503 ||
+                response.status === 429 ||
+                response.status === 502;
+            if (!isTransient || attempt === maxAttempts) {
+                throw lastError;
+            }
+            const delayMs = 2 ** attempt * 1000;
+            console.log(
+                `  Download attempt ${attempt}/${maxAttempts} got HTTP ${response.status}; retrying in ${delayMs}ms...`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        } catch (err) {
+            lastError = err;
+            const isAbort = err.name === "AbortError";
+            const isTransient =
+                isAbort ||
+                (err.message &&
+                    /ETIMEDOUT|ECONNRESET|ENOTFOUND/.test(err.message));
+            if (!isTransient || attempt === maxAttempts) {
+                throw err;
+            }
+            const delayMs = 2 ** attempt * 1000;
+            console.log(
+                `  Download attempt ${attempt}/${maxAttempts} failed (${err.message}); retrying in ${delayMs}ms...`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
     }
 
-    const buf = Buffer.from(await response.arrayBuffer());
-    await writeFile(pbfPath, buf);
-    const mb = (buf.length / 1024 / 1024).toFixed(1);
-    console.log(`  Wrote ${mb} MB to ${pbfPath}`);
-    return pbfPath;
+    throw lastError;
 }
 
 /**

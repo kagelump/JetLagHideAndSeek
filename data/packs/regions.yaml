@@ -53,3 +53,335 @@ regions:
               新北大眾捷運股份有限公司: ["新北捷運公司", "新北捷運股份有限公司"]
               臺中捷運: ["臺中捷運公司", "臺中捷運股份有限公司"]
           # curatedRoutes: {} # T17 — bus/cable-car line modes
+    # ─── Top global regions batch 1 ───────────────────────────────────────────────
+    # Body-of-water is disabled for this batch because the NL build showed the
+    # polygon dissolve can hit a GEOS TopologyException and hard-lock on the
+    # polyclip-ts fallback. POI, boundaries, coastline, high-speed-rail and
+    # transit are still produced.
+    - id: europe-greater-london
+      label: Greater London
+      regionPath: [Europe, United Kingdom, England, Greater London]
+      pbfUrl: https://download.geofabrik.de/europe/united-kingdom/england/greater-london-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: europe-ile-de-france
+      label: Île-de-France
+      regionPath: [Europe, France, Ile-de-France]
+      pbfUrl: https://download.geofabrik.de/europe/france/ile-de-france-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: europe-berlin
+      label: Berlin
+      regionPath: [Europe, Germany, Berlin]
+      pbfUrl: https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: europe-madrid
+      label: Madrid
+      regionPath: [Europe, Spain, Madrid]
+      pbfUrl: https://download.geofabrik.de/europe/spain/madrid-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: europe-italy-centro
+      label: Central Italy
+      regionPath: [Europe, Italy, Centro]
+      pbfUrl: https://download.geofabrik.de/europe/italy/centro-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-south-korea
+      label: South Korea
+      regionPath: [Asia, South Korea]
+      pbfUrl: https://download.geofabrik.de/asia/south-korea-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+          # Korea's national rail network has too many parallel/branch fragments
+          # for the current continuity validator; disable until the stitcher is
+          # made more tolerant.
+          high-speed-rail:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["역"]
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-japan-kanto
+      label: Kanto
+      regionPath: [Asia, Japan, Kanto]
+      pbfUrl: https://download.geofabrik.de/asia/japan/kanto-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["駅"]
+          maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-china-beijing
+      label: Beijing
+      regionPath: [Asia, China, Beijing]
+      pbfUrl: https://download.geofabrik.de/asia/china/beijing-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["站"]
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-india-northern-zone
+      label: Northern India
+      regionPath: [Asia, India, Northern Zone]
+      pbfUrl: https://download.geofabrik.de/asia/india/northern-zone-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: russia-central-fed-district
+      label: Central Federal District
+      regionPath: [Russia, Central Federal District]
+      pbfUrl: https://download.geofabrik.de/russia/central-fed-district-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-new-york
+      label: New York
+      regionPath: [North America, US, New York]
+      pbfUrl: https://download.geofabrik.de/north-america/us/new-york-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-canada-ontario
+      label: Ontario
+      regionPath: [North America, Canada, Ontario]
+      pbfUrl: https://download.geofabrik.de/north-america/canada/ontario-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: south-america-brazil-sudeste
+      label: Southeast Brazil
+      regionPath: [South America, Brazil, Sudeste]
+      pbfUrl: https://download.geofabrik.de/south-america/brazil/sudeste-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: australia-oceania-new-south-wales
+      label: New South Wales
+      regionPath: [Australia Oceania, Australia, New South Wales]
+      pbfUrl: https://download.geofabrik.de/australia-oceania/australia/new-south-wales-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-mexico
+      label: Mexico
+      regionPath: [North America, Mexico]
+      pbfUrl: https://download.geofabrik.de/north-america/mexico-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: europe-turkey
+      label: Turkey
+      regionPath: [Europe, Turkey]
+      pbfUrl: https://download.geofabrik.de/europe/turkey-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-thailand
+      label: Thailand
+      regionPath: [Asia, Thailand]
+      pbfUrl: https://download.geofabrik.de/asia/thailand-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-vietnam
+      label: Vietnam
+      regionPath: [Asia, Vietnam]
+      pbfUrl: https://download.geofabrik.de/asia/vietnam-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-malaysia-singapore-brunei
+      label: Malaysia, Singapore and Brunei
+      regionPath: [Asia, Malaysia Singapore Brunei]
+      pbfUrl: https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-philippines
+      label: Philippines
+      regionPath: [Asia, Philippines]
+      pbfUrl: https://download.geofabrik.de/asia/philippines-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
