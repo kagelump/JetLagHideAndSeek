@@ -305,6 +305,8 @@ jest.mock("qrcode/lib/core/qrcode", () => ({
 jest.mock("@/features/hidingZone/hidingZoneData", () => {
     let cached: any[] | null = null;
     let loadPromise: Promise<any[]> | null = null;
+    const packPresets: any[] = [];
+    const packSourcesListeners = new Set<() => void>();
 
     function loadPresets(_bbox?: unknown) {
         void _bbox;
@@ -323,9 +325,9 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
         loadHidingZonePresets: (bbox?: any) => loadPresets(bbox),
         getHidingZonePresets: () => {
             if (!cached) throw new Error("Presets not loaded yet");
-            return cached;
+            return [...cached, ...packPresets];
         },
-        getHidingZonePresetsOrEmpty: () => cached ?? [],
+        getHidingZonePresetsOrEmpty: () => [...(cached ?? []), ...packPresets],
         getTransitManifest: () => ({
             version: 1,
             bundles: [
@@ -351,6 +353,24 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
         clearTransitBundleCache: () => {
             cached = null;
             loadPromise = null;
+            packPresets.length = 0;
+        },
+        registerTransitSource: (..._args: any[]) => {
+            void _args;
+            for (const listener of packSourcesListeners) {
+                listener();
+            }
+        },
+        onPackSourcesChanged: (listener: () => void) => {
+            packSourcesListeners.add(listener);
+            return () => {
+                packSourcesListeners.delete(listener);
+            };
+        },
+        // For tests: pre-populate pack presets to appear in
+        // getHidingZonePresets / getHidingZonePresetsOrEmpty.
+        __addPackPresetForTest: (preset: any) => {
+            packPresets.push(preset);
         },
     };
 });

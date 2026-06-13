@@ -8,8 +8,47 @@ import {
     isCanonicalTransitStationId,
 } from "@/features/transit/transitIdentity";
 
+// The real hidingZoneData module is globally mocked in jest.setup.ts.
+// The mock exposes these test-only helpers; they only exist on the mock.
+const mockMod = require("@/features/hidingZone/hidingZoneData") as {
+    __addPackPresetForTest: (preset: any) => void;
+    registerTransitSource: (
+        packId: string,
+        path: string,
+        summaries: any[],
+    ) => void;
+    onPackSourcesChanged: (listener: () => void) => () => void;
+};
+
+const PACK_PRESET = {
+    id: "pack:europe-greater-london:london-underground",
+    label: "London Underground",
+    operator: "London Underground",
+    kind: "operator" as const,
+    bbox: [-0.48, 51.4, 0.23, 51.65] as [number, number, number, number],
+    defaultColor: "#1f6f78",
+    source: {
+        kind: "osm-pack" as const,
+        namespace: "pack:europe-greater-london",
+    },
+    routes: [],
+    stations: [
+        {
+            id: "osm:node:780856",
+            lat: 51.50607,
+            lon: -0.2263134,
+            name: "Shepherd's Bush Market",
+            routeIds: ["osm:relation:7666927"],
+            sourceId: "osm:node:780856",
+            mergeKey: "osm:node:780856",
+        },
+    ],
+};
+
 describe("generated hiding-zone preset data", () => {
     beforeAll(() => loadHidingZonePresets());
+
+    // ── Existing tests ─────────────────────────────────────────────────
 
     it("contains canonical source-adapter transit ids", () => {
         const presets = getHidingZonePresets();
@@ -54,11 +93,60 @@ describe("generated hiding-zone preset data", () => {
         expect(presets.length).toBeGreaterThan(0);
         expect(presets.some((p) => p.id === "tokyo-metro")).toBe(true);
     });
-});
 
-// NOTE: The real hidingZoneData module is globally mocked in jest.setup.ts
-// because it uses dynamic import().  The mock mirrors the same API contract.
-// The tests above (cached return, repeated-call stability, OrEmpty after load)
-// exercise the mock's loaded-state paths.  The unloaded paths (throw / empty)
-// are exercised implicitly by the mock's construction; they also run whenever
-// these tests execute in a fresh Jest worker.
+    // ── Pack transit source coverage ────────────────────────────────────
+
+    describe("pack transit sources", () => {
+        it("getHidingZonePresetsOrEmpty includes pack presets", () => {
+            mockMod.__addPackPresetForTest(PACK_PRESET);
+
+            const presets = getHidingZonePresetsOrEmpty();
+            expect(presets.some((p) => p.id === PACK_PRESET.id)).toBe(true);
+        });
+
+        it("getHidingZonePresets includes pack presets after loading", () => {
+            mockMod.__addPackPresetForTest(PACK_PRESET);
+
+            const presets = getHidingZonePresets();
+            expect(presets.some((p) => p.id === PACK_PRESET.id)).toBe(true);
+        });
+
+        it("onPackSourcesChanged listener fires on registerTransitSource", () => {
+            let fired = false;
+            const unsub = mockMod.onPackSourcesChanged(() => {
+                fired = true;
+            });
+
+            mockMod.registerTransitSource(
+                "test-pack",
+                "/path/transit.json",
+                [],
+            );
+
+            expect(fired).toBe(true);
+            unsub();
+        });
+
+        it("onPackSourcesChanged unsubscribe stops notifications", () => {
+            let count = 0;
+            const unsub = mockMod.onPackSourcesChanged(() => {
+                count++;
+            });
+
+            mockMod.registerTransitSource(
+                "test-pack",
+                "/path/transit.json",
+                [],
+            );
+            expect(count).toBe(1);
+
+            unsub();
+            mockMod.registerTransitSource(
+                "test-pack",
+                "/path/transit.json",
+                [],
+            );
+            expect(count).toBe(1); // unsubscribed — no second fire
+        });
+    });
+});

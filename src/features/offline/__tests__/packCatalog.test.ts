@@ -182,4 +182,70 @@ describe("packCatalog schema", () => {
         });
         expect(result.success).toBe(false);
     });
+
+    it("accepts category: null and normalizes to undefined", () => {
+        const catalog = {
+            schemaVersion: 2,
+            generatedAt: "2026-06-12T00:00:00Z",
+            packs: [
+                {
+                    id: "test",
+                    label: "Test",
+                    regionPath: ["Europe"],
+                    bbox: [0, 0, 1, 1],
+                    osmSnapshot: "2026-06-08",
+                    totalBytes: 1000,
+                    artifacts: [
+                        {
+                            kind: "poi",
+                            category: null, // real catalog uses null for category-less artifacts
+                            url: "https://example.com/test.json.gz",
+                            bytes: 1000,
+                            md5: "abc",
+                            sha256: "def",
+                            schemaVersion: 1,
+                        },
+                    ],
+                },
+            ],
+        };
+        const result = catalogSchema.safeParse(catalog);
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.packs[0].artifacts[0].category).toBeUndefined();
+        }
+    });
+
+    it("accepts artifacts with missing category field", () => {
+        const catalog = {
+            schemaVersion: 2,
+            generatedAt: "2026-06-12T00:00:00Z",
+            packs: [
+                {
+                    id: "test",
+                    label: "Test",
+                    regionPath: ["Europe"],
+                    bbox: [0, 0, 1, 1],
+                    osmSnapshot: "2026-06-08",
+                    totalBytes: 1000,
+                    artifacts: [
+                        {
+                            kind: "boundaries",
+                            // category intentionally missing (undefined)
+                            url: "https://example.com/test.json.gz",
+                            bytes: 1000,
+                            md5: "abc",
+                            sha256: "def",
+                            schemaVersion: 1,
+                        },
+                    ],
+                },
+            ],
+        };
+        const result = catalogSchema.safeParse(catalog);
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.packs[0].artifacts[0].category).toBeUndefined();
+        }
+    });
 });
