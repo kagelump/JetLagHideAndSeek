@@ -57,4 +57,4 @@ jobs:
                   packager: pnpm
 
             - name: Build production apps
-              run: eas build --platform all --profile production --non-interactive
+              run: eas build --platform all --profile production --non-interactive --auto-submit
