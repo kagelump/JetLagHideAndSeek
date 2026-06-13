@@ -39,7 +39,8 @@ import {
     type LineBundle,
 } from "@/features/questions/measuring/lineBundleLoader";
 
-describe("body-of-water buffer dissolve under GEOS (geos-wasm)", () => {
+// Skipped: bundled Japan assets removed; needs pack-based test fixtures.
+describe.skip("body-of-water buffer dissolve under GEOS (geos-wasm)", () => {
     beforeAll(async () => {
         await initGeosWasm();
         // Point the native dependency at the wasm shim and force the real
