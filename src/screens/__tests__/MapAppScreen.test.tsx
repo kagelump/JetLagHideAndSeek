@@ -10,6 +10,100 @@ import {
     getHidingZonePresets,
     loadHidingZonePresets,
 } from "@/features/hidingZone/hidingZoneData";
+
+// Inject a tokyo-metro preset into the mock so hiding zone tests work.
+const mockHidingZoneData = require("@/features/hidingZone/hidingZoneData") as {
+    __addPackPresetForTest: (preset: any) => void;
+    __clearPackTransitSourcesForTest: () => void;
+};
+
+const TOKYO_METRO_PRESET = {
+    id: "tokyo-metro",
+    label: "Tokyo Metro",
+    operator: "Tokyo Metro",
+    kind: "operator",
+    bbox: [139.6, 35.6, 140.0, 35.8] as [number, number, number, number],
+    defaultColor: "#00a1e4",
+    source: { kind: "gtfs", namespace: "jp-tokyo-metro" },
+    routes: [
+        {
+            id: "gtfs:jp-tokyo-metro:G",
+            shortName: "Ginza",
+            color: "#f39800",
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [139.6922, 35.6855],
+                    [139.6993, 35.6764],
+                ],
+            },
+        },
+    ],
+    stations: [
+        {
+            id: "gtfs:jp-tokyo-metro:station-1",
+            lat: 35.6855,
+            lon: 139.6922,
+            name: "Shibuya",
+            routeIds: ["gtfs:jp-tokyo-metro:G"],
+            sourceId: "gtfs:jp-tokyo-metro:station-1",
+            mergeKey: "gtfs:jp-tokyo-metro:station-1",
+        },
+        {
+            id: "gtfs:jp-tokyo-metro:station-2",
+            lat: 35.6764,
+            lon: 139.6993,
+            name: "Omote-sando",
+            routeIds: ["gtfs:jp-tokyo-metro:G"],
+            sourceId: "gtfs:jp-tokyo-metro:station-2",
+            mergeKey: "gtfs:jp-tokyo-metro:station-2",
+        },
+    ],
+};
+
+const TOEI_SUBWAY_PRESET = {
+    id: "toei-subway",
+    label: "Toei Subway",
+    operator: "Toei",
+    kind: "operator",
+    bbox: [139.6, 35.5, 140.0, 35.9] as [number, number, number, number],
+    defaultColor: "#b6007a",
+    source: { kind: "gtfs", namespace: "jp-toei" },
+    routes: [
+        {
+            id: "gtfs:jp-toei:Asakusa",
+            shortName: "Asakusa",
+            color: "#e8538f",
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [139.6922, 35.6855],
+                    [139.6993, 35.6764],
+                ],
+            },
+        },
+    ],
+    stations: [
+        {
+            id: "gtfs:jp-toei:station-1",
+            lat: 35.6855,
+            lon: 139.6922,
+            name: "Shibuya",
+            routeIds: ["gtfs:jp-toei:Asakusa"],
+            sourceId: "gtfs:jp-toei:station-1",
+            mergeKey: "gtfs:jp-toei:station-1",
+        },
+        {
+            id: "gtfs:jp-toei:station-2",
+            lat: 35.6764,
+            lon: 139.6993,
+            name: "Omote-sando",
+            routeIds: ["gtfs:jp-toei:Asakusa"],
+            sourceId: "gtfs:jp-toei:station-2",
+            mergeKey: "gtfs:jp-toei:station-2",
+        },
+    ],
+};
 import { defaultPlayArea } from "@/features/map/playArea";
 import { AppStateProviders } from "@/state/AppStateProviders";
 
@@ -196,7 +290,11 @@ async function pressAddTransitLineQuestion(screen: ReturnType<typeof render>) {
 }
 
 describe("MapAppScreen", () => {
-    beforeAll(() => loadHidingZonePresets());
+    beforeAll(() => {
+        mockHidingZoneData.__addPackPresetForTest(TOKYO_METRO_PRESET);
+        mockHidingZoneData.__addPackPresetForTest(TOEI_SUBWAY_PRESET);
+        return loadHidingZonePresets();
+    });
 
     beforeEach(async () => {
         jest.useRealTimers();

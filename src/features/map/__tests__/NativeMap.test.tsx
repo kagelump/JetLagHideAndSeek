@@ -14,6 +14,99 @@ import { QuestionProvider, useQuestionActions } from "@/state/questionStore";
 
 import { NativeMap } from "../NativeMap";
 
+// Inject a tokyo-metro preset into the hidingZoneData mock so
+// SelectTokyoMetroHidingZone can find it.
+const mockHidingZoneData = require("@/features/hidingZone/hidingZoneData") as {
+    __addPackPresetForTest: (preset: any) => void;
+    __clearPackTransitSourcesForTest: () => void;
+};
+
+const TOKYO_METRO_PRESET = {
+    id: "tokyo-metro",
+    label: "Tokyo Metro",
+    operator: "Tokyo Metro",
+    kind: "operator",
+    bbox: [139.6, 35.6, 140.0, 35.8] as [number, number, number, number],
+    defaultColor: "#00a1e4",
+    source: { kind: "gtfs", namespace: "jp-tokyo-metro" },
+    routes: [
+        {
+            id: "gtfs:jp-tokyo-metro:G",
+            shortName: "Ginza",
+            color: "#f39800",
+        },
+    ],
+    stations: [
+        {
+            id: "gtfs:jp-tokyo-metro:station-1",
+            lat: 35.6855,
+            lon: 139.6922,
+            name: "Shibuya",
+            routeIds: ["gtfs:jp-tokyo-metro:G"],
+            sourceId: "gtfs:jp-tokyo-metro:station-1",
+            mergeKey: "gtfs:jp-tokyo-metro:station-1",
+        },
+    ],
+};
+
+// Inject synthetic data for measuring mask tests.
+import { __setLineBundleForTest as setLineBundle } from "@/features/questions/measuring/lineBundleLoader";
+import {
+    registerRegion as registerPoiRegion,
+    clearBundledRegionCache,
+} from "@/features/questions/matching/bundledPois";
+
+beforeEach(() => {
+    mockHidingZoneData.__clearPackTransitSourcesForTest();
+    mockHidingZoneData.__addPackPresetForTest(TOKYO_METRO_PRESET);
+    // Register a minimal POI region for measuring mask tests.
+    clearBundledRegionCache();
+    registerPoiRegion("test-japan", {
+        schemaVersion: 1,
+        region: "test-japan",
+        label: "Test Japan",
+        generatedAt: "2026-06-12",
+        bbox: [139.5, 35.5, 139.9, 35.8],
+        totalCount: 1,
+        categories: {
+            museum: {
+                count: 1,
+                lon: [139.761],
+                lat: [35.681],
+                name: ["Test Museum"],
+                osmId: [100],
+                osmType: [0],
+            },
+        },
+    });
+    // Provide a minimal coastline bundle for measuring mask tests.
+    setLineBundle("coastline", {
+        schemaVersion: 1,
+        category: "coastline",
+        generatedAt: "2026-06-12",
+        source: "test",
+        extractBbox: [139.5, 35.5, 139.9, 35.8] as [
+            number,
+            number,
+            number,
+            number,
+        ],
+        features: [
+            {
+                type: "Feature",
+                geometry: {
+                    type: "LineString",
+                    coordinates: [
+                        [139.6, 35.65],
+                        [139.8, 35.7],
+                    ],
+                },
+                properties: {},
+            },
+        ],
+    });
+});
+
 const { __cameraMethods } = jest.requireMock(
     "@maplibre/maplibre-react-native",
 ) as {

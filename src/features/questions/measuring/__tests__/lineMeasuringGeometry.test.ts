@@ -1124,7 +1124,6 @@ describe("filterFeaturesByBboxMargin", () => {
         // buffer radius dramatically reduces feature count.
         const bundle: LineBundle = require("../../../../../assets/measuring/body-of-water.json");
         __setLineBundleForTest("body-of-water", bundle);
-        __clearLineBundlesForTest(); // clean up after the require side-effect
 
         // Window features selected with the 50 km margin (simulating
         // computeLineCategory's output).
