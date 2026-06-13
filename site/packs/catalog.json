@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-13T10:26:07.554Z",
+    "generatedAt": "2026-06-13T10:26:33.764Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -150,92 +150,92 @@
             ]
         },
         {
-            "id": "asia-japan-kansai",
-            "label": "Kansai",
-            "regionPath": ["Asia", "Japan", "Kansai"],
-            "bbox": [133.964396, 33.0789789, 137.657278, 36.458201],
+            "id": "asia-japan-chubu",
+            "label": "Chubu",
+            "regionPath": ["Asia", "Japan", "Chubu"],
+            "bbox": [135.4393, 34.2664899, 139.909, 38.90717],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 3934243,
+            "totalBytes": 5370871,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-poi.json.gz",
-                    "bytes": 402609,
-                    "md5": "6a01903b9caba458e1a1e8b8ce76b2cb",
-                    "sha256": "54a6e6d115397d662fb0c9cf27df29bb109e36c83418fe2e9c31edac25bff56e",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-poi.json.gz",
+                    "bytes": 466463,
+                    "md5": "bd139bb91b2cf36e8868295032bd9e7b",
+                    "sha256": "8a2dd6dc54d5a397719ff9d8ee17ed7dde58cebf694aee24482262504df96cc7",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-measuring-coastline.json.gz",
-                    "bytes": 415598,
-                    "md5": "2ec0bbcca0fc741ebb424132b0694c85",
-                    "sha256": "149c5ac056dd1ff5e549b076146e1c15fb97540acb750e69d2ae2d670897404d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-measuring-coastline.json.gz",
+                    "bytes": 365709,
+                    "md5": "200883d4df4cb92768b2583fccbdfe10",
+                    "sha256": "3f52bd34377def73e357628ad845a789b3b2dd07725cacc080de50877783132d",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-measuring-high-speed-rail.json.gz",
-                    "bytes": 2800,
-                    "md5": "d2f9c9a10b328d731fafa45ce44ee258",
-                    "sha256": "053133027e2ace8c25d55d5a3fdb3b5b4fc91f9fceff9adaa33a16ca17a86c2d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-measuring-high-speed-rail.json.gz",
+                    "bytes": 9039,
+                    "md5": "0aebe5bf46d105f97e7b535c0ae39812",
+                    "sha256": "95e0716b784a8ee675ba2f066cfeeefe04b2e5ee85f7866d0ecd29bd6f72c4f7",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-measuring-admin-1st-border.json.gz",
-                    "bytes": 166064,
-                    "md5": "b00cb2c232a4e059e033fde705da4222",
-                    "sha256": "ee4a02155c250fe4dce2d8cd137f361ae6f4faa20ef6767e0537edd85fc562d3",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-measuring-admin-1st-border.json.gz",
+                    "bytes": 233697,
+                    "md5": "1396f688629b205d8532c8f7a93fde2f",
+                    "sha256": "7b6f008fa0eaee893387fea24b42ca71544440f0170c166d6ce873ed1d5dd029",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-measuring-admin-2nd-border.json.gz",
-                    "bytes": 809125,
-                    "md5": "08bcaafb8581e6b96a0839aa3ddc111a",
-                    "sha256": "09592e151caa0cb5cb6af03eb381957215fb226eee55ffb157d7f011c638e061",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-measuring-admin-2nd-border.json.gz",
+                    "bytes": 1323194,
+                    "md5": "b79beba21d70fa4fc7192e22fe19ce18",
+                    "sha256": "dffaaa21a8f98b0798160424b6d110bd873e8e74835d1ac7419606828ca386b3",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-measuring-admin-boundaries.json.gz",
-                    "bytes": 1380796,
-                    "md5": "3a9489a995368098624a9b20a165075d",
-                    "sha256": "cf20099ebd48d7754e2500d921823c4552744f15e644845526f208ae6928bcf8",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-measuring-admin-boundaries.json.gz",
+                    "bytes": 1986864,
+                    "md5": "9cabff29fc142471ac3493386f01872c",
+                    "sha256": "1414c0fbeee9c829ac81f6c1ebe8542d6889b34ccfe106494047b7f7c4d529c0",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-boundaries.json.gz",
-                    "bytes": 697221,
-                    "md5": "dffc519718834d734c97b198cfe64c1a",
-                    "sha256": "64bd424759d9ed797f68ef0179be46e072464f488c8035f8fc1da8111b87625c",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-boundaries.json.gz",
+                    "bytes": 921522,
+                    "md5": "7a94867ca9f6328f457ff59abc3a1d93",
+                    "sha256": "554ec0bd508a64c993879ec6a13caae77a4c3f42b49687cf441ca1cb97df8f9f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-transit.json.gz",
-                    "bytes": 59532,
-                    "md5": "a1b1b6ca7676aba82d5b4311c7aa3829",
-                    "sha256": "d57b9de573023a7b7504462b10de555a9ed2b481fba5a99f2271e95d638bb580",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-transit.json.gz",
+                    "bytes": 63890,
+                    "md5": "521f1674f8c06b49a28512f3bb0e013d",
+                    "sha256": "0efd2daa8afe273c6c894b33891a6f59ff0b501e16e7f3b9e26a5c5833826f7d",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-kansai-meta.json.gz",
-                    "bytes": 498,
-                    "md5": "c5cb4cd2ea56e63fd13884f3d35f49a6",
-                    "sha256": "60000c9f4b0fa7849a24d84ee1cba78f97cdc62a707f80a64b8ff20fcc722762",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-chubu-meta.json.gz",
+                    "bytes": 493,
+                    "md5": "1022d53c01c2149c40fd101234062a22",
+                    "sha256": "3079f27f04a3308af0a716aa5b8f16c5b222c910fde34b93245c8c4492d6b41b",
                     "schemaVersion": 1
                 }
             ]
