@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 
 import { UnitSegmentedControl } from "@/components/UnitSegmentedControl";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
@@ -27,6 +34,7 @@ export function HidingZoneScreen() {
 
     const [showBrowseAll, setShowBrowseAll] = useState(false);
     const [browseSearch, setBrowseSearch] = useState("");
+    const [showRadiusModal, setShowRadiusModal] = useState(false);
 
     // Classify presets by kind from the manifest.
     const manifest = getTransitManifest();
@@ -121,181 +129,99 @@ export function HidingZoneScreen() {
     const noPlayArea = !playArea;
 
     return (
-        <SheetScrollView
-            style={styles.container}
-            contentContainerStyle={styles.scrollContent}
-        >
-            {/* Radius section — unchanged */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Station radius</Text>
-                <View style={styles.radiusRow}>
-                    <TextInput
-                        accessibilityLabel="Hiding zone radius"
-                        keyboardType="decimal-pad"
-                        onChangeText={setRadiusDisplayValue}
-                        style={styles.radiusInput}
-                        testID="hiding-zone-radius-input"
-                        value={radiusDisplayValue}
-                    />
-                    <UnitSegmentedControl
-                        onChange={setRadiusUnit}
-                        testIDPrefix="hiding-zone-unit"
-                        value={radiusUnit}
-                    />
-                </View>
-                <Text
-                    accessibilityLabel={`Stored as ${Math.round(radiusMeters)} m`}
-                    style={styles.metadata}
-                    testID="hiding-zone-radius-meters"
-                >
-                    Stored as {Math.round(radiusMeters)} m
-                </Text>
-            </View>
-
-            {/* Current card — clipped count vs total */}
-            <View
-                accessible
-                accessibilityLabel={currentAccessibilityLabel}
-                style={styles.card}
-                testID="current-hiding-zone-card"
+        <>
+            <SheetScrollView
+                style={styles.container}
+                contentContainerStyle={styles.scrollContent}
             >
-                <Text style={styles.cardLabel}>Current</Text>
-                <Text style={styles.currentName}>
-                    {selectedPresetIds.length} preset
-                    {selectedPresetIds.length === 1 ? "" : "s"} selected
-                </Text>
-                <Text style={styles.metadata}>
-                    {clippedStations.length} station
-                    {clippedStations.length === 1 ? "" : "s"} in play area
-                    {clippedStations.length !== allSelectedStations.length
-                        ? ` (${allSelectedStations.length} total)`
-                        : ""}
-                </Text>
-            </View>
+                {/* Eyebrow + 3-dot menu */}
+                <View style={styles.eyebrowRow}>
+                    <Text style={styles.eyebrow}>
+                        Select your transit lines
+                    </Text>
+                    <Pressable
+                        accessibilityLabel="More options"
+                        accessibilityRole="button"
+                        hitSlop={8}
+                        onPress={() => setShowRadiusModal(true)}
+                        style={({ pressed }) => [
+                            styles.menuButton,
+                            pressed ? styles.actionPressed : null,
+                        ]}
+                        testID="hiding-zone-menu-button"
+                    >
+                        <Text style={styles.menuButtonText}>•••</Text>
+                    </Pressable>
+                </View>
 
-            {/* Scoped view or browse-all */}
-            {noPlayArea ? (
-                // No play area: direct browse-all.
-                <PresetSection
-                    presets={browsePresets}
-                    selectedSet={selectedSet}
-                    title="All presets"
-                    togglePreset={togglePreset}
-                    showSearch
-                    searchValue={browseSearch}
-                    onSearchChange={setBrowseSearch}
-                />
-            ) : (
-                <>
-                    {/* Operators in play area */}
-                    {operatorPresets.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>
-                                Operators in your play area
-                            </Text>
-                            {unselectedOperators.length >= 2 && (
-                                <Pressable
-                                    accessibilityLabel="Add all operators in play area"
-                                    accessibilityRole="button"
-                                    onPress={() =>
-                                        unselectedOperators.forEach((p) =>
-                                            togglePreset(p.id),
-                                        )
-                                    }
-                                    style={({ pressed }) => [
-                                        styles.addAllRow,
-                                        pressed ? styles.actionPressed : null,
-                                    ]}
-                                    testID="hiding-zone-add-all-operators"
-                                >
-                                    <Text style={styles.addAllText}>
-                                        Add all operators
-                                    </Text>
-                                </Pressable>
-                            )}
-                            {operatorPresets.map((preset) => {
-                                const stats = playAreaStats?.find(
-                                    (s) => s.presetId === preset.id,
-                                );
-                                return (
-                                    <PresetRow
-                                        isSelected={selectedSet.has(preset.id)}
-                                        key={preset.id}
-                                        preset={preset}
-                                        onToggle={() => togglePreset(preset.id)}
-                                        subtitle={
-                                            stats
-                                                ? `${stats.stationsInArea} stations in your play area · ${preset.routes.length} line${preset.routes.length === 1 ? "" : "s"}`
-                                                : undefined
+                {/* Current card — clipped count vs total */}
+                <View
+                    accessible
+                    accessibilityLabel={currentAccessibilityLabel}
+                    style={styles.card}
+                    testID="current-hiding-zone-card"
+                >
+                    <Text style={styles.cardLabel}>Current</Text>
+                    <Text style={styles.currentName}>
+                        {selectedPresetIds.length} preset
+                        {selectedPresetIds.length === 1 ? "" : "s"} selected
+                    </Text>
+                    <Text style={styles.metadata}>
+                        {clippedStations.length} station
+                        {clippedStations.length === 1 ? "" : "s"} in play area
+                        {clippedStations.length !== allSelectedStations.length
+                            ? ` (${allSelectedStations.length} total)`
+                            : ""}
+                    </Text>
+                </View>
+
+                {/* Scoped view or browse-all */}
+                {noPlayArea ? (
+                    // No play area: direct browse-all.
+                    <PresetSection
+                        presets={browsePresets}
+                        selectedSet={selectedSet}
+                        title="All presets"
+                        togglePreset={togglePreset}
+                        showSearch
+                        searchValue={browseSearch}
+                        onSearchChange={setBrowseSearch}
+                    />
+                ) : (
+                    <>
+                        {/* Operators in play area */}
+                        {operatorPresets.length > 0 && (
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>
+                                    Operators in your play area
+                                </Text>
+                                {unselectedOperators.length >= 2 && (
+                                    <Pressable
+                                        accessibilityLabel="Add all operators in play area"
+                                        accessibilityRole="button"
+                                        onPress={() =>
+                                            unselectedOperators.forEach((p) =>
+                                                togglePreset(p.id),
+                                            )
                                         }
-                                    />
-                                );
-                            })}
-                        </View>
-                    )}
-
-                    {/* Coverage presets */}
-                    {coveragePresets.length > 0 && (
-                        <PresetSection
-                            presets={coveragePresets}
-                            selectedSet={selectedSet}
-                            title="All stations"
-                            togglePreset={togglePreset}
-                        />
-                    )}
-
-                    {/* Selected elsewhere — presets outside play area that are selected */}
-                    {(() => {
-                        const elsewhere = otherPresets.filter((p) =>
-                            selectedSet.has(p.id),
-                        );
-                        if (elsewhere.length === 0) return null;
-                        return (
-                            <PresetSection
-                                presets={elsewhere}
-                                selectedSet={selectedSet}
-                                title="Selected elsewhere"
-                                togglePreset={togglePreset}
-                            />
-                        );
-                    })()}
-
-                    {/* Browse all regions (collapsed by default) */}
-                    <View style={styles.section}>
-                        <Pressable
-                            accessibilityLabel={`Browse all regions${showBrowseAll ? ", expanded" : ", collapsed"}`}
-                            accessibilityRole="button"
-                            onPress={() => setShowBrowseAll((v) => !v)}
-                            style={({ pressed }) => [
-                                styles.browseToggle,
-                                pressed ? styles.actionPressed : null,
-                            ]}
-                            testID="hiding-zone-browse-all-toggle"
-                        >
-                            <Text style={styles.browseToggleText}>
-                                Browse all regions
-                            </Text>
-                            <Text style={styles.metadata}>
-                                {showBrowseAll ? "▲" : "▼"}
-                            </Text>
-                        </Pressable>
-                        {showBrowseAll && (
-                            <>
-                                <TextInput
-                                    accessibilityLabel="Search presets"
-                                    onChangeText={setBrowseSearch}
-                                    placeholder="Search…"
-                                    placeholderTextColor={colors.muted}
-                                    style={styles.searchInput}
-                                    testID="hiding-zone-browse-search"
-                                    value={browseSearch}
-                                />
-                                {browsePresets.length === 0 ? (
-                                    <Text style={styles.emptyText}>
-                                        No matching presets.
-                                    </Text>
-                                ) : (
-                                    browsePresets.map((preset) => (
+                                        style={({ pressed }) => [
+                                            styles.addAllRow,
+                                            pressed
+                                                ? styles.actionPressed
+                                                : null,
+                                        ]}
+                                        testID="hiding-zone-add-all-operators"
+                                    >
+                                        <Text style={styles.addAllText}>
+                                            Add all operators
+                                        </Text>
+                                    </Pressable>
+                                )}
+                                {operatorPresets.map((preset) => {
+                                    const stats = playAreaStats?.find(
+                                        (s) => s.presetId === preset.id,
+                                    );
+                                    return (
                                         <PresetRow
                                             isSelected={selectedSet.has(
                                                 preset.id,
@@ -305,15 +231,157 @@ export function HidingZoneScreen() {
                                             onToggle={() =>
                                                 togglePreset(preset.id)
                                             }
+                                            subtitle={
+                                                stats
+                                                    ? `${stats.stationsInArea} stations in your play area · ${preset.routes.length} line${preset.routes.length === 1 ? "" : "s"}`
+                                                    : undefined
+                                            }
                                         />
-                                    ))
-                                )}
-                            </>
+                                    );
+                                })}
+                            </View>
                         )}
-                    </View>
-                </>
-            )}
-        </SheetScrollView>
+
+                        {/* Coverage presets */}
+                        {coveragePresets.length > 0 && (
+                            <PresetSection
+                                presets={coveragePresets}
+                                selectedSet={selectedSet}
+                                title="All stations"
+                                togglePreset={togglePreset}
+                            />
+                        )}
+
+                        {/* Selected elsewhere — presets outside play area that are selected */}
+                        {(() => {
+                            const elsewhere = otherPresets.filter((p) =>
+                                selectedSet.has(p.id),
+                            );
+                            if (elsewhere.length === 0) return null;
+                            return (
+                                <PresetSection
+                                    presets={elsewhere}
+                                    selectedSet={selectedSet}
+                                    title="Selected elsewhere"
+                                    togglePreset={togglePreset}
+                                />
+                            );
+                        })()}
+
+                        {/* Browse all regions (collapsed by default) */}
+                        <View style={styles.section}>
+                            <Pressable
+                                accessibilityLabel={`Browse all regions${showBrowseAll ? ", expanded" : ", collapsed"}`}
+                                accessibilityRole="button"
+                                onPress={() => setShowBrowseAll((v) => !v)}
+                                style={({ pressed }) => [
+                                    styles.browseToggle,
+                                    pressed ? styles.actionPressed : null,
+                                ]}
+                                testID="hiding-zone-browse-all-toggle"
+                            >
+                                <Text style={styles.browseToggleText}>
+                                    Browse all regions
+                                </Text>
+                                <Text style={styles.metadata}>
+                                    {showBrowseAll ? "▲" : "▼"}
+                                </Text>
+                            </Pressable>
+                            {showBrowseAll && (
+                                <>
+                                    <TextInput
+                                        accessibilityLabel="Search presets"
+                                        onChangeText={setBrowseSearch}
+                                        placeholder="Search…"
+                                        placeholderTextColor={colors.muted}
+                                        style={styles.searchInput}
+                                        testID="hiding-zone-browse-search"
+                                        value={browseSearch}
+                                    />
+                                    {browsePresets.length === 0 ? (
+                                        <Text style={styles.emptyText}>
+                                            No matching presets.
+                                        </Text>
+                                    ) : (
+                                        browsePresets.map((preset) => (
+                                            <PresetRow
+                                                isSelected={selectedSet.has(
+                                                    preset.id,
+                                                )}
+                                                key={preset.id}
+                                                preset={preset}
+                                                onToggle={() =>
+                                                    togglePreset(preset.id)
+                                                }
+                                            />
+                                        ))
+                                    )}
+                                </>
+                            )}
+                        </View>
+                    </>
+                )}
+            </SheetScrollView>
+
+            <Modal
+                animationType="slide"
+                onRequestClose={() => setShowRadiusModal(false)}
+                transparent
+                visible={showRadiusModal}
+            >
+                <Pressable
+                    onPress={() => setShowRadiusModal(false)}
+                    style={styles.modalBackdrop}
+                >
+                    <Pressable style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalHeaderTitle}>
+                                Station radius
+                            </Text>
+                            <Pressable
+                                accessibilityLabel="Close"
+                                accessibilityRole="button"
+                                hitSlop={12}
+                                onPress={() => setShowRadiusModal(false)}
+                                style={({ pressed }) => [
+                                    styles.modalCloseButton,
+                                    pressed ? styles.actionPressed : null,
+                                ]}
+                                testID="hiding-zone-radius-modal-close"
+                            >
+                                <Text style={styles.modalCloseButtonText}>
+                                    Done
+                                </Text>
+                            </Pressable>
+                        </View>
+                        <View style={styles.modalBody}>
+                            <View style={styles.radiusRow}>
+                                <TextInput
+                                    accessibilityLabel="Hiding zone radius"
+                                    keyboardType="decimal-pad"
+                                    onChangeText={setRadiusDisplayValue}
+                                    style={styles.radiusInput}
+                                    testID="hiding-zone-radius-input"
+                                    value={radiusDisplayValue}
+                                />
+                                <UnitSegmentedControl
+                                    onChange={setRadiusUnit}
+                                    testIDPrefix="hiding-zone-unit"
+                                    value={radiusUnit}
+                                />
+                            </View>
+                            <Text
+                                accessibilityLabel={`Stored as ${Math.round(radiusMeters)} m`}
+                                style={styles.metadata}
+                                testID="hiding-zone-radius-meters"
+                            >
+                                Stored as {Math.round(radiusMeters)} m
+                            </Text>
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+        </>
     );
 }
 
@@ -543,5 +611,70 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "800",
         marginBottom: 10,
+    },
+    eyebrow: {
+        color: colors.tint,
+        fontSize: 12,
+        fontWeight: "800",
+        letterSpacing: 0,
+        textTransform: "uppercase",
+    },
+    eyebrowRow: {
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 4,
+        marginTop: 12,
+    },
+    menuButton: {
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 32,
+        minWidth: 32,
+    },
+    menuButtonText: {
+        color: colors.muted,
+        fontSize: 18,
+        fontWeight: "800",
+        letterSpacing: 1,
+    },
+    modalBackdrop: {
+        backgroundColor: "rgba(0,0,0,0.4)",
+        flex: 1,
+        justifyContent: "flex-end",
+    },
+    modalBody: {
+        gap: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    modalCloseButton: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    modalCloseButtonText: {
+        color: colors.tint,
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    modalContainer: {
+        backgroundColor: colors.background,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        paddingBottom: 40,
+    },
+    modalHeader: {
+        alignItems: "center",
+        borderBottomColor: colors.border,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    modalHeaderTitle: {
+        color: colors.ink,
+        fontSize: 18,
+        fontWeight: "800",
     },
 });
