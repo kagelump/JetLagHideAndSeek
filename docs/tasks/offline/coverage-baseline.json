@@ -1,0 +1,104 @@
+{
+    "schemaVersion": 1,
+    "generatedAt": "2026-06-13T09:56:42.154Z",
+    "poi": {
+        "regions": [
+            {
+                "id": "japan-kanto",
+                "label": "Kantō, Japan",
+                "bbox": [134.045154, 18.625054, 155.605818, 37.15988],
+                "totalCount": 33754,
+                "categoryCounts": {
+                    "amusement-park": 101,
+                    "aquarium": 31,
+                    "commercial-airport": 6,
+                    "foreign-consulate": 162,
+                    "golf-course": 751,
+                    "hospital": 2504,
+                    "landmark": 1175,
+                    "library": 1154,
+                    "mountain": 1344,
+                    "movie-theater": 175,
+                    "museum": 1370,
+                    "park": 22709,
+                    "station-name-length": 2183,
+                    "zoo": 89
+                }
+            }
+        ],
+        "categories": [
+            "amusement-park",
+            "aquarium",
+            "commercial-airport",
+            "foreign-consulate",
+            "golf-course",
+            "hospital",
+            "landmark",
+            "library",
+            "mountain",
+            "movie-theater",
+            "museum",
+            "park",
+            "station-name-length",
+            "zoo"
+        ]
+    },
+    "measuring": {
+        "extractBbox": [137.9, 33.9, 141.9, 37.9],
+        "categories": [
+            "admin-1st-border",
+            "admin-2nd-border",
+            "admin-boundaries",
+            "body-of-water",
+            "coastline",
+            "high-speed-rail"
+        ]
+    },
+    "transit": {
+        "regions": [
+            {
+                "id": "japan-kanto",
+                "bbox": [138.4, 34.8, 140.9, 37.1],
+                "presetCount": 64
+            },
+            {
+                "id": "japan-kansai",
+                "bbox": [134.5, 33.5, 136.5, 35.8],
+                "presetCount": 35
+            },
+            {
+                "id": "japan-chubu",
+                "bbox": [136.2, 34.6, 138.6, 37.8],
+                "presetCount": 30
+            },
+            {
+                "id": "japan-tohoku",
+                "bbox": [139.5, 36.9, 142, 41.6],
+                "presetCount": 16
+            },
+            {
+                "id": "japan-chugoku",
+                "bbox": [130.7, 33.3, 134.5, 36],
+                "presetCount": 20
+            },
+            {
+                "id": "japan-kyushu",
+                "bbox": [129.3, 30.9, 132.5, 34.2],
+                "presetCount": 19
+            },
+            {
+                "id": "japan-shikoku",
+                "bbox": [131.9, 32.5, 134.8, 34.5],
+                "presetCount": 11
+            },
+            {
+                "id": "japan-hokkaido",
+                "bbox": [139.5, 41.3, 146, 45.7],
+                "presetCount": 5
+            }
+        ]
+    },
+    "adminBoundaries": {
+        "levels": [4, 7, 8, 9]
+    }
+}
