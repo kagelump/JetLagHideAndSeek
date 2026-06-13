@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-13T10:28:12.337Z",
+    "generatedAt": "2026-06-13T10:28:36.729Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -150,6 +150,97 @@
             ]
         },
         {
+            "id": "asia-japan-hokkaido",
+            "label": "Hokkaido",
+            "regionPath": ["Asia", "Japan", "Hokkaido"],
+            "bbox": [137.934616, 41.15098, 146.247631, 46.040273],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 4194926,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-poi.json.gz",
+                    "bytes": 173345,
+                    "md5": "979270b95500d6be23811932c1d60902",
+                    "sha256": "0e1d795aab4a82cc00ef0ea381d61e8e37bb95ddba94b42fb617f4fe5a380ca4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-measuring-coastline.json.gz",
+                    "bytes": 290713,
+                    "md5": "827a25879dd614ec909f12af3d49b7f9",
+                    "sha256": "a6b9173f5ad4e5697f810ffe257cd421e2449c4194e610c40132740fc36fa40f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-measuring-high-speed-rail.json.gz",
+                    "bytes": 1178,
+                    "md5": "1a19569a49e33b6b155b691ed72d9ec6",
+                    "sha256": "2565526791b7f0b62cad4e372f917b3187041cb62c6789cb2fabba326d7051e2",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-measuring-admin-1st-border.json.gz",
+                    "bytes": 9730,
+                    "md5": "4bec03eee1c7a742e284594f8f1f8413",
+                    "sha256": "a2a5683ae27aff9b6474b7f03188d4f71cfaf04a5506a1e4e3081bd4f0dfba0a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-measuring-admin-2nd-border.json.gz",
+                    "bytes": 916064,
+                    "md5": "50d30126e1a46c34cb3c9dc3c5647f81",
+                    "sha256": "b1816b432ef78b03853727d96ef02e6686b07e70d93674b6006f52d49a70d8b0",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-measuring-admin-boundaries.json.gz",
+                    "bytes": 1909981,
+                    "md5": "1dec00fc6bcda4aa198dc826e27dd2dc",
+                    "sha256": "ce92e89ca6d73524ab911afc2f98816b5291a865b3a1b158739b0d8af15b13ff",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-boundaries.json.gz",
+                    "bytes": 878575,
+                    "md5": "9a251a051a9d2b4bde91bf625a8f3431",
+                    "sha256": "8f280d41adb74bda6204c1dd7e94de79ef4a04a482d293be9aec0f8ed4050494",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-transit.json.gz",
+                    "bytes": 14841,
+                    "md5": "8ff4ddf3ed0c1d195773c75ce3671fdf",
+                    "sha256": "d117d7a3d0aed66d4141cac681be54b6fbd38bd16db7920f0c04248163cb18fc",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-hokkaido-meta.json.gz",
+                    "bytes": 499,
+                    "md5": "5e9b8b6e0df087e4dd853a95d179d323",
+                    "sha256": "799790422451d24008f377d9f06d8184964ab228779a65073d585ceef7e2b607",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
             "id": "asia-japan-kanto",
             "label": "Kanto",
             "regionPath": ["Asia", "Japan", "Kanto"],
@@ -236,88 +327,6 @@
                     "bytes": 506,
                     "md5": "a98b5f578fc6c59e809a5d6a56fbe03e",
                     "sha256": "004ce7f22cff694e3812fd0306888a641f4c3e02076705999c8ccbadae827803",
-                    "schemaVersion": 1
-                }
-            ]
-        },
-        {
-            "id": "asia-japan-shikoku",
-            "label": "Shikoku",
-            "regionPath": ["Asia", "Japan", "Shikoku"],
-            "bbox": [131.769819, 32.229585, 135.17938, 34.65151],
-            "osmSnapshot": "2026-06-13",
-            "totalBytes": 2295339,
-            "artifacts": [
-                {
-                    "kind": "poi",
-                    "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-shikoku-poi.json.gz",
-                    "bytes": 92387,
-                    "md5": "dbf19ef56416c7d572d3be78929ab47f",
-                    "sha256": "80ca1a034e21a1f9d09360ed72e26b900c5dee81f4c1ed84decf790c2db62ca6",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-shikoku-measuring-coastline.json.gz",
-                    "bytes": 445168,
-                    "md5": "acdf8c8483ff7e0f797baf4544add774",
-                    "sha256": "d87e788af886e975f2e3af46737d7cc7139953d46e004626e694d1a9e157f66d",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-shikoku-measuring-admin-1st-border.json.gz",
-                    "bytes": 60991,
-                    "md5": "8b351618e1a3a5c907e96e76269b6d78",
-                    "sha256": "d82acb04b2ba2ce468b62eacff0a33d278ca9e99c3fa0ac06761ef90e761d228",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-shikoku-measuring-admin-2nd-border.json.gz",
-                    "bytes": 349235,
-                    "md5": "1e17ca3cb95b95de089742044e9db6db",
-                    "sha256": "bc3df6adc496133492162d6ef54df744c9eec6caf671c3729a250507a1ea1338",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-shikoku-measuring-admin-boundaries.json.gz",
-                    "bytes": 828971,
-                    "md5": "cf2401331a564364a03520b13475acf5",
-                    "sha256": "91a0e9136c192550b824b2500e83982c20a4372cb2333d483935e2804d047937",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "boundaries",
-                    "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-shikoku-boundaries.json.gz",
-                    "bytes": 502380,
-                    "md5": "50bbe3c460c98b299431bb0589df42fb",
-                    "sha256": "6b8103b02eb179b6ff22a5a85668588f08bcc42c267a92a92b084c5a662bcd47",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "transit",
-                    "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-shikoku-transit.json.gz",
-                    "bytes": 15722,
-                    "md5": "db1a3041398b3398984bca4db4411855",
-                    "sha256": "4c1be20ddd542882e3f6763130a6e20870a19921d6da8aed353c9d9eb0df6023",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "meta",
-                    "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-japan-shikoku-meta.json.gz",
-                    "bytes": 485,
-                    "md5": "7c03d96bb5dca5411d81122d00c50350",
-                    "sha256": "6124d3e9d4f067889c083f25b09e621144c5164a79b832c1c6ddc98e95622407",
                     "schemaVersion": 1
                 }
             ]
