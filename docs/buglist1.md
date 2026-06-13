@@ -2,7 +2,10 @@
 
 # Unprocessed Buglist
 
+## Local rulesets
+
 - In SF Bay area, a common game mode is: Allowed transit lines/stations - Everything on rails (BART, MUNI, Caltrain, cablecars, historic streetcars) plus the 38r and 14r bus lines. This requires adding in bus line options.
+- Dallas https://docs.google.com/document/d/1ahmznZhiLT6PncF8tASiT7ISJqIrZS4u28yWIiSrB1M/edit?tab=t.0#heading=h.ns0pgnihiy1a
 
 # Processed Buglist
 
