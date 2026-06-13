@@ -194,14 +194,16 @@ export async function buildTransitArtifact({
 
         const includeRailway =
             region.transitOverrides?.useRailwayInfrastructure ?? false;
+        const routeModes = region.transitOverrides?.routeModes;
         const { relations, nodeCoords, ways } =
             await extractRouteRelationsFromPbf({
                 pbfPath,
                 cacheDir: routeCacheDir,
                 regionId: region.id,
                 includeRailway,
+                routeModes,
             });
-        const { lines } =
+        const { lines: rawLines } =
             relations.length > 0 && stationRecords.length > 0
                 ? processOsmRoutes(
                       relations,
@@ -211,6 +213,15 @@ export async function buildTransitArtifact({
                       ways,
                   )
                 : { lines: [] };
+
+        // 5b. Clip route geometry to the region bbox. Geofabrik extracts can
+        // include relations whose ways extend past the nominal region boundary
+        // (e.g., long-distance Amtrak routes entering Northern California).
+        // Keep only the portion inside the bbox so pack-lint passes and the
+        // map doesn't render tracks in unrelated areas.
+        const lines = regionBbox
+            ? clipLinesToBbox(rawLines, regionBbox)
+            : rawLines;
 
         // 6. Build per-operator presets with nested stations and routes.
         const operatorNames = region.transitOverrides?.operatorNames ?? {};
@@ -454,4 +465,122 @@ function filterRecordsByBbox(records, bbox) {
             r.lat >= south - SLOP &&
             r.lat <= north + SLOP,
     );
+}
+
+/**
+ * Clip a set of route lines to the region bbox. Routes whose geometry is
+ * entirely outside the bbox are dropped.
+ *
+ * @param {object[]} lines - line records from processOsmRoutes
+ * @param {[number, number, number, number]} bbox - [west, south, east, north]
+ * @returns {object[]} clipped lines
+ */
+function clipLinesToBbox(lines, bbox) {
+    const clipped = [];
+    for (const line of lines) {
+        const geometry = clipGeometryToBbox(line.geometry, bbox);
+        if (!geometry) continue;
+        clipped.push({ ...line, geometry });
+    }
+    return clipped;
+}
+
+/**
+ * Clip a GeoJSON LineString or MultiLineString to a bbox.
+ * Returns a MultiLineString (even for a single clipped segment) or null if
+ * nothing remains inside the bbox.
+ *
+ * @param {{type: string, coordinates: any[]}} geometry
+ * @param {[number, number, number, number]} bbox - [west, south, east, north]
+ * @returns {{type: "MultiLineString", coordinates: number[][][]} | null}
+ */
+function clipGeometryToBbox(geometry, bbox) {
+    if (!geometry || !Array.isArray(geometry.coordinates)) return null;
+
+    const parts =
+        geometry.type === "LineString"
+            ? [geometry.coordinates]
+            : geometry.type === "MultiLineString"
+              ? geometry.coordinates
+              : null;
+    if (!parts) return null;
+
+    const segments = [];
+    for (const part of parts) {
+        if (!Array.isArray(part) || part.length < 2) continue;
+        for (let i = 0; i < part.length - 1; i++) {
+            const clipped = clipSegmentToBbox(part[i], part[i + 1], bbox);
+            if (clipped) segments.push(clipped);
+        }
+    }
+
+    if (segments.length === 0) return null;
+
+    // Chain consecutive segments that share an endpoint into polylines.
+    const EPS = 1e-9;
+    const chains = [];
+    let current = null;
+    for (const seg of segments) {
+        if (!current) {
+            current = [...seg];
+            continue;
+        }
+        const last = current[current.length - 1];
+        const start = seg[0];
+        if (
+            Math.abs(last[0] - start[0]) < EPS &&
+            Math.abs(last[1] - start[1]) < EPS
+        ) {
+            current.push(seg[1]);
+        } else {
+            chains.push(current);
+            current = [...seg];
+        }
+    }
+    if (current) chains.push(current);
+
+    const valid = chains.filter((c) => c.length >= 2);
+    if (valid.length === 0) return null;
+    return { type: "MultiLineString", coordinates: valid };
+}
+
+/**
+ * Liang-Barsky line clipping to a rectangle.
+ *
+ * @param {[number, number]} a - [lon, lat] start
+ * @param {[number, number]} b - [lon, lat] end
+ * @param {[number, number, number, number]} bbox - [west, south, east, north]
+ * @returns {[[number, number], [number, number]] | null}
+ */
+function clipSegmentToBbox(a, b, bbox) {
+    const [xmin, ymin, xmax, ymax] = bbox;
+    let [x0, y0] = a;
+    let [x1, y1] = b;
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+
+    const p = [-dx, dx, -dy, dy];
+    const q = [x0 - xmin, xmax - x0, y0 - ymin, ymax - y0];
+    let u1 = 0;
+    let u2 = 1;
+
+    for (let i = 0; i < 4; i++) {
+        if (p[i] === 0) {
+            if (q[i] < 0) return null;
+        } else {
+            const t = q[i] / p[i];
+            if (p[i] < 0) {
+                u1 = Math.max(u1, t);
+            } else {
+                u2 = Math.min(u2, t);
+            }
+        }
+    }
+
+    if (u1 > u2) return null;
+
+    return [
+        [x0 + u1 * dx, y0 + u1 * dy],
+        [x0 + u2 * dx, y0 + u2 * dy],
+    ];
 }

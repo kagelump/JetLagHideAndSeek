@@ -400,7 +400,11 @@ regions:
           nameSuffixes: []
           maxClusterMeters: 150
           routeColors: {}
-          wayGeometry: false
+          wayGeometry: true
+          routeModes: [train, subway, light_rail, monorail, cable]
+          operatorNames:
+              San Francisco Municipal Railway:
+                  - San Francisco Municipal Transportation Agency
     - id: north-america-us-california-socal
       label: Southern California
       regionPath: [North America, US, California, Southern California]
