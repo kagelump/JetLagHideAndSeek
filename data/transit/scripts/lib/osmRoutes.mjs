@@ -653,7 +653,15 @@ function buildLine(
 
         for (const m of members) {
             const role = m.role ?? "";
-            if (role !== "stop" && role !== "station") continue;
+            // OSM PTv2 directional variants use stop_entry_only / stop_exit_only
+            // for terminus stations. Treat them as valid stop members.
+            if (
+                role !== "stop" &&
+                role !== "station" &&
+                role !== "stop_entry_only" &&
+                role !== "stop_exit_only"
+            )
+                continue;
 
             const ref = m.ref;
             let resolvedId = null;
@@ -903,17 +911,29 @@ function buildLine(
                     : stitched;
 
             // Spatial attach: pull in stations near the stitched track that
-            // aren't already resolved as stop members. This is what gives
-            // 0-stop infrastructure lines (e.g. 縱貫線/宜蘭線) their stations.
-            const attachMeters = localeConfig.railwayAttachMeters ?? 120;
-            const spatialIds = attachStationsAlongLine(
-                geometry,
-                stationById,
-                attachMeters,
-                allStationIds,
-            );
-            for (const sid of spatialIds) {
-                allStationIds.add(sid);
+            // aren't already resolved as stop members. Only applies to
+            // infrastructure lines (route=railway/tracks) — these often have
+            // 0 explicit stop members and need spatial attachment to survive
+            // the <2 station guard. Service-layer lines (route=train/subway/
+            // light_rail/monorail) have explicit stop members that are
+            // authoritative; spatial proximity would add false positives
+            // (e.g. Shonan-Shinjuku Line express passing 原宿 without
+            // stopping).
+            const routeType =
+                tags.route_master ?? tags.route ?? tags["construction:route"];
+            const isInfra =
+                routeType === "railway" || routeType === "tracks";
+            if (isInfra || allStationIds.size < 2) {
+                const attachMeters = localeConfig.railwayAttachMeters ?? 120;
+                const spatialIds = attachStationsAlongLine(
+                    geometry,
+                    stationById,
+                    attachMeters,
+                    allStationIds,
+                );
+                for (const sid of spatialIds) {
+                    allStationIds.add(sid);
+                }
             }
         }
     }

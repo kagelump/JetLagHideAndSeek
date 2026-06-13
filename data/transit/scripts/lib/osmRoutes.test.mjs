@@ -409,7 +409,10 @@ describe("processOsmRoutes", () => {
         assert.ok(lines[0].memberStationIds.length >= 2);
     });
 
-    it("spatially attaches stations near stitched way geometry", () => {
+    it("spatially attaches stations for lines with < 2 explicit stops", () => {
+        // Spatial attach only runs when the line has < 2 resolved explicit
+        // stop members. This saves 0-stop infrastructure lines (e.g. 縱貫線)
+        // while preventing false positives on service-layer lines.
         const relations = [
             {
                 id: 900,
@@ -420,23 +423,22 @@ describe("processOsmRoutes", () => {
                         operator: "TestRail",
                     },
                 },
+                // Only 1 explicit stop — spatial attach needed to reach 2.
                 members: [
                     { type: "way", ref: 901, role: "" },
                     { type: "node", ref: 80, role: "stop" },
-                    { type: "node", ref: 81, role: "stop" },
                 ],
             },
         ];
 
         const stationRecords = [
             { id: "osm:node:80", name: "End A", lat: 35.0, lon: 139.0 },
-            { id: "osm:node:81", name: "End B", lat: 35.1, lon: 139.1 },
-            { id: "osm:node:82", name: "Nearby", lat: 35.05, lon: 139.05 },
+            { id: "osm:node:81", name: "Nearby", lat: 35.05, lon: 139.05 },
         ];
 
         const nodeCoords = new Map([
             [80, { lat: 35.0, lon: 139.0 }],
-            [81, { lat: 35.1, lon: 139.1 }],
+            [81, { lat: 35.05, lon: 139.05 }],
         ]);
 
         const ways = new Map([[901, [80, 81]]]);
@@ -455,10 +457,70 @@ describe("processOsmRoutes", () => {
         );
 
         assert.equal(lines.length, 1);
-        // Station 82 is near the line geometry and should be attached.
+        // Station 81 is near the line geometry — spatial attach brings
+        // the line from 1 stop to 2, saving it from the <2 guard.
         assert.ok(
-            lines[0].memberStationIds.includes("osm:node:82"),
+            lines[0].memberStationIds.includes("osm:node:81"),
             "spatially nearby station attached",
+        );
+    });
+
+    it("skips spatial attach for service-layer lines with explicit stops", () => {
+        // Service-layer lines (route=train/subway) with explicit stop
+        // members should NOT get spatial attachment — their stop list
+        // is authoritative and track proximity would add false positives
+        // (e.g. express services passing stations without stopping).
+        const relations = [
+            {
+                id: 901,
+                properties: {
+                    tags: {
+                        route: "subway",
+                        name: "Express Line",
+                        operator: "TestRail",
+                    },
+                },
+                members: [
+                    { type: "way", ref: 902, role: "" },
+                    { type: "node", ref: 80, role: "stop" },
+                    { type: "node", ref: 81, role: "stop" },
+                ],
+            },
+        ];
+
+        const stationRecords = [
+            { id: "osm:node:80", name: "Station A", lat: 35.0, lon: 139.0 },
+            { id: "osm:node:81", name: "Station B", lat: 35.1, lon: 139.1 },
+            { id: "osm:node:82", name: "Passing Station", lat: 35.05, lon: 139.05 },
+        ];
+
+        const nodeCoords = new Map([
+            [80, { lat: 35.0, lon: 139.0 }],
+            [81, { lat: 35.1, lon: 139.1 }],
+            [82, { lat: 35.05, lon: 139.05 }],
+        ]);
+
+        const ways = new Map([[902, [80, 82, 81]]]);
+
+        const { lines } = processOsmRoutes(
+            relations,
+            stationRecords,
+            {
+                nameSuffixes: [],
+                operators: [],
+                useRailwayInfrastructure: true,
+                railwayAttachMeters: 500,
+            },
+            nodeCoords,
+            ways,
+        );
+
+        assert.equal(lines.length, 1);
+        // Station 82 is on the track between A and B but is NOT an explicit
+        // stop — it should NOT be attached (express passes without stopping).
+        assert.ok(
+            !lines[0].memberStationIds.includes("osm:node:82"),
+            "passing station not spatially attached to line with >= 2 explicit stops",
         );
     });
 

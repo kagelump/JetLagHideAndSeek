@@ -641,16 +641,12 @@ async function checkTransitQuality(artifact, distDir) {
     if (regionId === "asia-japan-kanto") {
         // Station route-count assertions.
         const expectedCounts = {
-            中目黒: 2, // Tōyoko + Hibiya (verified 2026-06-14: way-overlap classifier)
+            中目黒: 2, // Tōyoko + Hibiya (verified 2026-06-14)
             広尾: 1, // Hibiya only (verified 2026-06-14)
             駒場東大前: 1, // Inokashira (Keio) (verified 2026-06-14)
             代官山: 1, // Tōyoko (Tokyu) (verified 2026-06-14)
-            // 原宿: 7 — TODO reduce when JR shared-track through-services
-            // (Saikyo, Shonan-Shinjuku, Narita Express) are classified.
-            // These lack passenger tags so the way-overlap+passenger gate
-            // doesn't catch them; they need geometry-aware detection.
-            // Baseline set to current value to prevent regression.
-            原宿: 7,
+            原宿: 1, // Yamanote only — express services excluded by spatial-attach gate
+            目黒: 4, // Yamanote + Mita + Namboku + Tōkyū-Meguro (verified 2026-06-14)
         };
         for (const [name, expected] of Object.entries(expectedCounts)) {
             const routes = stationRoutes.get(name);
