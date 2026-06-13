@@ -178,6 +178,132 @@ regions:
           railwayAttachMeters: 120
           routeColors: {}
           wayGeometry: false
+    - id: asia-japan-kansai
+      label: Kansai
+      regionPath: [Asia, Japan, Kansai]
+      pbfUrl: https://download.geofabrik.de/asia/japan/kansai-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["駅"]
+          maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-japan-chubu
+      label: Chubu
+      regionPath: [Asia, Japan, Chubu]
+      pbfUrl: https://download.geofabrik.de/asia/japan/chubu-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["駅"]
+          maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-japan-tohoku
+      label: Tohoku
+      regionPath: [Asia, Japan, Tohoku]
+      pbfUrl: https://download.geofabrik.de/asia/japan/tohoku-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["駅"]
+          maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-japan-chugoku
+      label: Chugoku
+      regionPath: [Asia, Japan, Chugoku]
+      pbfUrl: https://download.geofabrik.de/asia/japan/chugoku-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["駅"]
+          maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-japan-kyushu
+      label: Kyushu
+      regionPath: [Asia, Japan, Kyushu]
+      pbfUrl: https://download.geofabrik.de/asia/japan/kyushu-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["駅"]
+          maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-japan-shikoku
+      label: Shikoku
+      regionPath: [Asia, Japan, Shikoku]
+      pbfUrl: https://download.geofabrik.de/asia/japan/shikoku-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["駅"]
+          maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
+          routeColors: {}
+          wayGeometry: false
+    - id: asia-japan-hokkaido
+      label: Hokkaido
+      regionPath: [Asia, Japan, Hokkaido]
+      pbfUrl: https://download.geofabrik.de/asia/japan/hokkaido-latest.osm.pbf
+      adminLevels:
+          matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: ["駅"]
+          maxClusterMeters: 150
+          useRailwayInfrastructure: true
+          railwayAttachMeters: 120
+          routeColors: {}
+          wayGeometry: false
     - id: asia-china-beijing
       label: Beijing
       regionPath: [Asia, China, Beijing]
