@@ -102,7 +102,7 @@ describe("playAreaBoundary", () => {
 
     it("identifies bundled play area IDs", () => {
         expect(isBundledPlayAreaId(19631009)).toBe(true);
-        expect(isBundledPlayAreaId(358674)).toBe(true);
+        expect(isBundledPlayAreaId(358674)).toBe(false);
         expect(isBundledPlayAreaId(999999)).toBe(false);
     });
 
@@ -407,13 +407,23 @@ describe("playAreaBoundary", () => {
         expect(result.current.data).toBeUndefined();
     });
 
-    it("is disabled for bundled play area IDs", () => {
+    it("fetches Osaka now that it is no longer bundled", async () => {
+        mockedOsmToGeoJson.mockReturnValue(osakaBoundary);
+        (globalThis.fetch as jest.Mock).mockResolvedValue(
+            makeOverpassResponse(),
+        );
+
         const { result } = renderHook(() => usePlayAreaBoundary(358674), {
             wrapper: QueryWrapper,
         });
 
-        // Bundled Osaka — enabled=false, should not fetch.
-        expect(result.current.fetchStatus).toBe("idle");
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+        });
+
+        expect(result.current.data).not.toBeUndefined();
+        expect(result.current.data!.osmId).toBe(358674);
+        expect(result.current.data!.label).toBe("Osaka");
     });
 
     it("fetches a non-bundled boundary and returns the play area", async () => {
