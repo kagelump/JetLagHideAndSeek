@@ -26,10 +26,10 @@ picker" below is the stub form of "Bundled areas."
 
 1. **Sticky summary header:** current area ("Tokyo 23 Wards").
 2. **Rule-pack preset picker (stub):** friendly prompt "Where are you playing?"
-   + a chip/short-list of presets. **Stub this epic** — list the bundled cities
-   (Tokyo, Osaka) as built-in entries; the downloadable catalog is design-only
-   (see `07-rule-packs-design.md`). Architect the picker so a real catalog can
-   populate it later without layout churn.
+    - a chip/short-list of presets. **Stub this epic** — list the bundled cities
+      (Tokyo, Osaka) as built-in entries; the downloadable catalog is design-only
+      (see `07-rule-packs-design.md`). Architect the picker so a real catalog can
+      populate it later without layout churn.
 3. **Use my location (center):** centers/suggests from the device fix. v1 may
    simply center the map / bias search; full reverse-geocode-to-relation is a
    fast-follow (don't block first impression on a flaky reverse lookup).

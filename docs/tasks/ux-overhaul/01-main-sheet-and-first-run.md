@@ -25,6 +25,7 @@ game**.
 ## Scope
 
 ### Main-sheet identity + HUD (persistent, all-game)
+
 Follows the `MainSheet` HUD mock (`design-reference/screens.mock.jsx`). Treat the
 main sheet as a lightweight **game HUD**:
 
@@ -40,19 +41,20 @@ main sheet as a lightweight **game HUD**:
   repurposed.
 - **Nav rows below:** `ListRow` "Questions" (`N asked · tap to review`) and
   "Settings" (`Play area, hiding zones, sharing`).
-- *(Marquee follow-up, perf-gated)* the **"Stations left"** figure is live
+- _(Marquee follow-up, perf-gated)_ the **"Stations left"** figure is live
   eligibility ("~37 of 412 still possible"), updating as answers shade the map.
   See epic risks before making it always-on; until then show a static/derived
   count.
 
 ### First-run state (welcome + fork)
+
 When there is **no configured game yet** and onboarding hasn't completed, the
 main sheet shows its first-run face instead of the plain HUD (per the `MainSheet`
 first-run mock):
 
 - Eyebrow "Hide & Seek Mapper" + title **"Set up your game"** + one-line pitch:
-  *"You're the seeker. Ask the hider questions, record their answers, and watch
-  the map narrow down where they can be."*
+  _"You're the seeker. Ask the hider questions, record their answers, and watch
+  the map narrow down where they can be."_
 - Two stacked full-width actions: primary **Set up a game** (→ Phase 2 setup
   checklist) and subtle **Join a game** (→ Phase 3 paste-link import).
 - Centered subtext **"…or just explore the map."** — no button; the gentle
@@ -60,12 +62,14 @@ first-run mock):
 - Suppressed on imported/returning games (already set up).
 
 ### Empty-questions state
-Wire up the existing unused `emptyCard` styles: *"No questions yet — add one and
-the map starts narrowing down the hider."* + the existing Add CTA.
+
+Wire up the existing unused `emptyCard` styles: _"No questions yet — add one and
+the map starts narrowing down the hider."_ + the existing Add CTA.
 
 ### Discoverability fixes
+
 - **Long-press pin hint:** a muted line in the question-detail location section,
-  e.g. *"Long-press the map to drop or drag the pin."*
+  e.g. _"Long-press the map to drop or drag the pin."_
 - **Map-control a11y labels:** "Fit play area" / "Go to my location" on the two
   `MapControls` buttons.
 

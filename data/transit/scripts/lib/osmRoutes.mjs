@@ -921,8 +921,7 @@ function buildLine(
             // stopping).
             const routeType =
                 tags.route_master ?? tags.route ?? tags["construction:route"];
-            const isInfra =
-                routeType === "railway" || routeType === "tracks";
+            const isInfra = routeType === "railway" || routeType === "tracks";
             if (isInfra || allStationIds.size < 2) {
                 const attachMeters = localeConfig.railwayAttachMeters ?? 120;
                 const spatialIds = attachStationsAlongLine(

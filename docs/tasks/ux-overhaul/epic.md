@@ -14,8 +14,8 @@ recorded — is never demonstrated.
 
 This epic delivers a welcoming out-of-the-box (OOTB) experience and a compact,
 feature-rich sheet system, **without** building a parallel set of throwaway
-wizard components. Onboarding is expressed as *states and affordances layered on
-the real sheets*, so the same work that guides newcomers also improves everyday
+wizard components. Onboarding is expressed as _states and affordances layered on
+the real sheets_, so the same work that guides newcomers also improves everyday
 use.
 
 ### North star
@@ -57,21 +57,21 @@ mostly guided UX glue around those, plus a first-run fork and sheet polish.
 
 ## Decisions log
 
-| Decision | Choice |
-|---|---|
-| First-run heaviness | Baseline polish + lightweight setup (checklist/nudge), **clean start, no demo game** |
-| Wizard form | Reuse existing sheets; checklist + completion nudge; zero dedicated wizard screens |
-| Presets in setup | Downloadable curated **rule-pack** catalog (mirrors offline packs). **UI stub only this epic** — model designed in docs, not wired |
-| Rule-pack ↔ data-pack | **Hard dependency** (applying a rule pack requires its region data pack) — documented for when rule packs are implemented |
-| Join method (v1) | **Paste link only** — no in-app QR scanner; in-person QR relies on the phone camera + universal link |
-| Settings layout | Reordered around the setup CUJ: "Set up your game" group first, Share as culminating row |
-| Hiding-zone granularity | Add **operator → line drill-down** with per-operator route selection |
-| Setup completion | **Play Area confirmed + ≥1 hiding-zone preset** (default Tokyo still needs an explicit confirm) |
-| Question-sheet compaction | **Later phase in this epic** (after setup-critical sheets) |
-| Visual accent | **Teal `#1f6f78`** — primary buttons **and selected segments fill teal** (one accent); navy `#111827` only for the Seeker/Hider mode chip |
-| Main HUD actions | "+ Add Question" spans **full width** — no Re-share button beside it |
-| Radius control | Removed from the Hiding Zones body; lives behind a "…" header menu (number input + m/km/mi unit toggle) |
-| Thermometer detail | Mock is wrong — **adapt the current app's layout** into the compact pattern |
+| Decision                  | Choice                                                                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| First-run heaviness       | Baseline polish + lightweight setup (checklist/nudge), **clean start, no demo game**                                                      |
+| Wizard form               | Reuse existing sheets; checklist + completion nudge; zero dedicated wizard screens                                                        |
+| Presets in setup          | Downloadable curated **rule-pack** catalog (mirrors offline packs). **UI stub only this epic** — model designed in docs, not wired        |
+| Rule-pack ↔ data-pack    | **Hard dependency** (applying a rule pack requires its region data pack) — documented for when rule packs are implemented                 |
+| Join method (v1)          | **Paste link only** — no in-app QR scanner; in-person QR relies on the phone camera + universal link                                      |
+| Settings layout           | Reordered around the setup CUJ: "Set up your game" group first, Share as culminating row                                                  |
+| Hiding-zone granularity   | Add **operator → line drill-down** with per-operator route selection                                                                      |
+| Setup completion          | **Play Area confirmed + ≥1 hiding-zone preset** (default Tokyo still needs an explicit confirm)                                           |
+| Question-sheet compaction | **Later phase in this epic** (after setup-critical sheets)                                                                                |
+| Visual accent             | **Teal `#1f6f78`** — primary buttons **and selected segments fill teal** (one accent); navy `#111827` only for the Seeker/Hider mode chip |
+| Main HUD actions          | "+ Add Question" spans **full width** — no Re-share button beside it                                                                      |
+| Radius control            | Removed from the Hiding Zones body; lives behind a "…" header menu (number input + m/km/mi unit toggle)                                   |
+| Thermometer detail        | Mock is wrong — **adapt the current app's layout** into the compact pattern                                                               |
 
 ## Visual design system
 
@@ -92,37 +92,37 @@ Phases are ordered so each lands independently. Part 1 is the fastest visible
 win and the surface the nudge/fork hang off of.
 
 - [ ] **P0 — Assessment fixes (DONE, landed on branch)**
-  - [x] Remove `[detailTap]` debug `console.log`s in matching candidate paths
-  - [x] Fix offline `update-available` snapshot label (installed → available)
+    - [x] Remove `[detailTap]` debug `console.log`s in matching candidate paths
+    - [x] Fix offline `update-available` snapshot label (installed → available)
 - [ ] **Phase 1 — Main sheet & first-run state** — `01-main-sheet-and-first-run.md`
-  - [ ] Main-sheet identity (render the unused header/title styles)
-  - [ ] Live game-summary HUD (area · questions · stations)
-  - [ ] First-run state: welcome copy + **Set up / Join** fork
-  - [ ] Quick "Add Question" + "Re-share" actions; mode chip
-  - [ ] Real empty-questions state (wire up unused `emptyCard` styles)
-  - [ ] Long-press pin hint; map-control accessibility labels
+    - [ ] Main-sheet identity (render the unused header/title styles)
+    - [ ] Live game-summary HUD (area · questions · stations)
+    - [ ] First-run state: welcome copy + **Set up / Join** fork
+    - [ ] Quick "Add Question" + "Re-share" actions; mode chip
+    - [ ] Real empty-questions state (wire up unused `emptyCard` styles)
+    - [ ] Long-press pin hint; map-control accessibility labels
 - [ ] **Phase 2 — Setup checklist & nudge** — `02-setup-checklist-and-nudge.md`
-  - [ ] `setupMode` + completion state (Play Area confirmed + ≥1 preset)
-  - [ ] Settings reorder: "Set up your game" group + Share as culminating row
-  - [ ] Per-row ✓/status; activating Share CTA
-  - [ ] Accent dot + progress nudge; self-clearing; never on imported games
+    - [ ] `setupMode` + completion state (Play Area confirmed + ≥1 preset)
+    - [ ] Settings reorder: "Set up your game" group + Share as culminating row
+    - [ ] Per-row ✓/status; activating Share CTA
+    - [ ] Accent dot + progress nudge; self-clearing; never on imported games
 - [ ] **Phase 3 — Join & Share glue** — `03-join-and-share.md`
-  - [ ] Paste-link "Join a game" on `ImportScreen` empty state
-  - [ ] Setup summary line in `ShareSetupModal`
+    - [ ] Paste-link "Join a game" on `ImportScreen` empty state
+    - [ ] Setup summary line in `ShareSetupModal`
 - [ ] **Phase 4 — Compact sheet system** — `04-compact-sheet-system.md`
-  - [ ] Sticky-footer slot in `ChildSheetShell`; condensed row + chip styles
-  - [ ] 42%-resting / 88%-deep-browse snap behavior
+    - [ ] Sticky-footer slot in `ChildSheetShell`; condensed row + chip styles
+    - [ ] 42%-resting / 88%-deep-browse snap behavior
 - [ ] **Phase 5 — Play Area sheet** — `05-play-area-sheet.md`
-  - [ ] Rule-pack preset picker (stub) + use-my-location + search/no-results
-  - [ ] Collapse OSM relation-ID into Advanced; sticky Continue
+    - [ ] Rule-pack preset picker (stub) + use-my-location + search/no-results
+    - [ ] Collapse OSM relation-ID into Advanced; sticky Continue
 - [ ] **Phase 6 — Hiding Zone sheet** — `06-hiding-zone-sheet.md`
-  - [ ] Compact layout; suggested-operators hero; surface browse-all
-  - [ ] **Operator → line drill-down** + per-operator route selection state
+    - [ ] Compact layout; suggested-operators hero; surface browse-all
+    - [ ] **Operator → line drill-down** + per-operator route selection state
 - [ ] **Phase 7 — Rule packs (design only)** — `07-rule-packs-design.md`
-  - [ ] Document catalog/installed/payload model + hard data-pack dependency
-  - [ ] (No pipeline/client wiring this epic — picker is a stub)
+    - [ ] Document catalog/installed/payload model + hard data-pack dependency
+    - [ ] (No pipeline/client wiring this epic — picker is a stub)
 - [ ] **Phase 8 — Question-sheet compaction (later)** — `08-question-sheets-compaction.md`
-  - [ ] Apply the compact system to question detail screens; tidy nested modals
+    - [ ] Apply the compact system to question detail screens; tidy nested modals
 
 ## Risks & open items
 

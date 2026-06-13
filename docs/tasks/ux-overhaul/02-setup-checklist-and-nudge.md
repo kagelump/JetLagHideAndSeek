@@ -44,10 +44,10 @@ then Play Area / Hiding Zones / Offline Data, then Mode / Display / Maintenance.
 Reorder so the sheet **reads top-to-bottom as the setup flow**:
 
 1. **"Set up your game"** group, in dependency order:
-   - **Play Area** — carries ✓ / "set this up" status in `setupMode`.
-   - **Hiding Zones** — carries ✓ / status.
-   - **Share** — moved out of the floating corner to be the **culminating row**;
-     **activates** (enabled/emphasized) once the checklist completes.
+    - **Play Area** — carries ✓ / "set this up" status in `setupMode`.
+    - **Hiding Zones** — carries ✓ / status.
+    - **Share** — moved out of the floating corner to be the **culminating row**;
+      **activates** (enabled/emphasized) once the checklist completes.
 2. **Supporting:** Offline Data.
 3. **Secondary/admin:** Mode, Display, Admin Divisions, Maintenance, attribution.
 
@@ -63,7 +63,7 @@ the **culminating row** described above.
 ## The nudge (style & placement)
 
 - **Style:** an **accent-colored dot + a progress count** (e.g. `Setup · 1 of
-  2`), *not* an alarm-red badge. Red reads as error/unread; a soft progress chip
+2`), _not_ an alarm-red badge. Red reads as error/unread; a soft progress chip
   reads as "almost there." Reserve red for real problems.
 - **Placement:** on the main-sheet "Set up a game" affordance (Phase 1) and
   mirrored as per-row status inside Settings. Both are derived from the same
@@ -87,4 +87,4 @@ the **culminating row** described above.
 - Imported games never show the nudge.
 - Tests: completion-state unit tests (each step toggling), Settings render order,
   nudge visibility matrix (new vs imported vs complete). `pnpm test` + `pnpm
-  check`.
+check`.

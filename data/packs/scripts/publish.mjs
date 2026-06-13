@@ -353,9 +353,7 @@ export async function publish({
     );
     if (existsSync(localCatalogPath)) {
         try {
-            baseCatalog = JSON.parse(
-                await readFile(localCatalogPath, "utf8"),
-            );
+            baseCatalog = JSON.parse(await readFile(localCatalogPath, "utf8"));
             console.log("  Using local site/packs/catalog.json as base.");
         } catch (err) {
             console.warn(
@@ -375,9 +373,7 @@ export async function publish({
                 console.log("  Fetched published catalog as base.");
             }
         } catch (err) {
-            console.error(
-                `  ERROR fetching published catalog: ${err.message}`,
-            );
+            console.error(`  ERROR fetching published catalog: ${err.message}`);
             console.error(
                 "  Aborting — don't risk clobbering published packs.",
             );

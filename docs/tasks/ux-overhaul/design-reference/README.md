@@ -5,18 +5,19 @@ System"** (claude.ai/design), reverse-engineered from this repo + the UX-overhau
 plan. Persisted here because the design-file URL is ephemeral. These are the
 durable source-of-truth for the visual spec the epic implements.
 
-| File | What it is |
-|---|---|
-| `design-system-guide.md` | The full design-system guide — voice/tone, color, type, spacing, **the bottom-sheet anatomy + 42% rule**, and the **question-sheet table** (per-type primary control / answer / map reaction / cost). |
-| `colors.css` | Canonical color tokens. Accent is **teal `#1f6f78`**; `--fill-control: var(--teal)` (primary buttons + **selected segments fill teal**); navy `#111827` is `--fill-control-strong`, kept only for the Seeker/Hider mode chip. |
-| `screens.mock.jsx` | Mock of `MainSheet` (first-run + live HUD), `SettingsSheet`, `PlayAreaSheet`, `HidingZoneSheet`. |
-| `questions.mock.jsx` | Mock of the questions list, Add Question, and the five detail sheets. |
+| File                     | What it is                                                                                                                                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `design-system-guide.md` | The full design-system guide — voice/tone, color, type, spacing, **the bottom-sheet anatomy + 42% rule**, and the **question-sheet table** (per-type primary control / answer / map reaction / cost).                         |
+| `colors.css`             | Canonical color tokens. Accent is **teal `#1f6f78`**; `--fill-control: var(--teal)` (primary buttons + **selected segments fill teal**); navy `#111827` is `--fill-control-strong`, kept only for the Seeker/Hider mode chip. |
+| `screens.mock.jsx`       | Mock of `MainSheet` (first-run + live HUD), `SettingsSheet`, `PlayAreaSheet`, `HidingZoneSheet`.                                                                                                                              |
+| `questions.mock.jsx`     | Mock of the questions list, Add Question, and the five detail sheets.                                                                                                                                                         |
 
 ## Decisions on which mock elements we adopt
 
 Captured from the design review (see `../epic.md` decisions log):
 
 **Adopt as-is**
+
 - Teal accent + **teal-filled primary buttons and selected segments** (one
   accent; navy only for the mode chip).
 - `QuestionMeta` "Draw 2, pick 1 · 5 min" on Add-Question rows and detail
@@ -34,6 +35,7 @@ Captured from the design review (see `../epic.md` decisions log):
   `BottomSheet` (sticky footer slot), `MapControlButton`, `Fab` (••• mark).
 
 **Adopt with a change**
+
 - **Main HUD second button removed.** No Re-share next to "+ Add Question";
   **Add Question spans full width.**
 - **Share lives as the culminating row** of the "Set up your game" group
@@ -44,6 +46,7 @@ Captured from the design review (see `../epic.md` decisions log):
   operator; tap chevron = pick specific lines) — see `../06-hiding-zone-sheet.md`.
 
 **Ignore**
+
 - The **thermometer detail mock is wrong.** Adapt the current app's thermometer
   layout into the compact 42% pattern instead. See `../08-question-sheets-compaction.md`.
 

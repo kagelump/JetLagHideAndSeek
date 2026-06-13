@@ -14,8 +14,9 @@ bundles** (Tokyo/Osaka) in favor of rule packs — so bundled cities should be
 treated as "the first rule packs," surfaced in the same picker.
 
 Distinct from offline **data** packs:
+
 - **Data pack** = region gameplay data (POI, measuring, boundaries, transit).
-- **Rule pack** = a curated *game configuration* for an area.
+- **Rule pack** = a curated _game configuration_ for an area.
 
 ## Proposed model (mirrors `data/packs/` + `site/packs/`)
 
@@ -25,10 +26,10 @@ Distinct from offline **data** packs:
   blobs).
 - **On-device installed index** mirroring the offline-pack installed index.
 - **Payload (versioned game-setup envelope):**
-  - play-area reference (relation id / boundary, or a reference to a data-pack
-    region)
-  - suggested hiding-zone presets + line subsets (per Phase 6 selection model)
-  - optional rules (e.g. question budget) + metadata (name, blurb, difficulty)
+    - play-area reference (relation id / boundary, or a reference to a data-pack
+      region)
+    - suggested hiding-zone presets + line subsets (per Phase 6 selection model)
+    - optional rules (e.g. question budget) + metadata (name, blurb, difficulty)
 - Reuse the existing share/wire envelope vocabulary where possible so a rule
   pack is "a shareable setup that happens to be hosted."
 

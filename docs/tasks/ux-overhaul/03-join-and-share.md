@@ -25,6 +25,7 @@ moment of sharing.
 ## Scope
 
 ### Join-a-game (paste link) — v1, no scanner
+
 Most players just tap a link and bypass everything. The gap is the **cold open**:
 someone opens the app first, or wants to paste a link from chat.
 
@@ -38,6 +39,7 @@ someone opens the app first, or wants to paste a link from chat.
   priority.
 
 ### Setup summary at Share
+
 Add a compact summary line to the top of `ShareSetupModal`:
 `{playArea.label} · {N} lines/presets · {N} stations`. This makes Share double as
 the "commit" moment — no separate Commit screen is needed.

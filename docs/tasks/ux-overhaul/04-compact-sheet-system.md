@@ -16,12 +16,12 @@ is reserved for deep browse** (global search, browse-all-regions).
 ## The pattern system
 
 1. **Sticky context header + sticky action footer; scroll only the middle.**
-   - Top: a one-line state summary (e.g. "Tokyo · 3 operators · 412 stations ·
-     500 m").
-   - Bottom: the single primary action (Continue / Apply / Add), always visible
-     at 42% so the user never expands just to find the button.
-   - `ChildSheetShell` already owns the header; add an **optional sticky footer
-     slot** — one reusable component used across sheets.
+    - Top: a one-line state summary (e.g. "Tokyo · 3 operators · 412 stations ·
+      500 m").
+    - Bottom: the single primary action (Continue / Apply / Add), always visible
+      at 42% so the user never expands just to find the button.
+    - `ChildSheetShell` already owns the header; add an **optional sticky footer
+      slot** — one reusable component used across sheets.
 2. **Drill-in over expand.** Hierarchies (operator→lines, browse-all,
    show-more) **push a short sub-screen** (reuse MainDrawer's existing slide
    transition + edge-swipe-back) instead of growing the current list. Avoid
@@ -36,7 +36,7 @@ is reserved for deep browse** (global search, browse-all-regions).
    handful of rows. Only while the keyboard/search is active does the sheet pop
    to 88%, then settle back to 42%.
 6. **Map carries geometry.** Because the sheet rests at 42%, the live-shading
-   map stays visible behind it; the sheet never renders previews. This is *why*
+   map stays visible behind it; the sheet never renders previews. This is _why_
    42% is the target and what makes trial-and-error editing (e.g. toggling a
    transit line and watching zones update) feel good.
 
@@ -58,9 +58,10 @@ is reserved for deep browse** (global search, browse-all-regions).
 
 The mock composes a component vocabulary that maps onto our primitives — build
 or align these (`design-reference/`): `SheetHeader` (= `ChildSheetShell` header,
-+ "…" menu accessory), `BottomSheet` sticky-footer slot, `ListRow`
-(= `SheetListRow`, condensed), `ChipGroup`, `AnswerSelector`, `QuestionMeta`,
-`SegmentedControl`, `Badge`, `Chip`, `Fab` (••• mark), `MapControlButton`.
+
+- "…" menu accessory), `BottomSheet` sticky-footer slot, `ListRow`
+  (= `SheetListRow`, condensed), `ChipGroup`, `AnswerSelector`, `QuestionMeta`,
+  `SegmentedControl`, `Badge`, `Chip`, `Fab` (••• mark), `MapControlButton`.
 
 ## Constraints (from `AGENTS.md`)
 

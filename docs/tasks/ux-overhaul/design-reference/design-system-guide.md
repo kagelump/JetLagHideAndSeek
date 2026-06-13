@@ -1,7 +1,7 @@
 # Hide & Seek Mapper — Design System
 
-A design system distilled from **Hide & Seek Mapper** (working title *Hide & Seek
-Mapper v2*), a local-first mobile app for running *Jet Lag: The Game*–style
+A design system distilled from **Hide & Seek Mapper** (working title _Hide & Seek
+Mapper v2_), a local-first mobile app for running _Jet Lag: The Game_–style
 **Hide & Seek**. The app turns a phone into a live, shared map: an organizer
 picks a play area and which transit stations are in play, everyone shares one
 link or QR, and as the seekers ask the hider questions and record answers, the
@@ -24,12 +24,12 @@ access, read these to go deeper than this system can capture:
 
 - **GitHub (app + marketing site + docs):**
   https://github.com/kagelump/JetLagHideAndSeek
-  - `src/theme/colors.ts` — the canonical color palette (source of truth).
-  - `src/features/sheet/` — the bottom sheet, MainDrawer, SettingsScreen.
-  - `src/components/` — `SheetListRow`, `UnitSegmentedControl` (primitives).
-  - `src/features/hidingZone/`, `src/features/playArea/`, `src/features/map/`.
-  - `site/index.html` — the marketing landing page (green-tinted variant).
-  - `assets/icon.png`, `site/assets/app-preview.png` — brand imagery.
+    - `src/theme/colors.ts` — the canonical color palette (source of truth).
+    - `src/features/sheet/` — the bottom sheet, MainDrawer, SettingsScreen.
+    - `src/components/` — `SheetListRow`, `UnitSegmentedControl` (primitives).
+    - `src/features/hidingZone/`, `src/features/playArea/`, `src/features/map/`.
+    - `site/index.html` — the marketing landing page (green-tinted variant).
+    - `assets/icon.png`, `site/assets/app-preview.png` — brand imagery.
 - **UX overhaul plan** (branch `claude/expo-app-ux-assessment-v59xm4`, under
   `docs/tasks/ux-overhaul/`) — the OOTB & sheet UX direction this system
   follows: first-run fork (Set up / Join), compact 42%-resting sheets, the
@@ -58,10 +58,10 @@ system:
 ## Content fundamentals — how the product talks
 
 The voice is **plain, calm, and instructional** — a competent utility, not a
-hype brand. It explains *what a control does and why*, in one short line.
+hype brand. It explains _what a control does and why_, in one short line.
 
 - **Person & address:** Speaks to **"you"** ("watch the map narrow down where
-  *they* can be"). The hider is "the hider," the seeker is "you." Imperative for
+  _they_ can be"). The hider is "the hider," the seeker is "you." Imperative for
   actions ("Pick which transit stations the hider can be near", "Share the
   setup").
 - **Sentence case everywhere** for body and descriptions. **Title Case** for
@@ -69,40 +69,42 @@ hype brand. It explains *what a control does and why*, in one short line.
   Game", "Share"). **ALL-CAPS** only for tiny eyebrows/section labels ("RADAR
   QUESTION", "DISPLAY", "MAINTENANCE", "DATA & ATTRIBUTION").
 - **Descriptions are functional, not salesy.** Each settings row pairs a Title
-  Case title with one sentence-case line of *what it does*:
-  - "Eligible transit stations for the hiding zone."
-  - "Opening a shared question link answers it from your current location."
-  - "Show POI names in English when available."
-  - "Download offline POI packs for matching questions."
+  Case title with one sentence-case line of _what it does_:
+    - "Eligible transit stations for the hiding zone."
+    - "Opening a shared question link answers it from your current location."
+    - "Show POI names in English when available."
+    - "Download offline POI packs for matching questions."
 - **Marketing copy** is short, confident, benefit-led, and still concrete:
-  - Eyebrow: "Mobile mapper for hide and seek"
-  - H1: "Plan the play area. Share the setup. Keep the game moving."
-  - Lede: "A local-first Expo app for Jet Lag-style hide and seek: native maps,
-    hiding-zone overlays, radar questions, and share links built for chat and QR
-    codes."
+    - Eyebrow: "Mobile mapper for hide and seek"
+    - H1: "Plan the play area. Share the setup. Keep the game moving."
+    - Lede: "A local-first Expo app for Jet Lag-style hide and seek: native maps,
+      hiding-zone overlays, radar questions, and share links built for chat and QR
+      codes."
 - **Honesty over polish.** Unavailable things say so plainly: "Not ready yet",
   "App-store builds are not published yet."
 - **Destructive actions spell out the consequence.** "Start a new game? This
   clears all questions and resets your play area and hiding zones."
-- **No emoji in prose.** Emoji appear only as *functional glyphs* on map
+- **No emoji in prose.** Emoji appear only as _functional glyphs_ on map
   controls (🗺️ 📍). No exclamatory marketing, no winking tone, no jargon beyond
   the game's own terms (play area, hiding zone, radar/matching/thermometer
   questions, seeker/hider).
-- **Domain vocabulary:** *play area*, *hiding zone*, *preset/operator/line*,
-  *radar question*, *matching question*, *thermometer*, *seeker* / *hider*,
-  *Hit* / *Miss* / *Unanswered*, *share / import setup*.
+- **Domain vocabulary:** _play area_, _hiding zone_, _preset/operator/line_,
+  _radar question_, _matching question_, _thermometer_, _seeker_ / _hider_,
+  _Hit_ / _Miss_ / _Unanswered_, _share / import setup_.
 
 ---
 
 ## Visual foundations — the look and feel
 
 ### Overall vibe
+
 A **warm, analog "paper map"** utility. The surface is an off-white paper
 (`#f7f4ee`); cards and the bottom sheet are a slightly warmer near-white
-(`#fffefa`). The mood is quiet and legible so the *map* — full of color, transit
+(`#fffefa`). The mood is quiet and legible so the _map_ — full of color, transit
 lines, and shading — is the star. The chrome gets out of the way.
 
 ### Color
+
 - **Surfaces:** warm paper `--paper #f7f4ee` (app bg) → `--card #fffefa` (cards,
   sheet) → `--paper-tint #ece7dc` (insets/subtle buttons). Borders are a warm
   hairline `--line #d9d4ca`.
@@ -110,9 +112,9 @@ lines, and shading — is the star. The chrome gets out of the way.
   descriptions, meta, and chevrons.
 - **Accent is teal** `--teal #1f6f78` — links ("Back"), eyebrows, active
   borders, the "on" switch track, and the active-row wash `--teal-tint-bg
-  #e6f2ef`. The marketing site shifts this toward green `#176b4d`.
+#e6f2ef`. The marketing site shifts this toward green `#176b4d`.
 - **Filled controls are teal.** As of the UX overhaul the **primary button and
-  the *selected* segment of any segmented / answer control fill teal**
+  the _selected_ segment of any segmented / answer control fill teal**
   (`--fill-control` → `--teal`) with white text — one accent everywhere, the
   Apple-Maps model. Near-black navy (`--ink-button #111827`,
   `--fill-control-strong`) is kept as a rare neutral-strong option (the
@@ -125,6 +127,7 @@ lines, and shading — is the star. The chrome gets out of the way.
   (`#f4b4ae`); success/active read teal-green.
 
 ### Typography
+
 - **System font stack**, no webfonts. Heavy by default — the brand leans on
   weight, not size, for hierarchy: descriptions are 400, body 600, row titles
   700, titles 800, hero/figures 900.
@@ -136,6 +139,7 @@ lines, and shading — is the star. The chrome gets out of the way.
   412 · 35.6878, 139.7239 in mono).
 
 ### Spacing, radius, elevation
+
 - **4px base grid;** common gaps are 8, 12, 16, 20, 24.
 - **Corners are gently rounded:** 8px is the default for cards, rows, buttons,
   inputs; 7px for inner segmented buttons; the **FAB is a 28px circle**; the
@@ -147,6 +151,7 @@ lines, and shading — is the star. The chrome gets out of the way.
   deep one.
 
 ### Motion & interaction
+
 - **Press feedback is a single, uniform opacity dip to 0.72** across every
   tappable element — no scale, no color shift on press. Honor this everywhere.
 - **Selection** is a fill/wash change: segmented selected → navy fill; active
@@ -158,6 +163,7 @@ lines, and shading — is the star. The chrome gets out of the way.
 - Switches animate the knob ~160ms. Otherwise motion is minimal and functional.
 
 ### Imagery & backgrounds
+
 - The **hero image is the live map** — real OSM raster tiles, warm and slightly
   desaturated, overlaid with translucent **white hiding-zone circles**, colored
   **transit lines**, **station dots**, and a single **question pin**.
@@ -166,6 +172,7 @@ lines, and shading — is the star. The chrome gets out of the way.
   top-down white→paper gradient.
 
 ### Iconography
+
 See the **Iconography** section below.
 
 ---
@@ -173,11 +180,12 @@ See the **Iconography** section below.
 ## The bottom sheet — anatomy & the half-open ideal
 
 The app is, essentially, **a map with one bottom sheet**. Getting that sheet
-right *is* the design system. Apple-Maps is the north star: the sheet rests
+right _is_ the design system. Apple-Maps is the north star: the sheet rests
 **half-open** and you do most of your work there, watching the map react behind
 it.
 
 ### Snap points
+
 - **18% — peek.** Just the grabber + a HUD line. Glanceable.
 - **42% — the resting state and the workhorse.** Every common task must be
   completable here **without expanding**. This is the test for "is this screen
@@ -186,6 +194,7 @@ it.
   operators, candidate lists). Never the default.
 
 ### Anatomy (always, in this order)
+
 1. **Grabber** — the 44×5 handle.
 2. **`SheetHeader`** (optional) — teal "‹ Back" · centered title · trailing
    accessory (lock toggle / "…" menu / Share). Identical on every child sheet.
@@ -194,6 +203,7 @@ it.
    "Done"). Detail sheets usually omit it (the answer auto-applies).
 
 ### The map is the canvas; the sheet is a thin control surface
+
 Because the sheet sits at 42%, the **map stays visible and does the talking**:
 the radar circle, the hot/cold tint, tentacle candidate pins, the measuring
 line, the ward boundary. Manipulating a control in the sheet should produce an
@@ -205,18 +215,19 @@ it's too heavy — push secondary options into drill-ins.
 Five question types, each a compact sheet that keeps **primary control + answer
 above the 42% fold** and shades the map live:
 
-| Type | Primary control | Answer (`AnswerSelector type`) | Map reaction | Cost |
-|---|---|---|---|---|
-| **Radar** | distance `ChipGroup` | Hit / Miss | darkens **outside** (Hit) or **inside** (Miss) the ring | Draw 2, pick 1 |
-| **Thermometer** | Start/End pin segmented | Hotter / Colder | warm/cool tint toward the End pin | Draw 2, pick 1 |
-| **Measuring** | "compared to" drill-in | Closer / Farther | measuring line to the target | Draw 3, pick 1 |
-| **Matching** | category drill-in | Hit / Miss | tints the candidate region | Draw 2, pick 1 |
-| **Tentacles** | range `ChipGroup` + candidate list | *selects a place* (POI model — no AnswerSelector) | range circle + line to the winner | Draw 4, pick 2 |
+| Type            | Primary control                    | Answer (`AnswerSelector type`)                    | Map reaction                                            | Cost           |
+| --------------- | ---------------------------------- | ------------------------------------------------- | ------------------------------------------------------- | -------------- |
+| **Radar**       | distance `ChipGroup`               | Hit / Miss                                        | darkens **outside** (Hit) or **inside** (Miss) the ring | Draw 2, pick 1 |
+| **Thermometer** | Start/End pin segmented            | Hotter / Colder                                   | warm/cool tint toward the End pin                       | Draw 2, pick 1 |
+| **Measuring**   | "compared to" drill-in             | Closer / Farther                                  | measuring line to the target                            | Draw 3, pick 1 |
+| **Matching**    | category drill-in                  | Hit / Miss                                        | tints the candidate region                              | Draw 2, pick 1 |
+| **Tentacles**   | range `ChipGroup` + candidate list | _selects a place_ (POI model — no AnswerSelector) | range circle + line to the winner                       | Draw 4, pick 2 |
 
 Rules of thumb, codified:
+
 - **Radar/Thermometer/Measuring/Matching** record a binary answer → use
   `AnswerSelector` with the matching `type` for correct polarity labels.
-- **Tentacles** is a *POI* question — you pick the winning place from a list
+- **Tentacles** is a _POI_ question — you pick the winning place from a list
   (radio rows), there is no Hit/Miss.
 - Distance presets are a horizontal **`ChipGroup`**, not a wide segmented
   control, so the answer stays on screen at 42%.
@@ -248,20 +259,20 @@ corners rounded. Don't introduce filled/duotone icon families.
 
 ## What's in here (index)
 
-| Path | What it is |
-|---|---|
-| `styles.css` | Entry point — `@import`s every token file. Consumers link this. |
-| `tokens/colors.css` | Color custom properties (base + semantic aliases). |
-| `tokens/typography.css` | Font stacks, size scale, weights. |
-| `tokens/spacing.css` | Spacing grid, radii, elevation, interaction tokens. |
-| `components/core/` | `Button`, `Chip`, `Badge`, `Eyebrow`, `SectionHeading`, `Card`, `QuestionMeta`. |
-| `components/forms/` | `SegmentedControl`, `Switch`, `TextField`, `AnswerSelector`, `ChipGroup`. |
-| `components/sheet/` | `ListRow`, `BottomSheet` (snap + sticky footer), `SheetHeader`. |
-| `components/map/` | `MapControlButton`, `Fab`. |
-| `guidelines/*.card.html` | Foundation specimen cards (Colors, Type, Spacing, Brand). |
-| `ui_kit/app/` | Interactive app recreation — map + bottom sheet, the **question sheets** at the 42% rest driving the live map. |
-| `assets/` | `logo-icon.png`, `app-preview.png`, `question-pin.png`. |
-| `SKILL.md` | Agent Skill entry point (for use in Claude Code). |
+| Path                     | What it is                                                                                                     |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `styles.css`             | Entry point — `@import`s every token file. Consumers link this.                                                |
+| `tokens/colors.css`      | Color custom properties (base + semantic aliases).                                                             |
+| `tokens/typography.css`  | Font stacks, size scale, weights.                                                                              |
+| `tokens/spacing.css`     | Spacing grid, radii, elevation, interaction tokens.                                                            |
+| `components/core/`       | `Button`, `Chip`, `Badge`, `Eyebrow`, `SectionHeading`, `Card`, `QuestionMeta`.                                |
+| `components/forms/`      | `SegmentedControl`, `Switch`, `TextField`, `AnswerSelector`, `ChipGroup`.                                      |
+| `components/sheet/`      | `ListRow`, `BottomSheet` (snap + sticky footer), `SheetHeader`.                                                |
+| `components/map/`        | `MapControlButton`, `Fab`.                                                                                     |
+| `guidelines/*.card.html` | Foundation specimen cards (Colors, Type, Spacing, Brand).                                                      |
+| `ui_kit/app/`            | Interactive app recreation — map + bottom sheet, the **question sheets** at the 42% rest driving the live map. |
+| `assets/`                | `logo-icon.png`, `app-preview.png`, `question-pin.png`.                                                        |
+| `SKILL.md`               | Agent Skill entry point (for use in Claude Code).                                                              |
 
 Each component directory also carries a `.prompt.md` (what & when + usage) and a
 `*.card.html` thumbnail. Use components via the compiled bundle:
@@ -270,8 +281,8 @@ Each component directory also carries a `.prompt.md` (what & when + usage) and a
 <link rel="stylesheet" href="styles.css" />
 <script src="_ds_bundle.js"></script>
 <script type="text/babel">
-  const { Button, SegmentedControl, ListRow } =
-    window.HideSeekMapperDesignSystem_ee69a9;
+    const { Button, SegmentedControl, ListRow } =
+        window.HideSeekMapperDesignSystem_ee69a9;
 </script>
 ```
 

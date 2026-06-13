@@ -491,7 +491,12 @@ describe("processOsmRoutes", () => {
         const stationRecords = [
             { id: "osm:node:80", name: "Station A", lat: 35.0, lon: 139.0 },
             { id: "osm:node:81", name: "Station B", lat: 35.1, lon: 139.1 },
-            { id: "osm:node:82", name: "Passing Station", lat: 35.05, lon: 139.05 },
+            {
+                id: "osm:node:82",
+                name: "Passing Station",
+                lat: 35.05,
+                lon: 139.05,
+            },
         ];
 
         const nodeCoords = new Map([

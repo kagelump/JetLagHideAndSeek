@@ -43,8 +43,8 @@ thin control surface.
   stack" — a drill-in removes the workaround).
 - **Measuring:** category picker as chips/drill-in; distance + unit + answer
   compact; "Computing…" inline.
-- **Thermometer:** **ignore the design mock — it is wrong.** Adapt the *current
-  app's* thermometer detail (Start/End pin handling + Hotter/Colder, the "pins
+- **Thermometer:** **ignore the design mock — it is wrong.** Adapt the _current
+  app's_ thermometer detail (Start/End pin handling + Hotter/Colder, the "pins
   too close" guard) into the compact 42% pattern. Do not copy the mock's layout.
 - **Tentacles:** category grid → drill-in; candidate list compact with
   selection; keep the Reset affordance but de-emphasize its destructive-looking
