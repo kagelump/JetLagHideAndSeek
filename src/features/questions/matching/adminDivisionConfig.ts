@@ -51,8 +51,8 @@ function genericLabel(ordinal: string, osmLevel: string): string {
 
 const GENERIC_PACK: AdminDivisionNamePack = [
     { osmLevel: "4", labelNative: "", labelEn: "" },
-    { osmLevel: "7", labelNative: "", labelEn: "" },
-    { osmLevel: "9", labelNative: "", labelEn: "" },
+    { osmLevel: "6", labelNative: "", labelEn: "" },
+    { osmLevel: "8", labelNative: "", labelEn: "" },
     { osmLevel: "10", labelNative: "", labelEn: "" },
 ];
 

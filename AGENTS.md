@@ -315,6 +315,18 @@ focused feature/store and let the map render derived data.
   `docs/tasks/offline/`. Keep pack attribution (NOTICE) current; artifacts and
   the catalog carry an attribution block.
 
+## Admin Division Defaults
+
+- Japan: `[4, 7, 9, 10]` — Prefecture → City → Neighborhood → Cho-me. Defined as
+  the `japan` preset in `src/features/questions/matching/adminDivisionConfig.ts`.
+- Generic (fallback for all other regions, US primary): `[4, 6, 8, 10]` — State →
+  County → City → Neighborhood. Chose 8 over 7 (townships) because cities are more
+  intuitive to players; 10 over no-fourth for consistency with the Japan hierarchy.
+  Defined as the `generic` preset in the same file.
+- Per-pack overrides: when an installed pack's `meta.adminLevels.matching` is
+  present, it takes precedence over both presets (see
+  `src/features/offline/adminLevelDefaults.ts`).
+
 ## POI Spatial Index
 
 - kdbush/geokdbush (~5 KB total, pure JS) give one O(log n) nearest-neighbor
