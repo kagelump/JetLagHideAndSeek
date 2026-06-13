@@ -3,7 +3,7 @@
         "name": "Hide & Seek Mapper v2",
         "slug": "jet-lag-hide-and-seek-v2",
         "scheme": "jetlag-hide-seek-v2",
-        "version": "0.1.2",
+        "version": "0.1.3",
         "orientation": "portrait",
         "icon": "./assets/icon.png",
         "userInterfaceStyle": "light",
@@ -22,7 +22,8 @@
         },
         "android": {
             "package": "com.raycatdev.hideandseek.v2",
-            "appVersionSource": "remote",
+            "versionCode": 2,
+            "appVersionSource": "local",
             "predictiveBackGestureEnabled": false
         },
         "plugins": [

@@ -340,23 +340,50 @@ export async function publish({
     // Step 4: Rebuild catalog.json.
     console.log("\n[4/5] Rebuilding catalog...");
 
-    // Fetch currently published catalog.
+    // Use the local site/packs/catalog.json as base to avoid a race
+    // with Pages deployment (Pages may not have deployed the previous
+    // publish yet, causing sequential publishes to clobber each other).
+    // Fall back to fetching from Pages if the local file doesn't exist
+    // (e.g. fresh clone or first publish).
     let baseCatalog = undefined;
-    try {
-        const published = await resolvedFetch(catalogUrl);
-        if (published === null) {
-            console.log(
-                "  No published catalog found (first publish or 404). Starting fresh.",
+    const localCatalogPath = resolve(
+        siteDir ?? resolve(root, "site"),
+        "packs",
+        "catalog.json",
+    );
+    if (existsSync(localCatalogPath)) {
+        try {
+            baseCatalog = JSON.parse(
+                await readFile(localCatalogPath, "utf8"),
             );
-        } else {
-            baseCatalog = published;
-            console.log("  Fetched published catalog as base.");
+            console.log("  Using local site/packs/catalog.json as base.");
+        } catch (err) {
+            console.warn(
+                `  WARNING: Could not parse local catalog (${err.message}). Falling back to Pages.`,
+            );
         }
-    } catch (err) {
-        console.error(`  ERROR fetching published catalog: ${err.message}`);
-        console.error("  Aborting — don't risk clobbering published packs.");
-        process.exitCode = 1;
-        return;
+    }
+    if (!baseCatalog) {
+        try {
+            const published = await resolvedFetch(catalogUrl);
+            if (published === null) {
+                console.log(
+                    "  No published catalog found (first publish or 404). Starting fresh.",
+                );
+            } else {
+                baseCatalog = published;
+                console.log("  Fetched published catalog as base.");
+            }
+        } catch (err) {
+            console.error(
+                `  ERROR fetching published catalog: ${err.message}`,
+            );
+            console.error(
+                "  Aborting — don't risk clobbering published packs.",
+            );
+            process.exitCode = 1;
+            return;
+        }
     }
 
     const { buildCatalog: build } = await import("./build-catalog.mjs");
