@@ -1,11 +1,6 @@
 {
     "name": "mobile_v2",
     "version": "0.1.2",
-    "pnpm": {
-        "onlyBuiltDependencies": [
-            "dtrace-provider"
-        ]
-    },
     "main": "expo-router/entry",
     "expo": {
         "autolinking": {
