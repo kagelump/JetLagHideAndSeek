@@ -1,104 +1,1221 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-12T16:13:50.097Z",
+    "generatedAt": "2026-06-13T01:35:27.028Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
+        {
+            "id": "asia-china-beijing",
+            "label": "Beijing",
+            "regionPath": ["Asia", "China", "Beijing"],
+            "bbox": [115.415497, 39.440833, 117.509508, 41.063822],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 1067619,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-china-beijing-poi.json.gz",
+                    "bytes": 124169,
+                    "md5": "a7cf3a408aa9af23dc2776da196fb1a6",
+                    "sha256": "03afa33352a71ae01058feec9332617b3053ebdc4ea2331af8fee92c30d19521",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-china-beijing-measuring-high-speed-rail.json.gz",
+                    "bytes": 6139,
+                    "md5": "43099608a5e2026193d9d304f7a8fa24",
+                    "sha256": "d735a2211d51d293e63605cd2cb37f0cd18fcbaa8e8d56e0cc126242f9df0bb8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-china-beijing-measuring-admin-2nd-border.json.gz",
+                    "bytes": 3380,
+                    "md5": "0611b81b02da4ee19ca30573f32b5740",
+                    "sha256": "570c451e682f853778ac4fa871832da58327e03b75f795d7647ab22674c98096",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-china-beijing-measuring-admin-boundaries.json.gz",
+                    "bytes": 616003,
+                    "md5": "48cf0bc3f57640faf3358ec35a5812b9",
+                    "sha256": "f97932622f6fd81a0a64fafc68ec92c31e0faeca141b0a523332cbc8ae0fd968",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-china-beijing-boundaries.json.gz",
+                    "bytes": 292459,
+                    "md5": "a98082774d3f22be1a1735d8e2ed480a",
+                    "sha256": "1f6520d34b649b2d036dd1a31e04ebdd1905e587fb435f348f0b8b9b1fc345ce",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-china-beijing-transit.json.gz",
+                    "bytes": 24969,
+                    "md5": "cb14efcbe62b56b35eb2523dcb4e06de",
+                    "sha256": "dfa9a1dedc185f350623d0dba62991f73fa9298317eff012206102b86630727b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-china-beijing-meta.json.gz",
+                    "bytes": 500,
+                    "md5": "3743fd7df97e8a1344094a8cf5401652",
+                    "sha256": "10a2203d8337631bda48788d1cbd56e3175eddd1cfa0a55b7adcf202880ce1b4",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "asia-india-northern-zone",
+            "label": "Northern India",
+            "regionPath": ["Asia", "India", "Northern Zone"],
+            "bbox": [69.169911, 23.046881, 80.167546, 36.137884],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 6538613,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-india-northern-zone-poi.json.gz",
+                    "bytes": 286159,
+                    "md5": "75836271bff4cfd6734dff9d7a35b4aa",
+                    "sha256": "3211df8dc452df65d58c04a004b5c0873a37f78bd156ff2c4e6caa078160c243",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-india-northern-zone-measuring-admin-1st-border.json.gz",
+                    "bytes": 260050,
+                    "md5": "e348710594758720109fe824c7804e3c",
+                    "sha256": "2561fb644ae740b6d3828c209e2dea56e81070fa60993c4a6276bc2104c0d718",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-india-northern-zone-measuring-admin-2nd-border.json.gz",
+                    "bytes": 34612,
+                    "md5": "0050d89b5b201ccb107506bcda6503bc",
+                    "sha256": "19986d48e66c048de945a553860cb7d6186d82f2e08fd51a0e00f73ab425b913",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-india-northern-zone-measuring-admin-boundaries.json.gz",
+                    "bytes": 4379931,
+                    "md5": "cdf6cc49d39977be18cee85728b13428",
+                    "sha256": "9d6e584785029d71b49b42c3b5231e38806111673235dd59ffe3ee0ca5761f0d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-india-northern-zone-boundaries.json.gz",
+                    "bytes": 1520483,
+                    "md5": "2bc0ed1a11c02de4567a12c4b4f51371",
+                    "sha256": "36ce270cbc35106035daa45fb44d9cc9a89e6702dc06061c2426d5a872a3ab34",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-india-northern-zone-transit.json.gz",
+                    "bytes": 56880,
+                    "md5": "d8037a59ba483384c2d1486b380973af",
+                    "sha256": "7eec7a622c5088637d956b54a453d677b554b7fb6234ee87548b7fdfe762826c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-india-northern-zone-meta.json.gz",
+                    "bytes": 498,
+                    "md5": "922b8ad83fa4cafd8506b0c4567dde17",
+                    "sha256": "60d47f760dfe2f24de613f833fb0629a1e617edebc71180e21ec38f67cbf5fe2",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "asia-japan-kanto",
+            "label": "Kanto",
+            "regionPath": ["Asia", "Japan", "Kanto"],
+            "bbox": [134.045154, 18.625054, 155.605818, 37.15988],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 6130088,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-poi.json.gz",
+                    "bytes": 675795,
+                    "md5": "6be803e5cd5cf114113cc514c049f0b1",
+                    "sha256": "4f46e21b1ea9a422027173fa35a9abe9bdc40b3906383fbb605e4b6c5e0925e5",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-measuring-coastline.json.gz",
+                    "bytes": 250464,
+                    "md5": "7d3545fc003bad4493ea8206ca75a5f3",
+                    "sha256": "3b0909e18a4faa92f494fb695dce77d2fbb6fc4a1dae0010f0b2a54943b62632",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-measuring-high-speed-rail.json.gz",
+                    "bytes": 5279,
+                    "md5": "836367087bfd4265d10e94fd56c0c9be",
+                    "sha256": "69b61fac77ab114a94c905b6bd9f11f3f1acecdd04e8cdc6203b9b199032a4c8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-measuring-admin-1st-border.json.gz",
+                    "bytes": 114459,
+                    "md5": "3a062f4f7a9a9a268aa004e689f7dade",
+                    "sha256": "916ecc1c8eda241bd26c6b7fbcdbf634608e9328077d232c6304b0be81c03a40",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-measuring-admin-2nd-border.json.gz",
+                    "bytes": 927219,
+                    "md5": "2b6add5e7f87ead01f7003ec2d8fc57f",
+                    "sha256": "770a46cdf82f651402af219d0e38d7df7ffd239c9bd3f256e88885b11e607350",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-measuring-admin-boundaries.json.gz",
+                    "bytes": 2524107,
+                    "md5": "2f116c9a6227cd25b201edd2e0424601",
+                    "sha256": "c7ab08ea40f2fbf59ae19dfc55f66a46e8666dce7ceb28878d3a60c1f1b7be6e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-boundaries.json.gz",
+                    "bytes": 1552524,
+                    "md5": "09c1f650b14eaef3330713152e642018",
+                    "sha256": "8cc84d9bd0ded0b9d3a6f8d851f285d8c7af7a9b28aea0be9573c7d28a569663",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-transit.json.gz",
+                    "bytes": 79735,
+                    "md5": "982508a4d644d6e5111875ca63c632e2",
+                    "sha256": "770803907c1514aa8e7fbaf456550db701c341a85695f8fa49e2477844804e81",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-japan-kanto-meta.json.gz",
+                    "bytes": 506,
+                    "md5": "a98b5f578fc6c59e809a5d6a56fbe03e",
+                    "sha256": "004ce7f22cff694e3812fd0306888a641f4c3e02076705999c8ccbadae827803",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "asia-malaysia-singapore-brunei",
+            "label": "Malaysia, Singapore and Brunei",
+            "regionPath": ["Asia", "Malaysia Singapore Brunei"],
+            "bbox": [99.25611, 0.830813, 119.668278, 7.736849],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 4440190,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-poi.json.gz",
+                    "bytes": 198467,
+                    "md5": "1f026bbba85d4f74012085d3bd8ae75d",
+                    "sha256": "700d72f554529ea876ab90fe1da8ea1fc534490cc67c69633c94037975d62fa4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-measuring-coastline.json.gz",
+                    "bytes": 564065,
+                    "md5": "537ca6e533b337c4f48a5b4dd50af2c8",
+                    "sha256": "8647965c2b2195a1c6f7ad2bb9487fda153049db47844c7a39565295b5bdf452",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-measuring-high-speed-rail.json.gz",
+                    "bytes": 503,
+                    "md5": "134ff8502369c8500eabeadb2e205c5d",
+                    "sha256": "6942c1c9460e711c2b66d12bf54d199491ceb0bfcc5de5522657138e47162a15",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-measuring-admin-1st-border.json.gz",
+                    "bytes": 437919,
+                    "md5": "6fb5682707a736224549238322c1f182",
+                    "sha256": "2ab55d744a92d29dbab4cb194d3274bc356eb600234192ac636bc73a78accfe1",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-measuring-admin-2nd-border.json.gz",
+                    "bytes": 138853,
+                    "md5": "910c75006c894eb793a9534e1af4bd7b",
+                    "sha256": "851813fe1e3807619b5cb546384b61a7baedd683790d4f93c45b920a44ee9d2b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-measuring-admin-boundaries.json.gz",
+                    "bytes": 2282697,
+                    "md5": "43545c3e799a63ae60a00feaa0752ca1",
+                    "sha256": "6d4a17e6457dcf00f61a0fd9ace0c061a67c0888b7e0fa1a885424a394a310bf",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-boundaries.json.gz",
+                    "bytes": 808352,
+                    "md5": "c17c646cac8ed157ba8b724b95cce466",
+                    "sha256": "b23e0fe347a1110102cdab67652749bae0b98d341dd63cdadc141bd6db283a45",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-transit.json.gz",
+                    "bytes": 8812,
+                    "md5": "b500463069f42af4b553bfd8ca7d176c",
+                    "sha256": "8973b2cec9d8f410a1bfe30d74945867aa75052a4f3238d6677f5c89aebdfc43",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-malaysia-singapore-brunei-meta.json.gz",
+                    "bytes": 522,
+                    "md5": "8133ab238142589271e05ab45479fc6b",
+                    "sha256": "5291daf3d2a2822e06b3735c8f149e28edd6ca98a9ebec4b2ba72940802f8058",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "asia-philippines",
+            "label": "Philippines",
+            "regionPath": ["Asia", "Philippines"],
+            "bbox": [112.1661, 4.382696, 127.0742, 21.53021],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 10039152,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-philippines-poi.json.gz",
+                    "bytes": 224450,
+                    "md5": "148d8137ee98a41b92dd45f4bc0af7e2",
+                    "sha256": "b07e0227b7378689ae9e7d61615240dc5ff0aec51d9a0c8acd039efc66150e79",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-philippines-measuring-coastline.json.gz",
+                    "bytes": 3005548,
+                    "md5": "bb237b19266e1ab79f082d46fc613cdd",
+                    "sha256": "c53e4da97897956a4d106c88d6215038590cb52bd47fb54c25438da51bb6340e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-philippines-measuring-admin-1st-border.json.gz",
+                    "bytes": 572515,
+                    "md5": "af9132839bc9a917d3f3db0e7021078e",
+                    "sha256": "0b4ecde2133925d4c125400e8b43dc3f2b930e79d1ca4508d5014dc40150d9bf",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-philippines-measuring-admin-2nd-border.json.gz",
+                    "bytes": 54380,
+                    "md5": "8460d39235daf9b5cd13f878b1dcc858",
+                    "sha256": "c9944c62ecd7bf1f6b034aeac42de39c2411a12f36b99e80f5962132a13200d1",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-philippines-measuring-admin-boundaries.json.gz",
+                    "bytes": 4343860,
+                    "md5": "5c14bb43cd78c3e166e05ef5927dae6a",
+                    "sha256": "75e939bd69e76b6b78f14ed3d2cc970028ba7335bcd9da4491952b087d152372",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-philippines-boundaries.json.gz",
+                    "bytes": 1834115,
+                    "md5": "d4f95fc1b4cd68d84b77c2876373283a",
+                    "sha256": "25618a0777068999ab9d2e6966bcc5cb2dd4470bd4f146bacbccad1556071f49",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-philippines-transit.json.gz",
+                    "bytes": 3796,
+                    "md5": "97b9e096900ecc7e09a6345396a8600a",
+                    "sha256": "6c3e63cedbec86dfd4c0beca3ebf103d00185f7430bc756ef072da11c541525d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-philippines-meta.json.gz",
+                    "bytes": 488,
+                    "md5": "72e5f78249649a64c144f99660d286c0",
+                    "sha256": "80275059e370886554d9e4fd36120b81282b1a15fd9090be3559b858d161a19d",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "asia-south-korea",
+            "label": "South Korea",
+            "regionPath": ["Asia", "South Korea"],
+            "bbox": [124.3188, 32.36076, 132.3386, 38.64966],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 8438467,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-south-korea-poi.json.gz",
+                    "bytes": 754196,
+                    "md5": "c5283b5ea62f447c755edbc22b28a4df",
+                    "sha256": "b4647887f42cf65a5bb96c502627ab9e28118481dc5b9188c0d6e3f2443aafb5",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-south-korea-measuring-coastline.json.gz",
+                    "bytes": 1320795,
+                    "md5": "0332e61beb9581593edb8e32d142d42d",
+                    "sha256": "fdf3061bbfeed3dff3a481b14c1cbefa1dbf16d635ca9272c9c15f0baa598098",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-south-korea-measuring-admin-1st-border.json.gz",
+                    "bytes": 351902,
+                    "md5": "ea9eccb6bc5753976ee66f692ab9a52f",
+                    "sha256": "8a8c739ae73f54cbd3ecddd8afe04f5cb4d74e46e26ead298c65ea33a7639708",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-south-korea-measuring-admin-2nd-border.json.gz",
+                    "bytes": 107448,
+                    "md5": "81c1c815020736e6025df3d5dd6e4d9b",
+                    "sha256": "e94a79736c5969c39532a59ef794b3caa2ea64245e037ad410be8cf290cca9bb",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-south-korea-measuring-admin-boundaries.json.gz",
+                    "bytes": 4013210,
+                    "md5": "188a4685a79f937348309bced1d055b1",
+                    "sha256": "a31d5c3ba169a2a3ed6d33bd075528f4ab51eabac49a0358d504a6d0ecac5dbc",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-south-korea-boundaries.json.gz",
+                    "bytes": 1830441,
+                    "md5": "551dfcc50198ed66749d9e38b0c33912",
+                    "sha256": "76c58183d8c47e322f21909f6e04a53770159183b0cd10f3b35ff5e642e49b82",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-south-korea-transit.json.gz",
+                    "bytes": 59988,
+                    "md5": "1de02d7e3b1ce122fc52587730dafd72",
+                    "sha256": "db40b94a45ba023dd49b6848728700269e8e5475b5d049af7d4c8c1003618241",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-south-korea-meta.json.gz",
+                    "bytes": 487,
+                    "md5": "9f2d4203b79f2bf210a517e0e7aa59c4",
+                    "sha256": "c22a719c9e089dbbf8ee0152114587557faabd970e5580fdfcfe79a202bcc50a",
+                    "schemaVersion": 1
+                }
+            ]
+        },
         {
             "id": "asia-taiwan",
             "label": "Taiwan",
             "regionPath": ["Asia", "Taiwan"],
             "bbox": [118.1036, 20.72799, 122.9312, 26.60305],
             "osmSnapshot": "2026-06-12",
-            "totalBytes": 13106702,
+            "totalBytes": 12858501,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-poi.json.gz",
                     "bytes": 361405,
-                    "md5": "ba281d3f0ab1b90a9cca395d3211b56c",
-                    "sha256": "4c0d696e69755f0caa7702359e885b33c38d8c625cb0b2562bda058321c94c86",
+                    "md5": "94b0d4d28b20769cc3b33c6254e6c536",
+                    "sha256": "c38783cf5fd971cb45e2df585c37167fe7be1b1362d2ffc7128aaacd3c0d8569",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-measuring-coastline.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-measuring-coastline.json.gz",
                     "bytes": 193827,
-                    "md5": "d9f2793ab1fb9f717ef0f216fac6d95d",
-                    "sha256": "66bedf07a2085106f8fd0fc2b948be0cca7528bf78772575b181844f3cded837",
+                    "md5": "100963115c6a9fe180590c62867e76ef",
+                    "sha256": "747c662b6681384070350ec360edfa15d524076dc58201f5f5e6c006ff256c86",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-measuring-high-speed-rail.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-measuring-high-speed-rail.json.gz",
                     "bytes": 2815,
-                    "md5": "ae0f520939d8cd19a01f6d201a1db337",
-                    "sha256": "6b8428520a140281eec17c329ac4a85f1c020a1a5f90fed134091dc3a00c0342",
+                    "md5": "1157e46e8e5bebd070ebb84aed8ddc42",
+                    "sha256": "c9a3633f99a9c26efdf7ea66ff148dcc55fb3d02ab2580ebb08c1bac234ef681",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "body-of-water",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-measuring-body-of-water.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-measuring-body-of-water.json.gz",
                     "bytes": 5526142,
-                    "md5": "a7fa855c91b64eef72ce2c6ab6eb0ec2",
-                    "sha256": "2d99f044b0b43bcf97e51aea2bdacedfc6f1e7cdeabc3bfe33613757929465ff",
+                    "md5": "4ac074d742027c27b12d16859a4ef0e8",
+                    "sha256": "9a2595004260ec51920292419512e69876466b3e6df2452052c7a750547a6f7c",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-measuring-admin-1st-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-measuring-admin-1st-border.json.gz",
                     "bytes": 296027,
-                    "md5": "2035214ecde87be7da3206506cadddba",
-                    "sha256": "14b773586d86387be12017ec49d198dfc88de5e13e86ca561dcd9c5429bda90e",
+                    "md5": "69bed1677ad60fff07166fe5c25fd73a",
+                    "sha256": "1cfd9e60491a08c9ff909a5e0d3fc5ba2b0a049f41c5e1d436380059b628bd33",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-measuring-admin-2nd-border.json.gz",
                     "bytes": 392617,
-                    "md5": "eb70561d6b9b89db401fb3b3f507f344",
-                    "sha256": "c6c8098c15c0293b1c791b36d75022d0b084a8033038f5eb6ecd4dfaf48db7d8",
+                    "md5": "829eed321a93862f6e7a4e6fdac62348",
+                    "sha256": "5b3bd61e7de14c38cfa902c46cfee69e40899c86826ce341b63572ffdf8a1821",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-measuring-admin-boundaries.json.gz",
                     "bytes": 3878381,
-                    "md5": "0aaca2debb77ea547b45357814b5909b",
-                    "sha256": "64619a3621340988d5bfefee912c1fc9007be144ab5d92900d7c555cbbb43159",
+                    "md5": "a8b25b663893a1112bbdbc0d51d697d4",
+                    "sha256": "a08f5ecb38aa408f65ad7d3f0ecd814003cf403fec53862013b60c5395b5e45e",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-boundaries.json.gz",
-                    "bytes": 2124792,
-                    "md5": "2d9c692fada297ddeb7917199244111f",
-                    "sha256": "3f74eadd866004b28d624333b7327bdd109fea75485b7471661887c01b5b289f",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-boundaries.json.gz",
+                    "bytes": 2124790,
+                    "md5": "5a0fcdb386f87d9228474bf8f00a2f75",
+                    "sha256": "7fb43906e634076594581a49be7c2b8a2deb80b07c90d06ca60cc122c26e1f06",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-transit.json.gz",
-                    "bytes": 330195,
-                    "md5": "f73e6b955ee41c5eed66f0e92233083f",
-                    "sha256": "08125fe360da8892e06ddc0e25274399783c83ae98feff4b4d8710d3a251c363",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-transit.json.gz",
+                    "bytes": 81996,
+                    "md5": "540c912b6872f942d0df2bbba64b1fbe",
+                    "sha256": "6f85bd23608f6f1f71881b3c513ea3ba45fb43502d3571ce46eb8db26d6c704b",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-13/asia-taiwan-meta.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-taiwan-meta.json.gz",
                     "bytes": 501,
                     "md5": "4a3ca0d61d54a4fc92b47140150303d3",
                     "sha256": "2521f9cea31bda0a1262f53e9e5c4765cbb5ab6d2f5f729e9df8c4dca4e05a0d",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "asia-thailand",
+            "label": "Thailand",
+            "regionPath": ["Asia", "Thailand"],
+            "bbox": [97.135615, 5.597877, 105.63921, 20.468752],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 17587015,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-poi.json.gz",
+                    "bytes": 224187,
+                    "md5": "ac5c6741b2286033489a37721e3b78b9",
+                    "sha256": "c21f5b62136eded7e5be7a58c14f2b951477c3d808c9bd961a7c504614830298",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-measuring-coastline.json.gz",
+                    "bytes": 400601,
+                    "md5": "5085e6cf110f3a1639c0033aa209e56c",
+                    "sha256": "933a47bdc5595b99efe688c085e9ffa588f9b3deba40215dd0d5181b60ccfef7",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-measuring-high-speed-rail.json.gz",
+                    "bytes": 633,
+                    "md5": "fea0c489561c73adf4e9bb45ad98be87",
+                    "sha256": "c6b1b7278c512aaa939df0a28e099e6c30fc5c1d8fbb5daf06ea7b6422b4c416",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-measuring-admin-1st-border.json.gz",
+                    "bytes": 2255180,
+                    "md5": "97d08e51546e6e673d362608a8651039",
+                    "sha256": "8fe7f382eaae758b0ddecd93461eb253ed1010f1acd8a8eb6bab5ced713c9905",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-measuring-admin-2nd-border.json.gz",
+                    "bytes": 456242,
+                    "md5": "a73b5983a4ea61995c8e3b520e4100ec",
+                    "sha256": "0c4c3dacda91709bc90df647c35f37940f2a438c1e6170b04d9adbd37e372f90",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-measuring-admin-boundaries.json.gz",
+                    "bytes": 10425591,
+                    "md5": "c845f7a0b8fcfe333d579e854e8199af",
+                    "sha256": "331058324465d3bccd59a1e0cfe822f3d03c93ec97fd1efee43450825f6a87dd",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-boundaries.json.gz",
+                    "bytes": 3792461,
+                    "md5": "055c88a7b1c1db6651bf197d24f6933e",
+                    "sha256": "264a78a83ed5e691b311f0e41e70d842429c8595a8c94cdd7099dbbf3df85701",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-transit.json.gz",
+                    "bytes": 31621,
+                    "md5": "2dd9c8f101c1f1b85736d2a03623401f",
+                    "sha256": "0621672b581ee9941605cfe5e12b86ec228fa2f8dfcc41bc6b8db9d9e535c217",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-thailand-meta.json.gz",
+                    "bytes": 499,
+                    "md5": "a9b3e422e6503739c3767361411499b2",
+                    "sha256": "a57b02ae66d555b44d7570e38bdb96d4fa47d67fe438edfac498986293cf52a8",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "asia-vietnam",
+            "label": "Vietnam",
+            "regionPath": ["Asia", "Vietnam"],
+            "bbox": [102.095945, 7.382239, 114.642323, 23.402135],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 14877274,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-vietnam-poi.json.gz",
+                    "bytes": 153033,
+                    "md5": "1eb6769e91db973c7379523feda017fa",
+                    "sha256": "20bc2fbced4f7f213a0a0818dde60262953185bdc204c9371be68cbc1ef45f19",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-vietnam-measuring-coastline.json.gz",
+                    "bytes": 668122,
+                    "md5": "902ec2f7237e94c1590ed5814b2d94ce",
+                    "sha256": "ff1347cc764d5431a20110c5375ad2a8cc9dbf7355ba7b743054c038cbaac16f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-vietnam-measuring-admin-1st-border.json.gz",
+                    "bytes": 858420,
+                    "md5": "99f754b85e7e311e17e797e49ad19c2b",
+                    "sha256": "eb0a89e869db7d1711fa52694fd7460962301fa194c3169163c71e22ded0df56",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-vietnam-measuring-admin-boundaries.json.gz",
+                    "bytes": 9080835,
+                    "md5": "12ba0b205c6c8ee229d5fe1146a88f4a",
+                    "sha256": "25c1dc9356b62392351def374db9410151d4e1324d28703f328d688c3fe585ec",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-vietnam-boundaries.json.gz",
+                    "bytes": 4102981,
+                    "md5": "6a44c47b98a807daa199c790afef063a",
+                    "sha256": "f16faadd2d7c5ec4fa3f47fa96b2dd054231fcf4ca0c0831a11b2addd0e01505",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-vietnam-transit.json.gz",
+                    "bytes": 13400,
+                    "md5": "dd00fd02926e1ec910ddeeb282304591",
+                    "sha256": "a1ff884864455f1c30c22966ca85ee832de3091142db6f4c843209aff3c0b01e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/asia-vietnam-meta.json.gz",
+                    "bytes": 483,
+                    "md5": "c3b9872fb8fcc35a130d9e07a9c1aca8",
+                    "sha256": "e611d3fade67d67af037940fafe07cab9ea753578c05e1fdafaf2603bdeb904f",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "australia-oceania-new-south-wales",
+            "label": "New South Wales",
+            "regionPath": ["Australia Oceania", "Australia", "New South Wales"],
+            "bbox": [140.994781, -37.759836, 160.074672, -28.138982],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 13103799,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/australia-oceania-new-south-wales-poi.json.gz",
+                    "bytes": 307224,
+                    "md5": "ac6e65866ed49debe83d7a03f8217e62",
+                    "sha256": "21a71f18ed21ab85dac071ff81d5fd1bc421bdcb89744f3cbeef374c1b7d906d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/australia-oceania-new-south-wales-measuring-coastline.json.gz",
+                    "bytes": 206296,
+                    "md5": "bb004377c1b5793cdd84500b52e27958",
+                    "sha256": "549cbf9fcab972ca587ee52423faf4782c914d90dc3e92c8d3222d216f2b038a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/australia-oceania-new-south-wales-measuring-admin-1st-border.json.gz",
+                    "bytes": 209769,
+                    "md5": "2a0fc10eed0e1507235add640d2ce8b0",
+                    "sha256": "9759e79a28df4ff15968d336831c24c10ed31f68fff6595a01ba45253c43028d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/australia-oceania-new-south-wales-measuring-admin-2nd-border.json.gz",
+                    "bytes": 50758,
+                    "md5": "3d1148b23e09741314e5cff25df5804f",
+                    "sha256": "86dde274f2e9c6b774e2ca1b4634893307707c33e81a1e4673bfcc49ec914730",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/australia-oceania-new-south-wales-measuring-admin-boundaries.json.gz",
+                    "bytes": 8702422,
+                    "md5": "a32657eff531099b457f1d045ad5b0c7",
+                    "sha256": "807f35c799c431e4f6065eabc7bb9d1a8311405e6b9da89f119e6bd75b58f270",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/australia-oceania-new-south-wales-boundaries.json.gz",
+                    "bytes": 3605314,
+                    "md5": "cb51fc99733fe880b81c935fab739aad",
+                    "sha256": "b3b7588db982ce1f53d4b9d5379962e72534d0f9049a5b005f96d5309990c78c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/australia-oceania-new-south-wales-transit.json.gz",
+                    "bytes": 21499,
+                    "md5": "f7147261460e3f36d5d15408af780b82",
+                    "sha256": "be8acddab4d1b78f7b00aaa3b1fafb0077ea016574e974fe58957182139d181b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/australia-oceania-new-south-wales-meta.json.gz",
+                    "bytes": 517,
+                    "md5": "6a84b71113b4576d07bcecf57292bd57",
+                    "sha256": "e6c705669a6bf08a2a74bf14d0673dd51666ec12e135dda32be56065d4fcc70d",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "europe-berlin",
+            "label": "Berlin",
+            "regionPath": ["Europe", "Germany", "Berlin"],
+            "bbox": [13.08283, 52.33446, 13.762245, 52.6783],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 219976,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-berlin-poi.json.gz",
+                    "bytes": 48467,
+                    "md5": "d8537bf537925b1fd6aaf95d7b22cf7d",
+                    "sha256": "0edf9e0c27fdccb0cce7ccf2caa4077000498053fffc137def915530ace44598",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-berlin-measuring-high-speed-rail.json.gz",
+                    "bytes": 708,
+                    "md5": "9bd6199963d9c4ca470f37a7efc92799",
+                    "sha256": "2f8b6c0852f2f8bd2d45dd39c0095e43467fe7058abe7b5354237b3a20ec808a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-berlin-measuring-admin-1st-border.json.gz",
+                    "bytes": 10337,
+                    "md5": "1f7732d8f6ec4b9ed57fda77898dd02f",
+                    "sha256": "edb661d68d19d74b801e4a5fa79799811a08e43f41527ba113f09e3b5823db13",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-berlin-measuring-admin-boundaries.json.gz",
+                    "bytes": 86804,
+                    "md5": "9b7fefa2075ed3d2a30ddffd72aaef41",
+                    "sha256": "f647f45f91d7f8be8465f24612bb8f7e40123ac33707172afb4b901a0220b63c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-berlin-boundaries.json.gz",
+                    "bytes": 39647,
+                    "md5": "cd71a1f3ae8953ff37ce0d884bed6207",
+                    "sha256": "805d9dfef67d2744c0d9dbcc7839867822a5cf5689bbfc1bf08edd1b124278c9",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-berlin-transit.json.gz",
+                    "bytes": 33536,
+                    "md5": "dba0ee49d2c654bea27523d10449ebc2",
+                    "sha256": "f9263e68315d74b46c753244cdb7b4b97119d1e6ac900f386ac0088fecbaba92",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-berlin-meta.json.gz",
+                    "bytes": 477,
+                    "md5": "265a29b4e94b9c47176065d51419e708",
+                    "sha256": "0812a2aed0811665d497f28ead2d59ce06fada958a461b69753316174e92a03d",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "europe-greater-london",
+            "label": "Greater London",
+            "regionPath": [
+                "Europe",
+                "United Kingdom",
+                "England",
+                "Greater London"
+            ],
+            "bbox": [-0.511482, 51.28554, 0.335437, 51.69344],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 239733,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-greater-london-poi.json.gz",
+                    "bytes": 87715,
+                    "md5": "334f5c511568a8da6886deb8a15f08c4",
+                    "sha256": "4d82f423bfd91d8037aabb08ed9623ac6890fa6b7e86109ede36cf4facfaac8b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-greater-london-measuring-high-speed-rail.json.gz",
+                    "bytes": 1488,
+                    "md5": "37dec25623514211cbfd70d4486b5136",
+                    "sha256": "cfa7897ec0d15171000658fd1aa545429581110800e07e06859d63aee6b11ea9",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-greater-london-measuring-admin-boundaries.json.gz",
+                    "bytes": 80917,
+                    "md5": "f4ac4251737cb20b297cc33e740e2718",
+                    "sha256": "e71f281fb897ce128ad88c682bcda14e0270d20599fcc2b453a18c617d29d949",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-greater-london-boundaries.json.gz",
+                    "bytes": 33598,
+                    "md5": "df2cc42d92cb79ee34889a071a3356aa",
+                    "sha256": "09803be232ab8d0c8dc9e028b58f5f08eefac543bd6122ceabee1b195188ba15",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-greater-london-transit.json.gz",
+                    "bytes": 35514,
+                    "md5": "d7a18937abc266c4fdceb9bc673c9cc5",
+                    "sha256": "500aa9f47e4b7f314c39c66ee5794a106d85bf0b03f861cde00dd59f4d4b50d6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-greater-london-meta.json.gz",
+                    "bytes": 501,
+                    "md5": "a18eb322e538930d03973ae7d752cd43",
+                    "sha256": "b38e195330eac2e2a60c2d6a2ceb6a2b5747655eb2c35764c1f6ea4f0228d433",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "europe-ile-de-france",
+            "label": "Île-de-France",
+            "regionPath": ["Europe", "France", "Ile-de-France"],
+            "bbox": [1.445097, 48.11918, 3.560409, 49.24271],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 2394919,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-ile-de-france-poi.json.gz",
+                    "bytes": 158676,
+                    "md5": "ab24c1392202766f1854a63b8ec74520",
+                    "sha256": "6c3acf8bd90e6d723f32acab25a836e438880aae314aad2f03467f7a43aa860a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-ile-de-france-measuring-high-speed-rail.json.gz",
+                    "bytes": 6151,
+                    "md5": "9587d13694642d2d76c142a9189859fb",
+                    "sha256": "0f90ece52013d80b685ba587ae27921c7f5f63221de5d224448d4fa9811e3fd9",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-ile-de-france-measuring-admin-1st-border.json.gz",
+                    "bytes": 43555,
+                    "md5": "e89ff7d6456237ca1c660dfe9edae36b",
+                    "sha256": "96d1f5187a1428eab09c934f02a1d5c7956cf273732e1d25c7d54b2bdadb8e3c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-ile-de-france-measuring-admin-2nd-border.json.gz",
+                    "bytes": 165783,
+                    "md5": "7bac866726c9808611b72fead43a3690",
+                    "sha256": "80c19caad43c1a093e18dbc9847e026bdaea786b22f67cb27d695fed038a7ae6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-ile-de-france-measuring-admin-boundaries.json.gz",
+                    "bytes": 1323671,
+                    "md5": "1e79eb3295cc356e15fc66ac07075b21",
+                    "sha256": "ca01edee7a9a66dcd1a531c011f1982f79c2a070e654d33c48501734bda13491",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-ile-de-france-boundaries.json.gz",
+                    "bytes": 646608,
+                    "md5": "5b84e6e1653edebf2603745932926b74",
+                    "sha256": "79b45d5b5a5f447a52328a876c291c7591b2ce11cd526dd11433f5cf7f1859f2",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-ile-de-france-transit.json.gz",
+                    "bytes": 49971,
+                    "md5": "43fb168a8bfcbdb5e5dd741c409747f5",
+                    "sha256": "bacfd18b449d43d6773e3c7a2634fec06d18b4abe5324f78f4174281c74c248f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-ile-de-france-meta.json.gz",
+                    "bytes": 504,
+                    "md5": "2f88cf6848606d11904830912b3bf956",
+                    "sha256": "d7d8b23ecb6cd98938068de17f7acf0c1b602ae0c76f8d1a3bb8071c5617e2e9",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "europe-italy-centro",
+            "label": "Central Italy",
+            "regionPath": ["Europe", "Italy", "Centro"],
+            "bbox": [8.61327, 40.21443, 14.981, 44.4797],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 4928194,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-poi.json.gz",
+                    "bytes": 351609,
+                    "md5": "08d7943d7a691f5e0952bec17338d99e",
+                    "sha256": "eca2d97ef16fe88f7c68c942890d335ef3997bf82378393732f86a30d992648f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-measuring-coastline.json.gz",
+                    "bytes": 153144,
+                    "md5": "3d4568cd934e9186c5e4fc3abde3dd02",
+                    "sha256": "044854fc9d5a1c6e3f6ce27948d3df3dccc8360812234f0b3439176cb6409c8e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-measuring-high-speed-rail.json.gz",
+                    "bytes": 5017,
+                    "md5": "99a468879e9e3e64bf1e7a9161cf07d6",
+                    "sha256": "4949a69b6b6fea17757aeb7643346a7585372d6040378f55edf509d89e42ca17",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-measuring-admin-1st-border.json.gz",
+                    "bytes": 198271,
+                    "md5": "9caa83d7b99bf4ba201d923e8980488a",
+                    "sha256": "50a7168aba0f25e2ad2ac69705c93b6f0788ddb922b4e58d3346ce427abafb86",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-measuring-admin-2nd-border.json.gz",
+                    "bytes": 154549,
+                    "md5": "92417375d703b736ad3b6f113c011870",
+                    "sha256": "654ba306770f161f98684fcdad7e41d1a5641cd87ba823449cf1ab9ec9ec5588",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-measuring-admin-boundaries.json.gz",
+                    "bytes": 2887810,
+                    "md5": "1427414d7d31a1907264a80fbdbfeb21",
+                    "sha256": "01d4f4af640c4b41243fc7fd25b200ceaa4234fe5476b0eb79732c5a533d82af",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-boundaries.json.gz",
+                    "bytes": 1139653,
+                    "md5": "d9a9f8fdc665c370f7eb7d7b6ead4f0f",
+                    "sha256": "ce858ccc482f8348ee2f1cf39ad99aef982647d6121433310065ca1c0f5bcf75",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-transit.json.gz",
+                    "bytes": 37635,
+                    "md5": "edf338a49b33c966e28f0c803d168987",
+                    "sha256": "3c4464bbd915ba946ec9459f19314f91ccc523c4ba145e2f52bcabc57d065920",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-italy-centro-meta.json.gz",
+                    "bytes": 506,
+                    "md5": "8cea4e30062cbbf43185df3744c42f3e",
+                    "sha256": "d5ab327019690b357a0cc62df955cd51de7a812f8405f664a9318c240f6c61da",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "europe-madrid",
+            "label": "Madrid",
+            "regionPath": ["Europe", "Spain", "Madrid"],
+            "bbox": [-4.589539, 39.881157, -3.050423, 41.16864],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 592652,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-madrid-poi.json.gz",
+                    "bytes": 88487,
+                    "md5": "47b0edaeb3f6a889f60392108aa09538",
+                    "sha256": "8dc4ba3788d3335066d7bfb86d69c8e335bb7bb48f1de26498bf475da8163600",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-madrid-measuring-high-speed-rail.json.gz",
+                    "bytes": 5836,
+                    "md5": "066a4533ee6b41ba74528c1774e19ceb",
+                    "sha256": "ff0fca4082de35253809c20a91b0517fbd4c047a376798b95114d2754f69ddc4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-madrid-measuring-admin-boundaries.json.gz",
+                    "bytes": 324217,
+                    "md5": "96c33bc6583f64b6a9effc7dbaf82df9",
+                    "sha256": "e46691ac523ffb0be466131a78e78e124d17bb2fca6e8422cd0b1c29c64c403d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-madrid-boundaries.json.gz",
+                    "bytes": 155759,
+                    "md5": "d0345e0da9da58edb3676cddb8f39cfb",
+                    "sha256": "e78258bac4d5810c44bbf5324fc74095f5a87ded196eb269127bb95ffc7ea421",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-madrid-transit.json.gz",
+                    "bytes": 17869,
+                    "md5": "414ff038fba7a853d6058327bb0c03c2",
+                    "sha256": "14c2271c8a182fcb78b36d4d967c86429f92e713f90621ce147023333370393d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-madrid-meta.json.gz",
+                    "bytes": 484,
+                    "md5": "347a9399e8427395b5ac1c95f869467c",
+                    "sha256": "07dacb887ae919a0edbe628e2dc526744a5837bded67a7b9284c99f43c399dd3",
                     "schemaVersion": 1
                 }
             ]
@@ -109,51 +1226,42 @@
             "regionPath": ["Europe", "Netherlands"],
             "bbox": [2.936095, 50.74753, 7.230455, 54.01786],
             "osmSnapshot": "2026-06-12",
-            "totalBytes": 8555638,
+            "totalBytes": 4312898,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-poi.json.gz",
-                    "bytes": 207400,
-                    "md5": "024f9375c68d7829c6299fae4eece3bf",
-                    "sha256": "39ed6ab20fa787faa723a77573b3822858e298467583864f4ec4bf3449d2d1c1",
+                    "bytes": 207398,
+                    "md5": "869b73f00e4e2e51201f5cb22300ed67",
+                    "sha256": "b80072768de96dc9da5504243510efcea6f0e05d4cb422e7924c2e1236c1a369",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-coastline.json.gz",
-                    "bytes": 145281,
-                    "md5": "a35502b63143e342f4019c48ae9e7499",
-                    "sha256": "dfb37b967232e6004aee6226992d00d42c5085617cd6821f5a9ddb336d012531",
+                    "bytes": 145277,
+                    "md5": "06598f260cd1179977ef5793ad3960d9",
+                    "sha256": "edfb914e9f5891410af166f831d4c13006d9c178dfceb7da4c8c969b01dda48e",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-high-speed-rail.json.gz",
-                    "bytes": 2824,
-                    "md5": "065ccf3a71f1db669482381cbfedc21f",
-                    "sha256": "2afa4f757d00ebaf87b02b5041ffab8bd56a3e593ff1c43c8e39e84cd7214782",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "body-of-water",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-body-of-water.json.gz",
-                    "bytes": 4434344,
-                    "md5": "ec82cd6029945806c6058fd2cd449a4b",
-                    "sha256": "758b9303f726799eac79494f5e46ad10ba2a6cfadb5836cf3f0ffd24e107305a",
+                    "bytes": 2825,
+                    "md5": "a15b3291be68546ec477c37b0b12a592",
+                    "sha256": "abd541b5185aadd6eef1610152aeb3da8eceea54001c0b4597998a5d3e1a5237",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-1st-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-admin-1st-border.json.gz",
-                    "bytes": 109045,
-                    "md5": "b6540dd982244799adcb0c0f982f8eae",
-                    "sha256": "cbda4656bbb305130fe5c3b4954aa97db8e9e6ceef7e190e69ecc5478cba97a7",
+                    "bytes": 109044,
+                    "md5": "5f3ff321fae2f618717f065b96554059",
+                    "sha256": "18dafe5e7220394dac3e8f9d4780e5c181f8d2527cbd9bc75710039b479ee4c2",
                     "schemaVersion": 1
                 },
                 {
@@ -161,17 +1269,17 @@
                     "category": "admin-2nd-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-admin-2nd-border.json.gz",
                     "bytes": 524727,
-                    "md5": "be7d9a93e8204679c3acda332064ed58",
-                    "sha256": "9aeac476aaa75fc998d469c4d1650152e8678d3f0eea723d727c59f95c781c27",
+                    "md5": "6d12113d32d4aff3612fa69d3c43ce27",
+                    "sha256": "a8eda0a6e7317817a23c56ac71cf774462a52f7a6f8ca20e5216177ad2849a34",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-measuring-admin-boundaries.json.gz",
-                    "bytes": 1983544,
-                    "md5": "9a303427f4a8403340eeea22ca550d7d",
-                    "sha256": "7950f44bc20013fbaa2a0815f7cf02a8db109d0274578ce20c74d7ba7c1ffd7d",
+                    "bytes": 1983545,
+                    "md5": "bd0b9135b61c04b658139400b46d8c74",
+                    "sha256": "5e54700443bcbdfcecb01c081cfde280f167bf8a16b153797aef69dcc0e71182",
                     "schemaVersion": 1
                 },
                 {
@@ -179,26 +1287,509 @@
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-boundaries.json.gz",
                     "bytes": 1044575,
-                    "md5": "4602de3ac8c55c68967d60d40a84755d",
-                    "sha256": "6058ccdcfafcda3ca6d5d0ece01c8e216594c0dcc2c2310d77398c3c387e0c2f",
+                    "md5": "6515177d4cab740ba21cc61a41e68df9",
+                    "sha256": "6609195615d85542c265d676d0eabee8b625590925b26b769f20e4ac105dbe53",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-transit.json.gz",
-                    "bytes": 103421,
-                    "md5": "4323e365fe25c3220846e19bddab3703",
-                    "sha256": "8f9e30958d00a76c505733684b441a3716b45301553cb618a5f0b3c840332f5e",
+                    "bytes": 295013,
+                    "md5": "01c4e07fbb90331e2c31d96ff85f56b6",
+                    "sha256": "a73e83b77cb8d2817db7d0d907be7e611e2327443e5e73569d1a69dac919be27",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-netherlands-meta.json.gz",
-                    "bytes": 477,
-                    "md5": "a2defa6545392b3c6c22cebaea296fa8",
-                    "sha256": "73faf599b3259e02736eeb78fa5417518ad516e882c5992bb07ee0ba70cc8c97",
+                    "bytes": 494,
+                    "md5": "5326cb827c9d876109103d709d9ac969",
+                    "sha256": "987c5b96a36dc5942ed545ba06232c95216e2e1b9f6654c980c9fc0dd3b446f7",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "europe-turkey",
+            "label": "Turkey",
+            "regionPath": ["Europe", "Turkey"],
+            "bbox": [25.523985, 35.717, 44.859923, 43.074814],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 23507860,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-poi.json.gz",
+                    "bytes": 490461,
+                    "md5": "df74f39ae0323942125ea46bfc2b9deb",
+                    "sha256": "584fdd5ce451fa4b90ca6d0ad6a719416957f8a810f7d441fcd833ed037e4133",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-measuring-coastline.json.gz",
+                    "bytes": 848514,
+                    "md5": "4b02e63d8bbe9d2f8293739113de6573",
+                    "sha256": "551334a8b40465aad57808a7957cfba6b792fad1fd3db2726201dbe7114febc6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-measuring-high-speed-rail.json.gz",
+                    "bytes": 13236,
+                    "md5": "b8f872fa86674ec7ca26e5d60eb08d73",
+                    "sha256": "4a226c4daf2a23787830e027ad6ff32b4e83de4a3816d0b059f286d4ce0f8295",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-measuring-admin-1st-border.json.gz",
+                    "bytes": 1279175,
+                    "md5": "c9b8d2a069bf941d35eb465077d0c697",
+                    "sha256": "144e64afdc849e1cd7c495d713fd7dd81159dfb0cdaf1470ad0d0b2afbaa8d74",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-measuring-admin-2nd-border.json.gz",
+                    "bytes": 163799,
+                    "md5": "df1877636a688d7976e2e4a5b062c4c7",
+                    "sha256": "ecb911b0fe56fd05dd1c7d1f687d63243986e12f42a0e1f24876773fb235b24d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-measuring-admin-boundaries.json.gz",
+                    "bytes": 14147134,
+                    "md5": "3f477c8e53679369112bcc11bee84edd",
+                    "sha256": "9f9cf18d2a2ba8477bc37076570799cb72f75ce07d376d7ee6e145f69e560b19",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-boundaries.json.gz",
+                    "bytes": 6491676,
+                    "md5": "def5ca8bd6b0130b927d035729df1484",
+                    "sha256": "bf9e7465a435bb341726f524f7938e920070da31b2da8a57355b800c018b6258",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-transit.json.gz",
+                    "bytes": 73369,
+                    "md5": "da7ff027857a59754dcaf11b0c911bda",
+                    "sha256": "67e14d4845a1fe3ec752770f22bc120935a73b27261650642923a15838225a9b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/europe-turkey-meta.json.gz",
+                    "bytes": 496,
+                    "md5": "d87da3f117c0a107eee476793493b540",
+                    "sha256": "fb16bd926716473bfc6d6b6b2b04b4d419e4bfdf9432f3cf665771443e3db009",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-canada-ontario",
+            "label": "Ontario",
+            "regionPath": ["North America", "Canada", "Ontario"],
+            "bbox": [-95.15965, 41.6377, -74.30998, 57.50826],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 2486024,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-canada-ontario-poi.json.gz",
+                    "bytes": 254015,
+                    "md5": "8092312515499b0d7286185a3570e208",
+                    "sha256": "4a9eedb4da5e22e862e20d90866979c58f1ae1ece3f737d0c9bdf887bbf8cda0",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-canada-ontario-measuring-coastline.json.gz",
+                    "bytes": 79548,
+                    "md5": "e944352cf7d5650fdbba84d0bce01fc2",
+                    "sha256": "105c0854c819fcc3d6d6b1fb4d7fce34bbf948b6058a1c68a33465f89fe3888d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-canada-ontario-measuring-admin-1st-border.json.gz",
+                    "bytes": 79946,
+                    "md5": "fff63fc8586bfd9f697d759f9d14ef2c",
+                    "sha256": "f5b7caab519be9ab7c95c9118df3d2e276f55f643518d4f8d12bf24122a10fb3",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-canada-ontario-measuring-admin-2nd-border.json.gz",
+                    "bytes": 4835,
+                    "md5": "f0e1a9fbb95e885597b571ee3a1d4917",
+                    "sha256": "e1ebbada4169cd058c0287e4448d04dc0d7cb10c0e7ee2829fa8a614c1ec535a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-canada-ontario-measuring-admin-boundaries.json.gz",
+                    "bytes": 1459986,
+                    "md5": "66a234efe7d26f2cd84a81f264f80b8e",
+                    "sha256": "303ab955c0081262a3d81c49960cce0ad5ba85715eefa54f8d7a7898ab5dab0d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-canada-ontario-boundaries.json.gz",
+                    "bytes": 579705,
+                    "md5": "eff3a89edb63cce8d068d290ad0b0af9",
+                    "sha256": "b74b3e23ea4c69696d9b4dcb7ab74896bed8c0a66122056dc468ad9afc586fb5",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-canada-ontario-transit.json.gz",
+                    "bytes": 27483,
+                    "md5": "120008a6831cf415e3ae3d8ee30bb8c6",
+                    "sha256": "d3801c406edced55c5eb53202d436f5cf0bf1fc84680c33b47e7c320ca2c4875",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-canada-ontario-meta.json.gz",
+                    "bytes": 506,
+                    "md5": "69e54237bc9e4e38d308eb2f7ec3dff1",
+                    "sha256": "f3ec44884d9b04c700a17d8d4ccfa59e3947139187f8e7b8b8b2f554e777ca16",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-mexico",
+            "label": "Mexico",
+            "regionPath": ["North America", "Mexico"],
+            "bbox": [-132.495161, 9.079755, -81.60533, 32.72067],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 24130463,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-mexico-poi.json.gz",
+                    "bytes": 654010,
+                    "md5": "2caf141f019451c73346be2cdcbc3f12",
+                    "sha256": "92db7bc1d1c192fd18fd0dc5ff0f371353195a03a4141a8eff39522069f02ddf",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-mexico-measuring-coastline.json.gz",
+                    "bytes": 1840613,
+                    "md5": "d088dcdeb02c21365c81e499fc46177e",
+                    "sha256": "5a7fe90bc6bbb2f733e10067356e277844e40c958826c1da2b1789939df8da5a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-mexico-measuring-admin-1st-border.json.gz",
+                    "bytes": 2111487,
+                    "md5": "f482316aacf5db93523880cc2ac41cf8",
+                    "sha256": "d88108a12dbd8624596731394b0e1b72a05ea738d6c1442c69b63480236c9d60",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-mexico-measuring-admin-2nd-border.json.gz",
+                    "bytes": 193457,
+                    "md5": "634e73a9a591b8b50853d4a6f9d4238a",
+                    "sha256": "1f38970db02bc30c8b43b1d89d1d2c468a022214f5b50a79194b08d95cd85176",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-mexico-measuring-admin-boundaries.json.gz",
+                    "bytes": 14089125,
+                    "md5": "40057760a6f73cda84302b7e8d25a0e9",
+                    "sha256": "f80d809a5c283408f12360690ef1611802660d498962ca0864620597ba4ca60a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-mexico-boundaries.json.gz",
+                    "bytes": 5226479,
+                    "md5": "55c69c88a9328895bbe4022f6791d33b",
+                    "sha256": "4800201561df978d1decd4d96e3043ea089cc010a18e7aa120219e8686b41624",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-mexico-transit.json.gz",
+                    "bytes": 14794,
+                    "md5": "1a57567363eb6d470b757e682722eab2",
+                    "sha256": "1e5cc8a454712258bcbd16fe2d7d8fefdb483788513398f60a25432f2218d38a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-mexico-meta.json.gz",
+                    "bytes": 498,
+                    "md5": "3f83f8a484b85c9b1523fbb008fa5e17",
+                    "sha256": "4994195e791cb612de50f13615ca0ab704ecdc15cbdf9e2b8c7ae18cc84f5536",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-new-york",
+            "label": "New York",
+            "regionPath": ["North America", "US", "New York"],
+            "bbox": [-79.82402, 40.439216, -71.660801, 45.07133],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 2436455,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-new-york-poi.json.gz",
+                    "bytes": 298069,
+                    "md5": "befce8bb6ff346f810fd3a1ee4a9ae88",
+                    "sha256": "fce168e1a2f21eef33bef9a3fd3e067e23f594e320aff8823762df8262797d83",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-new-york-measuring-coastline.json.gz",
+                    "bytes": 258131,
+                    "md5": "530fa4ff985699126b2ce3d701a71129",
+                    "sha256": "3ae10f16c7cd541d2af88b000436e9671f852fdf229df8b44f7edce29b44684c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-new-york-measuring-admin-2nd-border.json.gz",
+                    "bytes": 503972,
+                    "md5": "2fca1047952671107ccd6b22590a72a0",
+                    "sha256": "aba9e8f4322c124da11abe94314a91aaa98acef84157fee42b3cfb3d88630f66",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-new-york-measuring-admin-boundaries.json.gz",
+                    "bytes": 842936,
+                    "md5": "e4fc73817fe993e1d552941778e469ff",
+                    "sha256": "1ef610fe0d5414dbcd055a6d6740ab3bc10bd50a85ecd5a8733e567ee3b0cea6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-new-york-boundaries.json.gz",
+                    "bytes": 497078,
+                    "md5": "b9f0d55472af6f7fafe32af06f356e5c",
+                    "sha256": "7d2ca497bd6387ca1062f533f12f28513904c011c3a868337c0d872397ce622e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-new-york-transit.json.gz",
+                    "bytes": 35765,
+                    "md5": "4dbf7e6aad9a677eda658f2651bca4e6",
+                    "sha256": "d4468e49ab8c6f582b8093f31b436f2796e2d4e736a5f77a3db44d6530c75910",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/north-america-us-new-york-meta.json.gz",
+                    "bytes": 504,
+                    "md5": "054d88f462d3f2b612ee8c3e32a0f24a",
+                    "sha256": "09f1242472309309acd18e4d12277e55702194a777e306a59d4be6511b8fd1bd",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "russia-central-fed-district",
+            "label": "Central Federal District",
+            "regionPath": ["Russia", "Central Federal District"],
+            "bbox": [29.26809, 48.79774, 47.67023, 59.6533],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 12151121,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/russia-central-fed-district-poi.json.gz",
+                    "bytes": 336250,
+                    "md5": "a5b5034b526fbf13b5f2dfe1b0e1a804",
+                    "sha256": "abc37c52bdca94dd029ebe75eb954c2f71b70cae0b06f5b38b675e33e82270a9",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/russia-central-fed-district-measuring-high-speed-rail.json.gz",
+                    "bytes": 1726,
+                    "md5": "154bcabb54cd6b22fda5a28ebefab99d",
+                    "sha256": "61144a6b4c953341e2614295e4e8a28ead2e619ecb5222e7bb125e6632f41566",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/russia-central-fed-district-measuring-admin-1st-border.json.gz",
+                    "bytes": 760348,
+                    "md5": "939b49490ad4401b08b1053a503079b2",
+                    "sha256": "62191fc218461c3755644cb7905d7f2a335c73643e1f7c6a6bf112b4d649a504",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/russia-central-fed-district-measuring-admin-boundaries.json.gz",
+                    "bytes": 7456873,
+                    "md5": "9d18dc74039829c58260bd63625a3fd2",
+                    "sha256": "a3b4a14d7d89f0503fe1d5d5c83a4c71a2e06a144e6ed816ff4fd760aa469499",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/russia-central-fed-district-boundaries.json.gz",
+                    "bytes": 3329353,
+                    "md5": "28782231a550e5ab5769ac92c2e1ca13",
+                    "sha256": "79dcef18c928a7864ab6e3678c850047a29b6f4cf8b29c1e5c081092676ae453",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/russia-central-fed-district-transit.json.gz",
+                    "bytes": 266070,
+                    "md5": "f502549eeeb0f70c88d119ffa581b1a7",
+                    "sha256": "d395814facd2029eb7175a056ba6a4a3c41a772f27962aad29f537d52eb25cb4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/russia-central-fed-district-meta.json.gz",
+                    "bytes": 501,
+                    "md5": "d473d475dc3a779414e1641796cb6cec",
+                    "sha256": "dd5c83df4ae999080237bd5c9c23c6159b1fe295783e111b2671bf29114918e1",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "south-america-brazil-sudeste",
+            "label": "Southeast Brazil",
+            "regionPath": ["South America", "Brazil", "Sudeste"],
+            "bbox": [-53.118897, -25.499297, -28.191953, -14.22445],
+            "osmSnapshot": "2026-06-13",
+            "totalBytes": 31031400,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/south-america-brazil-sudeste-poi.json.gz",
+                    "bytes": 704710,
+                    "md5": "83ef42fd1a2ec69e44d408c26361f8b0",
+                    "sha256": "842c4a4e4db73188aaaa4a11d6056beaefe79f97ff6715871ba9b65be0e58964",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/south-america-brazil-sudeste-measuring-coastline.json.gz",
+                    "bytes": 352937,
+                    "md5": "79bf44d22ba2ca633bafb7ea4066e202",
+                    "sha256": "f3c120095e101987467cff46d90c110ab7dc1fb7927acd7926aba85f5322ae4c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/south-america-brazil-sudeste-measuring-admin-1st-border.json.gz",
+                    "bytes": 448346,
+                    "md5": "a6cfe33d94e47ed2fed3282122c00143",
+                    "sha256": "99425e4ab34a7e48b83205d3979f73d747440c083a4935ba14e506bfcff654e6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/south-america-brazil-sudeste-measuring-admin-2nd-border.json.gz",
+                    "bytes": 2935701,
+                    "md5": "bfa28f76b286220812dbe55efd417658",
+                    "sha256": "307b1d074314042f1f141096a3a45bc7f1ffd77657532869da3287970a135b28",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/south-america-brazil-sudeste-measuring-admin-boundaries.json.gz",
+                    "bytes": 18836083,
+                    "md5": "6ed374d5a22b5613147627d996028786",
+                    "sha256": "9cf359d0e1e721e7ce00578d65fa7e45e09586525edfd70d6e25b4137145299f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/south-america-brazil-sudeste-boundaries.json.gz",
+                    "bytes": 7725916,
+                    "md5": "f12866566089dfb16b886031df9d4c01",
+                    "sha256": "eabf6d206798c48840aa9264665d7c4cd845d7df01156b2f35e9788a25a6af76",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/south-america-brazil-sudeste-transit.json.gz",
+                    "bytes": 27197,
+                    "md5": "17415eaeed52c06b7e525f0ad51e3b3d",
+                    "sha256": "359ccf10fac7715c3ed15af8e03eae370d8158ff4b7cb9fdbac65b635c140561",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-12/south-america-brazil-sudeste-meta.json.gz",
+                    "bytes": 510,
+                    "md5": "a58657e10f395908008387b7eb3d7004",
+                    "sha256": "bc078435b3a4fc5173e9f8be9c6c40040968a13939712b6a4e072bcf39e62b01",
                     "schemaVersion": 1
                 }
             ]
