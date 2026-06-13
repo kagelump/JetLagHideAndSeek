@@ -1,3 +1,39 @@
+// Stub loadPlayAreaByRelationId for Osaka (358674) so the persistence
+// test doesn't hit Overpass. Osaka was previously bundled; after bundle
+// removal it resolves via network which is not mocked in Jest.
+jest.mock("@/features/map/playAreaBoundary", () => {
+    const actual = jest.requireActual<
+        typeof import("@/features/map/playAreaBoundary")
+    >("@/features/map/playAreaBoundary");
+    return {
+        ...actual,
+        loadPlayAreaByRelationId: jest.fn(async (relationId: number) => {
+            if (relationId === 358674) {
+                return {
+                    cacheSource: "bundled" as const,
+                    playArea: {
+                        osmId: 358674,
+                        osmType: "R" as const,
+                        label: "Osaka",
+                        bbox: [135.3, 34.6, 135.7, 34.8] as [
+                            number,
+                            number,
+                            number,
+                            number,
+                        ],
+                        center: [135.5, 34.7] as [number, number],
+                        boundary: {
+                            type: "FeatureCollection" as const,
+                            features: [],
+                        },
+                    },
+                };
+            }
+            return actual.loadPlayAreaByRelationId(relationId);
+        }),
+    };
+});
+
 import { act, render, waitFor } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Text, View } from "react-native";

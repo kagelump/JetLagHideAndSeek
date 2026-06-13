@@ -7,7 +7,35 @@
  *
  * Run standalone:
  *   pnpm test -- --testPathPattern=perf/poiSearch.perf
+ *
+ * TODO: After bundled Japan POI was removed (2026-06), these tests need
+ * pack-based synthetic test fixtures registered via registerRegion.
+ * Currently mocked to prevent Overpass network calls; re-enable with
+ * real spatial-index data when pack POI fixtures are available.
  */
+
+// Stub findMatchingFeaturesWithIndex to prevent Overpass fallback now
+// that bundled Japan POI data has been removed. The real spatial-index
+// perf tests should be re-enabled with synthetic pack fixtures.
+jest.mock("../osmMatchingCache", () => {
+    const actual = jest.requireActual<typeof import("../osmMatchingCache")>(
+        "../osmMatchingCache",
+    );
+    return {
+        ...actual,
+        findMatchingFeaturesWithIndex: jest.fn(async () => ({
+            candidates: [],
+            source: "memory" as const,
+            debug: {
+                totalCount: 0,
+                origins: {} as Record<string, number>,
+                durationMs: 0,
+                status: "done" as const,
+                at: Date.now(),
+            },
+        })),
+    };
+});
 
 import {
     clearOsmMatchingMemoryCache,

@@ -175,22 +175,6 @@ export function getHidingZonePresetsOrEmpty(): HidingZonePreset[] {
 }
 
 /**
- * Returns the manifest for external consumers (e.g. settings UI counting
- * stations within the play area).
- */
-export function getTransitManifest(): {
-    version: number;
-    bundles: {
-        id: string;
-        bbox: Bbox;
-        file: string;
-        presets: { id: string; label: string; bbox: Bbox; kind?: string }[];
-    }[];
-} {
-    return { version: 1, bundles: [] };
-}
-
-/**
  * Clear the bundle cache.  Used in tests.
  */
 export function clearTransitBundleCache(): void {

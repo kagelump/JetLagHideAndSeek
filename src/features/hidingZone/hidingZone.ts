@@ -491,6 +491,62 @@ export function getPresetPlayAreaStats(
     return stats;
 }
 
+export type PartitionedPresets = {
+    operatorPresets: HidingZonePreset[];
+    coveragePresets: HidingZonePreset[];
+    otherPresets: HidingZonePreset[];
+};
+
+/**
+ * Partition presets into the three scoped groups the Hiding Zones screen
+ * renders:
+ *
+ * - `operatorPresets` — `kind !== "coverage"` presets with ≥1 station inside
+ *   the play area, sorted by in-area station count descending.
+ * - `coveragePresets` — `kind === "coverage"` presets with ≥1 station in area.
+ * - `otherPresets` — everything else (no play area, or zero in-area stations).
+ *
+ * `kind` is read straight off each preset (`HidingZonePreset.kind`), which the
+ * transit pipeline stamps as `"operator"`/`"coverage"`. When `playAreaStats`
+ * is null (no play area), every preset falls into `otherPresets`.
+ */
+export function partitionPresetsByScope(
+    presets: HidingZonePreset[],
+    playAreaStats: PresetPlayAreaStats[] | null,
+): PartitionedPresets {
+    const operators: HidingZonePreset[] = [];
+    const coverages: HidingZonePreset[] = [];
+    const others: HidingZonePreset[] = [];
+
+    for (const preset of presets) {
+        const kind = preset.kind ?? "operator";
+        if (!playAreaStats) {
+            others.push(preset);
+            continue;
+        }
+        const stats = playAreaStats.find((s) => s.presetId === preset.id);
+        if (!stats || stats.stationsInArea === 0) {
+            others.push(preset);
+        } else if (kind === "coverage") {
+            coverages.push(preset);
+        } else {
+            operators.push(preset);
+        }
+    }
+
+    if (playAreaStats) {
+        const countOf = (p: HidingZonePreset) =>
+            playAreaStats.find((s) => s.presetId === p.id)?.stationsInArea ?? 0;
+        operators.sort((a, b) => countOf(b) - countOf(a));
+    }
+
+    return {
+        operatorPresets: operators,
+        coveragePresets: coverages,
+        otherPresets: others,
+    };
+}
+
 /**
  * Clip selected stations to the play-area bbox expanded by radiusMeters.
  */

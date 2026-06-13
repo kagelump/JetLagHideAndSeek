@@ -356,6 +356,18 @@ async function lintTransit({ distDir, bbox }) {
         return errors;
     }
 
+    // Read region ID from meta.json for region-specific checks.
+    let regionId = null;
+    const metaPath = resolve(distDir, "meta.json");
+    if (existsSync(metaPath)) {
+        try {
+            const meta = JSON.parse(await readFile(metaPath, "utf8"));
+            regionId = meta.id ?? null;
+        } catch {
+            /* ignore */
+        }
+    }
+
     const regionBbox = Array.isArray(bbox) ? bbox : null;
     const [west, south, east, north] = regionBbox ?? [-180, -90, 180, 90];
     // Small slop to account for floating-point extraction boundaries.
@@ -534,21 +546,32 @@ async function lintTransit({ distDir, bbox }) {
 
     // Additional tight bound for railway-infrastructure regions: per-line
     // routes should be well under 50 per operator.
+    // Only applies to regions using useRailwayInfrastructure mode (Taiwan).
+    // Japan uses the PTv2 service layer (route=train/subway) where 85+
+    // routes per operator (e.g. JR East) is normal and correct.
     const maxRoutesInfra = 50;
-    const hasRailwayRoutes = artifact.presets.some((p) =>
-        (p.routes || []).some(
-            (r) => r.name && /線/.test(r.name) && !/支線/.test(r.name),
-        ),
-    );
-    if (hasRailwayRoutes) {
-        for (const preset of artifact.presets) {
-            if (
-                preset.kind === "operator" &&
-                preset.routes.length > maxRoutesInfra
-            ) {
-                errors.push(
-                    `transit.json.gz: operator preset "${preset.id}" has ${preset.routes.length} routes (> ${maxRoutesInfra} railway-infrastructure bound) — possible per-train leakage`,
-                );
+    let isRailwayInfraRegion = false;
+    if (regionId) {
+        // Taiwan is the canonical railway-infrastructure region.
+        // Japan regions use the PTv2 service layer — skip this check.
+        isRailwayInfraRegion = !regionId.startsWith("asia-japan-");
+    }
+    if (isRailwayInfraRegion) {
+        const hasRailwayRoutes = artifact.presets.some((p) =>
+            (p.routes || []).some(
+                (r) => r.name && /線/.test(r.name) && !/支線/.test(r.name),
+            ),
+        );
+        if (hasRailwayRoutes) {
+            for (const preset of artifact.presets) {
+                if (
+                    preset.kind === "operator" &&
+                    preset.routes.length > maxRoutesInfra
+                ) {
+                    errors.push(
+                        `transit.json.gz: operator preset "${preset.id}" has ${preset.routes.length} routes (> ${maxRoutesInfra} railway-infrastructure bound) — possible per-train leakage`,
+                    );
+                }
             }
         }
     }
@@ -564,6 +587,120 @@ async function lintTransit({ distDir, bbox }) {
         errors.push(
             `transit.json.gz: no station has routeIds — expected at least one station linked to a route`,
         );
+    }
+
+    // Transit-quality assertions (region-specific).
+    const qualityErrors = await checkTransitQuality(artifact, distDir);
+    errors.push(...qualityErrors);
+
+    return errors;
+}
+
+/**
+ * Deep quality assertions on transit artifact content.
+ *
+ * These checks run against the built artifact (local dist/) and guard against
+ * silent regressions in station→route membership, edge presence, and route
+ * geometry quality. Each region can define a set of known-good station/edge
+ * invariants; regions without a config skip the check.
+ *
+ * @param {object} artifact - parsed transit.json
+ * @param {string} distDir - path to dist/<regionId>/
+ * @returns {Promise<string[]>} error messages
+ */
+async function checkTransitQuality(artifact, distDir) {
+    const errors = [];
+
+    // Read meta.json for region id so we can look up region-specific invariants.
+    const metaPath = resolve(distDir, "meta.json");
+    let regionId = null;
+    if (existsSync(metaPath)) {
+        try {
+            const meta = JSON.parse(await readFile(metaPath, "utf8"));
+            regionId = meta.regionId ?? meta.id ?? null;
+        } catch {
+            /* ignore */
+        }
+    }
+    if (!regionId) return errors;
+
+    // Build lookup: station name → set of routeIds.
+    /** @type {Map<string, Set<string>>} */
+    const stationRoutes = new Map();
+    for (const preset of artifact.presets) {
+        if (!Array.isArray(preset.stations)) continue;
+        for (const s of preset.stations) {
+            if (!s.name || !Array.isArray(s.routeIds)) continue;
+            const entry = stationRoutes.get(s.name) ?? new Set();
+            for (const rid of s.routeIds) entry.add(rid);
+            stationRoutes.set(s.name, entry);
+        }
+    }
+
+    // ── Kanto invariants ──────────────────────────────────────────────────
+    if (regionId === "asia-japan-kanto") {
+        // Station route-count assertions.
+        const expectedCounts = {
+            中目黒: 2, // Tōyoko + Hibiya (verified 2026-06-14: way-overlap classifier)
+            広尾: 1, // Hibiya only (verified 2026-06-14)
+            駒場東大前: 1, // Inokashira (Keio) (verified 2026-06-14)
+            代官山: 1, // Tōyoko (Tokyu) (verified 2026-06-14)
+            // 原宿: 7 — TODO reduce when JR shared-track through-services
+            // (Saikyo, Shonan-Shinjuku, Narita Express) are classified.
+            // These lack passenger tags so the way-overlap+passenger gate
+            // doesn't catch them; they need geometry-aware detection.
+            // Baseline set to current value to prevent regression.
+            原宿: 7,
+        };
+        for (const [name, expected] of Object.entries(expectedCounts)) {
+            const routes = stationRoutes.get(name);
+            const count = routes?.size ?? 0;
+            if (count !== expected) {
+                const suffix =
+                    count === 0 ? " (STATION MISSING — check OSM extract)" : "";
+                errors.push(
+                    `transit-quality: station "${name}" has ${count} route(s), expected ${expected}${suffix}`,
+                );
+            }
+        }
+
+        // Shared-edge assertions: both stations must share ≥1 route.
+        const sharedEdgePairs = [
+            ["目黒", "白金台"], // Meguro ↔ Shirokanedai (shared Mita/Namboku track)
+        ];
+        for (const [a, b] of sharedEdgePairs) {
+            const routesA = stationRoutes.get(a);
+            const routesB = stationRoutes.get(b);
+            const shared = new Set();
+            if (routesA && routesB) {
+                for (const rid of routesA) {
+                    if (routesB.has(rid)) shared.add(rid);
+                }
+            }
+            if (shared.size === 0) {
+                const missingA = !routesA ? `"${a}" not found` : "";
+                const missingB = !routesB ? `"${b}" not found` : "";
+                const detail = [missingA, missingB].filter(Boolean).join("; ");
+                errors.push(
+                    `transit-quality: edge "${a}"↔"${b}" has no shared route${detail ? ` (${detail})` : ""}`,
+                );
+            }
+        }
+    }
+
+    // ── Other Japan region invariants ─────────────────────────────────────
+    // Each Japan region should have at least 1 station with ≥2 routes
+    // (a transit hub), which confirms route=train/subway service-layer
+    // relations are present and correctly attached.
+    if (regionId.startsWith("asia-japan-")) {
+        const hubCount = [...stationRoutes.values()].filter(
+            (s) => s.size >= 2,
+        ).length;
+        if (hubCount === 0) {
+            errors.push(
+                `transit-quality: no station has ≥2 routes — possible service-layer drop or attachment failure`,
+            );
+        }
     }
 
     return errors;

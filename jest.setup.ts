@@ -314,7 +314,6 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
             return [...packPresets];
         },
         getHidingZonePresetsOrEmpty: () => [...packPresets],
-        getTransitManifest: () => ({ version: 1, bundles: [] }),
         clearTransitBundleCache: () => {
             packPresets.length = 0;
         },

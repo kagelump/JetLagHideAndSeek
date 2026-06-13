@@ -4,6 +4,12 @@
  * Groups directional `route` relations under their `route_master`, resolves
  * stop members to station records, and produces line objects for the
  * transit-line question.
+ *
+ * Through-service detection uses a way-overlap classifier
+ * (classifyThroughServices): a line whose way members are (near) entirely
+ * also used by other lines with different canonical keys is classified as a
+ * through-service and dropped (unless its stations would be stranded, in
+ * which case it is demoted to `_fallback` for gap-fill attachment).
  */
 
 import { normalizeName } from "./names.mjs";
@@ -314,7 +320,27 @@ export function processOsmRoutes(
         }
     }
 
-    // ─── Collapse masterless variants into logical lines ─────────────────
+    // ─── Clean multi-operator tags ──────────────────────────────────────
+    // OSM allows semicolon-joined operator values (e.g.
+    // "JR East;Tokyo Metro") when multiple operators run trains on the
+    // same physical line. We canonicalize to the owning operator by
+    // taking the first ";"-part. Through-services are detected later by
+    // the way-overlap classifier (classifyThroughServices).
+    {
+        let cleanedCount = 0;
+        for (const line of keptLines) {
+            if (line.operator && line.operator.includes(";")) {
+                line.operator = line.operator.split(";")[0].trim();
+                cleanedCount++;
+            }
+        }
+        if (cleanedCount > 0) {
+            console.log(
+                `[osmRoutes] Cleaned ${cleanedCount} multi-operator line(s)`,
+            );
+        }
+    }
+
     const operatorNames = localeConfig.operatorNames || {};
     const normalizeOp = buildOperatorNormalizer(operatorNames);
     const directionTokens = localeConfig.directionTokens;
@@ -352,8 +378,12 @@ export function processOsmRoutes(
 
         // Union member station ids across all variants.
         const memberSet = new Set();
+        const waySet = new Set();
         for (const line of group) {
             for (const sid of line.memberStationIds) memberSet.add(sid);
+            if (line.wayIds) {
+                for (const wid of line.wayIds) waySet.add(wid);
+            }
         }
 
         collapsed.push({
@@ -362,6 +392,10 @@ export function processOsmRoutes(
                 lineDisplayName(representative.name, directionTokens) ||
                 representative.name,
             memberStationIds: [...memberSet],
+            wayIds: [...waySet],
+            _hasPassengerTag:
+                representative._hasPassengerTag ||
+                group.some((l) => l._hasPassengerTag),
             collapsedVariantIds: group.map((l) => l.id),
         });
         stats.collapsedGroups = (stats.collapsedGroups || 0) + 1;
@@ -369,6 +403,45 @@ export function processOsmRoutes(
 
     keptLines.length = 0;
     keptLines.push(...collapsed);
+
+    // ─── Through-service classification (way-overlap) ───────────────────
+    // Detects inter-operator through-service relations by measuring how
+    // much of a line's track (way members) is also used by other lines
+    // with different canonical keys. A line contributing ≈ zero unique
+    // track is a through-service — it duplicates other lines' coverage.
+    const throughServiceConfig = {
+        overlap: localeConfig.throughServiceOverlap ?? 0.9,
+        minWays: localeConfig.minThroughServiceWays ?? 3,
+        directionTokens,
+    };
+    const classifyResult = classifyThroughServices(
+        keptLines,
+        normalizeOp,
+        throughServiceConfig,
+    );
+    if (classifyResult.throughServiceIds.size > 0) {
+        const before = keptLines.length;
+        const dropped = keptLines.filter(
+            (l) => !classifyResult.throughServiceIds.has(l.id),
+        );
+        keptLines.length = 0;
+        keptLines.push(...dropped);
+        stats.throughServicesDropped = before - keptLines.length;
+        console.log(
+            `[osmRoutes] Dropped ${stats.throughServicesDropped} through-service line(s) (way-overlap classifier)`,
+        );
+    }
+    if (classifyResult.strandedFallbackIds.size > 0) {
+        for (const line of keptLines) {
+            if (classifyResult.strandedFallbackIds.has(line.id)) {
+                line._fallback = true;
+            }
+        }
+        stats.strandedFallback = classifyResult.strandedFallbackIds.size;
+        console.log(
+            `[osmRoutes] ${stats.strandedFallback} through-service line(s) demoted to fallback (station safety net)`,
+        );
+    }
 
     // Resolve final colors: OSM tag → transitOverrides.routeColors →
     // deterministic hue fallback.
@@ -380,6 +453,126 @@ export function processOsmRoutes(
     stats.linesKept = keptLines.length;
 
     return { lines: keptLines, stats };
+}
+
+/**
+ * Classify through-service lines by way overlap.
+ *
+ * A through-service is a journey stitched across other lines' physical track.
+ * Since wayGeometry:true resolves each line's OSM way members, the discriminator
+ * is locale-free and tag-free: a line is a through-service when (near) all of
+ * its way members are also members of other route relations that resolve to a
+ * different canonical line — i.e. it contributes ≈ zero unique track.
+ *
+ * Way overlap alone is symmetric (a through-service and the physical line it
+ * runs on both see each other's ways). To break the tie, lines tagged with
+ * the OSM `passenger` key (suburban, regional, long_distance, local) are
+ * treated as service patterns; lines without it are treated as physical
+ * infrastructure. This two-signal gate (overlap + passenger) avoids the v1
+ * false-positive on European cross-border lines: those have `passenger` but
+ * own unique track, so their overlap ratio stays below threshold.
+ *
+ * Lines with zero way members (stop-position fallbacks) are never classified.
+ * Lines whose stations would be stranded (no coverage from kept lines) are
+ * demoted to `_fallback` rather than dropped — the safety net.
+ *
+ * @param {object[]} lines - kept lines with wayIds and _hasPassengerTag
+ * @param {(raw: string|null|undefined) => string|null} normalizeOp - operator normalizer
+ * @param {{ overlap?: number, minWays?: number, directionTokens?: string[] }} opts
+ * @returns {{ throughServiceIds: Set<string>, strandedFallbackIds: Set<string> }}
+ */
+export function classifyThroughServices(lines, normalizeOp, opts = {}) {
+    const OVERLAP_THRESHOLD = opts.overlap ?? 0.9;
+    const MIN_WAYS = opts.minWays ?? 3;
+    const directionTokens = opts.directionTokens;
+
+    // Build canonical key for each line (same key as collapse).
+    /** @type {Map<string, string>} line id → canonical key */
+    const lineKey = new Map();
+    for (const line of lines) {
+        const op = normalizeOp(line.operator) || line.operator || "_none";
+        const key = `${op}|${lineNameKey(line.name, directionTokens)}`;
+        lineKey.set(line.id, key);
+    }
+
+    // Build way → owners index.
+    /** @type {Map<number, Set<string>>} */
+    const wayOwners = new Map();
+    for (const line of lines) {
+        if (!line.wayIds || line.wayIds.length === 0) continue;
+        const key = lineKey.get(line.id);
+        for (const wid of line.wayIds) {
+            if (!wayOwners.has(wid)) wayOwners.set(wid, new Set());
+            wayOwners.get(wid).add(key);
+        }
+    }
+
+    // Score each line and classify.
+    // Only classify lines that (a) have high way overlap AND (b) carry a
+    // `passenger` tag. The passenger tag is the tiebreaker that resolves
+    // the symmetry between a physical line and its through-service: both
+    // see each other's ways, but only the through-service has passenger.
+    const throughServiceIds = new Set();
+
+    for (const line of lines) {
+        const n = line.wayIds?.length ?? 0;
+        if (n < MIN_WAYS) continue;
+
+        // Only classify lines with a passenger tag — they're service
+        // patterns, not physical infrastructure. Physical lines that
+        // share track with through-services are NOT classified.
+        if (!line._hasPassengerTag) continue;
+
+        const ownKey = lineKey.get(line.id);
+        let sharedForeign = 0;
+        for (const wid of line.wayIds) {
+            const owners = wayOwners.get(wid);
+            if (!owners) continue;
+            // Does any owner key differ from this line's own key?
+            for (const ownerKey of owners) {
+                if (ownerKey !== ownKey) {
+                    sharedForeign++;
+                    break;
+                }
+            }
+        }
+
+        const overlapRatio = sharedForeign / n;
+        if (overlapRatio >= OVERLAP_THRESHOLD) {
+            throughServiceIds.add(line.id);
+        }
+    }
+
+    // Safety net: never strand a station.
+    // If a through-service covers a station that no kept line reaches,
+    // demote it to fallback instead of dropping.
+    const strandedFallbackIds = new Set();
+    const keptLines = lines.filter((l) => !throughServiceIds.has(l.id));
+
+    /** @type {Map<string, number>} station id → count of kept lines covering it */
+    const stationCoverage = new Map();
+    for (const line of keptLines) {
+        for (const sid of line.memberStationIds) {
+            stationCoverage.set(sid, (stationCoverage.get(sid) || 0) + 1);
+        }
+    }
+
+    for (const line of lines) {
+        if (!throughServiceIds.has(line.id)) continue;
+        let wouldStrand = false;
+        for (const sid of line.memberStationIds) {
+            if (!stationCoverage.has(sid)) {
+                wouldStrand = true;
+                break;
+            }
+        }
+        if (wouldStrand) {
+            strandedFallbackIds.add(line.id);
+            throughServiceIds.delete(line.id);
+        }
+    }
+
+    return { throughServiceIds, strandedFallbackIds };
 }
 
 // ─── Internals ─────────────────────────────────────────────────────────────
@@ -758,6 +951,11 @@ function buildLine(
         return null;
     }
 
+    // Capture way member ids for through-service classification.
+    const wayIds = wayMembers
+        .map((m) => m.ref)
+        .filter((ref) => Number.isFinite(ref));
+
     return {
         id: lineId,
         name,
@@ -768,6 +966,14 @@ function buildLine(
         networkTag: tags.network || undefined,
         geometry,
         memberStationIds: [...allStationIds],
+        /** Way member ids for through-service overlap detection. */
+        wayIds,
+        /** True when the original OSM relation had a `passenger` tag
+         *  (values like suburban, regional, long_distance, local).
+         *  Used by classifyThroughServices as a tiebreaker: lines with
+         *  passenger tags that overlap other lines' track are through-
+         *  services; lines without that share track are physical. */
+        _hasPassengerTag: !!tags.passenger,
     };
 }
 

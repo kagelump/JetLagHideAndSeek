@@ -78,36 +78,37 @@ four special-cases in §3.
 
 These assume bundled Japan exists and/or is always covered:
 
-1. **Coverage badge** — [`coverage.ts:48-85`](../src/features/offline/coverage.ts).
-   `BUNDLED_REGION_BBOXES` (8 hardcoded Japan bboxes) + `isCoveredByBundledJapan`
+1.  **Coverage badge** — [`coverage.ts:48-85`](../src/features/offline/coverage.ts).
+    `BUNDLED_REGION_BBOXES` (8 hardcoded Japan bboxes) + `isCoveredByBundledJapan`
 
-    - `isBboxInJapan` short-circuit coverage to `state: "covered", packId:
-"japan-bundled"` _before_ any pack check ([`:106-113`](../src/features/offline/coverage.ts)).
-      Remove this once Japan is pack-backed, or Japan play areas with no pack
-      installed will falsely show "covered" and never prompt a download.
+        - `isBboxInJapan` short-circuit coverage to `state: "covered", packId:
 
-2. **Default play area** — [`playArea.ts:89-99`](../src/features/map/playArea.ts).
-   `defaultPlayArea` (Tokyo) is constructed synchronously from the bundled
-   JSON at import time and is the literal initial state of the store
-   ([`playAreaStore.tsx:40`](../src/state/playAreaStore.tsx)) and the reset
-   target ([`maintenance.ts:56`](../src/state/maintenance.ts)). If the Tokyo
-   boundary is no longer bundled, **there is no offline default play area on
-   first run.** This is the single biggest design decision (see §5).
+    "japan-bundled"` _before_ any pack check ([`:106-113`](../src/features/offline/coverage.ts)).
+    Remove this once Japan is pack-backed, or Japan play areas with no pack
+    installed will falsely show "covered" and never prompt a download.
 
-3. **Bundled-id fast path** — [`playAreaBoundary.ts:33-60,332-339`](../src/features/map/playAreaBoundary.ts).
-   `BUNDLED_BOUNDARIES = {358674: osaka}`, `isBundledPlayAreaId`,
-   `getBundledPlayArea` — these short-circuit Overpass for Tokyo/Osaka. The
-   pack path (`findBoundaryRelation` → `getBoundaryPolygon`, [`:139-168`](../src/features/map/playAreaBoundary.ts))
-   already handles arbitrary relations; the bundled shortcut becomes redundant
-   _if_ the Japan boundaries ship in a pack.
+2.  **Default play area** — [`playArea.ts:89-99`](../src/features/map/playArea.ts).
+    `defaultPlayArea` (Tokyo) is constructed synchronously from the bundled
+    JSON at import time and is the literal initial state of the store
+    ([`playAreaStore.tsx:40`](../src/state/playAreaStore.tsx)) and the reset
+    target ([`maintenance.ts:56`](../src/state/maintenance.ts)). If the Tokyo
+    boundary is no longer bundled, **there is no offline default play area on
+    first run.** This is the single biggest design decision (see §5).
 
-4. **Admin-boundary sync path** — [`adminBoundaryLoader.ts:189-234`](../src/features/questions/matching/adminBoundaryLoader.ts).
-   `getBundle()` `require()`s `admin-boundaries.json` and the bundled grid is
-   checked _first_, synchronously. Pack boundaries only resolve via the **async**
-   `queryAdminBoundaryAsync` (`:263`). Removing the bundle means the matching
-   admin path must go fully async for Japan too — check callers handle the
-   async variant (the sync `queryAdminBoundary` returns `null` to signal "call
-   async", `:252-253`).
+3.  **Bundled-id fast path** — [`playAreaBoundary.ts:33-60,332-339`](../src/features/map/playAreaBoundary.ts).
+    `BUNDLED_BOUNDARIES = {358674: osaka}`, `isBundledPlayAreaId`,
+    `getBundledPlayArea` — these short-circuit Overpass for Tokyo/Osaka. The
+    pack path (`findBoundaryRelation` → `getBoundaryPolygon`, [`:139-168`](../src/features/map/playAreaBoundary.ts))
+    already handles arbitrary relations; the bundled shortcut becomes redundant
+    _if_ the Japan boundaries ship in a pack.
+
+4.  **Admin-boundary sync path** — [`adminBoundaryLoader.ts:189-234`](../src/features/questions/matching/adminBoundaryLoader.ts).
+    `getBundle()` `require()`s `admin-boundaries.json` and the bundled grid is
+    checked _first_, synchronously. Pack boundaries only resolve via the **async**
+    `queryAdminBoundaryAsync` (`:263`). Removing the bundle means the matching
+    admin path must go fully async for Japan too — check callers handle the
+    async variant (the sync `queryAdminBoundary` returns `null` to signal "call
+    async", `:252-253`).
 
 ---
 

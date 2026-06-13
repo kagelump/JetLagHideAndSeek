@@ -178,229 +178,15 @@
                     "
                 >
                     <input type="checkbox" id="toggle-lines-polygons" checked />
-                    Lines &amp; Polygons
+                    Default zone
                 </label>
-            </div>
-            <div>
-                <span class="legend-swatch" style="background: #2563eb"></span
-                >Coastline
-            </div>
-            <div>
-                <span
-                    class="legend-swatch"
-                    style="background: #dc2626; height: 3px"
-                ></span
-                >High-speed rail
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="
-                        background: rgba(56, 189, 248, 0.4);
-                        border: 1px solid #1d4ed8;
-                    "
-                ></span
-                >Body of water (polygon)
-            </div>
-            <div>
-                <span class="legend-swatch" style="background: #059669"></span
-                >Body of water (waterway)
-            </div>
-            <div>
-                <span
-                    class="legend-swatch"
-                    style="
-                        background: #ea580c;
-                        border-top: 2px dashed #ea580c;
-                        height: 0;
-                    "
-                ></span
-                >Admin 1st border
-            </div>
-            <div>
-                <span
-                    class="legend-swatch"
-                    style="
-                        background: #6b7280;
-                        border-top: 1.5px dashed #6b7280;
-                        height: 0;
-                    "
-                ></span
-                >Admin 2nd border
             </div>
             <div>
                 <span
                     class="legend-swatch"
                     style="background: #16a34a; height: 2px"
                 ></span
-                >Default zones
-            </div>
-            <hr
-                style="
-                    border: none;
-                    border-top: 1px solid #e5e7eb;
-                    margin: 4px 0;
-                "
-            />
-            <div style="font-weight: 600; margin-bottom: 2px">
-                <label
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                    "
-                >
-                    <input type="checkbox" id="toggle-pois" checked />
-                    POIs (33,757)
-                </label>
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #22c55e"
-                ></span
-                >Park
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #ef4444"
-                ></span
-                >Hospital
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #a855f7"
-                ></span
-                >Museum
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #78716c"
-                ></span
-                >Mountain
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #f59e0b"
-                ></span
-                >Landmark
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #3b82f6"
-                ></span
-                >Library
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #15803d"
-                ></span
-                >Golf course
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #ec4899"
-                ></span
-                >Movie theater
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #6366f1"
-                ></span
-                >Foreign consulate
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #f97316"
-                ></span
-                >Amusement park
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #14b8a6"
-                ></span
-                >Zoo
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #06b6d4"
-                ></span
-                >Aquarium
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #e11d48"
-                ></span
-                >Airport
-            </div>
-            <div>
-                <span
-                    class="legend-swatch polygon"
-                    style="background: #8b5cf6"
-                ></span
-                >Station name length
-            </div>
-            <hr
-                style="
-                    border: none;
-                    border-top: 1px solid #e5e7eb;
-                    margin: 4px 0;
-                "
-            />
-            <div style="font-weight: 600; margin-bottom: 4px">Transit</div>
-            <div>
-                <label
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                    "
-                >
-                    <input type="checkbox" id="toggle-transit-routes" />
-                    <span
-                        class="legend-swatch"
-                        style="
-                            background: linear-gradient(
-                                90deg,
-                                #009bbf,
-                                #c9242f,
-                                #b1cb39
-                            );
-                        "
-                    ></span
-                    >Route lines
-                </label>
-            </div>
-            <div>
-                <label
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                    "
-                >
-                    <input type="checkbox" id="toggle-transit-stations" />
-                    <span
-                        class="legend-swatch polygon"
-                        style="background: #1f6f78; border: 1.5px solid #fff"
-                    ></span
-                    >Stations
-                </label>
+                >Tokyo 23 Wards (placeholder)
             </div>
             <hr
                 style="
@@ -442,16 +228,13 @@
                 fitBoundsOptions: { padding: 20 },
             });
 
+            // Only the Tokyo 23 Wards boundary placeholder remains bundled.
+            // All gameplay data (POI, measuring, transit) now lives in
+            // downloadable offline packs and can be inspected by dropping an
+            // artifact onto the map or by using the local server with
+            // --pack <distDir>.
             var SOURCES = {
-                coastline: "data/measuring/coastline.json",
-                "high-speed-rail": "data/measuring/high-speed-rail.json",
-                "body-of-water": "data/measuring/body-of-water.json",
-                "admin-1st-border": "data/measuring/admin-1st-border.json",
-                "admin-2nd-border": "data/measuring/admin-2nd-border.json",
                 zones: "data/zones/default.json",
-                pois: "data/poi/japan-kanto.json",
-                "transit-routes": "data/transit/routes.json",
-                "transit-stations": "data/transit/stations.json",
             };
 
             var CATALOG_DATA = null;
@@ -654,259 +437,6 @@
                         paint: { "line-color": "#16a34a", "line-width": 2 },
                     },
                 ],
-                pois: [
-                    {
-                        id: "poi-circle",
-                        type: "circle",
-                        paint: {
-                            "circle-radius": [
-                                "interpolate",
-                                ["linear"],
-                                ["zoom"],
-                                6,
-                                1.5,
-                                10,
-                                3,
-                                14,
-                                7,
-                            ],
-                            "circle-color": [
-                                "match",
-                                ["get", "category"],
-                                "park",
-                                "#22c55e",
-                                "hospital",
-                                "#ef4444",
-                                "museum",
-                                "#a855f7",
-                                "mountain",
-                                "#78716c",
-                                "landmark",
-                                "#f59e0b",
-                                "library",
-                                "#3b82f6",
-                                "golf-course",
-                                "#15803d",
-                                "movie-theater",
-                                "#ec4899",
-                                "foreign-consulate",
-                                "#6366f1",
-                                "amusement-park",
-                                "#f97316",
-                                "zoo",
-                                "#14b8a6",
-                                "aquarium",
-                                "#06b6d4",
-                                "commercial-airport",
-                                "#e11d48",
-                                "station-name-length",
-                                "#8b5cf6",
-                                "#9ca3af",
-                            ],
-                            "circle-opacity": 0.7,
-                            "circle-stroke-width": 0.5,
-                            "circle-stroke-color": "#fff",
-                        },
-                    },
-                ],
-                "transit-routes": [
-                    {
-                        id: "transit-routes-line",
-                        type: "line",
-                        layout: {
-                            visibility: "none",
-                            "line-cap": "round",
-                            "line-join": "round",
-                        },
-                        paint: {
-                            "line-color": [
-                                "to-color",
-                                ["get", "color"],
-                                "#888",
-                            ],
-                            "line-width": [
-                                "interpolate",
-                                ["linear"],
-                                ["zoom"],
-                                6,
-                                1,
-                                10,
-                                2,
-                                13,
-                                4,
-                                16,
-                                7,
-                            ],
-                            "line-opacity": 0.9,
-                        },
-                    },
-                ],
-                "transit-stations-large": [
-                    {
-                        id: "transit-stations-wedge-large",
-                        type: "fill",
-                        minzoom: 11,
-                        maxzoom: 13,
-                        layout: { visibility: "none" },
-                        paint: {
-                            "fill-color": [
-                                "to-color",
-                                ["get", "color"],
-                                "#888",
-                            ],
-                            "fill-opacity": 0.9,
-                            "fill-antialias": true,
-                        },
-                    },
-                ],
-                "transit-stations-medium": [
-                    {
-                        id: "transit-stations-wedge-medium",
-                        type: "fill",
-                        minzoom: 13,
-                        maxzoom: 15,
-                        layout: { visibility: "none" },
-                        paint: {
-                            "fill-color": [
-                                "to-color",
-                                ["get", "color"],
-                                "#888",
-                            ],
-                            "fill-opacity": 0.9,
-                            "fill-antialias": true,
-                        },
-                    },
-                ],
-                "transit-stations-small": [
-                    {
-                        id: "transit-stations-wedge-small",
-                        type: "fill",
-                        minzoom: 15,
-                        layout: { visibility: "none" },
-                        paint: {
-                            "fill-color": [
-                                "to-color",
-                                ["get", "color"],
-                                "#888",
-                            ],
-                            "fill-opacity": 0.9,
-                            "fill-antialias": true,
-                        },
-                    },
-                ],
-                "transit-stations-dot": [
-                    {
-                        id: "transit-stations-dot",
-                        type: "circle",
-                        maxzoom: 11,
-                        layout: { visibility: "none" },
-                        paint: {
-                            "circle-color": [
-                                "to-color",
-                                ["get", "color"],
-                                "#888",
-                            ],
-                            "circle-opacity": [
-                                "interpolate",
-                                ["linear"],
-                                ["zoom"],
-                                10,
-                                0.95,
-                                11,
-                                0,
-                            ],
-                            "circle-radius": [
-                                "interpolate",
-                                ["linear"],
-                                ["zoom"],
-                                0,
-                                0.5,
-                                6,
-                                1.5,
-                                10,
-                                3,
-                                11,
-                                5,
-                            ],
-                            "circle-stroke-color": "#fff",
-                            "circle-stroke-width": 1,
-                        },
-                    },
-                ],
-                "transit-stations-outline-large": [
-                    {
-                        id: "transit-stations-outline-large",
-                        type: "circle",
-                        minzoom: 11,
-                        maxzoom: 13,
-                        layout: { visibility: "none" },
-                        paint: {
-                            "circle-opacity": 0,
-                            "circle-stroke-color": "#fff",
-                            "circle-stroke-width": 1.5,
-                            "circle-radius": [
-                                "interpolate",
-                                ["linear"],
-                                ["zoom"],
-                                11,
-                                1.5,
-                                12,
-                                3,
-                                13,
-                                6,
-                            ],
-                        },
-                    },
-                ],
-                "transit-stations-outline-medium": [
-                    {
-                        id: "transit-stations-outline-medium",
-                        type: "circle",
-                        minzoom: 13,
-                        maxzoom: 15,
-                        layout: { visibility: "none" },
-                        paint: {
-                            "circle-opacity": 0,
-                            "circle-stroke-color": "#fff",
-                            "circle-stroke-width": 1.5,
-                            "circle-radius": [
-                                "interpolate",
-                                ["linear"],
-                                ["zoom"],
-                                13,
-                                2.5,
-                                14,
-                                5,
-                                15,
-                                10,
-                            ],
-                        },
-                    },
-                ],
-                "transit-stations-outline-small": [
-                    {
-                        id: "transit-stations-outline-small",
-                        type: "circle",
-                        minzoom: 15,
-                        layout: { visibility: "none" },
-                        paint: {
-                            "circle-opacity": 0,
-                            "circle-stroke-color": "#fff",
-                            "circle-stroke-width": 1.5,
-                            "circle-radius": [
-                                "interpolate",
-                                ["linear"],
-                                ["zoom"],
-                                15,
-                                4.5,
-                                16,
-                                9,
-                                18,
-                                34,
-                            ],
-                        },
-                    },
-                ],
             };
 
             async function fetchJson(url) {
@@ -966,7 +496,6 @@
                     }),
                 );
                 var loaded = 0;
-                var transitWedgeData = null;
                 for (var i = 0; i < entries.length; i++) {
                     var id = entries[i][0];
                     var result = results[i];
@@ -977,56 +506,9 @@
                         );
                         continue;
                     }
-                    if (id === "transit-stations") {
-                        transitWedgeData = result.value;
-                        continue;
-                    }
                     addSource(id, result.value);
                     addLayers(id, CONFIG_LAYERS[id]);
                     loaded++;
-                }
-                // Multi-size wedge tiers + dot-derived layers.
-                // Layer order matters: outlines → wedges → dots so
-                // white strokes render under coloured fills at z11+.
-                if (transitWedgeData) {
-                    var sizes = ["large", "medium", "small"];
-                    // Add all wedge GeoJSON sources first (no layers yet).
-                    for (var si = 0; si < sizes.length; si++) {
-                        var size = sizes[si];
-                        if (transitWedgeData[size]) {
-                            var srcId = "transit-stations-" + size;
-                            addSource(srcId, transitWedgeData[size]);
-                            loaded++;
-                        }
-                    }
-                    // Dot source (station centres) — shared by the
-                    // low-zoom dot layer and the white outline rings.
-                    var dotData = buildDotsFromWedges(
-                        transitWedgeData.large,
-                    );
-                    addSource("transit-stations-dot", dotData);
-                    // White circle outlines — behind wedges.
-                    var outlineSizes = ["large", "medium", "small"];
-                    for (var oi = 0; oi < outlineSizes.length; oi++) {
-                        var osz = outlineSizes[oi];
-                        addLayers(
-                            "transit-stations-dot",
-                            CONFIG_LAYERS["transit-stations-outline-" + osz],
-                        );
-                    }
-                    // Wedge fill layers — on top of outlines.
-                    for (var si = 0; si < sizes.length; si++) {
-                        var size = sizes[si];
-                        var srcId = "transit-stations-" + size;
-                        if (map.getSource(srcId)) {
-                            addLayers(srcId, CONFIG_LAYERS[srcId]);
-                        }
-                    }
-                    // Dot circle layer — low zoom.
-                    addLayers(
-                        "transit-stations-dot",
-                        CONFIG_LAYERS["transit-stations-dot"],
-                    );
                 }
                 document.getElementById("loading").classList.add("hidden");
                 console.log(
@@ -1037,28 +519,6 @@
             map.on("load", function () {
                 loadLayers();
                 loadCatalog();
-            });
-
-            map.on("mouseenter", "poi-circle", function (e) {
-                map.getCanvas().style.cursor = "pointer";
-                var p = e.features[0].properties;
-                var html =
-                    "<strong>" +
-                    (p.name || "(unnamed)") +
-                    "</strong><br>" +
-                    p.category;
-                if (p.osmId)
-                    html += "<br>osm " + (p.osmType || "") + " " + p.osmId;
-                if (p.iata) html += " &middot; IATA " + p.iata;
-                POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
-            });
-            map.on("mouseleave", "poi-circle", function () {
-                map.getCanvas().style.cursor = "";
-                POPUP.remove();
-            });
-
-            map.on("click", "poi-circle", function (e) {
-                copyNodeInfo(e.features[0]);
             });
 
             function addStationHover(layerId) {
@@ -1092,11 +552,6 @@
                     copyNodeInfo(e.features[0]);
                 });
             }
-
-            addStationHover("transit-stations-wedge-large");
-            addStationHover("transit-stations-wedge-medium");
-            addStationHover("transit-stations-wedge-small");
-            addStationHover("transit-stations-dot");
 
             function addDropPoiHover(layerId) {
                 map.on("mouseenter", layerId, function (e) {
@@ -1136,17 +591,7 @@
             }
 
             // ── Layer toggles ─────────────────────────────────────────────
-            var LINE_POLYGON_LAYERS = [
-                "coastline-line",
-                "hsr-line",
-                "water-fill",
-                "water-outline",
-                "waterway-line",
-                "admin1-line",
-                "admin2-line",
-                "zones-fill",
-                "zones-outline",
-            ];
+            var LINE_POLYGON_LAYERS = ["zones-fill", "zones-outline"];
 
             document
                 .getElementById("toggle-lines-polygons")
@@ -1155,45 +600,6 @@
                     for (var i = 0; i < LINE_POLYGON_LAYERS.length; i++) {
                         map.setLayoutProperty(
                             LINE_POLYGON_LAYERS[i],
-                            "visibility",
-                            vis,
-                        );
-                    }
-                });
-            document
-                .getElementById("toggle-pois")
-                .addEventListener("change", function (e) {
-                    map.setLayoutProperty(
-                        "poi-circle",
-                        "visibility",
-                        e.target.checked ? "visible" : "none",
-                    );
-                });
-            document
-                .getElementById("toggle-transit-routes")
-                .addEventListener("change", function (e) {
-                    map.setLayoutProperty(
-                        "transit-routes-line",
-                        "visibility",
-                        e.target.checked ? "visible" : "none",
-                    );
-                });
-            document
-                .getElementById("toggle-transit-stations")
-                .addEventListener("change", function (e) {
-                    var vis = e.target.checked ? "visible" : "none";
-                    var wedgeIds = [
-                        "transit-stations-wedge-large",
-                        "transit-stations-wedge-medium",
-                        "transit-stations-wedge-small",
-                        "transit-stations-outline-large",
-                        "transit-stations-outline-medium",
-                        "transit-stations-outline-small",
-                        "transit-stations-dot",
-                    ];
-                    for (var i = 0; i < wedgeIds.length; i++) {
-                        map.setLayoutProperty(
-                            wedgeIds[i],
                             "visibility",
                             vis,
                         );
@@ -1777,9 +1183,7 @@
                         }
                         // 2. Dot source (shared by low-zoom dots and
                         //    white outline rings).
-                        var dotData = buildDotsFromWedges(
-                            allWedges.large,
-                        );
+                        var dotData = buildDotsFromWedges(allWedges.large);
                         addSource(dotSourceId, dotData);
                         // 3. White circle outlines — behind wedges.
                         var outlineDefs = [
@@ -1791,9 +1195,12 @@
                                     "interpolate",
                                     ["linear"],
                                     ["zoom"],
-                                    11, 1.5,
-                                    12, 3,
-                                    13, 6,
+                                    11,
+                                    1.5,
+                                    12,
+                                    3,
+                                    13,
+                                    6,
                                 ],
                             },
                             {
@@ -1804,9 +1211,12 @@
                                     "interpolate",
                                     ["linear"],
                                     ["zoom"],
-                                    13, 2.5,
-                                    14, 5,
-                                    15, 10,
+                                    13,
+                                    2.5,
+                                    14,
+                                    5,
+                                    15,
+                                    10,
                                 ],
                             },
                             {
@@ -1816,9 +1226,12 @@
                                     "interpolate",
                                     ["linear"],
                                     ["zoom"],
-                                    15, 4.5,
-                                    16, 9,
-                                    18, 34,
+                                    15,
+                                    4.5,
+                                    16,
+                                    9,
+                                    18,
+                                    34,
                                 ],
                             },
                         ];
@@ -1907,8 +1320,7 @@
                         PACK_LOADED_LAYERS[dotSourceId] = true;
                     } else if (!this.checked) {
                         for (var si = 0; si < sizeIds.length; si++) {
-                            var szSrcId =
-                                sourceId + "-" + sizeIds[si].key;
+                            var szSrcId = sourceId + "-" + sizeIds[si].key;
                             removeSourceAndLayers(szSrcId);
                             delete PACK_LOADED_LAYERS[szSrcId];
                         }

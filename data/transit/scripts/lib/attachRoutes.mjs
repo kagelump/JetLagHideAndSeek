@@ -5,6 +5,12 @@
  *   the route's normalized operator.
  * - Adds the route's `routeId` to every member station copy in *every* preset
  *   that contains that station (by sourceId or mergeKey).
+ * - Two-pass attachment: non-fallback (single-operator) lines attach first.
+ *   Fallback lines (originally multi-operator, now cleaned to first operator)
+ *   only attach their routeIds to stations that still have zero routeIds
+ *   after the first pass. This prevents through-service relations from
+ *   inflating station route counts while preserving coverage for stations
+ *   that lack single-operator data.
  *
  * @module attachRoutes
  */
@@ -16,6 +22,7 @@
  * @property {string} color
  * @property {string} sourceId
  * @property {string} [operator]
+ * @property {boolean} [_fallback] True when the original operator was multi-value
  * @property {string[]} memberStationIds
  * @property {object} geometry
  */
@@ -78,7 +85,15 @@ export function attachRoutesToPresets(presets, lines, normalizeOp) {
                 p.id.toLowerCase().includes("other"),
         );
 
-    for (const line of lines) {
+    /**
+     * Place a line into its preset (add to routes array) and attach its
+     * routeId to every member station copy across all presets.
+     *
+     * @param {TransitLine} line
+     * @param {boolean} onlyIfEmpty - if true, skip stations that already
+     *   have ≥1 routeId (fallback gap-fill).
+     */
+    const placeAndAttach = (line, onlyIfEmpty) => {
         const lineOp = normalizeOp(line.operator);
         let targetPreset = lineOp ? presetByOperator.get(lineOp) : null;
         if (!targetPreset && fallbackPreset) {
@@ -95,16 +110,41 @@ export function attachRoutesToPresets(presets, lines, normalizeOp) {
             });
         }
 
-        // Attach routeId to every copy of every member station.
         for (const memberId of line.memberStationIds) {
             const entries = stationsByKey.get(memberId);
             if (!entries) continue;
             for (const { station } of entries) {
+                if (onlyIfEmpty && station.routeIds.length > 0) continue;
                 if (!station.routeIds.includes(line.id)) {
                     station.routeIds.push(line.id);
                 }
             }
         }
+    };
+
+    // Pass 1: non-fallback lines. These are single-operator lines
+    // (or lines whose multi-op operator was cleaned to the owning operator).
+    // Their routeIds get attached to every member station unconditionally.
+    for (const line of lines) {
+        if (!line._fallback) {
+            placeAndAttach(line, false);
+        }
+    }
+
+    // Pass 2: fallback lines. Originally multi-operator relations (e.g.
+    // through-services) whose operator has been cleaned. They still appear
+    // in their preset's route list, but their routeIds only fill stations
+    // that have no single-operator coverage — preventing inflated counts
+    // at stations like 中目黒 while preserving data for stations that
+    // lack single-operator route data.
+    const fallbackLines = lines.filter((l) => l._fallback);
+    if (fallbackLines.length > 0) {
+        for (const line of fallbackLines) {
+            placeAndAttach(line, true);
+        }
+        console.log(
+            `[attachRoutes] ${fallbackLines.length} fallback line(s) attached (gap-fill mode)`,
+        );
     }
 
     return presets;

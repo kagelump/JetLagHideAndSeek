@@ -106,12 +106,12 @@ describe("AppStateV1 schema", () => {
                     labelEn: "",
                 },
                 {
-                    osmLevel: "7",
+                    osmLevel: "6",
                     labelNative: "",
                     labelEn: "",
                 },
                 {
-                    osmLevel: "9",
+                    osmLevel: "8",
                     labelNative: "",
                     labelEn: "",
                 },

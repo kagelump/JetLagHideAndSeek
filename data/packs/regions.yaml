@@ -174,10 +174,46 @@ regions:
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
-          useRailwayInfrastructure: true
+          wayGeometry: true
+          simplifyMeters: 11
           railwayAttachMeters: 120
-          routeColors: {}
-          wayGeometry: false
+          routeColors: &japan_route_colors
+              東急東横線: "#DA0442"
+              # Tokyo Metro lines
+              東京メトロ銀座線: "#FF9500"
+              東京メトロ丸ノ内線: "#E60012"
+              東京メトロ日比谷線: "#B5B5AC"
+              東京メトロ東西線: "#00A7DB"
+              東京メトロ千代田線: "#00BB85"
+              東京メトロ有楽町線: "#D7C447"
+              東京メトロ半蔵門線: "#8F76D6"
+              東京メトロ南北線: "#00AC9B"
+              東京メトロ副都心線: "#9C5E31"
+              # Toei lines
+              都営浅草線: "#EF5B73"
+              都営三田線: "#0079C2"
+              都営新宿線: "#B0C724"
+              都営大江戸線: "#CE045B"
+              # JR East lines
+              JR山手線: "#80C341"
+              JR中央線快速: "#F15A22"
+              JR中央・総武線各駅停車: "#FFD400"
+              JR京浜東北線: "#00B2E5"
+              JR埼京線: "#2E8B57"
+              JR常磐線快速: "#00B264"
+              # Major private lines
+              京王線: "#DD0066"
+              京王井の頭線: "#004C9E"
+              小田急小田原線: "#0085CE"
+              西武池袋線: "#F6931E"
+              西武新宿線: "#00A0DE"
+              東武東上線: "#004C9E"
+              京成本線: "#005AAA"
+              京急本線: "#CC0033"
+              東急田園都市線: "#009966"
+              東急大井町線: "#F08400"
+              東急目黒線: "#0099CC"
+              みなとみらい線: "#09327E"
     - id: asia-japan-kansai
       label: Kansai
       regionPath: [Asia, Japan, Kansai]
@@ -192,10 +228,10 @@ regions:
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
-          useRailwayInfrastructure: true
+          wayGeometry: true
+          simplifyMeters: 11
           railwayAttachMeters: 120
-          routeColors: {}
-          wayGeometry: false
+          routeColors: *japan_route_colors
     - id: asia-japan-chubu
       label: Chubu
       regionPath: [Asia, Japan, Chubu]
@@ -210,10 +246,10 @@ regions:
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
-          useRailwayInfrastructure: true
+          wayGeometry: true
+          simplifyMeters: 11
           railwayAttachMeters: 120
-          routeColors: {}
-          wayGeometry: false
+          routeColors: *japan_route_colors
     - id: asia-japan-tohoku
       label: Tohoku
       regionPath: [Asia, Japan, Tohoku]
@@ -228,10 +264,10 @@ regions:
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
-          useRailwayInfrastructure: true
+          wayGeometry: true
+          simplifyMeters: 11
           railwayAttachMeters: 120
-          routeColors: {}
-          wayGeometry: false
+          routeColors: *japan_route_colors
     - id: asia-japan-chugoku
       label: Chugoku
       regionPath: [Asia, Japan, Chugoku]
@@ -246,10 +282,10 @@ regions:
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
-          useRailwayInfrastructure: true
+          wayGeometry: true
+          simplifyMeters: 11
           railwayAttachMeters: 120
-          routeColors: {}
-          wayGeometry: false
+          routeColors: *japan_route_colors
     - id: asia-japan-kyushu
       label: Kyushu
       regionPath: [Asia, Japan, Kyushu]
@@ -264,10 +300,10 @@ regions:
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
-          useRailwayInfrastructure: true
+          wayGeometry: true
+          simplifyMeters: 11
           railwayAttachMeters: 120
-          routeColors: {}
-          wayGeometry: false
+          routeColors: *japan_route_colors
     - id: asia-japan-shikoku
       label: Shikoku
       regionPath: [Asia, Japan, Shikoku]
@@ -282,10 +318,10 @@ regions:
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
-          useRailwayInfrastructure: true
+          wayGeometry: true
+          simplifyMeters: 11
           railwayAttachMeters: 120
-          routeColors: {}
-          wayGeometry: false
+          routeColors: *japan_route_colors
     - id: asia-japan-hokkaido
       label: Hokkaido
       regionPath: [Asia, Japan, Hokkaido]
@@ -300,10 +336,10 @@ regions:
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
-          useRailwayInfrastructure: true
+          wayGeometry: true
+          simplifyMeters: 11
           railwayAttachMeters: 120
-          routeColors: {}
-          wayGeometry: false
+          routeColors: *japan_route_colors
     - id: asia-china-beijing
       label: Beijing
       regionPath: [Asia, China, Beijing]

@@ -28,11 +28,6 @@ export { BOUNDARY_CACHE_TTL_MS } from "@/state/queryClient";
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
 const CACHE_PREFIX = "play-area-boundary:";
 
-// Kept as an empty placeholder for future bundled boundaries.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const BUNDLED_BOUNDARIES: Partial<Record<number, GeoJsonFeatureCollection>> =
-    {};
-
 export type LoadedPlayArea = {
     cacheSource: PlayAreaCacheSource;
     playArea: PlayArea;

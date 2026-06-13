@@ -19,8 +19,11 @@ import { usePlayArea } from "@/state/playAreaStore";
 import { colors } from "@/theme/colors";
 
 import type { HidingZonePreset } from "./hidingZoneTypes";
-import { getPresetPlayAreaStats, clipStationsToPlayArea } from "./hidingZone";
-import { getTransitManifest } from "./hidingZoneData";
+import {
+    getPresetPlayAreaStats,
+    clipStationsToPlayArea,
+    partitionPresetsByScope,
+} from "./hidingZone";
 
 export function HidingZoneScreen() {
     const { radiusDisplayValue, radiusMeters, radiusUnit, selectedPresetIds } =
@@ -35,23 +38,6 @@ export function HidingZoneScreen() {
     const [showBrowseAll, setShowBrowseAll] = useState(false);
     const [browseSearch, setBrowseSearch] = useState("");
     const [showRadiusModal, setShowRadiusModal] = useState(false);
-
-    // Classify presets by kind from the manifest.
-    const manifest = getTransitManifest();
-    const presetKind = useMemo(() => {
-        const map = new Map<string, "coverage" | "operator">();
-        for (const bundle of manifest.bundles) {
-            for (const p of bundle.presets) {
-                map.set(
-                    p.id,
-                    (p as { kind?: string }).kind === "coverage"
-                        ? "coverage"
-                        : "operator",
-                );
-            }
-        }
-        return map;
-    }, [manifest]);
 
     // Per-preset station counts within the play area.
     const playAreaStats = useMemo(
@@ -71,45 +57,11 @@ export function HidingZoneScreen() {
         [allSelectedStations, playArea?.bbox, radiusMeters],
     );
 
-    // Partition presets into scoped groups.
-    const { operatorPresets, coveragePresets, otherPresets } = useMemo(() => {
-        const operators: HidingZonePreset[] = [];
-        const coverages: HidingZonePreset[] = [];
-        const others: HidingZonePreset[] = [];
-
-        for (const preset of presets) {
-            const kind = presetKind.get(preset.id) ?? "operator";
-            if (!playArea || !playAreaStats) {
-                // No play area: everything is "other" (browse-all).
-                others.push(preset);
-            } else {
-                const stats = playAreaStats.find(
-                    (s) => s.presetId === preset.id,
-                );
-                if (!stats || stats.stationsInArea === 0) {
-                    others.push(preset);
-                } else if (kind === "coverage") {
-                    coverages.push(preset);
-                } else {
-                    operators.push(preset);
-                }
-            }
-        }
-
-        // Sort operators by in-play-area station count descending.
-        if (playAreaStats) {
-            const countOf = (p: HidingZonePreset) =>
-                playAreaStats.find((s) => s.presetId === p.id)
-                    ?.stationsInArea ?? 0;
-            operators.sort((a, b) => countOf(b) - countOf(a));
-        }
-
-        return {
-            operatorPresets: operators,
-            coveragePresets: coverages,
-            otherPresets: others,
-        };
-    }, [presets, presetKind, playArea, playAreaStats]);
+    // Partition presets into scoped groups (operator / coverage / other).
+    const { operatorPresets, coveragePresets, otherPresets } = useMemo(
+        () => partitionPresetsByScope(presets, playAreaStats),
+        [presets, playAreaStats],
+    );
 
     // Unselected operator count (for "Add all operators" button).
     const unselectedOperators = operatorPresets.filter(

@@ -50,7 +50,7 @@ describe("matchingCategories", () => {
         // before they return the configured label.
         setDefaultAdminConfig(DEFAULT_ADMIN_DIVISION_PACK, "native");
         expect(getCategoryTitle("admin-2nd")).toBe(
-            "2nd Admin Division (OSM level 7)",
+            "2nd Admin Division (OSM level 6)",
         );
     });
 

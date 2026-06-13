@@ -239,6 +239,36 @@ export function validateConfig(cfg, configPath = "regions.yaml") {
                         );
                     }
                 }
+                if (
+                    region.transitOverrides.throughServiceOverlap !== undefined
+                ) {
+                    if (
+                        typeof region.transitOverrides.throughServiceOverlap !==
+                            "number" ||
+                        region.transitOverrides.throughServiceOverlap < 0 ||
+                        region.transitOverrides.throughServiceOverlap > 1
+                    ) {
+                        errors.push(
+                            `${prefix}: "transitOverrides.throughServiceOverlap" must be a number between 0 and 1`,
+                        );
+                    }
+                }
+                if (
+                    region.transitOverrides.minThroughServiceWays !== undefined
+                ) {
+                    if (
+                        typeof region.transitOverrides.minThroughServiceWays !==
+                            "number" ||
+                        region.transitOverrides.minThroughServiceWays < 1 ||
+                        !Number.isInteger(
+                            region.transitOverrides.minThroughServiceWays,
+                        )
+                    ) {
+                        errors.push(
+                            `${prefix}: "transitOverrides.minThroughServiceWays" must be a positive integer`,
+                        );
+                    }
+                }
             }
         }
     }

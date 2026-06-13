@@ -8,6 +8,7 @@ import {
     getSelectedRoutes,
     getSelectedStations,
     getSuggestedPresetIds,
+    partitionPresetsByScope,
 } from "../hidingZone";
 import type { HidingZonePreset } from "../hidingZoneTypes";
 
@@ -597,5 +598,84 @@ describe("clipStationsToPlayArea", () => {
     it("returns empty array for empty stations", () => {
         const result = clipStationsToPlayArea([], bbox, 600);
         expect(result).toEqual([]);
+    });
+});
+
+describe("partitionPresetsByScope", () => {
+    const playAreaBbox: Bbox = [139.6, 35.6, 139.8, 35.8];
+
+    function makePreset(
+        id: string,
+        kind: HidingZonePreset["kind"],
+        stationCoords: [number, number][],
+    ): HidingZonePreset {
+        return {
+            bbox: playAreaBbox,
+            defaultColor: "#009BBF",
+            id,
+            kind,
+            label: id,
+            operator: id,
+            routes: [],
+            source: { kind: "osm-pack", namespace: "test" },
+            stations: stationCoords.map(([lon, lat], i) => ({
+                id: `${id}:stop:${i}`,
+                lat,
+                lon,
+                mergeKey: `${id}-merge-${i}`,
+                name: `${id} Station ${i}`,
+                routeIds: [],
+                sourceId: `${id}-${i}`,
+            })),
+        };
+    }
+
+    // A coverage preset and operators, all with stations inside the play area.
+    const operator = makePreset("operator", "operator", [
+        [139.7, 35.7],
+        [139.71, 35.71],
+    ]);
+    const operatorFewer = makePreset("operator-fewer", "operator", [
+        [139.72, 35.72],
+    ]);
+    const coverage = makePreset("coverage", "coverage", [[139.73, 35.73]]);
+    const undefinedKind = makePreset("legacy", undefined, [[139.74, 35.74]]);
+    // No stations inside the play-area bbox → "other".
+    const outside = makePreset("outside", "operator", [[140.5, 36.5]]);
+
+    const presets = [operator, operatorFewer, coverage, undefinedKind, outside];
+
+    it("routes coverage-kind presets to coveragePresets, not operators (regression)", () => {
+        const stats = getPresetPlayAreaStats(presets, playAreaBbox);
+        const { operatorPresets, coveragePresets, otherPresets } =
+            partitionPresetsByScope(presets, stats);
+
+        // The coverage preset must land in its own group.
+        expect(coveragePresets.map((p) => p.id)).toEqual(["coverage"]);
+        // Operators (incl. the undefined-kind preset defaulting to operator)
+        // must NOT contain the coverage preset.
+        expect(operatorPresets.map((p) => p.id)).not.toContain("coverage");
+        expect(operatorPresets.map((p) => p.id).sort()).toEqual([
+            "legacy",
+            "operator",
+            "operator-fewer",
+        ]);
+        // Zero-in-area presets fall through to "other".
+        expect(otherPresets.map((p) => p.id)).toEqual(["outside"]);
+    });
+
+    it("sorts operators by in-area station count descending", () => {
+        const stats = getPresetPlayAreaStats(presets, playAreaBbox);
+        const { operatorPresets } = partitionPresetsByScope(presets, stats);
+        // operator (2 stations) before operator-fewer / legacy (1 each).
+        expect(operatorPresets[0].id).toBe("operator");
+    });
+
+    it("puts everything in otherPresets when there is no play area", () => {
+        const { operatorPresets, coveragePresets, otherPresets } =
+            partitionPresetsByScope(presets, null);
+        expect(operatorPresets).toEqual([]);
+        expect(coveragePresets).toEqual([]);
+        expect(otherPresets).toHaveLength(presets.length);
     });
 });
