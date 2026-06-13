@@ -54,6 +54,12 @@ Reorder so the sheet **reads top-to-bottom as the setup flow**:
 Outside `setupMode`, this is simply a better-grouped Settings screen — no
 separate mode UI required beyond the per-row status indicators.
 
+This matches the `SettingsSheet` mock (`design-reference/screens.mock.jsx`):
+the "Set up your game" group with **`Badge tone="success"` ✓** on completed rows
+(Play Area, Hiding Zones), then Mode / Display / Maintenance / Attribution. Note
+the mock shows Share as a header button; per the design review we instead use
+the **culminating row** described above.
+
 ## The nudge (style & placement)
 
 - **Style:** an **accent-colored dot + a progress count** (e.g. `Setup · 1 of

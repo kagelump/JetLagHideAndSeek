@@ -17,6 +17,11 @@ power-user capability. Resting at 42%.
 - Resolution order (per `AGENTS.md`): bundled Tokyo/Osaka → caches → installed
   packs → Overpass.
 
+Layout follows the `PlayAreaSheet` mock (`design-reference/screens.mock.jsx`):
+search field → **"Bundled areas"** section (Tokyo "In use" badge, Osaka) →
+**Advanced** disclosure hiding the OSM relation-ID. The "rule-pack preset
+picker" below is the stub form of "Bundled areas."
+
 ## Scope (top-to-bottom, 42%-resting)
 
 1. **Sticky summary header:** current area ("Tokyo 23 Wards").

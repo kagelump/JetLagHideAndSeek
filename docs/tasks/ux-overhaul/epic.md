@@ -68,6 +68,23 @@ mostly guided UX glue around those, plus a first-run fork and sheet polish.
 | Hiding-zone granularity | Add **operator → line drill-down** with per-operator route selection |
 | Setup completion | **Play Area confirmed + ≥1 hiding-zone preset** (default Tokyo still needs an explicit confirm) |
 | Question-sheet compaction | **Later phase in this epic** (after setup-critical sheets) |
+| Visual accent | **Teal `#1f6f78`** — primary buttons **and selected segments fill teal** (one accent); navy `#111827` only for the Seeker/Hider mode chip |
+| Main HUD actions | "+ Add Question" spans **full width** — no Re-share button beside it |
+| Radius control | Removed from the Hiding Zones body; lives behind a "…" header menu (number input + m/km/mi unit toggle) |
+| Thermometer detail | Mock is wrong — **adapt the current app's layout** into the compact pattern |
+
+## Visual design system
+
+The visual spec comes from the Claude Design handoff bundle, persisted under
+`design-reference/` (the design URL is ephemeral). Read
+`design-reference/README.md` for the per-element adopt/change/ignore list and
+`design-reference/design-system-guide.md` for the foundations (voice, color,
+type, spacing, **bottom-sheet anatomy + 42% rule**, and the question-sheet
+table). Component vocabulary to mirror: `SheetHeader`, `AnswerSelector`
+(3-segment, type-aware polarity), `ChipGroup` (scrolling distance presets),
+`QuestionMeta` (cost · time), `ListRow`, `BottomSheet` (sticky footer slot),
+`MapControlButton`, `Fab`. `src/theme/colors.ts` must gain a teal selected-fill
+treatment (reconcile in Phase 4).
 
 ## Phases & task list
 

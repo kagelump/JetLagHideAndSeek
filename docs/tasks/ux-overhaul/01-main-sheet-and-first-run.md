@@ -25,29 +25,38 @@ game**.
 ## Scope
 
 ### Main-sheet identity + HUD (persistent, all-game)
-Render a real header (app name + one-line tagline) and a **game-summary card**:
-`{playArea.label} · {N} questions · {N} stations`, tappable into the relevant
-screens. Treat the main sheet as a lightweight **game HUD**:
+Follows the `MainSheet` HUD mock (`design-reference/screens.mock.jsx`). Treat the
+main sheet as a lightweight **game HUD**:
 
-- **Live game summary** (above) — the always-visible anchor.
-- **Quick "Add Question"** action — the most frequent in-play action; don't make
-  users drill Questions → Add every time.
-- **Re-share / Show QR** quick action — for late joiners / re-syncing.
-- **Seeker/Hider mode chip** — visible since it changes link behavior.
-- *(Marquee follow-up, perf-gated)* **Eligibility progress** —
-  e.g. "~37 of 412 stations still possible" / "~12% of zone left," updating as
-  answers shade the map. See epic risks before making this always-on.
+- **Header:** Eyebrow "Current game" + the play-area label as the title, with a
+  **Seeker/Hider mode chip** top-right (the one navy-filled control; toggles
+  mode).
+- **Hero stat `Card`:** three big 900-weight, tabular-number stats —
+  **Questions · Stations left · Operators**. Placeholder content for now (final
+  metric set TBD; the "stations left" figure is the perf-gated eligibility
+  number, see below).
+- **Primary action:** **"+ Add Question" spans full width** (teal). Per the
+  design review there is **no Re-share button beside it** — the slot is gone, not
+  repurposed.
+- **Nav rows below:** `ListRow` "Questions" (`N asked · tap to review`) and
+  "Settings" (`Play area, hiding zones, sharing`).
+- *(Marquee follow-up, perf-gated)* the **"Stations left"** figure is live
+  eligibility ("~37 of 412 still possible"), updating as answers shade the map.
+  See epic risks before making it always-on; until then show a static/derived
+  count.
 
 ### First-run state (welcome + fork)
 When there is **no configured game yet** and onboarding hasn't completed, the
-main sheet shows its first-run face instead of the plain HUD:
+main sheet shows its first-run face instead of the plain HUD (per the `MainSheet`
+first-run mock):
 
-- Warm header + one-line pitch: *"You're the seeker. Ask the hider questions,
-  record their answers, and watch the map narrow down where they can be."*
-- Two primary actions: **Set up a game** (→ Phase 2 setup checklist) and
-  **Join a game** (→ Phase 3 paste-link import).
-- Implicit third path: just use the app ("Just explore") — no button needed;
-  the gentle setup nudge persists until setup completes (Phase 2).
+- Eyebrow "Hide & Seek Mapper" + title **"Set up your game"** + one-line pitch:
+  *"You're the seeker. Ask the hider questions, record their answers, and watch
+  the map narrow down where they can be."*
+- Two stacked full-width actions: primary **Set up a game** (→ Phase 2 setup
+  checklist) and subtle **Join a game** (→ Phase 3 paste-link import).
+- Centered subtext **"…or just explore the map."** — no button; the gentle
+  setup nudge persists until setup completes (Phase 2).
 - Suppressed on imported/returning games (already set up).
 
 ### Empty-questions state

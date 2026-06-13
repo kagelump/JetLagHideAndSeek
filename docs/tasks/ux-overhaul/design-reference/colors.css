@@ -1,0 +1,65 @@
+/* ─────────────────────────────────────────────────────────────
+   Hide & Seek Mapper — Color tokens
+   Source of truth: src/theme/colors.ts (the Expo app) plus the
+   marketing site palette (site/index.html) and app icon.
+   The app reads as a "warm paper map" surface with a teal accent
+   and near-black filled controls.
+   ───────────────────────────────────────────────────────────── */
+:root {
+    /* ── Base palette (raw, named after the app's colors.ts) ── */
+    --paper:            #f7f4ee; /* app background — warm off-white */
+    --paper-tint:       #ece7dc; /* subtle button / inset on paper */
+    --card:             #fffefa; /* card & sheet surface (near-white, warm) */
+    --white:            #ffffff;
+    --ink:              #17202a; /* primary text */
+    --ink-button:       #111827; /* filled control fill (near-black navy) */
+    --muted:            #667085; /* secondary text, meta, chevrons */
+    --line:             #d9d4ca; /* hairline borders on paper */
+
+    --teal:             #1f6f78; /* primary accent — links, eyebrows, active */
+    --teal-tint-bg:     #e6f2ef; /* active-row background wash */
+    --teal-soft:        #176b4d; /* marketing site green-teal variant */
+
+    --brand-blue:       #2d7dd2; /* app icon blue */
+
+    /* ── Map surface colors (from the live MapLibre style) ── */
+    --map-blue:         #9ec5df; /* water */
+    --map-green:        #9bc4a3; /* parks / greenspace */
+    --map-road:         #f1d083; /* major roads */
+    --map-land:         #e9e4da; /* land fill under tiles */
+    --measuring-line:   #ff0000; /* radar / measuring ray */
+
+    /* ── Semantic / status ── */
+    --danger:           #b42318; /* destructive text */
+    --danger-border:    #f4b4ae; /* destructive row border */
+    --danger-bg:        #fdecea;
+    --success:          #176b4d;
+    --pin:              #7a3b34; /* question pin (warm brown-red) */
+
+    /* ── Semantic aliases (use these in component CSS) ── */
+    --bg-app:           var(--paper);
+    --surface-card:     var(--card);
+    --surface-inset:    var(--paper-tint);
+    --surface-sheet:    var(--card);
+
+    --text-primary:     var(--ink);
+    --text-secondary:   var(--muted);
+    --text-on-fill:     var(--white);
+    --text-link:        var(--teal);
+    --text-accent:      var(--teal);
+    --text-danger:      var(--danger);
+
+    --border-default:   var(--line);
+    --border-strong:    rgba(23, 32, 42, 0.14); /* on floating controls over map */
+    --border-active:    var(--teal);
+
+    /* Teal is the action accent: primary buttons + selected segments fill teal
+       (Apple-Maps model — one accent everywhere). Navy is kept as a neutral
+       high-emphasis option via --fill-control-strong. */
+    --fill-control:     var(--teal);         /* segmented selected, primary button */
+    --fill-control-on:  var(--white);
+    --fill-control-strong: var(--ink-button); /* rare neutral-strong (mode chip) */
+    --accent:           var(--teal);
+    --accent-wash:      var(--teal-tint-bg);
+    --accent-press:     #195a62;             /* pressed teal (darker) */
+}

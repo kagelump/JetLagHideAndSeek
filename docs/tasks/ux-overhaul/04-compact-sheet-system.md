@@ -48,6 +48,19 @@ is reserved for deep browse** (global search, browse-all-regions).
 - A small helper for **transient snap expansion** (pop to 88% on
   search/keyboard, return to 42%) coordinated with `AppBottomSheet`.
 - Document the "42% resting / 88% deep-browse" rule in `implementation_notes.md`.
+- **Teal selected-fill reconciliation:** update `src/theme/colors.ts` and the
+  segmented/answer controls so the **selected segment fills teal** (today's
+  selected state uses the dark navy fill). Navy is retained only for the
+  Seeker/Hider mode chip. Mirrors `design-reference/colors.css`
+  (`--fill-control: var(--teal)`).
+
+## Design system mapping
+
+The mock composes a component vocabulary that maps onto our primitives — build
+or align these (`design-reference/`): `SheetHeader` (= `ChildSheetShell` header,
++ "…" menu accessory), `BottomSheet` sticky-footer slot, `ListRow`
+(= `SheetListRow`, condensed), `ChipGroup`, `AnswerSelector`, `QuestionMeta`,
+`SegmentedControl`, `Badge`, `Chip`, `Fab` (••• mark), `MapControlButton`.
 
 ## Constraints (from `AGENTS.md`)
 

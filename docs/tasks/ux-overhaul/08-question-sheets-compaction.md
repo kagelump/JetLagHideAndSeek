@@ -17,6 +17,22 @@ everything secondary into drill-ins. The map behind the sheet shows the
 geometry (radar circle, candidate pins, measuring lines), so the sheet stays a
 thin control surface.
 
+## Shared detail-sheet pattern (from `design-reference/questions.mock.jsx`)
+
+- **Header:** `SheetHeader` (‹ Back · centered title · trailing **lock toggle**
+  🔒/🔓), then an Eyebrow + a title row pairing the question title (e.g.
+  "{distance} radar") with **`QuestionMeta`** on the right — the muted
+  **"Draw 2, pick 1 · 5 min"** cost·time line the user called out. `QuestionMeta`
+  also appears on Add-Question rows.
+- **Answer:** `AnswerSelector` (3-segment, type-aware polarity:
+  Hit/Miss · Hotter/Colder · Closer/Farther; **selected segment fills teal**).
+  Tentacles is POI — a radio candidate list, no `AnswerSelector`.
+- **Distance presets:** horizontal **`ChipGroup`**, not a wide segmented
+  control, so the answer stays on screen at 42%.
+- **Questions list:** compact `ListRow`s with the answer as a color-coded
+  **`Badge`** (Miss=danger, Hotter=success, POI selection=neutral) + a
+  "swipe to delete" hint.
+
 ## Per-type targets
 
 - **Radar:** distance preset **chips** (horizontal scroll) + Hit/Miss answer
@@ -27,8 +43,9 @@ thin control surface.
   stack" — a drill-in removes the workaround).
 - **Measuring:** category picker as chips/drill-in; distance + unit + answer
   compact; "Computing…" inline.
-- **Thermometer:** Start/End pin toggle + distance + answer compact; keep the
-  "pins too close" guard.
+- **Thermometer:** **ignore the design mock — it is wrong.** Adapt the *current
+  app's* thermometer detail (Start/End pin handling + Hotter/Colder, the "pins
+  too close" guard) into the compact 42% pattern. Do not copy the mock's layout.
 - **Tentacles:** category grid → drill-in; candidate list compact with
   selection; keep the Reset affordance but de-emphasize its destructive-looking
   red (it only clears the answer).

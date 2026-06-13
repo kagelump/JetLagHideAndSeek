@@ -30,23 +30,33 @@ the map behind the sheet.
 
 ## Scope
 
+Layout follows the `HidingZoneSheet` mock (`design-reference/screens.mock.jsx`),
+**with radius removed from the body** per the design review.
+
 ### Layout (top-to-bottom, 42%-resting)
-1. **Sticky summary header** + a **one-line explainer**: "Pick which transit
-   stations the hider can be near."
-2. **Compact radius control** (segmented unit + value) — sensible default, not
-   the first thing. Canonical value stays in meters (`HidingZoneProvider`).
+1. **`SheetHeader`** with a **"…" overflow menu** accessory + a one-line
+   explainer: "Pick which transit stations the hider can be near."
+2. **Radius lives in the "…" menu**, not the body — a **number input + m/km/mi
+   unit toggle** (canonical value stays in meters via `HidingZoneProvider`). It
+   is a secondary control, so it should not occupy body space at 42%.
 3. **Suggested operators (hero):** operators intersecting the play-area bbox as
-   **condensed toggle rows** (`name · station count · ✓`), with a clearly
-   *suggested* default (suggested, **not** auto-selected — preset selection stays
-   additive and user-driven). Each row has a **chevron to drill into lines**.
-4. **Browse all regions:** make it discoverable; open it as a **drill-in**
-   sub-screen (its search may use 88%).
+   **condensed rows** matching the mock — leading **color dot** + name +
+   `"N lines · N stations"` meta + a trailing **Add / Added ✓ chip** + active
+   wash when on. Suggested default is *suggested*, **not** auto-selected (preset
+   selection stays additive and user-driven). Each row also carries a
+   **drill-in chevron** (see below).
+4. **Browse all regions:** a second section (as mocked) / drill-in; its search
+   may use 88%.
 5. **Sticky footer:** Continue (setup) / done.
 
 ### Operator → line drill-down
-- Tapping a row **body** toggles the whole operator (= all its lines).
-- Tapping the **chevron pushes a line sub-screen** (reuse MainDrawer slide
-  transition + edge-swipe-back):
+- The trailing **Add / Added ✓ chip toggles the whole operator** (= all its
+  lines), as in the mock.
+- A **drill-in chevron pushes a line sub-screen** (reuse MainDrawer slide
+  transition + edge-swipe-back). The chip and chevron are distinct hit targets;
+  if both trailing affordances feel cramped at 42%, the chevron may move to a
+  tap on the row body — decide during implementation, but keep "toggle all" and
+  "pick lines" as separate gestures.
   - **"All lines"** toggle at top.
   - Compact colored line rows: `color swatch · line name · ✓`.
   - Selecting specific lines flips that operator from **All** to **Custom · N
