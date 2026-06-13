@@ -1125,6 +1125,31 @@
                 return labelEl;
             }
 
+            function addPackPoiHover(layerId) {
+                map.on("mouseenter", layerId, function (e) {
+                    map.getCanvas().style.cursor = "pointer";
+                    var p = e.features[0].properties;
+                    var html =
+                        "<strong>" +
+                        (p.name || "(unnamed)") +
+                        "</strong><br>" +
+                        p.category;
+                    if (p.osmId)
+                        html += "<br>osm " + (p.osmType || "") + " " + p.osmId;
+                    if (p.iata) html += " &middot; IATA " + p.iata;
+                    POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
+                });
+
+                map.on("mouseleave", layerId, function () {
+                    map.getCanvas().style.cursor = "";
+                    POPUP.remove();
+                });
+
+                map.on("click", layerId, function (e) {
+                    copyNodeInfo(e.features[0]);
+                });
+            }
+
             function createPoiToggle(category) {
                 var color = POI_COLORS[category] || "#9ca3af";
                 return makeToggle(
@@ -1159,6 +1184,8 @@
                                         },
                                     });
                                     PACK_STATE.loadedLayers[sourceId] = true;
+                                    // Hover + click handlers for pack POIs.
+                                    addPackPoiHover(layerId);
                                 })
                                 .catch(function (err) {
                                     console.error(

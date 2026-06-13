@@ -927,6 +927,32 @@
             }
 
             addStationHover("transit-stations-wedge");
+
+            function addDropPoiHover(layerId) {
+                map.on("mouseenter", layerId, function (e) {
+                    map.getCanvas().style.cursor = "pointer";
+                    var p = e.features[0].properties;
+                    var html =
+                        "<strong>" +
+                        (p.name || "(unnamed)") +
+                        "</strong><br>" +
+                        p.category;
+                    if (p.osmId)
+                        html +=
+                            "<br>osm " + (p.osmType || "") + " " + p.osmId;
+                    if (p.iata) html += " &middot; IATA " + p.iata;
+                    POPUP.setLngLat(e.lngLat).setHTML(html).addTo(map);
+                });
+
+                map.on("mouseleave", layerId, function () {
+                    map.getCanvas().style.cursor = "";
+                    POPUP.remove();
+                });
+
+                map.on("click", layerId, function (e) {
+                    copyNodeInfo(e.features[0]);
+                });
+            }
             addStationHover("transit-stations-dot");
 
             function truncateList(str, max) {
@@ -1280,6 +1306,7 @@
                                     },
                                 });
                                 PACK_LOADED_LAYERS[sourceId] = true;
+                                addDropPoiHover(layerId);
                             } else if (!this.checked) {
                                 removeSourceAndLayers(sourceId);
                                 delete PACK_LOADED_LAYERS[sourceId];
