@@ -86,6 +86,10 @@ export function calculateCenter([west, south, east, north]: Bbox): Position {
 
 const simplifiedTokyoBbox = calculateBbox(simplifiedTokyoBoundary);
 
+// Placeholder default play area — the Tokyo 23 Wards boundary is bundled only
+// so the map has something to render on first run. Game data (POI, measuring,
+// transit) for Tokyo/Japan comes from downloadable offline packs like every
+// other region. This will be replaced by an out-of-the-box wizard later.
 export const defaultPlayArea: DefaultPlayArea = {
     bbox: simplifiedTokyoBbox,
     boundary: simplifiedTokyoBoundary,
