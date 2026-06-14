@@ -1,5 +1,13 @@
 import Foundation
+// The GEOS C API is reached differently depending on the build:
+//   - Standalone SPM XCTest package: the `CGEOS` target's module map declares
+//     `module GEOS`, so we import it explicitly.
+//   - CocoaPods / Expo app build: there is no `GEOS` module (the podspec avoids
+//     a custom module map); GEOS symbols are visible via the pod's auto-generated
+//     umbrella header, which includes `geos_bridge.h`. No import is needed there.
+#if canImport(GEOS)
 import GEOS
+#endif
 
 /// Stateless namespace for GEOS-backed geometry operations.
 ///
