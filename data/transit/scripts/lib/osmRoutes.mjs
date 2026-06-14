@@ -344,6 +344,7 @@ export function processOsmRoutes(
     const operatorNames = localeConfig.operatorNames || {};
     const normalizeOp = buildOperatorNormalizer(operatorNames);
     const directionTokens = localeConfig.directionTokens;
+    const stripPrefixes = localeConfig.routeNameStripPrefix;
 
     const collapsed = [];
     /** @type {Map<string, object[]>} */
@@ -355,7 +356,7 @@ export function processOsmRoutes(
             continue;
         }
         const op = normalizeOp(line.operator) || line.operator || "_none";
-        const key = `${op}|${lineNameKey(line.name, directionTokens)}`;
+        const key = `${op}|${lineNameKey(line.name, directionTokens, stripPrefixes)}`;
         if (!masterlessGroups.has(key)) masterlessGroups.set(key, []);
         masterlessGroups.get(key).push(line);
     }
@@ -389,7 +390,7 @@ export function processOsmRoutes(
         collapsed.push({
             ...representative,
             name:
-                lineDisplayName(representative.name, directionTokens) ||
+                lineDisplayName(representative.name, directionTokens, stripPrefixes) ||
                 representative.name,
             memberStationIds: [...memberSet],
             wayIds: [...waySet],
@@ -413,6 +414,7 @@ export function processOsmRoutes(
         overlap: localeConfig.throughServiceOverlap ?? 0.9,
         minWays: localeConfig.minThroughServiceWays ?? 3,
         directionTokens,
+        routeNameStripPrefix: stripPrefixes,
     };
     const classifyResult = classifyThroughServices(
         keptLines,
@@ -478,20 +480,21 @@ export function processOsmRoutes(
  *
  * @param {object[]} lines - kept lines with wayIds and _hasPassengerTag
  * @param {(raw: string|null|undefined) => string|null} normalizeOp - operator normalizer
- * @param {{ overlap?: number, minWays?: number, directionTokens?: string[] }} opts
+ * @param {{ overlap?: number, minWays?: number, directionTokens?: string[], routeNameStripPrefix?: string[] }} opts
  * @returns {{ throughServiceIds: Set<string>, strandedFallbackIds: Set<string> }}
  */
 export function classifyThroughServices(lines, normalizeOp, opts = {}) {
     const OVERLAP_THRESHOLD = opts.overlap ?? 0.9;
     const MIN_WAYS = opts.minWays ?? 3;
     const directionTokens = opts.directionTokens;
+    const stripPrefixes = opts.routeNameStripPrefix;
 
     // Build canonical key for each line (same key as collapse).
     /** @type {Map<string, string>} line id → canonical key */
     const lineKey = new Map();
     for (const line of lines) {
         const op = normalizeOp(line.operator) || line.operator || "_none";
-        const key = `${op}|${lineNameKey(line.name, directionTokens)}`;
+        const key = `${op}|${lineNameKey(line.name, directionTokens, stripPrefixes)}`;
         lineKey.set(line.id, key);
     }
 
@@ -1038,6 +1041,21 @@ const DEFAULT_DIRECTION_TOKENS = [
 ];
 
 /**
+ * Prefixes that OSM mappers add to route_master names to disambiguate the
+ * route type (e.g. "Train Toyoko Line" vs "列車 東急東横線").  Stripped
+ * from display names so the label reflects only the line name.
+ *
+ * Overridable per region via transitOverrides.routeNameStripPrefix.
+ * The default set covers the two conventions observed in global OSM data:
+ * English "Train" (used worldwide) and Japanese "列車".
+ */
+const DEFAULT_ROUTE_NAME_STRIP_PREFIXES = [
+    "列車 ", // fullwidth space (U+3000) — common in Japanese OSM
+    "列車 ", // regular space (U+0020)
+    "Train ",
+];
+
+/**
  * Returns true if the string contains CJK characters.
  *
  * @param {string} s
@@ -1062,9 +1080,21 @@ function hasCjk(s) {
  * @param {string[]} [tokens] - direction tokens to strip
  * @returns {string}
  */
-export function lineNameKey(name, tokens = DEFAULT_DIRECTION_TOKENS) {
+export function lineNameKey(
+    name,
+    tokens = DEFAULT_DIRECTION_TOKENS,
+    stripPrefixes = DEFAULT_ROUTE_NAME_STRIP_PREFIXES,
+) {
     if (!name || typeof name !== "string") return "";
     let key = name.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+    // Strip route_master type prefixes ("列車 ", "Train ", etc.)
+    for (const prefix of stripPrefixes) {
+        const p = prefix.toLowerCase();
+        if (key.startsWith(p)) {
+            key = key.slice(p.length).trim();
+            break;
+        }
+    }
     key = key.replace(/[（(][^）)]+[）)]/gu, " ").trim();
     // Strip trailing direction arrows. When an arrow is preceded by whitespace,
     // remove that whole token too (station names like "南港→左營"); otherwise
@@ -1123,9 +1153,20 @@ export function lineNameKey(name, tokens = DEFAULT_DIRECTION_TOKENS) {
  * @param {string[]} [tokens] - direction tokens to strip
  * @returns {string}
  */
-export function lineDisplayName(name, tokens = DEFAULT_DIRECTION_TOKENS) {
+export function lineDisplayName(
+    name,
+    tokens = DEFAULT_DIRECTION_TOKENS,
+    stripPrefixes = DEFAULT_ROUTE_NAME_STRIP_PREFIXES,
+) {
     if (!name || typeof name !== "string") return "";
     let key = name.replace(/\s+/g, " ").trim();
+    // Strip route_master type prefixes ("列車 ", "Train ", etc.)
+    for (const prefix of stripPrefixes) {
+        if (key.startsWith(prefix)) {
+            key = key.slice(prefix.length).trim();
+            break;
+        }
+    }
     key = key.replace(/[（(][^）)]+[）)]/gu, " ").trim();
 
     const ARROW_RE = /(?:[→⇒←⇐↔]|->)/u;

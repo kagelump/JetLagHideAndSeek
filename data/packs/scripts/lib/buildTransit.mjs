@@ -207,6 +207,8 @@ export async function buildTransitArtifact({
             routeColors: region.transitOverrides?.routeColors ?? {},
             operatorNames: region.transitOverrides?.operatorNames ?? {},
             directionTokens: region.transitOverrides?.directionTokens,
+            routeNameStripPrefix: region.transitOverrides
+                ?.routeNameStripPrefix,
             useRailwayInfrastructure:
                 region.transitOverrides?.useRailwayInfrastructure ?? false,
             railwayAttachMeters:

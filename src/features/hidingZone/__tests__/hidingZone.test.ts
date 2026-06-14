@@ -138,6 +138,16 @@ describe("hidingZone helpers", () => {
         const duplicatePreset: HidingZonePreset = {
             ...preset,
             id: "toei-subway",
+            routes: [
+                ...preset.routes,
+                {
+                    color: "#009BBF",
+                    geometry: preset.routes[0].geometry,
+                    id: "gtfs:toei:route:route-b",
+                    name: "Route B",
+                    sourceId: "route-b",
+                },
+            ],
             stations: [
                 {
                     ...preset.stations[0],
@@ -293,7 +303,7 @@ describe("hidingZone helpers", () => {
         expect(stations[0].routeColors).not.toContain(operatorB.defaultColor);
     });
 
-    it("resolves cross-preset route colors even when the owner preset is unselected", () => {
+    it("excludes route colors from unselected presets (only shows selected operator's routes)", () => {
         // Operator A owns line L with a real color. It is NOT selected.
         const operatorA: HidingZonePreset = {
             ...preset,
@@ -319,7 +329,7 @@ describe("hidingZone helpers", () => {
             stations: [],
         };
 
-        // Operator B is selected and has a station that references line L.
+        // Operator B is selected and has a station that references both lines.
         const operatorB: HidingZonePreset = {
             ...preset,
             id: "operator-b",
@@ -362,10 +372,10 @@ describe("hidingZone helpers", () => {
             [operatorA, operatorB],
         );
         expect(stations).toHaveLength(1);
-        expect(stations[0].routeColors).toEqual(
-            expect.arrayContaining(["#FF0000", "#0000FF"]),
-        );
-        expect(stations[0].routeColors).not.toContain(operatorB.defaultColor);
+        // Only line M (from the selected operator B) should contribute a ring.
+        // Line L belongs to the unselected operator A and must be excluded.
+        expect(stations[0].routeColors).toEqual(["#0000FF"]);
+        expect(stations[0].routeIds).toEqual(["cross-preset:route:line-m"]);
     });
 
     it("preserves route colors and falls back only when a route color is absent", () => {

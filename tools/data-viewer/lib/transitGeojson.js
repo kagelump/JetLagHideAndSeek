@@ -67,6 +67,18 @@
             }
         }
 
+        // Only routes from the selected presets should contribute rings.
+        // attachRoutesToPresets attaches routes across all operators so
+        // interchange hubs have full routeId lists on every station copy,
+        // but unselected operators' routes must not produce rings.
+        var selectedRouteIdSet = new Set();
+        for (var si2 = 0; si2 < presets.length; si2++) {
+            var sp = presets[si2];
+            for (var ri3 = 0; ri3 < sp.routes.length; ri3++) {
+                selectedRouteIdSet.add(sp.routes[ri3].id);
+            }
+        }
+
         var stations = new Map();
         for (var pi = 0; pi < sorted.length; pi++) {
             var preset = sorted[pi];
@@ -79,13 +91,19 @@
             var presetLabel = preset.label || preset.operator || preset.id;
             for (var si = 0; si < preset.stations.length; si++) {
                 var station = preset.stations[si];
-                var routeColors = getStationRouteColors(
-                    station.routeIds,
-                    routeColorById,
-                    preset.defaultColor,
-                );
+                var stationRouteIds = station.routeIds.filter(function (rid) {
+                    return selectedRouteIdSet.has(rid);
+                });
+                var routeColors =
+                    stationRouteIds.length > 0
+                        ? getStationRouteColors(
+                              stationRouteIds,
+                              routeColorById,
+                              preset.defaultColor,
+                          )
+                        : [preset.defaultColor || STATION_FALLBACK_COLOR];
                 // Collect route names for this station's routes
-                var stationRouteNames = station.routeIds
+                var stationRouteNames = stationRouteIds
                     .map(function (rid) {
                         return routeNameById.get(rid);
                     })
@@ -93,7 +111,7 @@
                 var existing = stations.get(station.mergeKey);
                 if (existing) {
                     existing.routeIds = [
-                        ...new Set([...existing.routeIds, ...station.routeIds]),
+                        ...new Set([...existing.routeIds, ...stationRouteIds]),
                     ].sort();
                     existing.routeColors = [
                         ...new Set([
@@ -130,7 +148,7 @@
                         name: station.name,
                         nameEn: station.nameEn || undefined,
                         routeColors: routeColors,
-                        routeIds: station.routeIds.slice().sort(),
+                        routeIds: stationRouteIds.slice().sort(),
                         routeNames: stationRouteNames.slice(),
                         operators: [presetLabel],
                         sourceStationIds: [station.id],

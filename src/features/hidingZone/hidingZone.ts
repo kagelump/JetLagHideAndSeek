@@ -92,18 +92,36 @@ export function getSelectedStations(
         }
     }
 
+    // Only routes from the selected presets should contribute rings.
+    // attachRoutesToPresets attaches routes across all operators so
+    // interchange hubs (e.g. Ebisu: Tokyo Metro + JR East) have full
+    // routeId lists on every station copy, but unselected operators'
+    // routes must not produce rings.
+    const selectedRouteIdSet = new Set<string>();
+    for (const preset of selectedPresets) {
+        for (const route of preset.routes) {
+            selectedRouteIdSet.add(route.id);
+        }
+    }
+
     const stations = new Map<string, TransitStation>();
     for (const preset of sorted) {
         for (const station of preset.stations) {
-            const routeColors = getStationRouteColors(
-                station.routeIds,
-                routeColorById,
-                preset.defaultColor,
+            const stationRouteIds = station.routeIds.filter((id) =>
+                selectedRouteIdSet.has(id),
             );
+            const routeColors =
+                stationRouteIds.length > 0
+                    ? getStationRouteColors(
+                          stationRouteIds,
+                          routeColorById,
+                          preset.defaultColor,
+                      )
+                    : [preset.defaultColor || STATION_FALLBACK_COLOR];
             const existing = stations.get(station.mergeKey);
             if (existing) {
                 existing.routeIds = [
-                    ...new Set([...existing.routeIds, ...station.routeIds]),
+                    ...new Set([...existing.routeIds, ...stationRouteIds]),
                 ].sort();
                 existing.routeColors = [
                     ...new Set([
@@ -130,7 +148,7 @@ export function getSelectedStations(
                     name: station.name,
                     nameEn: station.nameEn,
                     routeColors,
-                    routeIds: [...station.routeIds].sort(),
+                    routeIds: [...stationRouteIds].sort(),
                     sourceStationIds: [station.id],
                 });
             }
