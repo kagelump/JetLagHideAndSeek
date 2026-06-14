@@ -166,7 +166,11 @@ Committed artifacts:
 2. Add the new version's SHA-256 to the `KNOWN_HASHES` table in `fetch-geos.sh`.
 3. Run `pnpm geos:fetch && pnpm geos:build:ios && pnpm geos:build:android`.
 4. Verify symbol exports (C API visible, C++ hidden) on both platforms.
-5. Commit the new artifacts.
+5. **Run the parity gates:**
+    - `pnpm test:geos` must pass (host-side geos-wasm 3.13 parity).
+    - `xcodebuild test -scheme NativeGeometryTests-Package -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO` must pass (device-side GEOS 3.14.1 golden fixture parity). Run from `modules/native-geometry/`.
+    - The golden fixtures (`modules/native-geometry/__fixtures__/geos-golden.json`) are keyed on engine-independent invariants (area ratio / bbox tolerance / type / null). If the new version legitimately shifts a result outside tolerance, regenerate with the XCTest `testRegenerateGoldenFixtures` method and review the diff before committing.
+6. Commit the new artifacts.
 
 ### Binary budget
 
@@ -272,22 +276,35 @@ turf oracle and asserts they agree, closing the "GEOS math never compared to the
 oracle" gap without a device.
 
 ```bash
-pnpm test:geos     # NODE_OPTIONS=--experimental-vm-modules, jest.config.geos.js
+pnpm test:geos              # all geos-wasm suites (one process each)
+pnpm test:geos geosGolden   # filter by path substring
 ```
 
-- **Files:** `src/shared/geometry/__tests__/geosParity.test.ts` (the gate) and
-  `__tests__/helpers/geosWasmShim.ts` (a `bufferWKB(wkb, distance, qs)` shim over
-  the GEOS C API matching the native module's contract; pointed at the mocked
-  `native-geometry` so the real backend runs unmodified).
+- **Files:** `src/shared/geometry/__tests__/geosParity.test.ts` (the buffer
+  gate); `geosGolden.geos.test.ts` (the **golden-fixture** gate — replays every
+  buffer/overlay case in `modules/native-geometry/__fixtures__/geos-golden.json`
+  and asserts the committed invariants, the same JSON the device suites load);
+  and `__tests__/helpers/geosWasmShim.ts` (a `bufferWKB(wkb, distance, qs)` shim
+  over the GEOS C API matching the native module's contract; pointed at the
+  mocked `native-geometry` so the real backend runs unmodified). Regenerate the
+  golden file with `pnpm data:geos-golden`.
+- **One process per suite:** geos-wasm is loaded through a realm-escaping runtime
+  `import()`, so a reused Jest worker races VM-realm teardown across two geos
+  files ("Test environment has been torn down"). `pnpm test:geos`
+  (`scripts/run-geos-tests.mjs`) enumerates the suites with `--listTests` and
+  runs each in its own `jest` process — deterministic, no shared worker. CI runs
+  it as the "GEOS parity" step in `app-checks.yml`.
 - **What it validates:** the WKB codec, the AEQD projection, the backend adapter,
   and GEOS buffer math vs turf — Tokyo/Osaka line + polygon + multipoint fixtures
   × {500, 2000, 5000} m at QS=8. Current result: **area ratio 1.00000, bbox Δ
   0.00 m** across all cases (GEOS is a C++ port of the same JTS buffer algorithm
   turf uses, run in the identical projected space the backend replicates).
 - **Why a separate config/flag:** geos-wasm is ESM-only and uses `import.meta`,
-  so the suite needs `--experimental-vm-modules`. It is excluded from the default
-  `pnpm test` (see `testPathIgnorePatterns` in `jest.config.js`) and run via the
-  dedicated `test:geos` script / `jest.config.geos.js`.
+  so the suites need `--experimental-vm-modules` (set per child by the runner).
+  They are excluded from the default `pnpm test` (see `testPathIgnorePatterns` in
+  `jest.config.js`) and run via the dedicated `test:geos` script /
+  `jest.config.geos.js`. The geos config also ignores `spikes/` (throwaway
+  research suites that need hand-minted local artifacts).
 - **Version caveat:** geos-wasm bundles GEOS 3.13.x, not the vendored 3.14.1.
   Parity is gated on **tolerance** (area ratio + bbox proximity), stable across
   GEOS 3.x — not exact bytes. It does **not** exercise the native Swift/JNI

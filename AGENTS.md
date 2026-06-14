@@ -383,6 +383,40 @@ For UI, state, or config changes, also run `pnpm check` (lint + format +
 typecheck + perf-typecheck + POI-selector drift). Remember `pnpm check` does not
 run jest, so keep running `pnpm test` too.
 
+For **geometry / GEOS backend** changes (`src/shared/geometry/**`,
+`modules/native-geometry/**`), also run `pnpm test:geos` — the geos-wasm parity
+
+- golden-fixture gate (run each suite in its own process via
+  `scripts/run-geos-tests.mjs`; it is excluded from `pnpm test`). If a change
+  legitimately shifts a GEOS result, regenerate the golden file with
+  `pnpm data:geos-golden` and review the diff. CI runs this as the "GEOS parity"
+  step in `app-checks.yml`.
+
+For native GEOS changes that affect the Swift code path (`GeosCore.swift`,
+`NativeGeometryModule.swift`), also run the XCTest suite against the real
+vendored GEOS 3.14.1 on the simulator:
+
+```bash
+xcodebuild test -scheme NativeGeometryTests-Package \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+Run from `modules/native-geometry/`. No Metro, no app build, no signing — the
+standalone SPM package compiles `GeosCore.swift` directly and validates golden
+fixtures, memory stress, MakeValid recovery, and empty-result semantics. If a
+change legitimately shifts a GEOS 3.14 result, regenerate the golden fixtures:
+
+```bash
+xcodebuild test -scheme NativeGeometryTests-Package \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+  CODE_SIGNING_ALLOWED=NO \
+  -only-testing:GeosCoreTests/GeosCoreTests/testRegenerateGoldenFixtures
+```
+
+Then verify the host-side parity still passes (`pnpm test:geos`). The golden
+fixture oracle field records which GEOS version generated it.
+
 For native accessibility, bottom-sheet, MapLibre, or app-start changes, run the
 Maestro stack when a simulator/dev build is available (`pnpm test:e2e:stack`,
 `pnpm test:e2e:ios:stack`). Otherwise use the GitHub Actions workflow as the

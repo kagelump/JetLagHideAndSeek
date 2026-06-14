@@ -20,5 +20,12 @@ module.exports = {
         "**/__tests__/**/geosParity.test.{ts,tsx}",
         "**/__tests__/**/*.geos.test.{ts,tsx}",
     ],
-    testPathIgnorePatterns: ["/node_modules/", "<rootDir>/.claude/"],
+    // `spikes/` holds throwaway research suites (e.g. captureBow.geos.test.ts)
+    // that depend on hand-minted local artifacts — never part of the project run.
+    testPathIgnorePatterns: [
+        "/node_modules/",
+        "<rootDir>/.claude/",
+        "<rootDir>/spikes/",
+    ],
+    modulePathIgnorePatterns: ["<rootDir>/.claude/", "<rootDir>/spikes/"],
 };

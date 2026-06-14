@@ -1,0 +1,4 @@
+module GEOS {
+    header "geos_bridge.h"
+    export *
+}
