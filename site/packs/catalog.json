@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-14T05:29:09.227Z",
+    "generatedAt": "2026-06-14T05:29:25.409Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -82,15 +82,15 @@
             "regionPath": ["Asia", "India", "Northern Zone"],
             "bbox": [69.169911, 23.046881, 80.167546, 36.137884],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 6538613,
+            "totalBytes": 6540715,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-india-northern-zone-poi.json.gz",
-                    "bytes": 286159,
-                    "md5": "75836271bff4cfd6734dff9d7a35b4aa",
-                    "sha256": "3211df8dc452df65d58c04a004b5c0873a37f78bd156ff2c4e6caa078160c243",
+                    "bytes": 286158,
+                    "md5": "b40dbb24224170135a71742979483bdb",
+                    "sha256": "7f55c4e8609426cd3e0dabff06ae911443f69f36982584c2ed8fb630a11125c4",
                     "schemaVersion": 1
                 },
                 {
@@ -98,8 +98,8 @@
                     "category": "admin-1st-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-india-northern-zone-measuring-admin-1st-border.json.gz",
                     "bytes": 260050,
-                    "md5": "e348710594758720109fe824c7804e3c",
-                    "sha256": "2561fb644ae740b6d3828c209e2dea56e81070fa60993c4a6276bc2104c0d718",
+                    "md5": "acc216004020c8afe510d365d53b8046",
+                    "sha256": "e7daee76ee24987c218914de6dcc05bcf30602029988bdc185fc8a2244e18aa0",
                     "schemaVersion": 1
                 },
                 {
@@ -107,17 +107,17 @@
                     "category": "admin-2nd-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-india-northern-zone-measuring-admin-2nd-border.json.gz",
                     "bytes": 34612,
-                    "md5": "0050d89b5b201ccb107506bcda6503bc",
-                    "sha256": "19986d48e66c048de945a553860cb7d6186d82f2e08fd51a0e00f73ab425b913",
+                    "md5": "e92658342291a4dfcf14e041dedf3258",
+                    "sha256": "4e91c028bb8dc4506671f53c152b25125b7611046012d5b52089aca6d867eaae",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-india-northern-zone-measuring-admin-boundaries.json.gz",
-                    "bytes": 4379931,
-                    "md5": "cdf6cc49d39977be18cee85728b13428",
-                    "sha256": "9d6e584785029d71b49b42c3b5231e38806111673235dd59ffe3ee0ca5761f0d",
+                    "bytes": 4379932,
+                    "md5": "27003f899b82b5cd08a6c69e317dad26",
+                    "sha256": "e451589b0a9b200126d5669dc2bda27e190fee99081e1b5e96aa9fdf8001ab10",
                     "schemaVersion": 1
                 },
                 {
@@ -125,17 +125,17 @@
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-india-northern-zone-boundaries.json.gz",
                     "bytes": 1520483,
-                    "md5": "2bc0ed1a11c02de4567a12c4b4f51371",
-                    "sha256": "36ce270cbc35106035daa45fb44d9cc9a89e6702dc06061c2426d5a872a3ab34",
+                    "md5": "c33957e11fdb96fe302987ebfa9337ae",
+                    "sha256": "f986ab1e997f5d64fba31c89b63586dd0cda07ded668b06617a3efe5f5c27470",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-india-northern-zone-transit.json.gz",
-                    "bytes": 56880,
-                    "md5": "d8037a59ba483384c2d1486b380973af",
-                    "sha256": "7eec7a622c5088637d956b54a453d677b554b7fb6234ee87548b7fdfe762826c",
+                    "bytes": 58982,
+                    "md5": "0d8810fe1b845b30a49164089cf9396d",
+                    "sha256": "121b256b8f14b82262c2b72a2d6edc56ac137bac5ac663281a311036fa729483",
                     "schemaVersion": 1
                 },
                 {
