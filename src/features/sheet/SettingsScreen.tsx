@@ -290,17 +290,19 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     </Text>
                 </View>
             </View>
-            <ShareSetupModal
-                hidingZones={{
-                    radiusMeters,
-                    radiusUnit,
-                    selectedPresetIds,
-                }}
-                onClose={() => setIsShareVisible(false)}
-                playArea={playArea}
-                questions={questions}
-                visible={isShareVisible}
-            />
+            {isPlayAreaSet(playArea) && (
+                <ShareSetupModal
+                    hidingZones={{
+                        radiusMeters,
+                        radiusUnit,
+                        selectedPresetIds,
+                    }}
+                    onClose={() => setIsShareVisible(false)}
+                    playArea={playArea}
+                    questions={questions}
+                    visible={isShareVisible}
+                />
+            )}
         </SheetScrollView>
     );
 }
