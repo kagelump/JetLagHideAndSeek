@@ -29,6 +29,9 @@
             "android": {
                 "track": "internal",
                 "releaseStatus": "completed"
+            },
+            "ios": {
+                "appleTeamId": "442BWTA4F4"
             }
         }
     }

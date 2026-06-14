@@ -52,7 +52,7 @@ jobs:
             - name: Install EAS CLI
               run: npm install -g eas-cli
 
-            - name: Build production apps
+            - name: Build and submit production apps
               env:
                   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-              run: eas build --platform all --profile production --non-interactive
+              run: eas build --platform all --profile production --non-interactive --auto-submit
