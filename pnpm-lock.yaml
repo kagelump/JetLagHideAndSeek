@@ -88,6 +88,9 @@ importers:
             kdbush:
                 specifier: ^4.1.0
                 version: 4.1.0
+            native-geometry:
+                specifier: link:./modules/native-geometry
+                version: link:modules/native-geometry
             osmtogeojson:
                 specifier: 3.0.0-beta.5
                 version: 3.0.0-beta.5
