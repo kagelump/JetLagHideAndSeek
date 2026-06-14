@@ -44,6 +44,10 @@ easily do:
 
 This app is tuned specifically to play JetLag: Hide & Seek in the Tokyo 23 wards.
 
+## Supported Areas
+
+See [the bundle viewer](https://jetlag.hinoka.org/bundle-viewer/) to browser supported areas.
+
 ## Features
 
 - **Interactive map** — MapLibre GL map with play area boundary overlay.

@@ -177,6 +177,64 @@ regions:
           wayGeometry: true
           simplifyMeters: 11
           railwayAttachMeters: 120
+          operatorNames: &japan_operator_names
+              "JR East":
+                  - "東日本旅客鉄道"
+                  - "JR東日本"
+                  - "東日本旅客鉄道株式会社"
+                  - "JR東日本旅客鉄道"
+                  - "東日本旅客鉄道 (JR East)"
+                  - "JR East"
+              "Tokyu Railways":
+                  - "東京急行電鉄"
+                  - "東急電鉄"
+                  - "Tokyu Corporation"
+                  - "Tokyu Railways"
+              "Keikyu":
+                  - "京浜急行電鉄"
+                  - "京浜急行電鉄 (Keikyu Corporation)"
+                  - "Keikyu Corporation"
+              "Keio":
+                  - "京王電鉄"
+                  - "Keio Corporation"
+              "Seibu":
+                  - "西武鉄道"
+              "Keisei":
+                  - "京成電鉄"
+              "Odakyu":
+                  - "小田急電鉄"
+              "Tobu":
+                  - "東武鉄道"
+              "Tokyo Metro":
+                  - "東京地下鉄"
+                  - "東京メトロ"
+                  - "Tokyo Metro"
+              "Toei":
+                  - "東京都交通局"
+                  - "Toei"
+              "Yokohama Municipal Subway":
+                  - "横浜市交通局"
+              "Sotetsu":
+                  - "相模鉄道"
+              "Hankyu":
+                  - "阪急電鉄"
+              "Hanshin":
+                  - "阪神電気鉄道"
+              "Kintetsu":
+                  - "近畿日本鉄道"
+                  - "近鉄"
+              "Nankai":
+                  - "南海電気鉄道"
+              "Keihan":
+                  - "京阪電気鉄道"
+              "Meitetsu":
+                  - "名古屋鉄道"
+              "JR Central":
+                  - "東海旅客鉄道"
+                  - "JR東海"
+              "JR West":
+                  - "西日本旅客鉄道"
+                  - "JR西日本"
           routeColors: &japan_route_colors
               東急東横線: "#DA0442"
               # Tokyo Metro lines
@@ -231,6 +289,7 @@ regions:
           wayGeometry: true
           simplifyMeters: 11
           railwayAttachMeters: 120
+          operatorNames: *japan_operator_names
           routeColors: *japan_route_colors
     - id: asia-japan-chubu
       label: Chubu
@@ -249,6 +308,7 @@ regions:
           wayGeometry: true
           simplifyMeters: 11
           railwayAttachMeters: 120
+          operatorNames: *japan_operator_names
           routeColors: *japan_route_colors
     - id: asia-japan-tohoku
       label: Tohoku
@@ -267,6 +327,7 @@ regions:
           wayGeometry: true
           simplifyMeters: 11
           railwayAttachMeters: 120
+          operatorNames: *japan_operator_names
           routeColors: *japan_route_colors
     - id: asia-japan-chugoku
       label: Chugoku
@@ -285,6 +346,7 @@ regions:
           wayGeometry: true
           simplifyMeters: 11
           railwayAttachMeters: 120
+          operatorNames: *japan_operator_names
           routeColors: *japan_route_colors
     - id: asia-japan-kyushu
       label: Kyushu
@@ -303,6 +365,7 @@ regions:
           wayGeometry: true
           simplifyMeters: 11
           railwayAttachMeters: 120
+          operatorNames: *japan_operator_names
           routeColors: *japan_route_colors
     - id: asia-japan-shikoku
       label: Shikoku
@@ -321,6 +384,7 @@ regions:
           wayGeometry: true
           simplifyMeters: 11
           railwayAttachMeters: 120
+          operatorNames: *japan_operator_names
           routeColors: *japan_route_colors
     - id: asia-japan-hokkaido
       label: Hokkaido
@@ -339,6 +403,7 @@ regions:
           wayGeometry: true
           simplifyMeters: 11
           railwayAttachMeters: 120
+          operatorNames: *japan_operator_names
           routeColors: *japan_route_colors
     - id: asia-china-beijing
       label: Beijing

@@ -316,15 +316,43 @@ import { writeFile } from "node:fs/promises";
  * @param {(raw: string | null | undefined) => string | null} normalizeOp - operator normalizer
  */
 function buildPresets(records, regionId, lines, normalizeOp) {
-    // Group records by normalized operator.
+    // Build route-inferred operators: if a station is a member of a route
+    // relation, it's served by that route's operator — even when the
+    // station's own OSM operator tag doesn't list it.  This is common for
+    // multi-operator hubs (e.g. Nakameguro: tagged 東京急行電鉄 but also
+    // served by Tokyo Metro Hibiya Line, Shibuya: tagged JR East but also
+    // served by Tokyo Metro, etc.).
+    const routeOperatorsByStation = new Map();
+    for (const line of lines) {
+        const lineOp = normalizeOp(line.operator);
+        if (!lineOp) continue;
+        for (const memberId of line.memberStationIds) {
+            if (!routeOperatorsByStation.has(memberId)) {
+                routeOperatorsByStation.set(memberId, new Set());
+            }
+            routeOperatorsByStation.get(memberId).add(lineOp);
+        }
+    }
+
+    // Group records by ALL operators (tag + route-inferred), not just the
+    // primary OSM tag.  A station appears in every operator group it
+    // serves; getSelectedStations merges them at selection time by mergeKey.
     const byOperator = new Map();
     for (const rec of records) {
-        const ops = rec.operator
+        const tagOps = rec.operator
             ? splitOperators(rec.operator, normalizeOp)
             : [];
-        const primaryOp = ops[0] || "other";
-        if (!byOperator.has(primaryOp)) byOperator.set(primaryOp, []);
-        byOperator.get(primaryOp).push(rec);
+        const routeOps = routeOperatorsByStation.get(rec.id) || new Set();
+        const operators = [...new Set([...tagOps, ...routeOps])];
+        if (operators.length === 0) {
+            if (!byOperator.has("other")) byOperator.set("other", []);
+            byOperator.get("other").push(rec);
+        } else {
+            for (const op of operators) {
+                if (!byOperator.has(op)) byOperator.set(op, []);
+                byOperator.get(op).push(rec);
+            }
+        }
     }
 
     const presets = [];
@@ -358,24 +386,34 @@ function buildPresets(records, regionId, lines, normalizeOp) {
     }
 
     // Coverage preset: only leftover stations (no operator or operator
-    // with < MIN_OPERATOR_STATIONS). This mirrors Japan's buildOtherPreset
-    // which holds leftover stations only — avoids duplicating every station
-    // into coverage and causing double-colored rings.
+    // with < MIN_OPERATOR_STATIONS). Exclude stations that already appear
+    // in a full operator preset — a multi-operator hub (e.g. station tagged
+    // "A" but also on route "B") may be in both a large-operator preset and
+    // a small-operator leftover list; it should appear in the large preset
+    // only.
     if (leftoverStations.length > 0) {
-        presets.push({
-            id: `osm-${regionId}-coverage`,
-            label: `Other stations (${regionId})`,
-            operator: "other",
-            kind: "coverage",
-            bbox: computeRecordsBbox(leftoverStations),
-            defaultColor: "#1f6f78",
-            source: {
-                kind: "osm-pack",
-                namespace: `pack:${regionId}`,
-            },
-            routes: [],
-            stations: leftoverStations.map(toStationContribution),
-        });
+        const fullPresetStationIds = new Set(
+            presets.flatMap((p) => p.stations.map((s) => s.id)),
+        );
+        const coverageStations = leftoverStations.filter(
+            (rec) => !fullPresetStationIds.has(rec.id),
+        );
+        if (coverageStations.length > 0) {
+            presets.push({
+                id: `osm-${regionId}-coverage`,
+                label: `Other stations (${regionId})`,
+                operator: "other",
+                kind: "coverage",
+                bbox: computeRecordsBbox(coverageStations),
+                defaultColor: "#1f6f78",
+                source: {
+                    kind: "osm-pack",
+                    namespace: `pack:${regionId}`,
+                },
+                routes: [],
+                stations: coverageStations.map(toStationContribution),
+            });
+        }
     }
 
     // Attach routes globally across presets.

@@ -48,11 +48,9 @@ pnpm test       # jest + node --test suites (pretest); NOT run by pnpm check
 pnpm typecheck
 pnpm lint
 pnpm format:check
-pnpm test:data:transit # node --test pipeline suites
 pnpm test -- NativeMap.test.tsx        # single suite
 pnpm data:poi        # regenerate bundled POIs -> assets/poi (commit the output)
 pnpm data:measuring  # regenerate measuring bundles -> assets/measuring (commit)
-pnpm data:transit    # regenerate transit bundles (needs network or --cache-only)
 pnpm data:pack -- --region <id>   # build pack artifacts -> data/packs/dist (NOT committed)
 pnpm data:pack:lint               # validate built pack artifacts
 pnpm data:pack:publish -- --region <id>  # upload blobs to a Release, recommit site/packs/catalog.json
@@ -260,9 +258,9 @@ focused feature/store and let the map render derived data.
   multiple selected routes renders concentric rings, not one arbitrary color.
 - Transit preset data comes exclusively from installed packs via
   `registerTransitSource`. No bundled transit presets remain.
-- The transit pipeline (`data/transit/`) generates pack-source data.
-  `pnpm data:transit -- --cache-only` regenerates from cached data when
-  network access or `ODPT_KEY` is unavailable.
+- Transit data is built by the packs pipeline (`pnpm data:pack`) which
+  extracts OSM stations + routes from Geofabrik PBFs and applies
+  region-level `operatorNames` normalization from `data/packs/regions.yaml`.
 - Keep `data/transit/NOTICE.md` and `data/transit/sources.md` current; bundles
   carry an attribution block.
 

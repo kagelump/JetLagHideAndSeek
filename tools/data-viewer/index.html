@@ -622,17 +622,6 @@
                 });
 
             // ── Station hover popup ─────────────────────────────────────
-            function truncateList(str, max) {
-                if (!str) return "";
-                var items = str.split(", ");
-                if (items.length <= max) return str;
-                return (
-                    items.slice(0, max).join(", ") +
-                    " +" +
-                    (items.length - max) +
-                    " more"
-                );
-            }
 
             function addStationHover(layerId) {
                 map.on("mouseenter", layerId, function (e) {
@@ -641,11 +630,11 @@
                     var html = "<strong>" + p.name + "</strong>";
                     if (p.operators)
                         html +=
-                            "<br><em>" + truncateList(p.operators, 3) + "</em>";
+                            "<br><em>" + p.operators + "</em>";
                     if (p.routeNames)
                         html +=
                             '<br><span style="color:#666">' +
-                            truncateList(p.routeNames, 4) +
+                            p.routeNames +
                             "</span>";
                     if (p.wedgeCount && p.wedgeCount > 1) {
                         html +=
@@ -1295,12 +1284,12 @@
                         if (p.operators)
                             html +=
                                 "<br><em>" +
-                                truncateList(p.operators, 3) +
+                                p.operators +
                                 "</em>";
                         if (p.routeNames)
                             html +=
                                 '<br><span style="color:#666">' +
-                                truncateList(p.routeNames, 4) +
+                                p.routeNames +
                                 "</span>";
                         if (p.wedgeCount && p.wedgeCount > 1) {
                             html +=

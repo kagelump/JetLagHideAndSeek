@@ -38,7 +38,6 @@
         "data:pack:lint": "node data/packs/scripts/pack-lint.mjs",
         "data:pack:catalog": "node data/packs/scripts/build-catalog.mjs",
         "data:pack:publish": "node data/packs/scripts/publish.mjs",
-        "data:transit": "node data/transit/scripts/extract-transit.mjs --locale japan",
         "geos:fetch": "bash modules/native-geometry/scripts/fetch-geos.sh",
         "geos:build:ios": "bash modules/native-geometry/scripts/build-geos-ios.sh",
         "geos:build:android": "bash modules/native-geometry/scripts/build-geos-android.sh",
