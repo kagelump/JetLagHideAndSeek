@@ -16,12 +16,17 @@ export default ({ config }) => ({
         ...config.extra,
         appLinkBaseUrl: `https://${appLinkDomain}`,
     },
-    ios: {
-        ...config.ios,
-        ...(shouldUseAssociatedDomains
-            ? { associatedDomains: [`applinks:${appLinkDomain}`] }
-            : {}),
-    },
+    ios: (() => {
+        // associatedDomains is owned ENTIRELY here (not in app.json) so the
+        // E2E gate can fully strip it. An associated-domains entitlement forces
+        // a signed iOS build, which breaks the unsigned CI simulator build.
+        // Defensively drop any inherited value before re-adding when enabled.
+        const { associatedDomains: _drop, ...iosBase } = config.ios ?? {};
+        void _drop; // stripped below — only used to exclude the key from iosBase
+        return shouldUseAssociatedDomains
+            ? { ...iosBase, associatedDomains: [`applinks:${appLinkDomain}`] }
+            : iosBase;
+    })(),
     android: {
         ...config.android,
         intentFilters: [
