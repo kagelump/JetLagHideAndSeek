@@ -241,12 +241,22 @@ Landed on `claude/laughing-ritchie-ur26bc`. What shipped:
           process (`scripts/run-geos-tests.mjs`) because geos-wasm's realm-escaping
           `import()` trips "Test environment has been torn down" when a Jest worker is
           reused across two geos files; `spikes/` is excluded from the geos config.
-    - **Device jobs — still pending** (blocked on WI-2/WI-4 targets existing):
-      new `.github/workflows/native-geometry-tests.yml`. iOS job (`macos-15`):
-      boot sim → `xcodebuild test` (reuse the UDID-select block from
-      `maestro-e2e.yml`); no `expo run`, no signing, no Metro. Android job
-      (`reactivecircus/android-emulator-runner`): `connectedAndroidTest`. D1 is
-      unblocked by A1; D2 needs B1.
+    - **Device jobs — ✅ WIRED (first CI run lands on merge).**
+      `.github/workflows/native-geometry-tests.yml` added. The iOS job
+      (`macos-15`) boots a simulator and runs
+      `xcodebuild test -scheme NativeGeometryTests-Package` (no `expo` run, no
+      pnpm, no signing, no Metro — the SPM package is fully committed). The
+      Android job (ubuntu) runs pnpm install, then `expo prebuild --platform android`,
+      then `:native-geometry:connectedDebugAndroidTest` on an x86_64 emulator via
+      `reactivecircus/android-emulator-runner` (setup-java pins JDK 17, so the
+      local default-JDK trap doesn't apply). It triggers on changes under
+      `modules/native-geometry/**` or the workflow file, plus `workflow_dispatch`
+      with a platform selector. **Note:** a newly added workflow does not run on
+      the PR that introduces it — GitHub only registers it once it lands on the
+      default branch, so the first actual run fires when the PR merges to master
+      (or via `workflow_dispatch` thereafter). Both suites are locally green
+      (iOS 14/14, Android 14/14), the YAML validates, and the gradle/xcodebuild
+      invocations match the local runs.
 - **F1/F2 = sanitizers/concurrency:** seed a double-free, confirm ASan catches it;
   exercise lazy context init from N threads. Gated on a harness (A1 satisfies iOS).
 - **E1 final step (CI run):** infra fixes landed + locally verified
