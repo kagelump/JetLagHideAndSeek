@@ -1,5 +1,13 @@
 import Foundation
-import GEOS
+// In the standalone SPM test package the GEOS C API is its own module (named
+// `GEOS` via Sources/CGEOS/include/module.modulemap), so it must be imported.
+// In the CocoaPods app build there is no `GEOS` module — `geos_bridge.h` is a
+// pod source/public header, so the C symbols are already part of this pod's
+// umbrella module and no import is needed (and `import GEOS` would fail to
+// resolve). Guard the import so the file compiles in both builds.
+#if canImport(GEOS)
+    import GEOS
+#endif
 
 /// Stateless namespace for GEOS-backed geometry operations.
 ///
