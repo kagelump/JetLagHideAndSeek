@@ -49,9 +49,7 @@ export function MapAppScreen() {
     const handlePlacePin = useCallback(
         (position: [number, number]) => {
             if (!activeQuestion || isLocked || !isQuestionDetailRoute) return;
-            if (activeQuestion.type === "thermometer") {
-                handlePinCommit(activeQuestion.id, "start", position);
-            } else if ("center" in activeQuestion) {
+            if ("center" in activeQuestion) {
                 handlePinCommit(activeQuestion.id, "center", position);
             }
         },

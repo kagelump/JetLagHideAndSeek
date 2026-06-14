@@ -160,7 +160,7 @@ function bboxDiagonalMeters([west, south, east, north]: Bbox): number {
  * bisector of segment P1→P2, computed in a local equirectangular projection
  * centered on the midpoint.
  */
-function buildHalfPlane(
+export function buildHalfPlane(
     p1: Position,
     p2: Position,
     answer: "positive" | "negative",
@@ -261,6 +261,150 @@ function buildHalfPlane(
     return clipCellsToPlayArea(cells, boundary);
 }
 
+// ─── Bisector line ───────────────────────────────────────────────────────────
+
+/**
+ * Build the perpendicular bisector line between P1 and P2, clipped to the
+ * play area bbox. Always computable when both pins are set, regardless of
+ * answer state.
+ */
+export function buildBisectorLine(
+    p1: Position,
+    p2: Position,
+    boundaryBbox: Bbox,
+): Feature<LineString> | null {
+    const M: Position = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
+    const cosLat = Math.cos((M[1] * Math.PI) / 180);
+    const mPerDegLat = EARTH_RADIUS_METERS * (Math.PI / 180);
+    const mPerDegLon = cosLat * mPerDegLat;
+
+    const [p1x, p1y] = [
+        (p1[0] - M[0]) * mPerDegLon,
+        (p1[1] - M[1]) * mPerDegLat,
+    ];
+    const [p2x, p2y] = [
+        (p2[0] - M[0]) * mPerDegLon,
+        (p2[1] - M[1]) * mPerDegLat,
+    ];
+    const dx = p2x - p1x;
+    const dy = p2y - p1y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return null;
+
+    // Perpendicular direction (90° CCW).
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    const diagonalM = bboxDiagonalMeters(boundaryBbox);
+    const L = Math.max(diagonalM, 1000);
+
+    const unproject = ([x, y]: [number, number]): Position => [
+        M[0] + x / mPerDegLon,
+        M[1] + y / mPerDegLat,
+    ];
+
+    // Bisector endpoints in lon/lat (far outside the play area).
+    const start = unproject([L * nx, L * ny]);
+    const end = unproject([-L * nx, -L * ny]);
+
+    // Clip the bisector line segment to the play area bbox using
+    // Cohen-Sutherland line clipping.
+    const [west, south, east, north] = boundaryBbox;
+    const clipped = clipLineToBbox(
+        start[0],
+        start[1],
+        end[0],
+        end[1],
+        west,
+        south,
+        east,
+        north,
+    );
+    if (!clipped) return null;
+
+    return {
+        type: "Feature",
+        properties: {},
+        geometry: {
+            type: "LineString",
+            coordinates: [
+                [clipped.x0, clipped.y0],
+                [clipped.x1, clipped.y1],
+            ],
+        },
+    };
+}
+
+const INSIDE = 0;
+const LEFT = 1;
+const RIGHT = 2;
+const BOTTOM = 4;
+const TOP = 8;
+
+function computeOutCode(
+    x: number,
+    y: number,
+    xmin: number,
+    ymin: number,
+    xmax: number,
+    ymax: number,
+): number {
+    let code = INSIDE;
+    if (x < xmin) code |= LEFT;
+    else if (x > xmax) code |= RIGHT;
+    if (y < ymin) code |= BOTTOM;
+    else if (y > ymax) code |= TOP;
+    return code;
+}
+
+function clipLineToBbox(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    xmin: number,
+    ymin: number,
+    xmax: number,
+    ymax: number,
+): { x0: number; y0: number; x1: number; y1: number } | null {
+    let out0 = computeOutCode(x0, y0, xmin, ymin, xmax, ymax);
+    let out1 = computeOutCode(x1, y1, xmin, ymin, xmax, ymax);
+
+    while (true) {
+        if (!(out0 | out1)) {
+            return { x0, y0, x1, y1 };
+        }
+        if (out0 & out1) {
+            return null;
+        }
+        const out = out0 || out1;
+        let x: number;
+        let y: number;
+        if (out & TOP) {
+            x = x0 + ((x1 - x0) * (ymax - y0)) / (y1 - y0);
+            y = ymax;
+        } else if (out & BOTTOM) {
+            x = x0 + ((x1 - x0) * (ymin - y0)) / (y1 - y0);
+            y = ymin;
+        } else if (out & RIGHT) {
+            y = y0 + ((y1 - y0) * (xmax - x0)) / (x1 - x0);
+            x = xmax;
+        } else {
+            y = y0 + ((y1 - y0) * (xmin - x0)) / (x1 - x0);
+            x = xmin;
+        }
+        if (out === out0) {
+            x0 = x;
+            y0 = y;
+            out0 = computeOutCode(x0, y0, xmin, ymin, xmax, ymax);
+        } else {
+            x1 = x;
+            y1 = y;
+            out1 = computeOutCode(x1, y1, xmin, ymin, xmax, ymax);
+        }
+    }
+}
+
 // ─── Preview features ────────────────────────────────────────────────────────
 
 /**
@@ -272,7 +416,7 @@ function buildHalfPlane(
  *   - `"travel-line"` — the P1→P2 segment
  *   - `"ring-1km"`, `"ring-5km"`, `"ring-15km"` — concentric rings from P1
  */
-function buildThermometerPreviewFeatures(
+export function buildThermometerPreviewFeatures(
     p1: Position,
     p2: Position,
 ): FeatureCollection<LineString | Polygon> {
@@ -327,6 +471,7 @@ export function buildThermometerRenderState(
     // Multi-question path: aggregate from per-component caches.
     const hitFeatures: Feature<Polygon | MultiPolygon>[] = [];
     const previewFeatures: Feature<LineString | Polygon>[] = [];
+    let bisectorLine: Feature<LineString> | null = null;
 
     for (const q of thermometerQuestions) {
         if (!q.previousPosition || !q.currentPosition) continue;
@@ -344,9 +489,13 @@ export function buildThermometerRenderState(
         const single = buildSingleThermometerRenderState(q, playAreaBoundary);
         previewFeatures.push(...single.previewFeatures.features);
         hitFeatures.push(...single.hitMaskFeatures.features);
+        if (!bisectorLine && single.bisectorLine) {
+            bisectorLine = single.bisectorLine;
+        }
     }
 
     return {
+        bisectorLine,
         hitMaskFeatures: {
             type: "FeatureCollection",
             features: hitFeatures,
@@ -373,6 +522,7 @@ function buildSingleThermometerRenderState(
     // Missing both pins — nothing to render.
     if (!p1 && !p2) {
         return {
+            bisectorLine: null,
             hitMaskFeatures: { type: "FeatureCollection", features: [] },
             previewFeatures: { type: "FeatureCollection", features: [] },
         };
@@ -388,6 +538,7 @@ function buildSingleThermometerRenderState(
             geometry: { type: "LineString", coordinates: [p, p] },
         };
         return {
+            bisectorLine: null,
             hitMaskFeatures: { type: "FeatureCollection", features: [] },
             previewFeatures: {
                 type: "FeatureCollection",
@@ -411,6 +562,7 @@ function buildSingleThermometerRenderState(
             },
         };
         return {
+            bisectorLine: null,
             hitMaskFeatures: { type: "FeatureCollection", features: [] },
             previewFeatures: {
                 type: "FeatureCollection",
@@ -435,6 +587,10 @@ function buildSingleThermometerRenderState(
         return cached;
     }
 
+    // ── Bisector line: always when both positions set ──────────────
+    const boundaryBbox = computeBoundaryBbox(playAreaBoundary);
+    const bisector = buildBisectorLine(p1, p2, boundaryBbox);
+
     // ── Preview: always when both positions set ────────────────────
     let pv: FeatureCollection<LineString | Polygon>;
     const pvKey = previewCacheKey(p1, p2);
@@ -455,7 +611,6 @@ function buildSingleThermometerRenderState(
     // ── Mask: only for answered questions ─────────────────────────
     let hitMask: FeatureCollection<Polygon | MultiPolygon>;
     if (answer === "positive" || answer === "negative") {
-        const boundaryBbox = computeBoundaryBbox(playAreaBoundary);
         const hpKey = halfPlaneCacheKey(p1, p2, answer, boundaryId);
         const cachedHp = halfPlaneCache.get(hpKey);
         if (cachedHp) {
@@ -482,6 +637,7 @@ function buildSingleThermometerRenderState(
 
     // ── Store in full-state cache ──────────────────────────────────
     const result: ThermometerRenderState = {
+        bisectorLine: bisector,
         hitMaskFeatures: hitMask,
         previewFeatures: pv,
     };

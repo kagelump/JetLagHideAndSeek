@@ -354,7 +354,7 @@ describe("buildThermometerRenderState", () => {
 
     // ── Test 7: Unanswered preview ───────────────────────────────────────
 
-    it("unanswered: no hitMaskFeatures, previewFeatures has travel line + rings", () => {
+    it("unanswered: no hitMaskFeatures, previewFeatures has travel line + rings, bisectorLine present", () => {
         const question = makeThermometerQuestion({
             answer: "unanswered",
             previousPosition: P1_WEST,
@@ -395,6 +395,145 @@ describe("buildThermometerRenderState", () => {
         for (const ring of rings) {
             expect(ring.geometry.type).toBe("Polygon");
         }
+
+        // Bisector line should be present even when unanswered.
+        expect(state.bisectorLine).not.toBeNull();
+        expect(state.bisectorLine!.geometry.type).toBe("LineString");
+    });
+
+    // ── Test 7b: Bisector line geometry ──────────────────────────────────
+
+    it("bisector line passes through midpoint and is perpendicular to travel direction", () => {
+        const question = makeThermometerQuestion({
+            answer: "unanswered",
+            previousPosition: P1_WEST,
+            currentPosition: P2_EAST,
+        });
+
+        const state = buildThermometerRenderState([question], TEST_BOUNDARY);
+        expect(state.bisectorLine).not.toBeNull();
+
+        const bisectorCoords = state.bisectorLine!.geometry.coordinates;
+        expect(bisectorCoords).toHaveLength(2);
+
+        // The bisector should pass near the midpoint of P1 and P2.
+        const mid = midpoint(P1_WEST, P2_EAST);
+        const [bx, by] = bisectorCoords[0];
+        const [ex, ey] = bisectorCoords[1];
+
+        // Midpoint of the bisector line should be close to the midpoint of P1-P2.
+        const bisectorMidX = (bx + ex) / 2;
+        const bisectorMidY = (by + ey) / 2;
+        expect(Math.abs(bisectorMidX - mid[0])).toBeLessThan(0.001);
+        expect(Math.abs(bisectorMidY - mid[1])).toBeLessThan(0.001);
+
+        // For E-W travel, the bisector should be roughly N-S (vertical).
+        // The X coordinates of the endpoints should be similar.
+        expect(Math.abs(bx - ex)).toBeLessThan(0.001);
+        // The Y coordinates should differ significantly.
+        expect(Math.abs(by - ey)).toBeGreaterThan(0.005);
+    });
+
+    it("bisector line is null when pins are degenerate", () => {
+        const question = makeThermometerQuestion({
+            answer: "positive",
+            previousPosition: [0.005, 0.005],
+            currentPosition: [0.0051, 0.005],
+        });
+
+        const state = buildThermometerRenderState([question], TEST_BOUNDARY);
+        expect(state.bisectorLine).toBeNull();
+    });
+
+    it("bisector line is null when both positions are null", () => {
+        const question = makeThermometerQuestion({
+            answer: "positive",
+            previousPosition: null,
+            currentPosition: null,
+        });
+
+        const state = buildThermometerRenderState([question], TEST_BOUNDARY);
+        expect(state.bisectorLine).toBeNull();
+    });
+
+    it("bisector line is clipped to the play area bbox", () => {
+        const question = makeThermometerQuestion({
+            answer: "unanswered",
+            previousPosition: P1_WEST,
+            currentPosition: P2_EAST,
+        });
+
+        const state = buildThermometerRenderState([question], TEST_BOUNDARY);
+        expect(state.bisectorLine).not.toBeNull();
+
+        const coords = state.bisectorLine!.geometry.coordinates;
+        for (const [lon, lat] of coords) {
+            expect(lon).toBeGreaterThanOrEqual(0 - 0.0001);
+            expect(lon).toBeLessThanOrEqual(0.01 + 0.0001);
+            expect(lat).toBeGreaterThanOrEqual(0 - 0.0001);
+            expect(lat).toBeLessThanOrEqual(0.01 + 0.0001);
+        }
+    });
+
+    // ── Test 7c: N-S travel produces horizontal bisector ────────────────
+
+    it("N-S travel produces a roughly horizontal bisector", () => {
+        const question = makeThermometerQuestion({
+            answer: "unanswered",
+            previousPosition: P1_SOUTH,
+            currentPosition: P2_NORTH,
+        });
+
+        const state = buildThermometerRenderState([question], TEST_BOUNDARY);
+        expect(state.bisectorLine).not.toBeNull();
+
+        const [bx, by] = state.bisectorLine!.geometry.coordinates[0];
+        const [ex, ey] = state.bisectorLine!.geometry.coordinates[1];
+
+        // For N-S travel, the bisector runs E-W (horizontal).
+        // Y coordinates should be similar, X should differ.
+        expect(Math.abs(by - ey)).toBeLessThan(0.001);
+        expect(Math.abs(bx - ex)).toBeGreaterThan(0.005);
+    });
+
+    // ── Test 7d: Bisector present for answered questions ────────────────
+
+    it("bisector line is present when answer is positive (hotter)", () => {
+        const question = makeThermometerQuestion({
+            answer: "positive",
+            previousPosition: P1_WEST,
+            currentPosition: P2_EAST,
+        });
+
+        const state = buildThermometerRenderState([question], TEST_BOUNDARY);
+        expect(state.bisectorLine).not.toBeNull();
+        expect(state.bisectorLine!.geometry.type).toBe("LineString");
+    });
+
+    it("bisector line is present when answer is negative (colder)", () => {
+        const question = makeThermometerQuestion({
+            answer: "negative",
+            previousPosition: P1_WEST,
+            currentPosition: P2_EAST,
+        });
+
+        const state = buildThermometerRenderState([question], TEST_BOUNDARY);
+        expect(state.bisectorLine).not.toBeNull();
+        expect(state.bisectorLine!.geometry.type).toBe("LineString");
+    });
+
+    // ── Test 7e: Bisector null when entirely outside bbox ───────────────
+
+    it("bisector line is null when midpoint is outside the play area bbox", () => {
+        // Both pins far north of the boundary [0,0,0.01,0.01].
+        const question = makeThermometerQuestion({
+            answer: "unanswered",
+            previousPosition: [0.005, 0.05],
+            currentPosition: [0.005, 0.06],
+        });
+
+        const state = buildThermometerRenderState([question], TEST_BOUNDARY);
+        expect(state.bisectorLine).toBeNull();
     });
 
     // ── Test 8: Clipping ─────────────────────────────────────────────────

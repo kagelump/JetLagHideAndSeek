@@ -1,4 +1,5 @@
 import type {
+    Feature,
     FeatureCollection,
     LineString,
     MultiPolygon,
@@ -21,6 +22,8 @@ export type ThermometerQuestion = BaseQuestion & {
 };
 
 export type ThermometerRenderState = {
+    /** Perpendicular bisector line between P1 and P2, clipped to the play area bbox. */
+    bisectorLine: Feature<LineString> | null;
     /** Half-plane where the hider must be, clipped to the play area. */
     hitMaskFeatures: FeatureCollection<Polygon | MultiPolygon>;
     /**
@@ -33,6 +36,7 @@ export type ThermometerRenderState = {
 };
 
 export const EMPTY_THERMOMETER_RENDER_STATE: ThermometerRenderState = {
+    bisectorLine: null,
     hitMaskFeatures: { features: [], type: "FeatureCollection" },
     previewFeatures: { features: [], type: "FeatureCollection" },
 };
