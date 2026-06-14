@@ -342,20 +342,27 @@
                     var p = f.properties;
                     if (p.wedgeIndex === 0 && !seen[p.id]) {
                         seen[p.id] = true;
+                        // Copy all wedge properties, drop wedgeIndex/wedgeCount
+                        // and stationLon/stationLat (geometry-only fields).
+                        var dotProps = {};
+                        var dropKeys = {
+                            wedgeIndex: true,
+                            stationLon: true,
+                            stationLat: true,
+                        };
+                        var keys = Object.keys(p);
+                        for (var k = 0; k < keys.length; k++) {
+                            if (!dropKeys[keys[k]]) {
+                                dotProps[keys[k]] = p[keys[k]];
+                            }
+                        }
                         features.push({
                             type: "Feature",
                             geometry: {
                                 type: "Point",
                                 coordinates: [p.stationLon, p.stationLat],
                             },
-                            properties: {
-                                color: p.color,
-                                id: p.id,
-                                name: p.name,
-                                routeNames: p.routeNames,
-                                operators: p.operators,
-                                wedgeCount: p.wedgeCount,
-                            },
+                            properties: dotProps,
                         });
                     }
                 }
@@ -603,8 +610,56 @@
             }
 
             map.on("load", function () {
-                loadLayers().then(initPackMode);
+                loadLayers()
+                    .then(function () {
+                        return initPackMode();
+                    })
+                    .then(function () {
+                        // Restore pack from URL if set.
+                        var st = readUrlState();
+                        if (st.pack) {
+                            var initialHidden = st.hidden.slice();
+                            var select = document.getElementById("pack-select");
+                            select.value = st.pack;
+                            select.dispatchEvent(new Event("change"));
+                            // switchPack clears hide; re-apply initial hide
+                            // after panels are built and auto-loaded.
+                            if (initialHidden.length > 0) {
+                                applyUrlHideState(400, initialHidden);
+                            }
+                        }
+                        // Apply viewport from URL (overrides fitBounds).
+                        if (st.viewport) {
+                            setTimeout(function () {
+                                map.setCenter([
+                                    st.viewport.lng,
+                                    st.viewport.lat,
+                                ]);
+                                map.setZoom(st.viewport.zoom);
+                            }, 700);
+                        }
+                    });
+
+                // Debounced viewport → URL sync.
+                map.on("moveend", function () {
+                    if (_viewportSyncTimer) clearTimeout(_viewportSyncTimer);
+                    _viewportSyncTimer = setTimeout(syncViewportToUrl, 300);
+                });
             });
+
+            // Event delegation: sync URL whenever a layer checkbox changes.
+            document
+                .getElementById("legend")
+                .addEventListener("change", function (e) {
+                    if (
+                        e.target.matches &&
+                        e.target.matches(
+                            'input[type="checkbox"][data-layer-id]',
+                        )
+                    ) {
+                        syncUrlFromCheckboxes();
+                    }
+                });
 
             // ── Zoom level display ──────────────────────────────────────
             var zoomEl = document.getElementById("zoom-level");
@@ -670,13 +725,96 @@
                 });
             }
 
+            // ── URL state ─────────────────────────────────────────────
+            function readUrlState() {
+                var p = new URLSearchParams(window.location.search);
+                var hidden = (p.get("hide") || "").split(",").filter(Boolean);
+                var lng = parseFloat(p.get("lng"));
+                var lat = parseFloat(p.get("lat"));
+                var zoom = parseFloat(p.get("zoom"));
+                var vp = null;
+                if (isFinite(lng) && isFinite(lat) && isFinite(zoom)) {
+                    vp = { lng: lng, lat: lat, zoom: zoom };
+                }
+                return {
+                    pack: p.get("pack") || "",
+                    hidden: hidden,
+                    viewport: vp,
+                };
+            }
+
+            function writeUrlState(pack, hidden) {
+                var url = new URL(window.location);
+                if (pack) url.searchParams.set("pack", pack);
+                else url.searchParams.delete("pack");
+                if (hidden && hidden.length > 0)
+                    url.searchParams.set("hide", hidden.join(","));
+                else url.searchParams.delete("hide");
+                history.replaceState(null, "", url);
+            }
+
+            var _viewportSyncTimer = null;
+            function syncViewportToUrl() {
+                var center = map.getCenter();
+                var zoom = map.getZoom();
+                var url = new URL(window.location);
+                url.searchParams.set("lng", center.lng.toFixed(5));
+                url.searchParams.set("lat", center.lat.toFixed(5));
+                url.searchParams.set("zoom", zoom.toFixed(1));
+                history.replaceState(null, "", url);
+            }
+
+            function applyViewportFromUrl() {
+                var st = readUrlState();
+                if (!st.viewport) return;
+                map.setCenter([st.viewport.lng, st.viewport.lat]);
+                map.setZoom(st.viewport.zoom);
+            }
+
+            function syncUrlFromCheckboxes() {
+                var hidden = [];
+                var cbs = document.querySelectorAll(
+                    '#legend input[type="checkbox"][data-layer-id]',
+                );
+                for (var i = 0; i < cbs.length; i++) {
+                    if (!cbs[i].checked)
+                        hidden.push(cbs[i].getAttribute("data-layer-id"));
+                }
+                var st = readUrlState();
+                writeUrlState(st.pack, hidden);
+            }
+
+            // Apply hide state from URL after pack panels are built.
+            function applyUrlHideState(delayMs, hiddenList) {
+                setTimeout(function () {
+                    var hidden = hiddenList || readUrlState().hidden;
+                    if (hidden.length === 0) return;
+                    var cbs = document.querySelectorAll(
+                        '#legend input[type="checkbox"][data-layer-id]',
+                    );
+                    for (var i = 0; i < cbs.length; i++) {
+                        var id = cbs[i].getAttribute("data-layer-id");
+                        if (hidden.indexOf(id) >= 0 && cbs[i].checked) {
+                            cbs[i].checked = false;
+                            cbs[i].dispatchEvent(
+                                new Event("change", { bubbles: true }),
+                            );
+                        }
+                    }
+                    // Sync URL after applying hide state so the restored
+                    // layers are reflected in the address bar.
+                    syncUrlFromCheckboxes();
+                }, delayMs || 200);
+            }
+
             // ── Pack mode ──────────────────────────────────────────────
-            function makeToggle(label, colorStyle, onChange) {
+            function makeToggle(label, colorStyle, onChange, layerId) {
                 var labelEl = document.createElement("label");
                 labelEl.style.cssText =
                     "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
                 var cb = document.createElement("input");
                 cb.type = "checkbox";
+                if (layerId) cb.setAttribute("data-layer-id", layerId);
                 cb.addEventListener("change", onChange);
                 labelEl.appendChild(cb);
                 if (colorStyle) {
@@ -776,6 +914,7 @@
                             delete PACK_STATE.loadedLayers[sourceId];
                         }
                     },
+                    "poi-" + category,
                 );
             }
 
@@ -789,51 +928,58 @@
                     "admin-boundaries": { line: "#8b5cf6" },
                 };
                 var cs = colorMap[category] || { line: "#9ca3af" };
-                return makeToggle(category, { line: cs.line }, function (e) {
-                    var sourceId = "pack-measuring-" + category;
-                    if (
-                        e.target.checked &&
-                        !PACK_STATE.loadedLayers[sourceId]
-                    ) {
-                        PACK_STATE.loadedLayers[sourceId] = "loading";
-                        fetchJson(
-                            "/api/pack/" +
-                                PACK_STATE.regionId +
-                                "/measuring/" +
-                                category,
-                        )
-                            .then(function (data) {
-                                addSource(sourceId, data);
-                                var layerConfigs = LAYER_CONFIGS[category];
-                                if (layerConfigs) {
-                                    addLayers(sourceId, layerConfigs);
-                                } else {
-                                    // Fallback: draw as lines
-                                    map.addLayer({
-                                        id: "pack-measuring-line-" + category,
-                                        type: "line",
-                                        source: sourceId,
-                                        paint: {
-                                            "line-color": cs.line,
-                                            "line-width": 2,
-                                        },
-                                    });
-                                }
-                                PACK_STATE.loadedLayers[sourceId] = true;
-                            })
-                            .catch(function (err) {
-                                console.error(
-                                    "Failed to load measuring " + category,
-                                    err,
-                                );
-                                PACK_STATE.loadedLayers[sourceId] = false;
-                                e.target.checked = false;
-                            });
-                    } else if (!e.target.checked) {
-                        removeSourceAndLayers(sourceId);
-                        delete PACK_STATE.loadedLayers[sourceId];
-                    }
-                });
+                return makeToggle(
+                    category,
+                    { line: cs.line },
+                    function (e) {
+                        var sourceId = "pack-measuring-" + category;
+                        if (
+                            e.target.checked &&
+                            !PACK_STATE.loadedLayers[sourceId]
+                        ) {
+                            PACK_STATE.loadedLayers[sourceId] = "loading";
+                            fetchJson(
+                                "/api/pack/" +
+                                    PACK_STATE.regionId +
+                                    "/measuring/" +
+                                    category,
+                            )
+                                .then(function (data) {
+                                    addSource(sourceId, data);
+                                    var layerConfigs = LAYER_CONFIGS[category];
+                                    if (layerConfigs) {
+                                        addLayers(sourceId, layerConfigs);
+                                    } else {
+                                        // Fallback: draw as lines
+                                        map.addLayer({
+                                            id:
+                                                "pack-measuring-line-" +
+                                                category,
+                                            type: "line",
+                                            source: sourceId,
+                                            paint: {
+                                                "line-color": cs.line,
+                                                "line-width": 2,
+                                            },
+                                        });
+                                    }
+                                    PACK_STATE.loadedLayers[sourceId] = true;
+                                })
+                                .catch(function (err) {
+                                    console.error(
+                                        "Failed to load measuring " + category,
+                                        err,
+                                    );
+                                    PACK_STATE.loadedLayers[sourceId] = false;
+                                    e.target.checked = false;
+                                });
+                        } else if (!e.target.checked) {
+                            removeSourceAndLayers(sourceId);
+                            delete PACK_STATE.loadedLayers[sourceId];
+                        }
+                    },
+                    "measuring-" + category,
+                );
             }
 
             function createBoundaryToggle(level) {
@@ -896,6 +1042,7 @@
                             delete PACK_STATE.loadedLayers[sourceId];
                         }
                     },
+                    "boundaries-" + level,
                 );
             }
 
@@ -912,6 +1059,9 @@
                 PACK_STATE.regionId = regionId;
                 var packSection = document.getElementById("pack-section");
                 var japanSections = document.getElementById("japan-sections");
+
+                // Persist pack selection in URL; clear hide list for new pack.
+                writeUrlState(regionId || "", []);
 
                 if (!regionId) {
                     packSection.style.display = "none";
@@ -931,11 +1081,15 @@
                         var label = meta.label || regionId;
                         infoEl.textContent =
                             label + " (" + meta.regionPath.join(" / ") + ")";
-                        if (meta.bbox) {
+                        // Skip fitBounds if URL viewport exists (page-load restore).
+                        if (meta.bbox && !readUrlState().viewport) {
                             map.fitBounds(meta.bbox, { padding: 40 });
                         }
 
                         rebuildPackPanels(meta);
+                        // Apply URL hide state after master-toggler
+                        // setTimeout(0) has fired its change events.
+                        applyUrlHideState(150);
                     })
                     .catch(function (err) {
                         console.error(
@@ -960,7 +1114,9 @@
                     for (var i = 0; i < checkboxes.length; i++) {
                         if (checkboxes[i] !== cb) {
                             checkboxes[i].checked = this.checked;
-                            checkboxes[i].dispatchEvent(new Event("change"));
+                            checkboxes[i].dispatchEvent(
+                                new Event("change", { bubbles: true }),
+                            );
                         }
                     }
                 });
@@ -975,7 +1131,9 @@
                     for (var i = 0; i < checkboxes.length; i++) {
                         if (checkboxes[i] !== cb && !checkboxes[i].checked) {
                             checkboxes[i].checked = true;
-                            checkboxes[i].dispatchEvent(new Event("change"));
+                            checkboxes[i].dispatchEvent(
+                                new Event("change", { bubbles: true }),
+                            );
                         }
                     }
                 }, 0);
@@ -1088,6 +1246,7 @@
                                 delete PACK_STATE.loadedLayers[sourceId];
                             }
                         },
+                        "transit-routes",
                     ),
                 );
                 trnSection.appendChild(
@@ -1287,6 +1446,7 @@
                                 delete PACK_STATE.loadedLayers[dotSourceId];
                             }
                         },
+                        "transit-stations",
                     ),
                 );
 

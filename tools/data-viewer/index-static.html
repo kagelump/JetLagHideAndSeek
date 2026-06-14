@@ -205,6 +205,51 @@
             <div id="pack-layers-container" style="margin-top: 2px"></div>
         </div>
         <script>
+            // ── URL state ─────────────────────────────────────────────
+            function readUrlState() {
+                var p = new URLSearchParams(window.location.search);
+                var hidden = (p.get("hide") || "").split(",").filter(Boolean);
+                var lng = parseFloat(p.get("lng"));
+                var lat = parseFloat(p.get("lat"));
+                var zoom = parseFloat(p.get("zoom"));
+                var vp = null;
+                if (isFinite(lng) && isFinite(lat) && isFinite(zoom)) {
+                    vp = { lng: lng, lat: lat, zoom: zoom };
+                }
+                return { hidden: hidden, viewport: vp };
+            }
+
+            function writeUrlState(hidden) {
+                var url = new URL(window.location);
+                if (hidden && hidden.length > 0)
+                    url.searchParams.set("hide", hidden.join(","));
+                else url.searchParams.delete("hide");
+                history.replaceState(null, "", url);
+            }
+
+            function syncUrlFromCheckboxes() {
+                var hidden = [];
+                var cbs = document.querySelectorAll(
+                    '#legend input[type="checkbox"][data-layer-id]',
+                );
+                for (var i = 0; i < cbs.length; i++) {
+                    if (!cbs[i].checked)
+                        hidden.push(cbs[i].getAttribute("data-layer-id"));
+                }
+                writeUrlState(hidden);
+            }
+
+            var _viewportSyncTimer = null;
+            function syncViewportToUrl() {
+                var center = map.getCenter();
+                var zoom = map.getZoom();
+                var url = new URL(window.location);
+                url.searchParams.set("lng", center.lng.toFixed(5));
+                url.searchParams.set("lat", center.lat.toFixed(5));
+                url.searchParams.set("zoom", zoom.toFixed(1));
+                history.replaceState(null, "", url);
+            }
+
             var KANTO_BBOX = [137.9, 33.9, 141.9, 37.9];
 
             var map = new maplibregl.Map({
@@ -341,20 +386,27 @@
                     var p = f.properties;
                     if (p.wedgeIndex === 0 && !seen[p.id]) {
                         seen[p.id] = true;
+                        // Copy all wedge properties, drop wedgeIndex/wedgeCount
+                        // and stationLon/stationLat (geometry-only fields).
+                        var dotProps = {};
+                        var dropKeys = {
+                            wedgeIndex: true,
+                            stationLon: true,
+                            stationLat: true,
+                        };
+                        var keys = Object.keys(p);
+                        for (var k = 0; k < keys.length; k++) {
+                            if (!dropKeys[keys[k]]) {
+                                dotProps[keys[k]] = p[keys[k]];
+                            }
+                        }
                         features.push({
                             type: "Feature",
                             geometry: {
                                 type: "Point",
                                 coordinates: [p.stationLon, p.stationLat],
                             },
-                            properties: {
-                                color: p.color,
-                                id: p.id,
-                                name: p.name,
-                                routeNames: p.routeNames,
-                                operators: p.operators,
-                                wedgeCount: p.wedgeCount,
-                            },
+                            properties: dotProps,
                         });
                     }
                 }
@@ -526,6 +578,53 @@
             map.on("load", function () {
                 loadLayers();
                 loadCatalog();
+
+                // Event delegation: sync URL on layer checkbox change.
+                document
+                    .getElementById("legend")
+                    .addEventListener("change", function (e) {
+                        if (
+                            e.target.matches &&
+                            e.target.matches(
+                                'input[type="checkbox"][data-layer-id]',
+                            )
+                        ) {
+                            syncUrlFromCheckboxes();
+                        }
+                    });
+
+                // Apply viewport from URL.
+                var st = readUrlState();
+                if (st.viewport) {
+                    map.setCenter([st.viewport.lng, st.viewport.lat]);
+                    map.setZoom(st.viewport.zoom);
+                }
+
+                // Debounced viewport → URL sync.
+                map.on("moveend", function () {
+                    if (_viewportSyncTimer) clearTimeout(_viewportSyncTimer);
+                    _viewportSyncTimer = setTimeout(syncViewportToUrl, 300);
+                });
+
+                // Apply URL hide state after any dropped layers load.
+                st = readUrlState();
+                if (st.hidden.length > 0) {
+                    setTimeout(function () {
+                        var cbs = document.querySelectorAll(
+                            '#legend input[type="checkbox"][data-layer-id]',
+                        );
+                        for (var i = 0; i < cbs.length; i++) {
+                            var id = cbs[i].getAttribute("data-layer-id");
+                            if (st.hidden.indexOf(id) >= 0 && cbs[i].checked) {
+                                cbs[i].checked = false;
+                                cbs[i].dispatchEvent(
+                                    new Event("change", { bubbles: true }),
+                                );
+                            }
+                        }
+                        syncUrlFromCheckboxes();
+                    }, 500);
+                }
             });
 
             function addStationHover(layerId) {
@@ -848,6 +947,7 @@
                             "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
                         var cb = document.createElement("input");
                         cb.type = "checkbox";
+                        cb.setAttribute("data-layer-id", "poi-" + catName);
                         var color = POI_COLORS[catName] || "#9ca3af";
                         var swatch = document.createElement("span");
                         swatch.className = "legend-swatch polygon";
@@ -922,6 +1022,7 @@
                     "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
                 var cb = document.createElement("input");
                 cb.type = "checkbox";
+                cb.setAttribute("data-layer-id", "measuring-" + category);
                 cb.addEventListener("change", function () {
                     var sourceId = "drop-measuring";
                     if (this.checked && !PACK_LOADED_LAYERS[sourceId]) {
@@ -989,6 +1090,7 @@
                             "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
                         var cb = document.createElement("input");
                         cb.type = "checkbox";
+                        cb.setAttribute("data-layer-id", "boundaries-" + lv);
                         var swatch = document.createElement("span");
                         swatch.className = "legend-swatch polygon";
                         swatch.style.cssText =
@@ -1100,6 +1202,7 @@
                     "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
                 var routeCb = document.createElement("input");
                 routeCb.type = "checkbox";
+                routeCb.setAttribute("data-layer-id", "transit-routes");
                 routeLabel.appendChild(routeCb);
                 routeLabel.appendChild(
                     document.createTextNode(
@@ -1159,6 +1262,7 @@
                     "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;";
                 var stationCb = document.createElement("input");
                 stationCb.type = "checkbox";
+                stationCb.setAttribute("data-layer-id", "transit-stations");
                 stationLabel.appendChild(stationCb);
                 stationLabel.appendChild(document.createTextNode("Stations"));
                 stationCb.addEventListener("change", function () {
