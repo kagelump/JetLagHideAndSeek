@@ -39,3 +39,6 @@ modules/native-geometry/vendor/geos/
 modules/native-geometry/ios/build/
 modules/native-geometry/android/build/
 modules/native-geometry/android/.cxx/
+
+# Use pnpm only — a committed package-lock.json makes EAS Build run npm ci
+package-lock.json

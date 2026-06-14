@@ -23,7 +23,7 @@
         "android": {
             "package": "com.raycatdev.hideandseek.v2",
             "versionCode": 2,
-            "appVersionSource": "local",
+            "appVersionSource": "remote",
             "predictiveBackGestureEnabled": false
         },
         "plugins": [
