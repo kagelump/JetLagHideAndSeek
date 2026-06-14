@@ -70,23 +70,38 @@ export function isBboxInJapan(bbox: Bbox): boolean {
 /**
  * Compute the coverage status for a play-area bbox.
  *
- * Rules:
- * 1. Installed pack intersects → `covered` (or `partial` if incomplete)
- * 2. Catalog pack intersects but none installed → `available`
- * 3. Nothing intersects → `uncovered`
- * 4. No catalog data → `unknown`
+ * Ranking for intersecting packs:
+ * 1. Packs that fully **contain** the play area (smallest first).
+ * 2. Packs that partially overlap, sorted by highest intersection ratio
+ *    (intersection area / play-area area).
  *
- * For overlapping packs, prefers: installed over catalog, then smallest-area.
+ * This prevents edge-clipping neighbors (e.g. Chubu barely touching
+ * western Tokyo) from beating a region that actually covers the play
+ * area (Kanto, which has an inflated bbox from Pacific island territories).
  */
 export function getCoverageStatus(
     playAreaBbox: Bbox,
     catalogPacks: CatalogPackInfo[] | undefined,
     installedPacks: InstalledPackInfo[],
 ): CoverageStatus {
+    const ranker = (aBbox: Bbox, bBbox: Bbox): number => {
+        const aContains = bboxContains(aBbox, playAreaBbox);
+        const bContains = bboxContains(bBbox, playAreaBbox);
+        // Containers always beat non-containers.
+        if (aContains && !bContains) return -1;
+        if (!aContains && bContains) return 1;
+        // Both containers: smaller area wins.
+        if (aContains) return packAreaBbox(aBbox) - packAreaBbox(bBbox);
+        // Neither contains: higher intersection ratio wins.
+        return (
+            intersectionRatio(bBbox, playAreaBbox) -
+            intersectionRatio(aBbox, playAreaBbox)
+        );
+    };
+
     // 1. Check installed packs.
     const installedCandidates = installedPacks
         .filter((p) => {
-            // Use catalog bbox first, fall back to installed bbox.
             const catPack = catalogPacks?.find((c) => c.id === p.id);
             const packBbox = catPack?.bbox ?? p.bbox;
             if (!packBbox) return false;
@@ -97,13 +112,8 @@ export function getCoverageStatus(
             const bCat = catalogPacks?.find((c) => c.id === b.id);
             const aBbox = aCat?.bbox ?? a.bbox;
             const bBbox = bCat?.bbox ?? b.bbox;
-            const aArea = aBbox
-                ? (aBbox[2] - aBbox[0]) * (aBbox[3] - aBbox[1])
-                : Infinity;
-            const bArea = bBbox
-                ? (bBbox[2] - bBbox[0]) * (bBbox[3] - bBbox[1])
-                : Infinity;
-            return aArea - bArea;
+            if (!aBbox || !bBbox) return 0;
+            return ranker(aBbox, bBbox);
         });
 
     if (installedCandidates.length > 0) {
@@ -115,7 +125,6 @@ export function getCoverageStatus(
                 missingKinds: best.missingKinds,
             };
         }
-        // Check for updates.
         const catPack = catalogPacks?.find((c) => c.id === best.id);
         const updateAvailable =
             catPack != null && catPack.osmSnapshot > best.osmSnapshot;
@@ -130,7 +139,7 @@ export function getCoverageStatus(
     if (catalogPacks && catalogPacks.length > 0) {
         const catalogCandidates = catalogPacks
             .filter((p) => bboxesIntersect(playAreaBbox, p.bbox))
-            .sort((a, b) => packArea(a) - packArea(b));
+            .sort((a, b) => ranker(a.bbox, b.bbox));
 
         if (catalogCandidates.length > 0) {
             const best = catalogCandidates[0];
@@ -152,11 +161,32 @@ export function getCoverageStatus(
     return { state: "uncovered" };
 }
 
-function packArea(pack: CatalogPackInfo | undefined): number {
-    if (!pack) return Infinity;
-    return (pack.bbox[2] - pack.bbox[0]) * (pack.bbox[3] - pack.bbox[1]);
-}
-
 function bboxesIntersect(a: Bbox, b: Bbox): boolean {
     return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+}
+
+/** Returns true when `container` fully encloses `inner`. */
+function bboxContains(container: Bbox, inner: Bbox): boolean {
+    return (
+        container[0] <= inner[0] &&
+        container[1] <= inner[1] &&
+        container[2] >= inner[2] &&
+        container[3] >= inner[3]
+    );
+}
+
+/** Intersection area / inner area.  0 = no overlap, 1 = fully contained. */
+function intersectionRatio(packBbox: Bbox, inner: Bbox): number {
+    const ixMin = Math.max(packBbox[0], inner[0]);
+    const iyMin = Math.max(packBbox[1], inner[1]);
+    const ixMax = Math.min(packBbox[2], inner[2]);
+    const iyMax = Math.min(packBbox[3], inner[3]);
+    if (ixMin >= ixMax || iyMin >= iyMax) return 0;
+    const intersection = (ixMax - ixMin) * (iyMax - iyMin);
+    const innerArea = (inner[2] - inner[0]) * (inner[3] - inner[1]);
+    return innerArea > 0 ? intersection / innerArea : 0;
+}
+
+function packAreaBbox(bbox: Bbox): number {
+    return (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]);
 }

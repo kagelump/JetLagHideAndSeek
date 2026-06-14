@@ -194,6 +194,105 @@ describe("getCoverageStatus — catalog available", () => {
             expect(result.packId).toBe("europe-netherlands");
         }
     });
+
+    it("prefers container over non-container even when the container is larger", () => {
+        // Tokyo 23 Wards bbox. Kanto's real (inflated) bbox is
+        // huge because of Pacific islands, but it fully contains Tokyo.
+        // Chubu's tighter bbox intersects but the east edge (139.909) is
+        // just west of Tokyo's east edge (139.92) — it does NOT contain.
+        const tokyoBbox: [number, number, number, number] = [
+            139.56, 35.48, 139.92, 35.82,
+        ];
+        const kantoBbox: [number, number, number, number] = [
+            134.05, 18.63, 155.61, 37.16,
+        ];
+        const chubuBbox: [number, number, number, number] = [
+            135.44, 34.27, 139.909, 38.91,
+        ];
+        const catalog = [
+            makeCatalogPack({
+                id: "asia-japan-kanto",
+                label: "Kanto",
+                bbox: kantoBbox,
+                totalBytes: 5_000_000,
+            }),
+            makeCatalogPack({
+                id: "asia-japan-chubu",
+                label: "Chubu",
+                bbox: chubuBbox,
+                totalBytes: 3_000_000,
+            }),
+        ];
+
+        const result = getCoverageStatus(tokyoBbox, catalog, []);
+        expect(result.state).toBe("available");
+        if (result.state === "available") {
+            // Kanto wins despite being 19× larger, because it contains Tokyo.
+            expect(result.packId).toBe("asia-japan-kanto");
+        }
+    });
+
+    it("prefers smaller container when multiple packs fully contain", () => {
+        const tokyoBbox: [number, number, number, number] = [
+            139.56, 35.48, 139.92, 35.82,
+        ];
+        // Both fully contain Tokyo; the smaller one should win.
+        const bigJapan: [number, number, number, number] = [
+            120.0, 20.0, 160.0, 50.0,
+        ];
+        const smallJapan: [number, number, number, number] = [
+            138.0, 34.0, 142.0, 37.0,
+        ];
+        const catalog = [
+            makeCatalogPack({
+                id: "big-japan",
+                label: "Big Japan",
+                bbox: bigJapan,
+            }),
+            makeCatalogPack({
+                id: "small-japan",
+                label: "Small Japan",
+                bbox: smallJapan,
+            }),
+        ];
+
+        const result = getCoverageStatus(tokyoBbox, catalog, []);
+        expect(result.state).toBe("available");
+        if (result.state === "available") {
+            expect(result.packId).toBe("small-japan");
+        }
+    });
+
+    it("uses highest intersection ratio when no pack fully contains", () => {
+        // A play area that isn't fully contained by any pack. The pack
+        // with the most overlap (by ratio) should win.
+        const playArea: [number, number, number, number] = [
+            5.0, 45.0, 15.0, 55.0,
+        ];
+        // Pack A covers ~80% of the play area.
+        const packA: [number, number, number, number] = [5.0, 45.0, 13.0, 55.0];
+        // Pack B covers only ~20%.
+        const packB: [number, number, number, number] = [5.0, 45.0, 7.0, 55.0];
+        const catalog = [
+            makeCatalogPack({
+                id: "pack-b",
+                label: "Pack B",
+                bbox: packB,
+            }),
+            makeCatalogPack({
+                id: "pack-a",
+                label: "Pack A",
+                bbox: packA,
+            }),
+        ];
+
+        const result = getCoverageStatus(playArea, catalog, []);
+        expect(result.state).toBe("available");
+        if (result.state === "available") {
+            // Pack A has higher overlap ratio.
+            expect(result.packId).toBe("pack-a");
+        }
+    });
 });
 
 // ─── Uncovered / unknown ────────────────────────────────────────────────
