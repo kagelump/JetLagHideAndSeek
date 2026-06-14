@@ -9,7 +9,7 @@ import {
     HidingZoneProvider,
     useHidingZoneActions,
 } from "@/state/hidingZoneStore";
-import { PlayAreaProvider } from "@/state/playAreaStore";
+import { PlayAreaProvider, usePlayArea } from "@/state/playAreaStore";
 import { QuestionProvider, useQuestionActions } from "@/state/questionStore";
 
 import { NativeMap } from "../NativeMap";
@@ -125,6 +125,7 @@ function renderWithSafeArea(ui: ReactElement) {
             }}
         >
             <PlayAreaProvider>
+                <SetDefaultPlayArea />
                 <HidingZoneProvider>
                     <QuestionProvider>{ui as any}</QuestionProvider>
                 </HidingZoneProvider>
@@ -139,6 +140,16 @@ function SelectTokyoMetroHidingZone() {
     useEffect(() => {
         addPreset("tokyo-metro");
     }, [addPreset]);
+
+    return null;
+}
+
+function SetDefaultPlayArea() {
+    const { importPlayArea } = usePlayArea();
+
+    useEffect(() => {
+        importPlayArea(defaultPlayArea);
+    }, [importPlayArea]);
 
     return null;
 }

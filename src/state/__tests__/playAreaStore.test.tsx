@@ -79,7 +79,7 @@ describe("PlayAreaProvider app-state persistence", () => {
         queryClient.clear();
     });
 
-    it("uses default play area when nothing is persisted", async () => {
+    it("starts with unset play area when nothing is persisted", async () => {
         const screen = renderProvider();
 
         await waitFor(() => {
@@ -88,9 +88,8 @@ describe("PlayAreaProvider app-state persistence", () => {
             );
         });
 
-        expect(screen.getByTestId("probe-label")).toHaveTextContent(
-            "Tokyo 23 Wards",
-        );
+        expect(screen.getByTestId("probe-label")).toHaveTextContent("");
+        expect(screen.getByTestId("probe-osm-id")).toHaveTextContent("0");
     });
 
     it("restores a persisted full play-area snapshot on mount", async () => {
@@ -109,14 +108,15 @@ describe("PlayAreaProvider app-state persistence", () => {
         expect(screen.getByTestId("probe-osm-id")).toHaveTextContent("358674");
     });
 
-    it("persists default app state after initial restore completes", async () => {
+    it("does not persist when play area is unset", async () => {
         renderProvider();
 
-        await waitFor(async () => {
-            const persisted = await loadPersistedAppState();
-            expect(persisted?.playArea.osmId).toBe(19631009);
-            expect(persisted?.questions).toEqual([]);
+        await waitFor(() => {
+            // Let the persist debounce settle.
         });
+
+        const persisted = await loadPersistedAppState();
+        expect(persisted).toBeNull();
     });
 
     it("persists play-area changes via importPlayArea", async () => {

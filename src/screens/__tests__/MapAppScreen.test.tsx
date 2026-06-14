@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import osmtogeojson from "osmtogeojson";
 import type { ReactElement } from "react";
+import { useEffect } from "react";
 import { Keyboard } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -106,12 +107,21 @@ const TOEI_SUBWAY_PRESET = {
 };
 import { defaultPlayArea } from "@/features/map/playArea";
 import { AppStateProviders } from "@/state/AppStateProviders";
+import { usePlayArea } from "@/state/playAreaStore";
 
 import { queryClient } from "@/state/queryClient";
 
 import { MapAppScreen } from "../MapAppScreen";
 
 const EARTH_RADIUS_METERS = 6371008.8;
+
+function SetDefaultPlayArea() {
+    const { importPlayArea } = usePlayArea();
+    useEffect(() => {
+        importPlayArea(defaultPlayArea);
+    }, [importPlayArea]);
+    return null;
+}
 
 jest.mock("osmtogeojson", () => ({
     __esModule: true,
@@ -248,7 +258,10 @@ function renderWithSafeArea(ui: ReactElement) {
                 insets: { bottom: 34, left: 0, right: 0, top: 47 },
             }}
         >
-            <AppStateProviders>{ui as any}</AppStateProviders>
+            <AppStateProviders>
+                <SetDefaultPlayArea />
+                {ui as any}
+            </AppStateProviders>
         </SafeAreaProvider>,
     );
 }

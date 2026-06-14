@@ -72,7 +72,7 @@ describe("useResetGame", () => {
         );
     }
 
-    it("resets play area to default", async () => {
+    it("resets play area to unset", async () => {
         const screen = renderProbe();
 
         await waitFor(() => {
@@ -84,10 +84,10 @@ describe("useResetGame", () => {
         });
 
         expect(screen.getByTestId("probe-play-area-label")).toHaveTextContent(
-            "Tokyo 23 Wards",
+            "",
         );
         expect(screen.getByTestId("probe-play-area-osm-id")).toHaveTextContent(
-            "19631009",
+            "0",
         );
     });
 

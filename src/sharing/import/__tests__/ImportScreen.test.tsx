@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { deflateSync, strToU8 } from "fflate";
+import { useEffect } from "react";
 import { Text, View } from "react-native";
 
 import { defaultPlayArea } from "@/features/map/playArea";
@@ -14,6 +15,14 @@ import { AppStateProviders } from "@/state/AppStateProviders";
 import { useHidingZoneState } from "@/state/hidingZoneStore";
 import { usePlayArea } from "@/state/playAreaStore";
 import { useQuestions } from "@/state/questionStore";
+
+function SetDefaultPlayArea() {
+    const { importPlayArea } = usePlayArea();
+    useEffect(() => {
+        importPlayArea(defaultPlayArea);
+    }, [importPlayArea]);
+    return null;
+}
 
 const { useLocalSearchParams, useRouter } = jest.requireMock("expo-router") as {
     useLocalSearchParams: jest.Mock;
@@ -78,6 +87,7 @@ describe("ImportScreen", () => {
 
         const screen = render(
             <AppStateProviders>
+                <SetDefaultPlayArea />
                 <ImportScreen />
                 <StoreProbe />
             </AppStateProviders>,
@@ -139,6 +149,7 @@ describe("ImportScreen", () => {
 
         const screen = render(
             <AppStateProviders>
+                <SetDefaultPlayArea />
                 <ImportScreen />
                 <StoreProbe />
             </AppStateProviders>,
@@ -198,6 +209,7 @@ describe("ImportScreen", () => {
 
         const screen = render(
             <AppStateProviders>
+                <SetDefaultPlayArea />
                 <ImportScreen />
                 <StoreProbe />
             </AppStateProviders>,

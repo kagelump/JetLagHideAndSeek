@@ -5,6 +5,29 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import { AppStateProviders } from "@/state/AppStateProviders";
 
+jest.mock("@/state/playAreaStore", () => {
+    const actual = jest.requireActual("@/state/playAreaStore");
+    const { defaultPlayArea } = jest.requireActual("@/features/map/playArea");
+    return {
+        ...actual,
+        usePlayArea: () => ({
+            ...actual.usePlayArea(),
+            playArea: defaultPlayArea,
+        }),
+    };
+});
+
+jest.mock("@/state/hidingZoneStore", () => {
+    const actual = jest.requireActual("@/state/hidingZoneStore");
+    return {
+        ...actual,
+        useHidingZoneState: () => ({
+            ...actual.useHidingZoneState(),
+            selectedPresetIds: ["test-preset"],
+        }),
+    };
+});
+
 function renderWithProviders(ui: ReactElement) {
     return render(
         <SafeAreaProvider

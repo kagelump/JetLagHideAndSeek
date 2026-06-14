@@ -403,7 +403,7 @@ describe("app-state persistence", () => {
         expect(metadata).toBeNull();
     });
 
-    it("returns null and cleans up when play area reference is invalid", async () => {
+    it("restores with unset play area when play area reference is invalid", async () => {
         // A play area reference without osmId.
         await AsyncStorage.multiSet([
             ["app-state:metadata:v1", JSON.stringify(makeAppState().metadata)],
@@ -422,11 +422,10 @@ describe("app-state persistence", () => {
             ],
         ]);
 
-        await expect(loadPersistedAppState()).resolves.toBeNull();
-
-        // All split keys should have been cleaned up.
-        const playArea = await AsyncStorage.getItem("app-state:play-area:v1");
-        expect(playArea).toBeNull();
+        const result = await loadPersistedAppState();
+        expect(result).not.toBeNull();
+        expect(result?.playArea.osmId).toBe(0);
+        expect(result?.playArea.label).toBe("");
     });
 
     it("returns null and cleans up when a slice contains invalid JSON", async () => {
