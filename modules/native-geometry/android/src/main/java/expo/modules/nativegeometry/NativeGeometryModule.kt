@@ -4,75 +4,42 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /**
- * G2 production Expo Module — GEOS-backed bufferWKB replacing the G1 smoke test.
+ * Production Expo Module — a thin delegator over [GeosBridge], which owns the
+ * GEOS JNI layer. Keeping the GEOS logic in [GeosBridge] lets the instrumented
+ * (`androidTest`) suite exercise the real binary without the RN bridge.
  */
 class NativeGeometryModule : Module() {
-
-    companion object {
-        init {
-            System.loadLibrary("native-geometry-jni")
-        }
-    }
 
     override fun definition() = ModuleDefinition {
         Name("NativeGeometry")
 
         Function("geosVersion") {
-            nativeGeosVersion()
+            GeosBridge.version()
         }
 
         // -- ABI version handshake (G5 follow-up) ------------------------------
-        Function("nativeAbiVersion") { 2 }
+        Function("nativeAbiVersion") { GeosBridge.NATIVE_ABI_VERSION }
 
         Function("bufferWKB") { wkb: ByteArray, distance: Double, quadrantSegments: Int ->
-            nativeBufferWKB(wkb, distance, quadrantSegments)
+            GeosBridge.buffer(wkb, distance, quadrantSegments)
         }
 
         // -- Overlay ops: binary --------------------------------------------
         Function("differenceWKB") { wkbA: ByteArray, wkbB: ByteArray ->
-            nativeDifferenceWKB(wkbA, wkbB)
+            GeosBridge.difference(wkbA, wkbB)
         }
 
         Function("unionWKB") { wkbA: ByteArray, wkbB: ByteArray ->
-            nativeUnionWKB(wkbA, wkbB)
+            GeosBridge.union(wkbA, wkbB)
         }
 
         Function("intersectionWKB") { wkbA: ByteArray, wkbB: ByteArray ->
-            nativeIntersectionWKB(wkbA, wkbB)
+            GeosBridge.intersection(wkbA, wkbB)
         }
 
         // -- Overlay op: unary union ----------------------------------------
         Function("unaryUnionWKB") { wkb: ByteArray ->
-            nativeUnaryUnionWKB(wkb)
+            GeosBridge.unaryUnion(wkb)
         }
     }
-
-    // -- JNI declarations ---------------------------------------------------
-
-    private external fun nativeGeosVersion(): String
-    private external fun nativeBufferWKB(
-        wkb: ByteArray,
-        distance: Double,
-        quadrantSegments: Int
-    ): ByteArray?
-
-    // -- Overlay ops --------------------------------------------------------
-    private external fun nativeDifferenceWKB(
-        wkbA: ByteArray,
-        wkbB: ByteArray
-    ): ByteArray?
-
-    private external fun nativeUnionWKB(
-        wkbA: ByteArray,
-        wkbB: ByteArray
-    ): ByteArray?
-
-    private external fun nativeIntersectionWKB(
-        wkbA: ByteArray,
-        wkbB: ByteArray
-    ): ByteArray?
-
-    private external fun nativeUnaryUnionWKB(
-        wkb: ByteArray
-    ): ByteArray?
 }

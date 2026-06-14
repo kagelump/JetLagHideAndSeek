@@ -15,6 +15,12 @@ android {
         versionCode 1
         versionName "0.1.0"
 
+        // Instrumented (androidTest) suite — exercises the real vendored GEOS
+        // binary on an emulator/device without the RN bridge. See
+        // src/androidTest/.../GeosBridgeTest.kt and AGENTS.md "Testing
+        // Expectations".
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17 -frtti -fexceptions"
@@ -48,14 +54,34 @@ android {
             // Pre-built GEOS C headers are installed alongside the .a files.
             jniLibs.srcDirs = ["libs"]
         }
+        androidTest {
+            // Load the committed, language-neutral golden fixture straight from
+            // __fixtures__ as a test asset — no copy, no duplication. The same
+            // file drives the host geos-wasm gate and the iOS XCTest suite, so
+            // all three engines parity-check against one source of truth.
+            assets.srcDirs += files("$projectDir/../__fixtures__")
+        }
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    // The instrumented test APK pulls libc++_shared.so from both this module
+    // (CMake ANDROID_STL=c++_shared) and react-android. The app module resolves
+    // that collision with pickFirst; the library's own androidTest APK needs
+    // the same rule or mergeDebugAndroidTestNativeLibs fails on the duplicate.
+    packaging {
+        jniLibs {
+            pickFirsts += ["**/libc++_shared.so"]
+        }
+    }
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
+
+    androidTestImplementation "androidx.test.ext:junit:1.1.5"
+    androidTestImplementation "androidx.test:runner:1.5.2"
 }
