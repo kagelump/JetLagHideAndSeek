@@ -1,0 +1,134 @@
+name: Native Geometry Tests
+
+# Device-side GEOS parity suites (WI-5 / research D1+D2). Both jobs run the real
+# vendored GEOS 3.14.1 binary against the committed, language-neutral golden
+# fixture (modules/native-geometry/__fixtures__/geos-golden.json) — the same
+# file the host geos-wasm gate ("GEOS parity" in app-checks.yml) asserts. No
+# Metro, no JS bundle, no app install, no code signing.
+#
+# - iOS:     standalone SwiftPM XCTest package (no prebuild / Pods / pnpm).
+# - Android: instrumented androidTest on an emulator (needs expo prebuild
+#            + JDK 17; setup-java pins 17 so the local default-JDK trap doesn't
+#            apply in CI).
+
+on:
+    workflow_dispatch:
+        inputs:
+            platform:
+                description: Platform to test
+                required: true
+                default: all
+                type: choice
+                options:
+                    - android
+                    - ios
+                    - all
+    pull_request:
+        paths:
+            - "modules/native-geometry/**"
+            - ".github/workflows/native-geometry-tests.yml"
+    push:
+        branches:
+            - master
+        paths:
+            - "modules/native-geometry/**"
+            - ".github/workflows/native-geometry-tests.yml"
+
+jobs:
+    ios:
+        name: iOS XCTest (GEOS parity)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'ios' || inputs.platform == 'all' }}
+        runs-on: macos-15
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Select and boot iOS simulator
+              run: |
+                  xcrun simctl list devices available
+                  IOS_SIMULATOR="iPhone 16 Pro"
+                  IOS_RUNTIME="18.5"
+                  UDID=$(xcrun simctl list devices available | grep "$IOS_SIMULATOR (" | grep "iOS $IOS_RUNTIME" | head -1 | sed -n 's/.*(\([A-F0-9-]*\)).*/\1/p')
+                  if [ -z "$UDID" ]; then
+                      echo "No $IOS_SIMULATOR on iOS $IOS_RUNTIME found; falling back to first available $IOS_SIMULATOR"
+                      UDID=$(xcrun simctl list devices available | grep "$IOS_SIMULATOR (" | head -1 | sed -n 's/.*(\([A-F0-9-]*\)).*/\1/p')
+                  fi
+                  if [ -z "$UDID" ]; then
+                      echo "Failed to find any available $IOS_SIMULATOR"
+                      exit 1
+                  fi
+                  echo "IOS_SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+                  echo "Selected simulator: $IOS_SIMULATOR ($UDID)"
+                  xcrun simctl boot "$UDID" || true
+
+            - name: Run XCTest suite against vendored GEOS
+              working-directory: modules/native-geometry
+              run: |
+                  set -o pipefail
+                  xcodebuild test \
+                      -scheme NativeGeometryTests-Package \
+                      -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_UDID" \
+                      -resultBundlePath TestResults.xcresult \
+                      CODE_SIGNING_ALLOWED=NO \
+                      2>&1 | grep -vE "ld: warning: object file"
+
+            - name: Upload xcresult
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: native-geometry-ios-xcresult
+                  path: modules/native-geometry/TestResults.xcresult
+                  if-no-files-found: ignore
+
+    android:
+        name: Android instrumented (GEOS parity)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'android' || inputs.platform == 'all' }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: 17
+
+            - name: Install pnpm
+              run: npm install -g pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Enable KVM
+              run: |
+                  echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+                  sudo udevadm control --reload-rules
+                  sudo udevadm trigger --name-match=kvm
+
+            - name: Prebuild Android project
+              run: pnpm exec expo prebuild --platform android --clean
+
+            - name: Run instrumented suite on emulator
+              uses: reactivecircus/android-emulator-runner@v2
+              with:
+                  api-level: 35
+                  arch: x86_64
+                  target: google_apis
+                  emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+                  # The :native-geometry instrumented APK builds the library + its
+                  # androidTest; no app install / Metro needed.
+                  script: ./android/gradlew -p android :native-geometry:connectedDebugAndroidTest
+
+            - name: Upload androidTest reports
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: native-geometry-android-results
+                  path: |
+                      android/native-geometry/build/reports/androidTests/**
+                      android/native-geometry/build/outputs/androidTest-results/**
+                  if-no-files-found: ignore
