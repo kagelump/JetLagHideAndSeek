@@ -1,27 +1,34 @@
-# Native Module Test Suite — Research Handoff
+# Native Module Test Suite — Handoff
 
-> Snapshot 2026-06-14. Tracks the research phase of
-> [`native-module-test-suite-research-plan.md`](../native-module-test-suite-research-plan.md).
-> Read that plan for the full RQ definitions; this doc is "where we are + how to
-> resume."
+> Snapshot 2026-06-14. The **research phase**
+> ([`native-module-test-suite-research-plan.md`](../native-module-test-suite-research-plan.md))
+> is essentially complete — every load-bearing risk is retired. The baton now
+> passes to the **implementation plan**
+> ([`native-module-test-suite-plan.md`](../native-module-test-suite-plan.md)).
+> **If you're picking this up, start at "Next: implementation plan" below.**
 
 ## TL;DR
 
-The make-or-break gate is cleared. **A standalone iOS XCTest harness links the
+The make-or-break gates are cleared. **A standalone iOS XCTest harness links the
 vendored GEOS and runs in ~11 s with no prebuild / Pods / signing.** WKB fixtures
-are cross-engine (JS↔Swift), and the GEOS 3.13→3.14.1 buffer delta is literally
-zero. Three findings are GREEN. Remaining work is the Android harness, the
-parity body-of-water timing case (in progress), CI wiring, and the Maestro
-reduction.
+are cross-engine (JS↔Swift), the GEOS 3.13→3.14.1 buffer delta is literally
+zero, and the body-of-water dissolve runs in 530 ms on device (vs 5.6 s
+polyclip-JS). Six research findings done (A1, C1, C2, C3, E2 GREEN; E1 fixes
+done, CI run pending). Gates 1–3 retired.
+
+**Next action: WI-0 (golden fixtures) → WI-1 (extract GeosCore) → WI-2 (promote
+the spike into the real iOS XCTest suite).** See the dedicated section below.
+The Android side (WI-3/4 = research B1/B2) and CI (WI-5 = D1/D2) follow and need
+an emulator; sanitizers (F1/F2) and the E1 smoke-flow CI run are still open.
 
 | RQ    | Topic                                  | Status                                     | Finding                      |
 | ----- | -------------------------------------- | ------------------------------------------ | ---------------------------- |
 | A1    | iOS standalone XCTest harness          | ✅ GREEN                                   | `research-findings/RQ-A1.md` |
 | C1    | WKB-hex cross-engine (JS↔Swift)       | ✅ GREEN (Kotlin pending B1)               | `research-findings/RQ-C1.md` |
 | C2    | Parity tolerances 3.13→3.14.1 (buffer) | ✅ GREEN                                   | `research-findings/RQ-C2.md` |
-| C3    | Body-of-water difference timing        | 🚧 IN PROGRESS                             | — (see below)                |
-| E1    | Maestro infra fixes (1 smoke flow)     | ⬜ NOT STARTED                             | —                            |
-| E2    | Deleted-flow assertion inventory       | ⬜ NOT STARTED                             | —                            |
+| C3    | Body-of-water difference timing        | ✅ GREEN                                   | `research-findings/RQ-C3.md` |
+| E1    | Maestro infra fixes (1 smoke flow)     | 🟡 FIXES DONE (CI run pending)             | `research-findings/RQ-E1.md` |
+| E2    | Deleted-flow assertion inventory       | ✅ GREEN                                   | `research-findings/RQ-E2.md` |
 | A2    | In-workspace iOS fallback              | ⏭️ UNNEEDED (A1 green; 2h desk-check only) | —                            |
 | A3    | GeosCore.swift refactor                | ⬜ NOT STARTED                             | —                            |
 | B1/B2 | Android instrumented harness           | ⬜ NOT STARTED                             | —                            |
@@ -29,8 +36,9 @@ reduction.
 | F1/F2 | Sanitizers / concurrency               | ⬜ NOT STARTED (gated on a harness)        | —                            |
 
 Decision gates: **Gate 1 RETIRED** (A1 green). **Gate 2 RETIRED for iOS axis**
-(C1+C2); Kotlin axis pending B1. **Gate 3 (body-of-water is real & GEOS is fast)
-in progress** (C3). Gate 4 (sanitizers) not started.
+(C1+C2); Kotlin axis pending B1. **Gate 3 RETIRED** — C3 shows device GEOS does
+the body-of-water dissolve in 530 ms (polyclip-JS 5.6 s) and the mask difference
+in 29 ms. Gate 4 (sanitizers) not started.
 
 ## The harness (reusable for every iOS RQ)
 
@@ -46,13 +54,19 @@ Structure:
   links the **simulator static slice directly** via `-L.../ios-arm64-simulator
 -lgeos-combined` + `-lc++`), `GeosSpikeTests`.
 - `Sources/GeosSpike/GeosSpike.swift` — `version()`, `intersectionArea…()`,
-  `probeWkbHex()` (C1), `bufferWkbHex()` (C2). Add C3 probes here.
+  `probeWkbHex()` (C1), `bufferWkbHex()` (C2), `unaryUnionWkbHex()` +
+  `differenceWkbHex()` (C3, timed). These are the **probe patterns** the real
+  suite reuses — but note they call GEOS _directly_ (test-only copy), not
+  production Swift; see the WI-1 caveat below.
 - `Tests/GeosSpikeTests/` — `GeosSpikeTests` (A1), `WkbParityTests` (C1),
-  `BufferParityTests` (C2). Tests read JSON fixtures from the package root via
-  `#filePath`.
+  `BufferParityTests` (C2), `BodyOfWaterTimingTests` (C3). Tests read JSON
+  fixtures from the package root via `#filePath`.
 - JS fixture emitters (run with `node --import tsx …`):
   `emit-wkb-fixtures.mts` → `wkb-fixtures.json` (C1);
   `emit-buffer-fixtures.mts` → `buffer-fixtures.json` (C2, drives geos-wasm 3.13).
+- C3 fixture is minted by a Jest capture test (needs the RN mocks):
+  `__tests__/captureBow.geos.test.ts` → `bow-fixtures.json` (12.7 MB — trim
+  before promoting; see RQ-C3.md). Asset copied to `/tmp/bow-asset.json` first.
 
 Run the whole suite:
 
@@ -79,94 +93,123 @@ version` lines. `.v18` needs `swift-tools-version:6.0`.
 3. Native + wasm buffer params are identical: `GEOSBufferWithParams`, QS=8,
    `CAP_ROUND`, `JOIN_ROUND`. Match these in any buffer comparison.
 
-## RQ-C3 — body-of-water timing (IN PROGRESS — resume here)
+## Next: implementation plan (START HERE)
 
-**Goal:** commit a real large-MultiPolygon `difference`/`unaryUnion` fixture and
-show device GEOS does it fast (< 3 s, ideally sub-second, non-null), vs the JS
-polyclip dissolve that hard-locks ~25 s.
+Work items are defined in
+[`native-module-test-suite-plan.md`](../native-module-test-suite-plan.md). WI-6
+(reduce Maestro) is **done** (commit `c6f2362` + E1 infra fixes, see below); WI-0
+→ WI-2 is the next critical path. Do them in order.
 
-**What's established:**
+### WI-0 — Golden fixtures + generator (do first; fully local, unblocked)
 
-- The marquee op is `backend.unaryUnion(merged)` at
-  `src/features/questions/measuring/lineMeasuringGeometry.ts:788-804`. `merged`
-  = `mergeBuffersToMultiPolygon(allBuffers)` — dissolved water polygons + river
-  line buffers over the **50 km** window (the over-wide window is the bug in
-  `docs/body-of-water-mask-bug.md`). polyclip-ts dissolve of this ≈ 25 s; only
-  GEOS does it cheaply. The downstream mask op is
-  `buildCombinedEligibilityMask` → GEOS `difference(playArea, eligibleArea)`.
-- **Repro data:** the real 15 MB asset (7012 features: 155 MultiPolygon + 6857
-  LineString, `category: body-of-water`) is gone from `assets/measuring/` but
-  survives at
-  `.claude/worktrees/reduce-simplify-tolerances/assets/measuring/body-of-water.json`.
-  (Pack form: `data/packs/dist/{asia-taiwan,europe-netherlands}/measuring-body-of-water.json.gz`;
-  Kantō pack has no body-of-water file.) Repro center
-  `CENTER=[139.658499,35.68783]`, `PLAY_AREA_BBOX=[139,35,140,36]` (from
-  `bodyWaterMask.geos.test.ts`, which is `describe.skip`'d post-bundle-removal).
+The backbone both device suites load. The research left **three disconnected**
+fixture files; consolidate them into ONE committed, invariant-keyed golden file.
 
-**The blocker that shaped the approach:** the app pipeline
-(`computeLineCategory`/`computeLineBuffer`/`geosGeometryBackend`) imports
-`native-geometry` (→ `requireNativeModule`) and RN bits, which throw under plain
-`node --import tsx`. Only jest has those mocks. So two viable paths to get the
-**exact** op-input WKB:
+- Write `modules/native-geometry/scripts/gen-golden-fixtures.mjs` that emits
+  `modules/native-geometry/__fixtures__/geos-golden.json` (schema in the impl
+  plan "Shared golden fixtures"). Reuse the three research emitters as the
+  starting point — they already produce exactly the right shapes:
+    - buffer cases ← `spikes/RQ-A1-ios-geos/emit-buffer-fixtures.mts` (projected
+      WKB in, geos-wasm 3.13 area/bbox oracle out).
+    - WKB-parse cases ← `spikes/RQ-A1-ios-geos/emit-wkb-fixtures.mts`.
+    - overlay + body-of-water cases ← the `captureBow.geos.test.ts` approach
+      (needs Jest/RN mocks; keep the generator's overlay step in a `.geos.test`
+      or a jest-run script, not plain tsx — see the blocker note in WI-2).
+      Key on engine-independent invariants (type / areaM2+ratioTol / bbox+bboxTolM /
+      isNull / minRingVertices), never bytes — GEOS 3.13≠3.14≠JSTS byte-wise.
+- Wire `geosParity.test.ts` to also assert against the committed JSON so host and
+  device can never silently drift. Commit `geos-golden.json` (trim the
+  body-of-water hex — bare it's 12.7 MB; gzip or use a smaller window).
 
-- **Path A (recommended, faithful):** add a throwaway capture test under the
-  geos jest config (`*.geos.test.ts`, runs via `pnpm test:geos` which has all
-  mocks). Point `require` at the worktree asset, monkeypatch
-  `native.unaryUnionWKB`/`differenceWKB` to **record their input WKB to disk**
-  (hex) before delegating to the wasm impl, run the pipeline from the skipped
-  test, and dump `bow-fixtures.json` (the largest `unaryUnion` input + the
-  `difference` a/b inputs). Also time the wasm op and, for the headline contrast,
-  time `jsGeometryBackend.unaryUnion` on the same input (expect ~25 s — that IS
-  the evidence; give it a long timeout).
-- **Path B (lighter, approximate):** in a tsx script using only `geosWasmNode` +
-  `bufferProjection` + `wkb` + turf (all tsx-safe), filter the asset to the
-  50 km Tokyo window, buffer each line via geos-wasm, concat into one big
-  MultiPolygon, encode → fixture. Less faithful to `mergeBuffersToMultiPolygon`
-  but captures the pathological overlap that stresses the dissolve.
+### WI-1 — Extract `GeosCore.swift` (real prerequisite for WI-2, not optional)
 
-**Then (either path):** add `unaryUnionWkbHex()` + `differenceWkbHex()` probes to
-`GeosSpike.swift` (use `GEOSUnaryUnion_r` and `GEOSDifference_r`), and a
-`BodyOfWaterTimingTests.swift` that reads `bow-fixtures.json`, runs each op,
-asserts non-null + result coord count > 0, and prints wall-clock
-(`CFAbsoluteTimeGetCurrent()`). Commit the fixture (it's the deliverable). If
-GEOS is _also_ slow → critical finding, escalate (Gate 3 fails).
+⚠️ **The research caveat that changes the order:** the RQ-A1 spike proved the
+_linking mechanism_, but `Sources/GeosSpike/GeosSpike.swift` calls GEOS through a
+**test-only copy** — it does NOT exercise `NativeGeometryModule.swift`'s memory
+ownership (the `defer`/`GEOSFree`/`destroy` chain, MakeValid reassignment). That
+memory-ownership coverage is the impl plan's headline value (Context-table rows
+2–4). So the real suite must call the extracted `GeosCore`, making WI-1 a genuine
+prerequisite.
 
-## Remaining tracks (not started)
+- Extract `geosContext()` + `_bufferAndWrite`/`_binaryOpAndWrite`/
+  `_unaryOpAndWrite` into `modules/native-geometry/ios/GeosCore.swift` as a
+  stateless enum (`buffer/difference/union/intersection/unaryUnion/version/
+abiVersion`). Thin `NativeGeometryModule.swift` to one-line delegators.
+- **Carve `GeosCore` to depend only on the C bridge + `Data` — NOT
+  `ExpoModulesCore`** (RQ-A1 confirmed the test target links without it; keeping
+  that boundary clean is what lets WI-2 compile `GeosCore` standalone).
+- Rebuild dev client (`expo prebuild --clean` + `run:ios`), confirm a buffer
+  renders identically. `pnpm test`/`test:geos` route around native → stay green.
 
-- **E2 (pure reading, cheapest):** inventory every assertion in `e2e/`
-  (`play-area`, `hiding-zone`, `radar-question`, `transit-line-question`,
-  `thermometer-question`, `geos-*`, `reconnect`, `dismiss-continue`) → table:
-  covered by Jest render-state / will be covered by native suite / orphaned.
-  Output `research-findings/RQ-E2.md`. No "unknown" rows allowed.
-- **E1 (touches CI):** two known fixes — (1) add `native-geometry` as a
-  `link:./modules/native-geometry` dep so Android Metro resolves it (currently a
-  stray symlink); (2) own the associated-domains gate in `app.config.ts` (strip
-  the entitlement, remove from `app.json`) + `CODE_SIGNING_ALLOWED=NO` on the sim
-  build. Goal: one Maestro smoke flow green on both platforms ×2 (flake check).
-  Verify locally what you can; the green-on-CI proof needs
-  `gh workflow run "Maestro E2E"` (outward-facing — get the user to trigger or
-  confirm cost).
-- **B1/B2 (Android):** needs an emulator booted + a full `expo prebuild
---platform android` (no `gradle` on PATH; use the generated `./gradlew`). Add
-  an `androidTest` source set to `modules/native-geometry/android/build.gradle`,
-  call `GEOSversion()` through JNI, run `:native-geometry:connectedAndroidTest`.
-  B2: watch for `UnsatisfiedLinkError` if the `external fun native*` decls move
-  off `NativeGeometryModule` (JNI symbols are
-  `Java_expo_modules_nativegeometry_NativeGeometryModule_native*`). Closes the
-  Kotlin axis of C1 (reuse `wkb-fixtures.json`).
-- **A3:** extract `GeosCore.swift` from `NativeGeometryModule.swift`, rebuild dev
-  client, confirm a buffer renders identically. Independent of the harness (the
-  harness doesn't need `ExpoModulesCore`).
-- **D1 (unblocked by A1):** GitHub `macos-15` runner, reuse the simulator UDID
-  block from `.github/workflows/maestro-e2e.yml`, run the A1 command. Expect a
-  few-min job dominated by sim boot, not the 11 s test.
-- **F1/F2:** sanitizers (seed a double-free, confirm ASan catches it) + lazy-init
-  concurrency. Gated on a working harness; A1 satisfies that for iOS.
+### WI-2 — iOS XCTest suite (promote the spike)
+
+- Stand up the real target at `modules/native-geometry/ios/Tests/` using the
+  **proven SPM recipe** (see "The harness" above + RQ-A1.md): copy the `CGEOS`
+  module + direct static-slice linking, but compile `GeosCore.swift` (production)
+  instead of the test-only `GeosSpike.swift`.
+- Load `geos-golden.json` from the bundle; implement the full case catalogue
+  (impl plan §"Test case catalogue"). The spike covers #1-5,7 in spirit; the
+  **native-only cases still to write**: #6 MakeValid recovery (bowtie), #9 memory
+  stress (≥1000× loop, no leak/double-free), #10 malformed input (NaN/unclosed/
+  truncated → null not crash), #11 concurrency (lazy `geosContext()` init).
+- Run: `xcodebuild test -scheme NativeGeometryTests -destination 'platform=iOS
+Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO`.
+- **Before building any of this**, decide the artifact-bug fix (task_76b534d5): if
+  fixed, you can use a clean `.binaryTarget(xcframework)` (links both slices); if
+  not, keep the direct `-L .../ios-arm64-simulator -lgeos-combined` hack
+  (simulator-only, which is fine for CI).
+
+## Remaining tracks (after WI-0→2)
+
+- **WI-3/WI-4 = Android (research B1/B2):** needs an emulator booted + a full
+  `expo prebuild --platform android` (no `gradle` on PATH; use the generated
+  `./gradlew`). Extract `GeosBridge` (Kotlin); add an `androidTest` source set to
+  `modules/native-geometry/android/build.gradle`; call `GEOSversion()` through
+  JNI; run `:native-geometry:connectedAndroidTest`. Watch for
+  `UnsatisfiedLinkError` if the `external fun native*` decls move off
+  `NativeGeometryModule` (JNI symbols are
+  `Java_expo_modules_nativegeometry_NativeGeometryModule_native*`). Reuse
+  `geos-golden.json` to close the Kotlin axis of C1.
+- **WI-5 = CI (research D1/D2):** new `.github/workflows/native-geometry-tests.yml`.
+  iOS job (`macos-15`): boot sim → `xcodebuild test` (reuse the UDID-select block
+  from `maestro-e2e.yml`); no `expo run`, no signing, no Metro. Android job
+  (`reactivecircus/android-emulator-runner`): `connectedAndroidTest`. D1 is
+  unblocked by A1; D2 needs B1.
+- **F1/F2 = sanitizers/concurrency:** seed a double-free, confirm ASan catches it;
+  exercise lazy context init from N threads. Gated on a harness (A1 satisfies iOS).
+- **E1 final step (CI run):** infra fixes landed + locally verified
+  (`research-findings/RQ-E1.md`); only the green-on-CI ×2 confirmation remains:
+  `gh workflow run "Maestro E2E" --ref research/RQ-A1-ios-standalone -f
+platform=all -f flow=smoke` then `gh run watch` (twice). Outward-facing / costs
+  CI — trigger when ready.
+- **WI-7 = docs/upgrade gate:** update `implementation_notes.md §How to upgrade
+GEOS` (golden parity must pass) + `AGENTS.md` Testing Expectations (point
+  native/geometry changes at the new suite; Maestro is now one smoke flow).
+
+## Branch / working-tree state (read before you commit anything)
+
+On branch `research/RQ-A1-ios-standalone`, **nothing is committed yet.** The
+uncommitted changes fall into three buckets — keep them separate when you stage:
+
+1. **Spike (throwaway, do NOT merge to master):** everything under
+   `spikes/RQ-A1-ios-geos/`.
+2. **Keepers:** the finding docs under `docs/native-geometry/research-findings/`.
+3. **Real fixes that must graduate to a proper PR (NOT throwaway):** the WI-6/E1
+   infra edits — `package.json` (+`native-geometry` link dep), `app.json`
+   (removed leaked `associatedDomains`), `app.config.ts` (gate now owns it),
+   `pnpm-lock.yaml` (3-line add; re-prettified — a bare `pnpm install` reformats
+   the whole file, so run `npx prettier --write pnpm-lock.yaml` after). These are
+   verified locally (`pnpm install --frozen-lockfile`, `prettier --check`,
+   `typecheck` all pass).
+
+Also: `src/features/playArea/PlayAreaScreen.tsx` is someone else's in-flight
+edit — leave it alone.
 
 ## House rules (from the plan)
 
-- Spikes live on `research/<rq>-…` branches, never merged to master.
-- Every RQ ends with a `research-findings/<rq>.md` (template at the bottom of the
-  research plan). A clear RED finding is a success.
-- The master working tree has unrelated in-flight edits (ux-overhaul, transit) —
-  leave them alone; spike work is isolated under `spikes/`.
+- Spike code lives on `research/…` branches, never merged to master; the real
+  WI-1/WI-2 suite lands under `modules/native-geometry/` via a normal PR.
+- Every research RQ ends with a `research-findings/<rq>.md`. A clear RED finding
+  is a success.
+- The open artifact-bug task (task_76b534d5) gates the WI-2 linking choice — see
+  WI-2 above.
