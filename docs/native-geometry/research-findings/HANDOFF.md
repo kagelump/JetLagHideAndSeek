@@ -209,14 +209,14 @@ Landed on `claude/laughing-ritchie-ur26bc`. What shipped:
 
 ## Remaining tracks (after WI-0→2)
 
-- **WI-3/WI-4 = Android (research B1/B2) — ✅ DONE.** Landed alongside the iOS
-  WI-1/WI-2 suite. What shipped:
+- **WI-3/WI-4 = Android (research B1/B2) — ✅ DONE.** What shipped:
     - `GeosBridge.kt` — RN-bridge-free Kotlin object owning `System.loadLibrary`
-        - the `external fun native*` decls + a public `version/buffer/difference/
-union/intersection/unaryUnion` surface. `NativeGeometryModule.kt` delegates
-          every `Function()` to it. The JNI exports in `native-geometry-jni.cpp` were
-          renamed `Java_..._NativeGeometryModule_native*` → `Java_..._GeosBridge_native*`
-          to match (the documented `UnsatisfiedLinkError` trap).
+      plus the `external fun native*` decls and a public
+      `version/buffer/difference/union/intersection/unaryUnion` surface;
+      `NativeGeometryModule.kt` delegates every `Function()` to it.
+    - `native-geometry-jni.cpp` — JNI exports renamed
+      `Java_..._NativeGeometryModule_native*` → `Java_..._GeosBridge_native*` to
+      match the new class (the documented `UnsatisfiedLinkError` trap).
     - `src/androidTest/.../GeosBridgeTest.kt` — instrumented suite (14 tests)
       loading the **same** `geos-golden.json` (wired in as an androidTest asset
       via `assets.srcDirs += ../__fixtures__`, no copy) and asserting the same
