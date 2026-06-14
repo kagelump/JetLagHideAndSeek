@@ -20,6 +20,7 @@ import {
 } from "@/state/hidingZoneStore";
 import { clearAppCaches, useResetGame } from "@/state/maintenance";
 import { usePlayArea } from "@/state/playAreaStore";
+import { isPlayAreaSet } from "@/features/map/playArea";
 import {
     useGameMode,
     useLabelLanguage,
@@ -56,7 +57,7 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
     );
     const resetGame = useResetGame();
 
-    const playAreaDone = !!playArea;
+    const playAreaDone = isPlayAreaSet(playArea);
     const hidingZonesDone = selectedPresetIds.length > 0;
     const setupComplete = playAreaDone && hidingZonesDone;
 
@@ -71,7 +72,7 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                     style: "destructive",
                     onPress: async () => {
                         await resetGame();
-                        setMaintenanceResult("Game reset");
+                        onNavigate("main");
                     },
                 },
             ],
@@ -127,7 +128,9 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
                 <Pressable
                     accessibilityLabel="Share game setup"
                     accessibilityRole="button"
-                    onPress={() => setIsShareVisible(true)}
+                    onPress={() => {
+                        if (setupComplete) setIsShareVisible(true);
+                    }}
                     style={({ pressed }) => [
                         styles.shareRow,
                         !setupComplete ? styles.shareRowInactive : null,

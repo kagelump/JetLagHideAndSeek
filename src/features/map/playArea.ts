@@ -100,6 +100,19 @@ export const defaultPlayArea: DefaultPlayArea = {
     osmType: "R",
 };
 
+export const unsetPlayArea: PlayArea = {
+    bbox: [0, 0, 0, 0],
+    boundary: { type: "FeatureCollection", features: [] },
+    center: [0, 0],
+    label: "",
+    osmId: 0,
+    osmType: "R",
+};
+
+export function isPlayAreaSet(playArea: PlayArea): boolean {
+    return playArea.osmId !== 0;
+}
+
 export const knownPlayAreaPresets: PlayArea[] = [defaultPlayArea];
 
 function collectPositions(value: unknown, output: Position[]) {

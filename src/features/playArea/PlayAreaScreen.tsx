@@ -58,6 +58,10 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
     const [relationIdError, setRelationIdError] = useState<string | null>(null);
     const [showAdvanced, setShowAdvanced] = useState(false);
 
+    useEffect(() => {
+        snapToIndex(SHEET_SNAP_INDEX.large);
+    }, [snapToIndex]);
+
     const handleSearchFocus = useCallback(() => {
         setTimeout(() => {
             scrollRef.current?.scrollTo({ y: searchSectionY, animated: true });
@@ -258,6 +262,7 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                     <Text style={styles.sectionTitle}>Search</Text>
                     <TextInput
                         accessibilityLabel="Search play areas"
+                        autoFocus
                         onChangeText={setQuery}
                         onFocus={handleSearchFocus}
                         placeholder="Search a city or region"
@@ -337,23 +342,24 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                             </Pressable>
                         </View>
                     ) : null}
+                    <View style={styles.stickyFooter}>
+                        <Pressable
+                            accessibilityLabel="Continue to hiding zones"
+                            accessibilityRole="button"
+                            onPress={() => onNavigate("hiding-zone")}
+                            style={({ pressed }) => [
+                                styles.continueButton,
+                                pressed ? styles.actionPressed : null,
+                            ]}
+                            testID="play-area-continue"
+                        >
+                            <Text style={styles.continueButtonText}>
+                                Continue
+                            </Text>
+                        </Pressable>
+                    </View>
                 </View>
             </SheetScrollView>
-
-            <View style={styles.stickyFooter}>
-                <Pressable
-                    accessibilityLabel="Continue to hiding zones"
-                    accessibilityRole="button"
-                    onPress={() => onNavigate("hiding-zone")}
-                    style={({ pressed }) => [
-                        styles.continueButton,
-                        pressed ? styles.actionPressed : null,
-                    ]}
-                    testID="play-area-continue"
-                >
-                    <Text style={styles.continueButtonText}>Continue</Text>
-                </Pressable>
-            </View>
 
             <OfflinePackModal
                 visible={showOfflineModal}

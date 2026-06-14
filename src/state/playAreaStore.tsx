@@ -13,8 +13,8 @@ import {
     parseRelationId,
 } from "@/features/map/playAreaBoundary";
 import {
-    defaultPlayArea,
     knownPlayAreaPresets,
+    unsetPlayArea,
     type PlayArea,
     type PlayAreaCacheSource,
 } from "@/features/map/playArea";
@@ -37,7 +37,7 @@ type PlayAreaState = {
 const PlayAreaContext = createContext<PlayAreaState | null>(null);
 
 export function PlayAreaProvider({ children }: { children: ReactNode }) {
-    const [playArea, setPlayArea] = useState<PlayArea>(defaultPlayArea);
+    const [playArea, setPlayArea] = useState<PlayArea>(unsetPlayArea);
     const [cacheSource, setCacheSource] =
         useState<PlayAreaCacheSource>("bundled");
     const [isLoading, setIsLoading] = useState(false);

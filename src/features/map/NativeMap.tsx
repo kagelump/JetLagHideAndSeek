@@ -18,6 +18,7 @@ import { colors } from "@/theme/colors";
 import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { useMarkAppMapReady } from "@/state/AppStateProviders";
 import { usePlayArea } from "@/state/playAreaStore";
+import { isPlayAreaSet } from "@/features/map/playArea";
 import type { Position } from "@/shared/geojson";
 import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
 
@@ -92,18 +93,23 @@ export function NativeMap({
     const markAppMapReady = useMarkAppMapReady();
     const questionMapRenderState = useQuestionMapRenderState();
     const { playArea } = usePlayArea();
+    const playAreaIsSet = isPlayAreaSet(playArea);
 
     const playAreaMask = useMemo(
         () =>
-            playArea.maskHoles
-                ? buildPlayAreaMaskFromMetadata(
-                      playArea.boundary,
-                      playArea.maskHoles,
-                  )
-                : buildPlayAreaMask(playArea.boundary),
-        [playArea.boundary, playArea.maskHoles],
+            !playAreaIsSet
+                ? { type: "FeatureCollection" as const, features: [] }
+                : playArea.maskHoles
+                  ? buildPlayAreaMaskFromMetadata(
+                        playArea.boundary,
+                        playArea.maskHoles,
+                    )
+                  : buildPlayAreaMask(playArea.boundary),
+        [playAreaIsSet, playArea.boundary, playArea.maskHoles],
     );
     const combinedInsideMask = useMemo(() => {
+        if (!playAreaIsSet)
+            return { type: "FeatureCollection" as const, features: [] };
         return buildCombinedEligibilityMask(
             playArea.boundary,
             [
@@ -145,6 +151,7 @@ export function NativeMap({
             ],
         );
     }, [
+        playAreaIsSet,
         playArea.boundary,
         zoneFeatures,
         questionMapRenderState.radar.hitMaskFeatures,
@@ -172,8 +179,9 @@ export function NativeMap({
         useUserLocation(cameraRef);
 
     const fitPlayArea = useCallback(() => {
+        if (!playAreaIsSet) return;
         fitCameraToBbox(cameraRef.current, playArea.bbox, fitPadding);
-    }, [fitPadding, playArea.bbox]);
+    }, [playAreaIsSet, fitPadding, playArea.bbox]);
     const handleMapReady = useCallback(() => {
         fitPlayArea();
         markAppMapReady();
@@ -217,8 +225,10 @@ export function NativeMap({
                     <MLCamera
                         ref={cameraRef}
                         defaultSettings={{
-                            centerCoordinate: playArea.center,
-                            zoomLevel: 4,
+                            centerCoordinate: playAreaIsSet
+                                ? playArea.center
+                                : [0, 20],
+                            zoomLevel: playAreaIsSet ? 4 : 2,
                         }}
                     />
 

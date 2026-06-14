@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback } from "react";
 
 import { cleanOrphanedBoundaryKeys } from "@/features/map/playAreaBoundary";
-import { defaultPlayArea } from "@/features/map/playArea";
+import { unsetPlayArea } from "@/features/map/playArea";
 import {
     DEFAULT_ADMIN_DIVISION_PACK,
     DEFAULT_ADMIN_DIVISION_PRESET_NAME,
@@ -54,7 +54,7 @@ export function useResetGame(): () => Promise<void> {
         importQuestions([]);
         importQuestionSettings(defaultQuestionSettings);
         replaceSetup(defaultHidingZoneSetup);
-        importPlayArea(defaultPlayArea);
+        importPlayArea(unsetPlayArea);
 
         // 2. Clear persisted game state so a kill-before-debounce doesn't
         //    resurrect the old state on next launch.

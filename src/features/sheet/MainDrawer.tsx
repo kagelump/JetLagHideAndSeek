@@ -25,6 +25,7 @@ import Animated, {
 import { HidingZoneScreen } from "@/features/hidingZone/HidingZoneScreen";
 import { buildCombinedEligibilityMask } from "@/features/map/maskBuilder";
 import { PlayAreaScreen } from "@/features/playArea/PlayAreaScreen";
+import { isPlayAreaSet } from "@/features/map/playArea";
 import { AddQuestionScreen } from "@/features/questions/AddQuestionScreen";
 import { MatchingQuestionScreen } from "@/features/questions/MatchingQuestionScreen";
 import {
@@ -354,7 +355,8 @@ function MainSheetContent({
     const questionMapRenderState = useQuestionMapRenderState();
 
     const showFirstRun =
-        selectedPresetIds.length === 0 && questionIds.length === 0;
+        !isPlayAreaSet(playArea) ||
+        (selectedPresetIds.length === 0 && questionIds.length === 0);
 
     // Tick every minute to update elapsed time display.
     const [now, setNow] = useState(() => Date.now());
@@ -440,7 +442,7 @@ function MainSheetContent({
                                 <Pressable
                                     accessibilityLabel="Set up a game"
                                     accessibilityRole="button"
-                                    onPress={() => onNavigate("settings")}
+                                    onPress={() => onNavigate("play-area")}
                                     style={({ pressed }) => [
                                         styles.primaryButton,
                                         pressed ? styles.actionPressed : null,
@@ -877,9 +879,7 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     firstRunContent: {
-        flex: 1,
         gap: 16,
-        justifyContent: "center",
         paddingVertical: 20,
     },
     exploreHint: {

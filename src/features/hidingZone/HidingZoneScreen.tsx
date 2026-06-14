@@ -689,9 +689,14 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     presetAction: {
+        borderColor: colors.button,
+        borderRadius: 6,
+        borderWidth: 1,
         color: colors.button,
         fontSize: 14,
         fontWeight: "800",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
     },
     presetActionSelected: {
         color: colors.tint,

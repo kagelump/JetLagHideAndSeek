@@ -4,7 +4,8 @@ import {
     ensurePlayAreaBoundaryCached,
     loadCachedPlayAreaByRelationId,
 } from "@/features/map/playAreaBoundary";
-import { type AppStateV1, migratePersistedAppState } from "@/state/appState";
+import { unsetPlayArea } from "@/features/map/playArea";
+import { migratePersistedAppState, type AppStateV1 } from "@/state/appState";
 
 const LEGACY_APP_STATE_KEY = "app-state:v1";
 const APP_STATE_METADATA_KEY = "app-state:metadata:v1";
@@ -75,32 +76,44 @@ async function loadSplitPersistedAppState(): Promise<AppStateV1 | null> {
         const playAreaReference = JSON.parse(
             rawSlices[APP_STATE_PLAY_AREA_KEY],
         ) as unknown;
-        if (!isPlayAreaReference(playAreaReference)) {
-            await clearSplitPersistedAppState();
-            return null;
+
+        let resolvedPlayArea: AppStateV1["playArea"] | null = null;
+        if (isPlayAreaReference(playAreaReference)) {
+            const cached = await loadCachedPlayAreaByRelationId(
+                playAreaReference.osmId,
+            );
+            if (cached) resolvedPlayArea = cached.playArea;
         }
 
-        const cached = await loadCachedPlayAreaByRelationId(
-            playAreaReference.osmId,
-        );
-        if (!cached) {
-            await clearSplitPersistedAppState();
-            return null;
-        }
-
-        const migrated = migratePersistedAppState({
+        const rawState = {
             hidingZones: JSON.parse(rawSlices[APP_STATE_HIDING_ZONES_KEY]),
             metadata: JSON.parse(rawSlices[APP_STATE_METADATA_KEY]),
-            playArea: cached.playArea,
+            playArea: resolvedPlayArea ?? {
+                osmId: 19631009,
+                osmType: "R" as const,
+                label: "placeholder",
+                bbox: [0, 0, 0, 0] as [number, number, number, number],
+                center: [0, 0] as [number, number],
+                boundary: {
+                    type: "FeatureCollection" as const,
+                    features: [],
+                },
+            },
             questionSettings: JSON.parse(
                 rawSlices[APP_STATE_QUESTION_SETTINGS_KEY],
             ),
             questions: JSON.parse(rawSlices[APP_STATE_QUESTIONS_KEY]),
             version: 1,
-        });
+        };
+
+        const migrated = migratePersistedAppState(rawState);
         if (!migrated) {
             await clearSplitPersistedAppState();
             return null;
+        }
+
+        if (!resolvedPlayArea) {
+            migrated.playArea = unsetPlayArea;
         }
 
         return migrated;
