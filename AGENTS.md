@@ -417,6 +417,29 @@ xcodebuild test -scheme NativeGeometryTests-Package \
 Then verify the host-side parity still passes (`pnpm test:geos`). The golden
 fixture oracle field records which GEOS version generated it.
 
+For native GEOS changes that affect the Android code path (`GeosBridge.kt`,
+`NativeGeometryModule.kt`, `native-geometry-jni.cpp`), also run the instrumented
+suite against the real vendored GEOS on a booted emulator. It loads the **same**
+`geos-golden.json` and asserts the same invariants as the iOS XCTest suite,
+closing the Kotlin axis of cross-engine parity. Needs a fresh
+`expo prebuild --platform android` and **JDK 17** (the RN gradle plugin's
+embedded Kotlin can't parse newer JDK version strings — e.g. JDK 26 fails plugin
+resolution):
+
+```bash
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo prebuild --platform android --clean
+cd android
+export ANDROID_HOME=~/Library/Android/sdk
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+./gradlew :native-geometry:connectedDebugAndroidTest
+```
+
+The GEOS logic lives in `GeosBridge` (RN-bridge-free) so the test calls it
+directly. The JNI symbols in `native-geometry-jni.cpp` are bound by name to
+`GeosBridge` — moving the `external fun native*` decls to another class changes
+the expected `Java_..._GeosBridge_native*` symbol and surfaces as
+`UnsatisfiedLinkError` at first call.
+
 For native accessibility, bottom-sheet, MapLibre, or app-start changes, run the
 Maestro stack when a simulator/dev build is available (`pnpm test:e2e:stack`,
 `pnpm test:e2e:ios:stack`). Otherwise use the GitHub Actions workflow as the

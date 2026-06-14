@@ -169,6 +169,7 @@ Committed artifacts:
 5. **Run the parity gates:**
     - `pnpm test:geos` must pass (host-side geos-wasm 3.13 parity).
     - `xcodebuild test -scheme NativeGeometryTests-Package -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO` must pass (device-side GEOS 3.14.1 golden fixture parity). Run from `modules/native-geometry/`.
+    - `./gradlew :native-geometry:connectedDebugAndroidTest` must pass on a booted emulator (device-side Android GEOS parity, same `geos-golden.json`). Needs a fresh `expo prebuild --platform android` and **JDK 17** — `export JAVA_HOME=$(/usr/libexec/java_home -v 17)` before invoking `./gradlew`. A newer default JDK (e.g. 26) breaks the React Native gradle plugin's embedded Kotlin at plugin-resolution time (`IllegalArgumentException` parsing the Java version), failing before any task runs.
     - The golden fixtures (`modules/native-geometry/__fixtures__/geos-golden.json`) are keyed on engine-independent invariants (area ratio / bbox tolerance / type / null). If the new version legitimately shifts a result outside tolerance, regenerate with the XCTest `testRegenerateGoldenFixtures` method and review the diff before committing.
 6. Commit the new artifacts.
 

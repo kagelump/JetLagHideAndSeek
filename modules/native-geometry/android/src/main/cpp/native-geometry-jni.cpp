@@ -1,7 +1,13 @@
 // native-geometry-jni.cpp — JNI bridge to the GEOS C API.
 //
-// G2 production: exposes geosVersion() and bufferWKB() so the Expo Module
-// can run real GEOS buffer operations.
+// Exposes geosVersion() + the WKB ops (buffer / difference / union /
+// intersection / unaryUnion) so the GEOS binary can run real operations.
+//
+// The JNI exports are bound by name to the Kotlin `GeosBridge` object
+// (Java_expo_modules_nativegeometry_GeosBridge_native*). GeosBridge owns
+// System.loadLibrary + the `external fun` declarations; NativeGeometryModule
+// delegates to it. If those declarations move to another class, these symbol
+// names must change to match or the first call throws UnsatisfiedLinkError.
 
 #include <jni.h>
 #include <android/log.h>
@@ -289,7 +295,7 @@ static jbyteArray unaryOpAndWrite(JNIEnv* env, GEOSContextHandle_t ctx,
 extern "C" {
 
 JNIEXPORT jstring JNICALL
-Java_expo_modules_nativegeometry_NativeGeometryModule_nativeGeosVersion(
+Java_expo_modules_nativegeometry_GeosBridge_nativeGeosVersion(
     JNIEnv* env, jobject /* thiz */) {
 
     const char* version = GEOSversion();
@@ -300,7 +306,7 @@ Java_expo_modules_nativegeometry_NativeGeometryModule_nativeGeosVersion(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_expo_modules_nativegeometry_NativeGeometryModule_nativeBufferWKB(
+Java_expo_modules_nativegeometry_GeosBridge_nativeBufferWKB(
     JNIEnv* env, jobject /* thiz */, jbyteArray wkb,
     jdouble distance, jint quadrantSegments) {
 
@@ -350,7 +356,7 @@ Java_expo_modules_nativegeometry_NativeGeometryModule_nativeBufferWKB(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_expo_modules_nativegeometry_NativeGeometryModule_nativeDifferenceWKB(
+Java_expo_modules_nativegeometry_GeosBridge_nativeDifferenceWKB(
     JNIEnv* env, jobject /* thiz */, jbyteArray wkbA, jbyteArray wkbB) {
 
     auto* ctx = getOrCreateContext();
@@ -358,7 +364,7 @@ Java_expo_modules_nativegeometry_NativeGeometryModule_nativeDifferenceWKB(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_expo_modules_nativegeometry_NativeGeometryModule_nativeUnionWKB(
+Java_expo_modules_nativegeometry_GeosBridge_nativeUnionWKB(
     JNIEnv* env, jobject /* thiz */, jbyteArray wkbA, jbyteArray wkbB) {
 
     auto* ctx = getOrCreateContext();
@@ -366,7 +372,7 @@ Java_expo_modules_nativegeometry_NativeGeometryModule_nativeUnionWKB(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_expo_modules_nativegeometry_NativeGeometryModule_nativeIntersectionWKB(
+Java_expo_modules_nativegeometry_GeosBridge_nativeIntersectionWKB(
     JNIEnv* env, jobject /* thiz */, jbyteArray wkbA, jbyteArray wkbB) {
 
     auto* ctx = getOrCreateContext();
@@ -374,7 +380,7 @@ Java_expo_modules_nativegeometry_NativeGeometryModule_nativeIntersectionWKB(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_expo_modules_nativegeometry_NativeGeometryModule_nativeUnaryUnionWKB(
+Java_expo_modules_nativegeometry_GeosBridge_nativeUnaryUnionWKB(
     JNIEnv* env, jobject /* thiz */, jbyteArray wkb) {
 
     auto* ctx = getOrCreateContext();

@@ -16,10 +16,11 @@ zero, and the body-of-water dissolve runs in 530 ms on device (vs 5.6 s
 polyclip-JS). Six research findings done (A1, C1, C2, C3, E2 GREEN; E1 fixes
 done, CI run pending). Gates 1–3 retired.
 
-**Next action: WI-0 (golden fixtures) → WI-1 (extract GeosCore) → WI-2 (promote
-the spike into the real iOS XCTest suite).** See the dedicated section below.
-The Android side (WI-3/4 = research B1/B2) and CI (WI-5 = D1/D2) follow and need
-an emulator; sanitizers (F1/F2) and the E1 smoke-flow CI run are still open.
+**WI-0 → WI-1 → WI-2 (iOS) and WI-3 → WI-4 (Android) are all done** — both
+device suites now load `geos-golden.json` and pass against the real binary
+(iOS 14 XCTest, Android 14 instrumented). The remaining open work is CI
+wiring (WI-5 = D1/D2 device jobs; host parity gate already in `app-checks.yml`),
+sanitizers (F1/F2), and the E1 smoke-flow CI run.
 
 | RQ    | Topic                                  | Status                                     | Finding                      |
 | ----- | -------------------------------------- | ------------------------------------------ | ---------------------------- |
@@ -31,12 +32,13 @@ an emulator; sanitizers (F1/F2) and the E1 smoke-flow CI run are still open.
 | E2    | Deleted-flow assertion inventory       | ✅ GREEN                                   | `research-findings/RQ-E2.md` |
 | A2    | In-workspace iOS fallback              | ⏭️ UNNEEDED (A1 green; 2h desk-check only) | —                            |
 | A3    | GeosCore.swift refactor                | ⬜ NOT STARTED                             | —                            |
-| B1/B2 | Android instrumented harness           | ⬜ NOT STARTED                             | —                            |
+| B1/B2 | Android instrumented harness           | ✅ GREEN (WI-3/WI-4 landed)                | —                            |
 | D1/D2 | iOS/Android CI                         | ⬜ NOT STARTED (D1 unblocked by A1)        | —                            |
 | F1/F2 | Sanitizers / concurrency               | ⬜ NOT STARTED (gated on a harness)        | —                            |
 
-Decision gates: **Gate 1 RETIRED** (A1 green). **Gate 2 RETIRED for iOS axis**
-(C1+C2); Kotlin axis pending B1. **Gate 3 RETIRED** — C3 shows device GEOS does
+Decision gates: **Gate 1 RETIRED** (A1 green). **Gate 2 RETIRED** — iOS axis
+(C1+C2) and the Kotlin axis (WI-3/WI-4 instrumented suite, same golden fixture)
+both pass. **Gate 3 RETIRED** — C3 shows device GEOS does
 the body-of-water dissolve in 530 ms (polyclip-JS 5.6 s) and the mask difference
 in 29 ms. Gate 4 (sanitizers) not started.
 
@@ -99,7 +101,8 @@ Work items are defined in
 [`native-module-test-suite-plan.md`](../native-module-test-suite-plan.md). WI-6
 (reduce Maestro) is **done** (commit `c6f2362` + E1 infra fixes, see below);
 **WI-0 is now done** (see below); **WI-1 and WI-2 are done** (see below);
-**WI-3/WI-4 (Android) is the next critical path** (needs an emulator). Do them in order.
+**WI-3/WI-4 (Android) is now done** (see below). The next open critical path is
+**WI-5 device CI** (wire the iOS + Android device jobs into a workflow).
 
 ### WI-0 — Golden fixtures + generator — ✅ DONE
 
@@ -206,15 +209,30 @@ Landed on `claude/laughing-ritchie-ur26bc`. What shipped:
 
 ## Remaining tracks (after WI-0→2)
 
-- **WI-3/WI-4 = Android (research B1/B2):** needs an emulator booted + a full
-  `expo prebuild --platform android` (no `gradle` on PATH; use the generated
-  `./gradlew`). Extract `GeosBridge` (Kotlin); add an `androidTest` source set to
-  `modules/native-geometry/android/build.gradle`; call `GEOSversion()` through
-  JNI; run `:native-geometry:connectedAndroidTest`. Watch for
-  `UnsatisfiedLinkError` if the `external fun native*` decls move off
-  `NativeGeometryModule` (JNI symbols are
-  `Java_expo_modules_nativegeometry_NativeGeometryModule_native*`). Reuse
-  `geos-golden.json` to close the Kotlin axis of C1.
+- **WI-3/WI-4 = Android (research B1/B2) — ✅ DONE.** What shipped:
+    - `GeosBridge.kt` — RN-bridge-free Kotlin object owning `System.loadLibrary`
+      plus the `external fun native*` decls and a public
+      `version/buffer/difference/union/intersection/unaryUnion` surface;
+      `NativeGeometryModule.kt` delegates every `Function()` to it.
+    - `native-geometry-jni.cpp` — JNI exports renamed
+      `Java_..._NativeGeometryModule_native*` → `Java_..._GeosBridge_native*` to
+      match the new class (the documented `UnsatisfiedLinkError` trap).
+    - `src/androidTest/.../GeosBridgeTest.kt` — instrumented suite (14 tests)
+      loading the **same** `geos-golden.json` (wired in as an androidTest asset
+      via `assets.srcDirs += ../__fixtures__`, no copy) and asserting the same
+      invariants as the iOS XCTest suite. Kotlin has no GEOS bindings, so result
+      WKB is decoded by a small in-test reader (planar shoelace area to match
+      `GEOSArea`, bbox, coord count). Covers buffer/overlay parity, empty-result
+      semantics, MakeValid recovery, ABI handshake, 1000× memory stress.
+    - `build.gradle` — `testInstrumentationRunner`, androidTest deps, and a
+      `packaging { jniLibs { pickFirsts += "**/libc++_shared.so" } }` rule (the
+      library's own test APK otherwise collides with react-android's copy).
+    - Verified: 14/14 green on the `Pixel_8` emulator against the real vendored
+      GEOS 3.14.1. **Run-from-clean note:** needs a fresh
+      `expo prebuild --platform android` and **JDK 17**
+      (`export JAVA_HOME=$(/usr/libexec/java_home -v 17)`) — the default JDK 26
+      breaks the RN gradle plugin's embedded Kotlin at plugin resolution. Then
+      `cd android && ./gradlew :native-geometry:connectedDebugAndroidTest`.
 - **WI-5 = CI (research D1/D2):**
     - **Host parity gate — ✅ DONE.** `app-checks.yml` now runs `pnpm test:geos`
       (the "GEOS parity" step) on every PR/master push, so the geos-wasm parity
