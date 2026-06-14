@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-14T05:28:27.168Z",
+    "generatedAt": "2026-06-14T05:28:48.748Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -610,15 +610,15 @@
             "regionPath": ["Asia", "Japan", "Kyushu"],
             "bbox": [122.23438, 20.725941, 132.804417, 35.097244],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 4993804,
+            "totalBytes": 5002198,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-kyushu-poi.json.gz",
                     "bytes": 284241,
-                    "md5": "571c019f38f8524c707ba8491a76ee51",
-                    "sha256": "598a6f6a1be69f85d480fd6f93b71c7b137d3628e31ad90fad314e4dd9924fcd",
+                    "md5": "c5515174a93d35eb9ae0672ee004a631",
+                    "sha256": "ad93010363e36ed3285190ceef874f595a4d28d42bca0c5d177cccd9460a2ffd",
                     "schemaVersion": 1
                 },
                 {
@@ -626,8 +626,8 @@
                     "category": "coastline",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-kyushu-measuring-coastline.json.gz",
                     "bytes": 1666620,
-                    "md5": "bfba2a1a7b019e8b11c9c2e5c19b2246",
-                    "sha256": "97262724f0cd35cdbdadd1565607e4ecc14515bb102e197da8ffc817664b8ee9",
+                    "md5": "dc4d4811cbb7fd58aa31a2bc30125c75",
+                    "sha256": "d1f6ae7eedbf99d54b10d0ad39c72e281781e18b0dbcbed05e220627f23d5991",
                     "schemaVersion": 1
                 },
                 {
@@ -635,8 +635,8 @@
                     "category": "high-speed-rail",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-kyushu-measuring-high-speed-rail.json.gz",
                     "bytes": 3742,
-                    "md5": "50019a4419f9ffab61eb051253d7ae11",
-                    "sha256": "af5d3b3c9430b9cd28160d44cbfa8823d67e86e43f6945c6cffdcb662b5091e6",
+                    "md5": "fdf57464885c239a4ef66a538cecb8c1",
+                    "sha256": "7e65dbf0a8f01e8698e24a4b9e9dee3b6ca8c15e4a6564c89b643f6e08b5f48b",
                     "schemaVersion": 1
                 },
                 {
@@ -644,8 +644,8 @@
                     "category": "admin-1st-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-kyushu-measuring-admin-1st-border.json.gz",
                     "bytes": 117859,
-                    "md5": "e0e93967a5951cc20261ab69649efd79",
-                    "sha256": "a1cb5e0de33b058a9dff679b934acc6de577a58b163d2629435a5f12be6da556",
+                    "md5": "843c8f0850304b0c45bf04c541dbee93",
+                    "sha256": "19c2f522e1f75c6ddb6d07b1cdea3af21b699e1f6e711ea456b41098889aeba9",
                     "schemaVersion": 1
                 },
                 {
@@ -653,8 +653,8 @@
                     "category": "admin-2nd-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-kyushu-measuring-admin-2nd-border.json.gz",
                     "bytes": 849473,
-                    "md5": "c96298689dade860c94cbe557e5ba055",
-                    "sha256": "3887bc061ca9892b280857483dff62d18facc3ecf43b55e4afc6d218ddac5b70",
+                    "md5": "f31bd8059dfd036425775e4e226184ee",
+                    "sha256": "6767ccfeb2d6e047307e0e584ab011eefa050dc4238a2f02f5810b960e877609",
                     "schemaVersion": 1
                 },
                 {
@@ -662,8 +662,8 @@
                     "category": "admin-boundaries",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-kyushu-measuring-admin-boundaries.json.gz",
                     "bytes": 1267763,
-                    "md5": "38bc9fed350d9f167e05c48a2d7c66b9",
-                    "sha256": "f6b404501e498278b657146b7d7a9851d49b107e99092d398cf5d97a742a1cdc",
+                    "md5": "d860e042daeb7877eb835a6e2f7c4ef8",
+                    "sha256": "098fc4c8eb8d035e020e1016c05b0c853fa6510bd954e07e8c78b892e2a0cb24",
                     "schemaVersion": 1
                 },
                 {
@@ -671,17 +671,17 @@
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-kyushu-boundaries.json.gz",
                     "bytes": 630251,
-                    "md5": "5744aee0973e05a1a0e4cb9ee4f8930a",
-                    "sha256": "f19b3298b943374142d251cb720c75ad8164bd44a743197e19cec254d5e85921",
+                    "md5": "307fc6f093a0f2c3f9072157adb8131c",
+                    "sha256": "13c769c2040111255d29eaadef7f3e26cdacb8934354c5cae584316b40f59f49",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-kyushu-transit.json.gz",
-                    "bytes": 173344,
-                    "md5": "7d6f2496998689d7eedabe64ea1eaa27",
-                    "sha256": "6915683fcdd5c2909e75460a1d79016bfbb5ca511ea1d3525128458f8ee746ed",
+                    "bytes": 181738,
+                    "md5": "92ac7938bf5434f7c1a4c797db6ebda1",
+                    "sha256": "ca241ca7cabdaacced32b557a076bf7ca4ef84bfdeb144fa7546877f59a9d772",
                     "schemaVersion": 1
                 },
                 {
