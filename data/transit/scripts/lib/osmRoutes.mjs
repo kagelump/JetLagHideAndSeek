@@ -352,7 +352,15 @@ export function processOsmRoutes(
 
     for (const line of keptLines) {
         if (line.isMastered) {
-            collapsed.push(line);
+            collapsed.push({
+                ...line,
+                name:
+                    lineDisplayName(
+                        line.name,
+                        directionTokens,
+                        stripPrefixes,
+                    ) || line.name,
+            });
             continue;
         }
         const op = normalizeOp(line.operator) || line.operator || "_none";
@@ -363,7 +371,16 @@ export function processOsmRoutes(
 
     for (const [, group] of masterlessGroups) {
         if (group.length === 1) {
-            collapsed.push(group[0]);
+            const single = group[0];
+            collapsed.push({
+                ...single,
+                name:
+                    lineDisplayName(
+                        single.name,
+                        directionTokens,
+                        stripPrefixes,
+                    ) || single.name,
+            });
             continue;
         }
 
