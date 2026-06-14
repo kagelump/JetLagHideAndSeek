@@ -46,7 +46,7 @@
         "typecheck": "tsc --noEmit",
         "pretest": "node --test scripts/e2e-maestro-stack-config.test.mjs data/geofabrik/scripts/poiReducer.test.mjs data/transit/scripts/lib/*.test.mjs data/packs/scripts/lib/*.test.mjs tools/data-viewer/__tests__/*.test.mjs",
         "test": "jest",
-        "test:geos": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.geos.js",
+        "test:geos": "node scripts/run-geos-tests.mjs",
         "test:data:default-zones": "node scripts/build-default-zone-metadata.mjs --check",
         "test:data:transit": "node --test data/transit/scripts/lib/*.test.mjs",
         "test:data:poi-selectors": "node --import tsx scripts/emit-poi-selectors.mjs --check",
