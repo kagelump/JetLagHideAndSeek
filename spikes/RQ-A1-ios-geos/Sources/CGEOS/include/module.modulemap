@@ -1,0 +1,7 @@
+// CGEOS — exposes the GEOS C API (geos_c.h) to Swift via geos_bridge.h.
+// Mirrors modules/native-geometry/ios/module.modulemap, but as an SPM C target
+// so a standalone test bundle can `import CGEOS` without the app/Pods.
+module CGEOS {
+    header "geos_bridge.h"
+    export *
+}

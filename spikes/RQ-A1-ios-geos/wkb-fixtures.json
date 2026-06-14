@@ -1,0 +1,50 @@
+[
+    {
+        "name": "tokyo_ward_polygon",
+        "type": "Polygon",
+        "hex": "0103000000010000000500000048e17a14ae77614014ae47e17ad44140e17a14ae4779614014ae47e17ad44140e17a14ae477961409a99999999d9414048e17a14ae7761409a99999999d9414048e17a14ae77614014ae47e17ad44140",
+        "numCoords": 5,
+        "bbox": {
+            "xmin": 139.74,
+            "ymin": 35.66,
+            "xmax": 139.79,
+            "ymax": 35.7
+        }
+    },
+    {
+        "name": "tokyo_rail_linestring",
+        "type": "LineString",
+        "hex": "0102000000040000007cf2b0506b7661402aa913d044d8414007ce1951da776140a3923a014dd441405f984c158c7861408104c58f31d74140cc7f48bf7d796140de718a8ee4da4140",
+        "numCoords": 4,
+        "bbox": {
+            "xmin": 139.7006,
+            "ymin": 35.6586,
+            "xmax": 139.7966,
+            "ymax": 35.7101
+        }
+    },
+    {
+        "name": "osaka_stations_multipoint",
+        "type": "MultiPoint",
+        "hex": "0104000000030000000101000000c442ad69deef6040ee5a423ee8594140010100000040a4dfbe0ef0604093a9825149554140010100000086c954c1a8f060403411363cbd524140",
+        "numCoords": 3,
+        "bbox": {
+            "xmin": 135.4959,
+            "ymin": 34.6464,
+            "xmax": 135.5206,
+            "ymax": 34.7024
+        }
+    },
+    {
+        "name": "two_wards_multipolygon",
+        "type": "MultiPolygon",
+        "hex": "0106000000020000000103000000010000000500000048e17a14ae77614014ae47e17ad44140e17a14ae4779614014ae47e17ad44140e17a14ae477961409a99999999d9414048e17a14ae7761409a99999999d9414048e17a14ae77614014ae47e17ad44140010300000001000000050000003333333333736140cdcccccccccc4140cdcccccccc746140cdcccccccccc4140cdcccccccc74614052b81e85ebd14140333333333373614052b81e85ebd141403333333333736140cdcccccccccc4140",
+        "numCoords": 10,
+        "bbox": {
+            "xmin": 139.6,
+            "ymin": 35.6,
+            "xmax": 139.79,
+            "ymax": 35.7
+        }
+    }
+]
