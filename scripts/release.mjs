@@ -97,8 +97,13 @@ function writeVersion(file, current, next) {
 }
 
 async function confirm(question) {
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-    const answer = (await rl.question(`${question} [y/N] `)).trim().toLowerCase();
+    const rl = createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+    const answer = (await rl.question(`${question} [y/N] `))
+        .trim()
+        .toLowerCase();
     rl.close();
     return answer === "y" || answer === "yes";
 }
@@ -171,7 +176,9 @@ async function main() {
     if (ahead && ahead !== "0") {
         console.log(`  note         ${ahead} local commit(s) will be pushed`);
     }
-    console.log(`  gate         ${opts.skipGate ? "SKIPPED" : "pnpm check && pnpm test"}`);
+    console.log(
+        `  gate         ${opts.skipGate ? "SKIPPED" : "pnpm check && pnpm test"}`,
+    );
 
     if (opts.dryRun) {
         console.log("\n✓ Dry run — nothing changed.\n");
