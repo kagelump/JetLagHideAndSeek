@@ -1,0 +1,358 @@
+{
+    "version": 1,
+    "oracle": "3.13.0-CAPI-1.19.0",
+    "generatedBy": "modules/native-geometry/scripts/gen-golden-fixtures.mjs",
+    "cases": [
+        {
+            "name": "buffer/tokyo-rail-corridor@500m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "010200000004000000a463d395e61daec01e575aaf55ed74c02c98273483dc6740265def868952a840f07aaf4ee0cda04030ce5d71dbc082401c0cf60cd6cdb2403f453039aa6ca4c0"
+            ],
+            "params": {
+                "distance": 500,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 13396809.096304,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-4353.3674, -3112.1453, 5311.649, 3610.7473],
+                "bboxTolM": 15,
+                "minRingVertices": 24
+            }
+        },
+        {
+            "name": "buffer/tokyo-rail-corridor@2000m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "010200000004000000a463d395e61daec01e575aaf55ed74c02c98273483dc6740265def868952a840f07aaf4ee0cda04030ce5d71dbc082401c0cf60cd6cdb2403f453039aa6ca4c0"
+            ],
+            "params": {
+                "distance": 2000,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 62223298.560023,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-5848.6184, -4605.5839, 6805.0875, 5103.1832],
+                "bboxTolM": 45,
+                "minRingVertices": 24
+            }
+        },
+        {
+            "name": "buffer/tokyo-rail-corridor@5000m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "010200000004000000a463d395e61daec01e575aaf55ed74c02c98273483dc6740265def868952a840f07aaf4ee0cda04030ce5d71dbc082401c0cf60cd6cdb2403f453039aa6ca4c0"
+            ],
+            "params": {
+                "distance": 5000,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 198795235.456571,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-8839.1205, -7592.461, 9791.9646, 8088.0552],
+                "bboxTolM": 105,
+                "minRingVertices": 23
+            }
+        },
+        {
+            "name": "buffer/tokyo-ward@500m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "010300000001000000050000006c2580447fca9bc0c749b27e3a53a340343a40a23f65a540c749b27e3a53a3404f869a14fc62a5404a1cc571c1d89ec0acbd3429f8c59bc04a1cc571c1d89ec06c2580447fca9bc0c749b27e3a53a340"
+            ],
+            "params": {
+                "distance": 500,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 29831079.027821,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-2278.6243, -2474.1889, 3238.6243, 2973.6142],
+                "bboxTolM": 15,
+                "minRingVertices": 18
+            }
+        },
+        {
+            "name": "buffer/tokyo-ward@2000m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "010300000001000000050000006c2580447fca9bc0c749b27e3a53a340343a40a23f65a540c749b27e3a53a3404f869a14fc62a5404a1cc571c1d89ec0acbd3429f8c59bc04a1cc571c1d89ec06c2580447fca9bc0c749b27e3a53a340"
+            ],
+            "params": {
+                "distance": 2000,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 68428258.138576,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-3778.6242, -3974.1889, 4738.6242, 4473.6142],
+                "bboxTolM": 45,
+                "minRingVertices": 18
+            }
+        },
+        {
+            "name": "buffer/tokyo-ward@5000m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "010300000001000000050000006c2580447fca9bc0c749b27e3a53a340343a40a23f65a540c749b27e3a53a3404f869a14fc62a5404a1cc571c1d89ec0acbd3429f8c59bc04a1cc571c1d89ec06c2580447fca9bc0c749b27e3a53a340"
+            ],
+            "params": {
+                "distance": 5000,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 187762125.894246,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-6778.6241, -6974.1889, 7738.6241, 7473.6142],
+                "bboxTolM": 105,
+                "minRingVertices": 18
+            }
+        },
+        {
+            "name": "buffer/osaka-stations@500m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "0104000000030000000101000000647d3ca2df4784c0233dd91e105fa6c0010100000088f27002de785bc0f6dfc221a5fa914001010000007778fcbcfd269940ba257236c946aa40"
+            ],
+            "params": {
+                "distance": 500,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "MultiPolygon",
+                "areaM2": {
+                    "value": 2341083.864194,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-1148.9842, -3363.5315, 2109.7478, 3863.393],
+                "bboxTolM": 15,
+                "minRingVertices": 16
+            }
+        },
+        {
+            "name": "buffer/osaka-stations@2000m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "0104000000030000000101000000647d3ca2df4784c0233dd91e105fa6c0010100000088f27002de785bc0f6dfc221a5fa914001010000007778fcbcfd269940ba257236c946aa40"
+            ],
+            "params": {
+                "distance": 2000,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "MultiPolygon",
+                "areaM2": {
+                    "value": 35140936.939935,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-2648.9842, -4863.5315, 3609.7478, 5363.393],
+                "bboxTolM": 45,
+                "minRingVertices": 25
+            }
+        },
+        {
+            "name": "buffer/osaka-stations@5000m",
+            "op": "buffer",
+            "inputWkbHex": [
+                "0104000000030000000101000000647d3ca2df4784c0233dd91e105fa6c0010100000088f27002de785bc0f6dfc221a5fa914001010000007778fcbcfd269940ba257236c946aa40"
+            ],
+            "params": {
+                "distance": 5000,
+                "quadrantSegments": 8
+            },
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 144826464.334033,
+                    "ratioTol": 0.01
+                },
+                "bbox": [-5648.9842, -7863.5315, 6609.7478, 8363.393],
+                "bboxTolM": 105,
+                "minRingVertices": 25
+            }
+        },
+        {
+            "name": "difference/square-with-hole",
+            "op": "difference",
+            "inputWkbHex": [
+                "01030000000100000005000000000000000000000000000000000000000000000000408f4000000000000000000000000000408f400000000000408f4000000000000000000000000000408f4000000000000000000000000000000000",
+                "010300000001000000050000000000000000406f400000000000406f4000000000007087400000000000406f40000000000070874000000000007087400000000000406f4000000000007087400000000000406f400000000000406f40"
+            ],
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 750000,
+                    "ratioTol": 0.01
+                },
+                "bbox": [0, 0, 1000, 1000],
+                "bboxTolM": 1,
+                "minRingVertices": 4
+            }
+        },
+        {
+            "name": "difference/a-inside-b-empty",
+            "op": "difference",
+            "inputWkbHex": [
+                "010300000001000000050000000000000000406f400000000000406f4000000000007087400000000000406f40000000000070874000000000007087400000000000406f4000000000007087400000000000406f400000000000406f40",
+                "01030000000100000005000000000000000000000000000000000000000000000000408f4000000000000000000000000000408f400000000000408f4000000000000000000000000000408f4000000000000000000000000000000000"
+            ],
+            "expect": {
+                "isNull": true
+            }
+        },
+        {
+            "name": "intersection/overlap",
+            "op": "intersection",
+            "inputWkbHex": [
+                "01030000000100000005000000000000000000000000000000000000000000000000408f4000000000000000000000000000408f400000000000408f4000000000000000000000000000408f4000000000000000000000000000000000",
+                "010300000001000000050000000000000000407f400000000000407f4000000000007097400000000000407f40000000000070974000000000007097400000000000407f4000000000007097400000000000407f400000000000407f40"
+            ],
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 250000,
+                    "ratioTol": 0.01
+                },
+                "bbox": [500, 500, 1000, 1000],
+                "bboxTolM": 1,
+                "minRingVertices": 4
+            }
+        },
+        {
+            "name": "intersection/disjoint-empty",
+            "op": "intersection",
+            "inputWkbHex": [
+                "01030000000100000005000000000000000000000000000000000000000000000000408f4000000000000000000000000000408f400000000000408f4000000000000000000000000000408f4000000000000000000000000000000000",
+                "01030000000100000005000000000000000088b340000000000088b3400000000000ecb340000000000088b3400000000000ecb3400000000000ecb340000000000088b3400000000000ecb340000000000088b340000000000088b340"
+            ],
+            "expect": {
+                "isNull": true
+            }
+        },
+        {
+            "name": "union/two-squares-touching",
+            "op": "union",
+            "inputWkbHex": [
+                "01030000000100000005000000000000000000000000000000000000000000000000408f4000000000000000000000000000408f400000000000408f4000000000000000000000000000408f4000000000000000000000000000000000",
+                "010300000001000000050000000000000000408f4000000000000000000000000000409f4000000000000000000000000000409f400000000000408f400000000000408f400000000000408f400000000000408f400000000000000000"
+            ],
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 2000000,
+                    "ratioTol": 0.01
+                },
+                "bbox": [0, 0, 2000, 1000],
+                "bboxTolM": 1,
+                "minRingVertices": 4
+            }
+        },
+        {
+            "name": "unaryUnion/self-overlapping-multipolygon",
+            "op": "unaryUnion",
+            "inputWkbHex": [
+                "01060000000200000001030000000100000005000000000000000000000000000000000000000000000000408f4000000000000000000000000000408f400000000000408f4000000000000000000000000000408f4000000000000000000000000000000000010300000001000000050000000000000000407f400000000000407f4000000000007097400000000000407f40000000000070974000000000007097400000000000407f4000000000007097400000000000407f400000000000407f40"
+            ],
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "areaM2": {
+                    "value": 1750000,
+                    "ratioTol": 0.01
+                },
+                "bbox": [0, 0, 1500, 1500],
+                "bboxTolM": 1,
+                "minRingVertices": 4
+            }
+        },
+        {
+            "name": "parse/tokyo-ward-polygon",
+            "op": "parse",
+            "inputWkbHex": [
+                "0103000000010000000500000048e17a14ae77614014ae47e17ad44140e17a14ae4779614014ae47e17ad44140e17a14ae477961409a99999999d9414048e17a14ae7761409a99999999d9414048e17a14ae77614014ae47e17ad44140"
+            ],
+            "expect": {
+                "isNull": false,
+                "resultType": "Polygon",
+                "numCoords": 5,
+                "bbox": [139.74, 35.66, 139.79, 35.7],
+                "bboxTolM": 0
+            }
+        },
+        {
+            "name": "parse/tokyo-rail-linestring",
+            "op": "parse",
+            "inputWkbHex": [
+                "0102000000040000007cf2b0506b7661402aa913d044d8414007ce1951da776140a3923a014dd441405f984c158c7861408104c58f31d74140cc7f48bf7d796140de718a8ee4da4140"
+            ],
+            "expect": {
+                "isNull": false,
+                "resultType": "LineString",
+                "numCoords": 4,
+                "bbox": [139.7006, 35.6586, 139.7966, 35.7101],
+                "bboxTolM": 0
+            }
+        },
+        {
+            "name": "parse/osaka-stations-multipoint",
+            "op": "parse",
+            "inputWkbHex": [
+                "0104000000030000000101000000c442ad69deef6040ee5a423ee8594140010100000040a4dfbe0ef0604093a9825149554140010100000086c954c1a8f060403411363cbd524140"
+            ],
+            "expect": {
+                "isNull": false,
+                "resultType": "MultiPoint",
+                "numCoords": 3,
+                "bbox": [135.4959, 34.6464, 135.5206, 34.7024],
+                "bboxTolM": 0
+            }
+        },
+        {
+            "name": "parse/two-wards-multipolygon",
+            "op": "parse",
+            "inputWkbHex": [
+                "0106000000020000000103000000010000000500000048e17a14ae77614014ae47e17ad44140e17a14ae4779614014ae47e17ad44140e17a14ae477961409a99999999d9414048e17a14ae7761409a99999999d9414048e17a14ae77614014ae47e17ad44140010300000001000000050000003333333333736140cdcccccccccc4140cdcccccccc746140cdcccccccccc4140cdcccccccc74614052b81e85ebd14140333333333373614052b81e85ebd141403333333333736140cdcccccccccc4140"
+            ],
+            "expect": {
+                "isNull": false,
+                "resultType": "MultiPolygon",
+                "numCoords": 10,
+                "bbox": [139.6, 35.6, 139.79, 35.7],
+                "bboxTolM": 0
+            }
+        }
+    ]
+}

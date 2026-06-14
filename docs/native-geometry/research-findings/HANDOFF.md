@@ -97,10 +97,44 @@ version` lines. `.v18` needs `swift-tools-version:6.0`.
 
 Work items are defined in
 [`native-module-test-suite-plan.md`](../native-module-test-suite-plan.md). WI-6
-(reduce Maestro) is **done** (commit `c6f2362` + E1 infra fixes, see below); WI-0
-→ WI-2 is the next critical path. Do them in order.
+(reduce Maestro) is **done** (commit `c6f2362` + E1 infra fixes, see below);
+**WI-0 is now done** (see below); **WI-1 → WI-2 is the next critical path**
+(both need macOS/Xcode + a simulator). Do them in order.
 
-### WI-0 — Golden fixtures + generator (do first; fully local, unblocked)
+### WI-0 — Golden fixtures + generator — ✅ DONE
+
+Landed on `claude/laughing-ritchie-ur26bc`. Fully local, no device. What shipped:
+
+- `modules/native-geometry/scripts/gen-golden-fixtures.mjs` (run via
+  `pnpm data:geos-golden`) emits
+  `modules/native-geometry/__fixtures__/geos-golden.json` — ONE committed,
+  invariant-keyed golden file (19 cases): 9 buffer (corridor/ward/stations ×
+  500/2000/5000 m, AEQD-projected WKB in, geos-wasm 3.13 area+bbox oracle out),
+  6 overlay (difference incl. square-with-hole + empty, intersection overlap +
+  disjoint-empty, union touching, unaryUnion self-overlap), 4 parse
+  (Polygon/LineString/MultiPoint/MultiPolygon — ISO Multi\* headers).
+- Invariants only (never bytes): `resultType`, `areaM2{value,ratioTol:0.01}`,
+  `bbox`+`bboxTolM`, `isNull`, `minRingVertices`, `numCoords`. Planar metrics
+  for projected/synthetic meter geometry live in new
+  `src/shared/geometry/planarMetrics.ts` (companion to the spherical
+  `parityMetrics.ts`).
+- Host drift guard: `src/shared/geometry/__tests__/geosGolden.geos.test.ts`
+  re-runs every case through geos-wasm and asserts the committed invariants, so
+  a hand-edit or a regen against a different engine fails on host before a
+  device. Runs under `pnpm test:geos`. **Passes in isolation (18 pass, 2
+  non-polygonal parse cases skipped — device-only).**
+- **Scope note vs the original WI-0 sketch:** body-of-water is NOT yet a golden
+  case — it needs the `captureBow.geos.test.ts` Jest/RN-mock capture (12.7 MB
+  hex; must be trimmed/gzipped before committing). Deferred to WI-2 alongside the
+  native-only behavioral cases (#6/#9/#10/#11). The overlay set above covers the
+  difference/union/intersection/unaryUnion polarity.
+- **Known env caveat (not a regression):** running multiple geos-wasm Jest
+  suites in one invocation throws "Test environment has been torn down" in this
+  container (reproduces with only pre-existing suites, e.g.
+  `geosWasmSmoke + maskBuilder.geos + geosParity`); each suite passes alone. If
+  CI hits this, shard the geos suites per file.
+
+### WI-0 (original sketch, for reference)
 
 The backbone both device suites load. The research left **three disconnected**
 fixture files; consolidate them into ONE committed, invariant-keyed golden file.
