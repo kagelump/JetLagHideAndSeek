@@ -126,6 +126,28 @@ const overlapMultiPolygon = {
     coordinates: [[square(0, 0, 1000, 1000)], [square(500, 500, 1500, 1500)]],
 };
 
+// Body-of-water-shaped input: a dense grid of mutually-overlapping squares that
+// dissolve into one connected blob. This mirrors the production measuring path
+// (many overlapping water-buffer pieces → unaryUnion dissolve → difference for
+// the eligibility mask) — the case the JS polyclip dissolve hard-locks on. Each
+// 1000-wide square is offset 600, so neighbours overlap and the union is one
+// piece. Synthetic (not the real 26 s Tokyo input), but the same op shape at a
+// scale that exercises the dissolve.
+const waterCluster = (() => {
+    const polys = [];
+    for (let i = 0; i < 6; i++) {
+        for (let j = 0; j < 6; j++) {
+            const x = i * 600;
+            const y = j * 600;
+            polys.push([square(x, y, x + 1000, y + 1000)]);
+        }
+    }
+    return { type: "MultiPolygon", coordinates: polys };
+})();
+// Window that fully contains the dissolved blob, so the difference is a clean
+// rectangle-with-hole (the eligibility-mask shape).
+const waterWindow = poly(square(-500, -500, 6500, 6500));
+
 // op, name, inputs[], runner(...wkbBytes) -> wkb|null
 const overlayFixtures = [
     {
@@ -162,6 +184,12 @@ const overlayFixtures = [
         op: "unaryUnion",
         name: "self-overlapping-multipolygon",
         inputs: [overlapMultiPolygon],
+        run: ([a]) => unaryUnionWKB(a),
+    },
+    {
+        op: "unaryUnion",
+        name: "water-cluster-dissolve",
+        inputs: [waterCluster],
         run: ([a]) => unaryUnionWKB(a),
     },
 ];
@@ -235,6 +263,25 @@ async function main() {
             name: `${op}/${name}`,
             op,
             inputWkbHex: wkbs.map(toHex),
+            expect: polygonalExpect(res, 1),
+        });
+    }
+
+    // Mask-difference on the dissolved water blob: this is the production order
+    // (dissolve the overlapping pieces first, THEN difference the window) — a
+    // raw overlapping MultiPolygon is an invalid GEOS difference input. The
+    // device test feeds these exact two WKBs to GEOSDifference; result is the
+    // window with the water blob cut out (rectangle-with-hole eligibility mask).
+    {
+        const windowWkb = encodeWkb(waterWindow);
+        const waterBlobWkb = unaryUnionWKB(encodeWkb(waterCluster));
+        if (!waterBlobWkb)
+            throw new Error("water cluster dissolve returned null");
+        const res = differenceWKB(windowWkb, waterBlobWkb);
+        cases.push({
+            name: "difference/window-minus-water-blob",
+            op: "difference",
+            inputWkbHex: [toHex(windowWkb), toHex(waterBlobWkb)],
             expect: polygonalExpect(res, 1),
         });
     }

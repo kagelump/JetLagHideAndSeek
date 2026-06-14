@@ -108,11 +108,14 @@ Landed on `claude/laughing-ritchie-ur26bc`. Fully local, no device. What shipped
 - `modules/native-geometry/scripts/gen-golden-fixtures.mjs` (run via
   `pnpm data:geos-golden`) emits
   `modules/native-geometry/__fixtures__/geos-golden.json` — ONE committed,
-  invariant-keyed golden file (19 cases): 9 buffer (corridor/ward/stations ×
+  invariant-keyed golden file (21 cases): 9 buffer (corridor/ward/stations ×
   500/2000/5000 m, AEQD-projected WKB in, geos-wasm 3.13 area+bbox oracle out),
-  6 overlay (difference incl. square-with-hole + empty, intersection overlap +
-  disjoint-empty, union touching, unaryUnion self-overlap), 4 parse
-  (Polygon/LineString/MultiPoint/MultiPolygon — ISO Multi\* headers).
+  8 overlay (difference incl. square-with-hole + empty, intersection overlap +
+  disjoint-empty, union touching, unaryUnion self-overlap, **plus the
+  body-of-water dissolve shape: `unaryUnion/water-cluster-dissolve` of a 36-cell
+  overlapping grid → one blob, and `difference/window-minus-water-blob` =
+  window minus the dissolved blob** — the production dissolve→difference order),
+  4 parse (Polygon/LineString/MultiPoint/MultiPolygon — ISO Multi\* headers).
 - Invariants only (never bytes): `resultType`, `areaM2{value,ratioTol:0.01}`,
   `bbox`+`bboxTolM`, `isNull`, `minRingVertices`, `numCoords`. Planar metrics
   for projected/synthetic meter geometry live in new
@@ -121,18 +124,21 @@ Landed on `claude/laughing-ritchie-ur26bc`. Fully local, no device. What shipped
 - Host drift guard: `src/shared/geometry/__tests__/geosGolden.geos.test.ts`
   re-runs every case through geos-wasm and asserts the committed invariants, so
   a hand-edit or a regen against a different engine fails on host before a
-  device. Runs under `pnpm test:geos`. **Passes in isolation (18 pass, 2
-  non-polygonal parse cases skipped — device-only).**
-- **Scope note vs the original WI-0 sketch:** body-of-water is NOT yet a golden
-  case — it needs the `captureBow.geos.test.ts` Jest/RN-mock capture (12.7 MB
-  hex; must be trimmed/gzipped before committing). Deferred to WI-2 alongside the
-  native-only behavioral cases (#6/#9/#10/#11). The overlay set above covers the
-  difference/union/intersection/unaryUnion polarity.
-- **Known env caveat (not a regression):** running multiple geos-wasm Jest
-  suites in one invocation throws "Test environment has been torn down" in this
-  container (reproduces with only pre-existing suites, e.g.
-  `geosWasmSmoke + maskBuilder.geos + geosParity`); each suite passes alone. If
-  CI hits this, shard the geos suites per file.
+  device. Runs under `pnpm test:geos` (20 pass, 2 non-polygonal parse cases
+  skipped — device-only).
+- **Body-of-water scope note:** the golden now carries the dissolve→difference
+  _op shape_ (synthetic 36-cell grid), so the device suite (catalogue #5) has an
+  input + invariants for it. It is **not** the real 26 s Tokyo input — the
+  marquee test's value is the wall-clock _hang/timing_ property, which is a
+  device-runtime check WI-2 still adds (feed a large real MultiPolygon, assert
+  it completes under a budget). The real capture (`captureBow.geos.test.ts`,
+  12.7 MB hex) still needs trimming/gzip before it can be committed.
+- **Geos suite reliability (was a flaky-CI risk):** `pnpm test:geos` now runs
+  each suite in its own process (`scripts/run-geos-tests.mjs`) — geos-wasm's
+  realm-escaping `import()` otherwise trips "Test environment has been torn down"
+  when a Jest worker is reused across two geos files. `spikes/` is excluded from
+  the geos config. CI runs `pnpm test:geos` as the "GEOS parity" step in
+  `app-checks.yml`.
 
 ### WI-0 (original sketch, for reference)
 
