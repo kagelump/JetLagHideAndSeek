@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-14T05:29:37.814Z",
+    "generatedAt": "2026-06-14T05:29:56.454Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1699,15 +1699,15 @@
             "regionPath": ["Europe", "Italy", "Centro"],
             "bbox": [8.61327, 40.21443, 14.981, 44.4797],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 4928194,
+            "totalBytes": 4933688,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-italy-centro-poi.json.gz",
-                    "bytes": 351609,
-                    "md5": "08d7943d7a691f5e0952bec17338d99e",
-                    "sha256": "eca2d97ef16fe88f7c68c942890d335ef3997bf82378393732f86a30d992648f",
+                    "bytes": 351608,
+                    "md5": "3c17b94861217a8256be34b3c01b975d",
+                    "sha256": "34f13b44870336b3a270f21fc033fa3e3e6c8070ff89cbc15b0e850af213cd2d",
                     "schemaVersion": 1
                 },
                 {
@@ -1715,8 +1715,8 @@
                     "category": "coastline",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-italy-centro-measuring-coastline.json.gz",
                     "bytes": 153144,
-                    "md5": "3d4568cd934e9186c5e4fc3abde3dd02",
-                    "sha256": "044854fc9d5a1c6e3f6ce27948d3df3dccc8360812234f0b3439176cb6409c8e",
+                    "md5": "6097be8c9b336e449813b7becd956948",
+                    "sha256": "f878a99b575fb3c8e7491a4d93aaa5369c9701c3d6c0fb92379b740fc2b24d69",
                     "schemaVersion": 1
                 },
                 {
@@ -1724,17 +1724,17 @@
                     "category": "high-speed-rail",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-italy-centro-measuring-high-speed-rail.json.gz",
                     "bytes": 5017,
-                    "md5": "99a468879e9e3e64bf1e7a9161cf07d6",
-                    "sha256": "4949a69b6b6fea17757aeb7643346a7585372d6040378f55edf509d89e42ca17",
+                    "md5": "9b04fcdcd26b46eea783565394860b3f",
+                    "sha256": "92fe56ab3a7c563b0637ac33bbd5fe1ac6659641482b79f572390162fa0e28b9",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-1st-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-italy-centro-measuring-admin-1st-border.json.gz",
-                    "bytes": 198271,
-                    "md5": "9caa83d7b99bf4ba201d923e8980488a",
-                    "sha256": "50a7168aba0f25e2ad2ac69705c93b6f0788ddb922b4e58d3346ce427abafb86",
+                    "bytes": 198270,
+                    "md5": "540ae024778521f7087d886abdc767e8",
+                    "sha256": "9c2c6329a6b6f5ac823fe789f0ee36bd86810816d751aeb81fdfc309d4bfd029",
                     "schemaVersion": 1
                 },
                 {
@@ -1742,8 +1742,8 @@
                     "category": "admin-2nd-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-italy-centro-measuring-admin-2nd-border.json.gz",
                     "bytes": 154549,
-                    "md5": "92417375d703b736ad3b6f113c011870",
-                    "sha256": "654ba306770f161f98684fcdad7e41d1a5641cd87ba823449cf1ab9ec9ec5588",
+                    "md5": "b42ad608b8cd9542a235f274c2eb6794",
+                    "sha256": "0d22eeb834c611f8fa8ef08aa0bcff781c4febb53b2bf1afbba929183f56fb86",
                     "schemaVersion": 1
                 },
                 {
@@ -1751,8 +1751,8 @@
                     "category": "admin-boundaries",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-italy-centro-measuring-admin-boundaries.json.gz",
                     "bytes": 2887810,
-                    "md5": "1427414d7d31a1907264a80fbdbfeb21",
-                    "sha256": "01d4f4af640c4b41243fc7fd25b200ceaa4234fe5476b0eb79732c5a533d82af",
+                    "md5": "e201fc1cd84e0b8c16d35ca1c9c9fef9",
+                    "sha256": "bbc07c4fb3fd34ff85ceb906fd324b3c0b8c8dab019e6b8331321a6686c65eaa",
                     "schemaVersion": 1
                 },
                 {
@@ -1760,17 +1760,17 @@
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-italy-centro-boundaries.json.gz",
                     "bytes": 1139653,
-                    "md5": "d9a9f8fdc665c370f7eb7d7b6ead4f0f",
-                    "sha256": "ce858ccc482f8348ee2f1cf39ad99aef982647d6121433310065ca1c0f5bcf75",
+                    "md5": "ab15e080221d070c9b9c88bf6edf5b0d",
+                    "sha256": "5f4668bd6d395f73c556904bbededc8bd9ef2e1c542ca73329e7b592017e6803",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-italy-centro-transit.json.gz",
-                    "bytes": 37635,
-                    "md5": "edf338a49b33c966e28f0c803d168987",
-                    "sha256": "3c4464bbd915ba946ec9459f19314f91ccc523c4ba145e2f52bcabc57d065920",
+                    "bytes": 43131,
+                    "md5": "e15fec677534f102a5891bf77a0f5fa5",
+                    "sha256": "f12ba24f57500bccbbec1f3869790efd734548ed1b246a9d6207984869b6e259",
                     "schemaVersion": 1
                 },
                 {
