@@ -1,4 +1,5 @@
 import CGEOS
+import Foundation
 
 /// Thin Swift surface over the GEOS C API, just enough for the RQ-A1 spike.
 /// Proves Swift can call into the vendored simulator GEOS slice.
@@ -156,5 +157,59 @@ public enum GeosSpike {
         GEOSGeom_getXMax_r(handle, buffered, &xmax)
         GEOSGeom_getYMax_r(handle, buffered, &ymax)
         return BufferProbe(area: area, xmin: xmin, ymin: ymin, xmax: xmax, ymax: ymax)
+    }
+
+    /// Result of a timed overlay op (RQ-C3).
+    public struct OpProbe: Equatable {
+        public let numCoords: Int32
+        public let ms: Double
+        public let isNull: Bool
+    }
+
+    private static func readGeom(
+        _ handle: GEOSContextHandle_t?, _ reader: OpaquePointer?, _ hex: String
+    ) -> OpaquePointer? {
+        let raw = bytes(fromHex: hex)
+        return raw.withUnsafeBufferPointer { buf in
+            GEOSWKBReader_read_r(handle, reader, buf.baseAddress, raw.count)
+        }
+    }
+
+    /// Times `GEOSUnaryUnion_r` (the dissolve that hard-locks polyclip-JS) on a
+    /// WKB-hex geometry. Returns result coord count + wall-clock ms.
+    public static func unaryUnionWkbHex(_ hex: String) -> OpProbe? {
+        let handle = GEOS_init_r()
+        defer { GEOS_finish_r(handle) }
+        let reader = GEOSWKBReader_create_r(handle)
+        defer { GEOSWKBReader_destroy_r(handle, reader) }
+        guard let geom = readGeom(handle, reader, hex) else { return nil }
+        defer { GEOSGeom_destroy_r(handle, geom) }
+
+        let t0 = CFAbsoluteTimeGetCurrent()
+        let result = GEOSUnaryUnion_r(handle, geom)
+        let ms = (CFAbsoluteTimeGetCurrent() - t0) * 1000
+        defer { if let r = result { GEOSGeom_destroy_r(handle, r) } }
+        let coords = result != nil ? GEOSGetNumCoordinates_r(handle, result) : 0
+        return OpProbe(numCoords: coords, ms: ms, isNull: result == nil)
+    }
+
+    /// Times `GEOSDifference_r(a, b)` on two WKB-hex geometries (the play-area
+    /// mask op). Returns result coord count + wall-clock ms.
+    public static func differenceWkbHex(_ aHex: String, _ bHex: String) -> OpProbe? {
+        let handle = GEOS_init_r()
+        defer { GEOS_finish_r(handle) }
+        let reader = GEOSWKBReader_create_r(handle)
+        defer { GEOSWKBReader_destroy_r(handle, reader) }
+        guard let a = readGeom(handle, reader, aHex) else { return nil }
+        defer { GEOSGeom_destroy_r(handle, a) }
+        guard let b = readGeom(handle, reader, bHex) else { return nil }
+        defer { GEOSGeom_destroy_r(handle, b) }
+
+        let t0 = CFAbsoluteTimeGetCurrent()
+        let result = GEOSDifference_r(handle, a, b)
+        let ms = (CFAbsoluteTimeGetCurrent() - t0) * 1000
+        defer { if let r = result { GEOSGeom_destroy_r(handle, r) } }
+        let coords = result != nil ? GEOSGetNumCoordinates_r(handle, result) : 0
+        return OpProbe(numCoords: coords, ms: ms, isNull: result == nil)
     }
 }
