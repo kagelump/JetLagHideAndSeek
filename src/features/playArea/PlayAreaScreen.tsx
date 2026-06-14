@@ -17,6 +17,7 @@ import {
     buildPackAdminDivisionPack,
     findPackForPlayArea,
 } from "@/features/offline/adminLevelDefaults";
+import { defaultPlayArea } from "@/features/map/playArea";
 import { OfflinePackModal } from "@/features/playArea/OfflinePackModal";
 import {
     type PlayAreaSearchResult,
@@ -53,14 +54,27 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
     } = usePlayAreaSearch(debouncedQuery);
 
     const scrollRef = useRef<SheetScrollViewHandle>(null);
+    const searchInputRef = useRef<TextInput>(null);
     const [searchSectionY, setSearchSectionY] = useState(0);
     const [relationIdInput, setRelationIdInput] = useState("");
     const [relationIdError, setRelationIdError] = useState<string | null>(null);
     const [showAdvanced, setShowAdvanced] = useState(false);
 
+    const visiblePresets = useMemo(
+        () => presets.filter((p) => p !== defaultPlayArea),
+        [presets],
+    );
+
     useEffect(() => {
         snapToIndex(SHEET_SNAP_INDEX.large);
     }, [snapToIndex]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            searchInputRef.current?.focus();
+        }, 400);
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleSearchFocus = useCallback(() => {
         setTimeout(() => {
@@ -219,41 +233,45 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                     <Text style={styles.summaryTitle}>{playArea.label}</Text>
                 </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>
-                        Where are you playing?
-                    </Text>
-                    {presets.map((preset) => {
-                        const isActive = preset.osmId === playArea.osmId;
-                        return (
-                            <Pressable
-                                accessibilityRole="button"
-                                key={preset.osmId}
-                                onPress={() => {
-                                    applyPreset(preset);
-                                    snapToIndex(SHEET_SNAP_INDEX.medium);
-                                }}
-                                style={({ pressed }) => [
-                                    styles.resultRow,
-                                    isActive ? styles.resultRowActive : null,
-                                    pressed ? styles.actionPressed : null,
-                                ]}
-                            >
-                                <View style={styles.resultCopy}>
-                                    <Text style={styles.resultTitle}>
-                                        {preset.label}
-                                    </Text>
-                                    {isActive ? (
-                                        <Text style={styles.activeBadge}>
-                                            In use
+                {visiblePresets.length > 0 ? (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>
+                            Where are you playing?
+                        </Text>
+                        {visiblePresets.map((preset) => {
+                            const isActive = preset.osmId === playArea.osmId;
+                            return (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    key={preset.osmId}
+                                    onPress={() => {
+                                        applyPreset(preset);
+                                        snapToIndex(SHEET_SNAP_INDEX.medium);
+                                    }}
+                                    style={({ pressed }) => [
+                                        styles.resultRow,
+                                        isActive
+                                            ? styles.resultRowActive
+                                            : null,
+                                        pressed ? styles.actionPressed : null,
+                                    ]}
+                                >
+                                    <View style={styles.resultCopy}>
+                                        <Text style={styles.resultTitle}>
+                                            {preset.label}
                                         </Text>
-                                    ) : null}
-                                </View>
-                                <Text style={styles.chevron}>›</Text>
-                            </Pressable>
-                        );
-                    })}
-                </View>
+                                        {isActive ? (
+                                            <Text style={styles.activeBadge}>
+                                                In use
+                                            </Text>
+                                        ) : null}
+                                    </View>
+                                    <Text style={styles.chevron}>›</Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                ) : null}
 
                 <View
                     style={styles.section}
@@ -262,10 +280,10 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                     <Text style={styles.sectionTitle}>Search</Text>
                     <TextInput
                         accessibilityLabel="Search play areas"
-                        autoFocus
                         onChangeText={setQuery}
                         onFocus={handleSearchFocus}
                         placeholder="Search a city or region"
+                        ref={searchInputRef}
                         style={styles.input}
                         testID="play-area-search-input"
                         value={query}
