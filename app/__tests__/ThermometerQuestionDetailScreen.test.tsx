@@ -6,7 +6,6 @@ import { ThermometerQuestionDetailScreen } from "@/features/questions/thermomete
 import type { ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
 import {
     QuestionProvider,
-    useActivePinKey,
     useQuestionActions,
     useQuestions,
 } from "@/state/questionStore";
@@ -42,7 +41,6 @@ function makeThermometerQuestion(
 }
 
 function Probe() {
-    const activePinKey = useActivePinKey();
     const questions = useQuestions();
     const thermometerQuestion = questions.find(
         (q): q is ThermometerQuestion => q.type === "thermometer",
@@ -50,7 +48,6 @@ function Probe() {
 
     return (
         <View>
-            <Text testID="probe-active-pin-key">{activePinKey ?? "null"}</Text>
             {thermometerQuestion ? (
                 <>
                     <Text testID="probe-question-answer">
@@ -120,34 +117,6 @@ function renderWithProvider(initialQuestion: ThermometerQuestion) {
 describe("ThermometerQuestionDetailScreen", () => {
     beforeEach(() => {
         mockRequestUserCoordinate.mockReset();
-    });
-
-    it("renders both pin rows and toggles active pin", async () => {
-        const question = makeThermometerQuestion();
-        const screen = renderWithProvider(question);
-
-        await waitFor(() => {
-            expect(
-                screen.getByTestId("thermometer-active-pin-start"),
-            ).toBeTruthy();
-            expect(
-                screen.getByTestId("thermometer-active-pin-end"),
-            ).toBeTruthy();
-        });
-
-        fireEvent.press(screen.getByTestId("thermometer-active-pin-start"));
-        await waitFor(() => {
-            expect(
-                screen.getByTestId("probe-active-pin-key"),
-            ).toHaveTextContent("start");
-        });
-
-        fireEvent.press(screen.getByTestId("thermometer-active-pin-end"));
-        await waitFor(() => {
-            expect(
-                screen.getByTestId("probe-active-pin-key"),
-            ).toHaveTextContent("end");
-        });
     });
 
     it("shows live distance between pins", async () => {

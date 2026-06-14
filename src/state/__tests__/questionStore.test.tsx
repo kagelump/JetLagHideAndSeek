@@ -21,14 +21,13 @@ import {
 } from "@/state/questionStore";
 
 function Probe() {
-    const { activeQuestionId, activePinKey, isRestored } = useQuestionState();
+    const { activeQuestionId, isRestored } = useQuestionState();
     const questions = useQuestions();
     const { activeQuestion } = useQuestionDerived();
     const {
         createQuestion,
         deleteQuestion,
         setActiveQuestionId,
-        setActivePinKey,
         updateQuestion,
     } = useQuestionActions();
 
@@ -37,7 +36,6 @@ function Probe() {
             <Text testID="probe-restored">{String(isRestored)}</Text>
             <Text testID="probe-count">{questions.length}</Text>
             <Text testID="probe-active-id">{activeQuestionId ?? "none"}</Text>
-            <Text testID="probe-active-pin-key">{activePinKey ?? "none"}</Text>
             <Text testID="probe-question-ids">
                 {questions.map((question) => question.id).join(",")}
             </Text>
@@ -301,11 +299,6 @@ function Probe() {
                           )
                         : null
                 }
-            />
-            <Pressable
-                accessibilityRole="button"
-                testID="action-set-active-pin-key"
-                onPress={() => setActivePinKey("start")}
             />
         </View>
     );
@@ -930,24 +923,6 @@ describe("QuestionProvider – new question types", () => {
         expect(currPos[1]).toBeCloseTo(defaultPlayArea.center[1], 3);
     });
 
-    it("creating a thermometer question sets activePinKey to end", async () => {
-        const screen = renderProvider();
-
-        await waitFor(() => {
-            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
-                "true",
-            );
-        });
-
-        act(() => {
-            fireEvent.press(screen.getByTestId("action-create-thermometer"));
-        });
-
-        expect(screen.getByTestId("probe-active-pin-key")).toHaveTextContent(
-            "end",
-        );
-    });
-
     it("updateThermometerPin updates only the targeted pin and bumps updatedAt", async () => {
         const screen = renderProvider();
 
@@ -978,30 +953,6 @@ describe("QuestionProvider – new question types", () => {
         expect(
             screen.getByTestId("probe-thermometer-updated-at").props.children,
         ).not.toBe("none");
-    });
-
-    it("clears activePinKey when active question changes to non-thermometer", async () => {
-        const screen = renderProvider();
-
-        await waitFor(() => {
-            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
-                "true",
-            );
-        });
-
-        act(() => {
-            fireEvent.press(screen.getByTestId("action-create-thermometer"));
-        });
-        expect(screen.getByTestId("probe-active-pin-key")).toHaveTextContent(
-            "end",
-        );
-
-        act(() => {
-            fireEvent.press(screen.getByTestId("action-create"));
-        });
-        expect(screen.getByTestId("probe-active-pin-key")).toHaveTextContent(
-            "none",
-        );
     });
 });
 

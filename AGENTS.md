@@ -348,7 +348,7 @@ focused feature/store and let the map render derived data.
   type-specific editing in focused detail components/hooks (e.g.
   `useRadarDistanceDraftInput`).
 - `QuestionProvider` (`questionStore.tsx`) exposes generic create/update/delete
-  plus type-specific helpers (e.g. thermometer pin updates, `activePinKey`).
+  plus type-specific helpers (e.g. thermometer pin updates).
   Prefer those over one-off global setters per family.
 - Radar stores `distanceMeters`, `distanceOption`, and `distanceUnit`. Presets
   are `500m`, `1km`, `2km`, `5km`, `10km`, `15km`, `40km`, `80km`, `150km`, plus

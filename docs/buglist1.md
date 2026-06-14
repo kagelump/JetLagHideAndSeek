@@ -89,11 +89,6 @@ Difficulty: **[E]** easy (≤half day), **[M]** medium (1–2 days), **[H]** har
 
 ## Thermometer
 
-- **[M]** There shouldn't be the Active Pin: Start/End system. Press+hold drag should just be based on which one is closer to the press.
-    - Direction: `usePinDrag` already picks the nearest pin within hit
-      radius; delete `activePinKey` plumbing from `questionStore.tsx` +
-      detail screen and let proximity win. Keep keyboard/coordinate editing
-      per-pin in the sheet.
 - **[E]** The two pins should have two different colors
     - Direction: `getQuestionPins.ts` already knows start/end; add a `role`
       property and split filtered layers in `QuestionPinLayer` (literal

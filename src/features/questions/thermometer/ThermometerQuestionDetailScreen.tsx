@@ -1,10 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
 import type { ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
 import { haversineDistanceMeters } from "@/shared/geojson";
 import { fromMeters } from "@/shared/distanceUnits";
-import { useQuestionActions, useActivePinKey } from "@/state/questionStore";
+import { useQuestionActions } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 import type { Position } from "@/shared/geojson";
 
@@ -21,9 +21,6 @@ export function ThermometerQuestionDetailScreen({
     question,
     updateQuestion,
 }: ThermometerQuestionDetailScreenProps) {
-    const { setActivePinKey } = useQuestionActions();
-    const activePinKey = useActivePinKey();
-
     const startPosition = question.previousPosition;
     const endPosition = question.currentPosition;
 
@@ -62,66 +59,6 @@ export function ThermometerQuestionDetailScreen({
                     questionType={question.type}
                     testIDPrefix="thermometer-answer-option"
                 />
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Active Pin</Text>
-                <View style={styles.pinToggleRow}>
-                    <Pressable
-                        accessibilityLabel="Set active pin to start"
-                        accessibilityRole="button"
-                        accessibilityState={{
-                            selected: activePinKey === "start",
-                        }}
-                        onPress={() => setActivePinKey("start")}
-                        style={({ pressed }) => [
-                            styles.pinToggleButton,
-                            activePinKey === "start"
-                                ? styles.pinToggleButtonActive
-                                : null,
-                            pressed ? styles.actionPressed : null,
-                        ]}
-                        testID="thermometer-active-pin-start"
-                    >
-                        <Text
-                            style={[
-                                styles.pinToggleButtonText,
-                                activePinKey === "start"
-                                    ? styles.pinToggleButtonTextActive
-                                    : null,
-                            ]}
-                        >
-                            Start
-                        </Text>
-                    </Pressable>
-                    <Pressable
-                        accessibilityLabel="Set active pin to end"
-                        accessibilityRole="button"
-                        accessibilityState={{
-                            selected: activePinKey === "end",
-                        }}
-                        onPress={() => setActivePinKey("end")}
-                        style={({ pressed }) => [
-                            styles.pinToggleButton,
-                            activePinKey === "end"
-                                ? styles.pinToggleButtonActive
-                                : null,
-                            pressed ? styles.actionPressed : null,
-                        ]}
-                        testID="thermometer-active-pin-end"
-                    >
-                        <Text
-                            style={[
-                                styles.pinToggleButtonText,
-                                activePinKey === "end"
-                                    ? styles.pinToggleButtonTextActive
-                                    : null,
-                            ]}
-                        >
-                            End
-                        </Text>
-                    </Pressable>
-                </View>
             </View>
 
             <View style={styles.section}>
@@ -172,48 +109,11 @@ export function ThermometerQuestionDetailScreen({
 }
 
 const styles = StyleSheet.create({
-    actionPressed: {
-        opacity: 0.72,
-    },
     distanceValue: {
         color: colors.ink,
         fontSize: 17,
         fontWeight: "800",
         marginTop: 8,
-    },
-    metadata: {
-        color: colors.muted,
-        fontSize: 13,
-        lineHeight: 18,
-        marginTop: 8,
-    },
-    pinToggleButton: {
-        alignItems: "center",
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        borderRadius: 8,
-        borderWidth: 1,
-        flex: 1,
-        justifyContent: "center",
-        minHeight: 46,
-        paddingHorizontal: 14,
-    },
-    pinToggleButtonActive: {
-        backgroundColor: colors.button,
-        borderColor: colors.button,
-    },
-    pinToggleButtonText: {
-        color: colors.ink,
-        fontSize: 15,
-        fontWeight: "800",
-    },
-    pinToggleButtonTextActive: {
-        color: colors.white,
-    },
-    pinToggleRow: {
-        flexDirection: "row",
-        gap: 10,
-        marginTop: 10,
     },
     positionCol: { flex: 1 },
     positionLabel: {

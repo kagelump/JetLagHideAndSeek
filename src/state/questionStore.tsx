@@ -3,7 +3,6 @@ import {
     type ReactNode,
     useCallback,
     useContext,
-    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -58,7 +57,6 @@ export type GameMode = "hider" | "seeker";
 
 type QuestionStateValue = {
     activeQuestionId: string | null;
-    activePinKey: string | null;
     adminDivisionPack: AdminDivisionNamePack;
     adminDivisionPresetName: AdminDivisionPresetName;
     gameMode: GameMode;
@@ -167,7 +165,6 @@ type QuestionActionsValue = {
     setGameMode: (mode: GameMode) => void;
     setLabelLanguage: (language: "native" | "english") => void;
     setSeekingStartedAt: (timestamp: number | null) => void;
-    setActivePinKey: (key: string | null) => void;
     updateQuestion: (
         questionId: string,
         updater: (question: QuestionState) => QuestionState,
@@ -204,16 +201,6 @@ export function useQuestionDerived(): QuestionDerivedValue {
         );
     }
     return context;
-}
-
-// ---------------------------------------------------------------------------
-// Active pin key context — UI state for thermometer pin editing
-// ---------------------------------------------------------------------------
-
-const ActivePinKeyContext = createContext<string | null>(null);
-
-export function useActivePinKey(): string | null {
-    return useContext(ActivePinKeyContext);
 }
 
 // ---------------------------------------------------------------------------
@@ -254,7 +241,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const [adminDivisionPresetName, setAdminDivisionPresetNameState] =
         useState<AdminDivisionPresetName>(DEFAULT_ADMIN_DIVISION_PRESET_NAME);
     const [isRestored, setIsRestored] = useState(false);
-    const [activePinKey, setActivePinKeyState] = useState<string | null>(null);
     const [seekingStartedAt, setSeekingStartedAtState] = useState<
         number | null
     >(null);
@@ -266,12 +252,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                 : null,
         [activeQuestionId, questions.byId],
     );
-
-    useEffect(() => {
-        if (activeQuestion?.type !== "thermometer") {
-            setActivePinKeyState(null);
-        }
-    }, [activeQuestion]);
 
     const updateQuestion = useCallback(
         (
@@ -328,9 +308,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                 };
             });
             setActiveQuestionIdState(question.id);
-            if (question.type === "thermometer") {
-                setActivePinKeyState("end");
-            }
             return question;
         },
         [],
@@ -464,10 +441,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setIsRestored(true);
     }, []);
 
-    const setActivePinKey = useCallback((key: string | null) => {
-        setActivePinKeyState(key);
-    }, []);
-
     const setSeekingStartedAt = useCallback((timestamp: number | null) => {
         setSeekingStartedAtState(timestamp);
     }, []);
@@ -475,7 +448,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const stateValue = useMemo<QuestionStateValue>(
         () => ({
             activeQuestionId,
-            activePinKey,
             adminDivisionPack,
             adminDivisionPresetName,
             gameMode,
@@ -485,7 +457,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         }),
         [
             activeQuestionId,
-            activePinKey,
             adminDivisionPack,
             adminDivisionPresetName,
             gameMode,
@@ -504,7 +475,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             importQuestions,
             markRestored,
             setActiveQuestionId,
-            setActivePinKey,
             setAdminDivisionPack,
             setAdminDivisionPresetName,
             setGameMode,
@@ -520,7 +490,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             importQuestions,
             markRestored,
             setActiveQuestionId,
-            setActivePinKey,
             setAdminDivisionPack,
             setAdminDivisionPresetName,
             setGameMode,
@@ -556,11 +525,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                                             <SeekingStartedAtContext.Provider
                                                 value={seekingStartedAt}
                                             >
-                                                <ActivePinKeyContext.Provider
-                                                    value={activePinKey}
-                                                >
-                                                    {children}
-                                                </ActivePinKeyContext.Provider>
+                                                {children}
                                             </SeekingStartedAtContext.Provider>
                                         </AdminDivisionPresetNameContext.Provider>
                                     </AdminDivisionPackContext.Provider>

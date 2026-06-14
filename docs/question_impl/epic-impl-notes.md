@@ -756,8 +756,8 @@ No review findings — the implementation was written test-first against the spe
 Built the full Thermometer detail screen and map interaction on top of the
 half-plane geometry (Task 08) and the two-pin primitive. Replaced the Task 01
 stub screen with a working detail screen, wired two-pin map drag with
-`activePinKey` state, added the preview/hit-mask layers to `NativeMap`, and
-added unit tests and a Maestro smoke flow.
+proximity-based pin selection, added the preview/hit-mask layers to `NativeMap`,
+and added unit tests and a Maestro smoke flow.
 
 ### Files created (3)
 
@@ -769,17 +769,17 @@ added unit tests and a Maestro smoke flow.
 
 ### Files modified (9)
 
-| File                                                                     | Change                                                                                                                                                                                                                |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/state/questionStore.tsx`                                            | Added `updateThermometerPin()`, `activePinKey` context + provider + `setActivePinKey`, creation seeds offset end pin (300m east), defaults `activePin="end"`, `useEffect` clears pin key on non-thermometer questions |
-| `src/features/questions/thermometer/ThermometerQuestionDetailScreen.tsx` | Full rewrite: active-pin toggle, two `QuestionLocationSelector` rows with Set GPS, live haversine distance in km, `QuestionAnswerSelector`, degenerate warning (<100m), stable testIDs                                |
-| `src/features/map/NativeMap.tsx`                                         | Added `ThermometerPreviewLayer`, wired `thermometer.hitMaskFeatures` into `combinedInsideMask` via `asSeparateMaskConstraints`, threaded `activePinKey` through to `QuestionPinLayer` and `usePinDrag`                |
-| `src/features/map/QuestionPinLayer.tsx`                                  | Added `isActive` property on pin features, dimmed circle layer (`#888888`, opacity 0.5) for inactive pins                                                                                                             |
-| `src/features/map/usePinDrag.ts`                                         | Added `activePinKey` gate: refuses drag start if closest pin doesn't match the active pin key                                                                                                                         |
-| `src/features/map/useMapPinCommit.ts`                                    | Routes `pinKey` "start"/"end" → `updateThermometerPin`, "center" → `updateQuestionCenter` (no-op for thermometer)                                                                                                     |
-| `src/features/questions/QuestionDetailScreen.tsx`                        | Pass `question` and `updateQuestion` props to `ThermometerQuestionDetailScreen`                                                                                                                                       |
-| `src/screens/MapAppScreen.tsx`                                           | Reads `useActivePinKey()` and passes it to `NativeMap`                                                                                                                                                                |
-| `src/state/__tests__/questionStore.test.tsx`                             | 3 new tests: `updateThermometerPin` updates targeted pin + bumps `updatedAt`, create sets `activePinKey` to "end", clears `activePinKey` when switching to non-thermometer                                            |
+| File                                                                     | Change                                                                                                                                                                       |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/state/questionStore.tsx`                                            | Added `updateThermometerPin()`, creation seeds offset end pin (300m east). `activePinKey` was later removed — both pins are now draggable by proximity.                      |
+| `src/features/questions/thermometer/ThermometerQuestionDetailScreen.tsx` | Full rewrite: two coordinate rows, live haversine distance in km, `QuestionAnswerSelector`, degenerate warning (<100m), stable testIDs. Active pin toggle was later removed. |
+| `src/features/map/NativeMap.tsx`                                         | Added `ThermometerPreviewLayer`, wired `thermometer.hitMaskFeatures` into `combinedInsideMask` via `asSeparateMaskConstraints`                                               |
+| `src/features/map/QuestionPinLayer.tsx`                                  | Renders all pins from a FeatureCollection; dimmed inactive-pin layer was later removed (both pins equally active)                                                            |
+| `src/features/map/usePinDrag.ts`                                         | Proximity-based pin selection; `activePinKey` gate was later removed so both pins are always draggable                                                                       |
+| `src/features/map/useMapPinCommit.ts`                                    | Routes `pinKey` "start"/"end" → `updateThermometerPin`, "center" → `updateQuestionCenter` (no-op for thermometer)                                                            |
+| `src/features/questions/QuestionDetailScreen.tsx`                        | Pass `question` and `updateQuestion` props to `ThermometerQuestionDetailScreen`                                                                                              |
+| `src/screens/MapAppScreen.tsx`                                           | Reads `useQuestionDerived()` and passes pins/canMove to `NativeMap`. Long-press away from pins places start pin for thermometer.                                             |
+| `src/state/__tests__/questionStore.test.tsx`                             | `updateThermometerPin` updates targeted pin + bumps `updatedAt`. `activePinKey` tests were later removed.                                                                    |
 
 ### Deviations from the task spec
 
@@ -830,29 +830,19 @@ required constraint (intersection = correct narrowing behavior).
    the map tap is effectively dead — by design (only drag-to-move for two-pin
    questions).
 
-3. **`activePinKey` is UI-only state** — not persisted, not in the wire format.
-   It's a transient editing affordance that lives in React context and is
-   cleared by a `useEffect` when the active question changes to a
-   non-thermometer type. No serialization changes needed.
+3. **Both pins are draggable by proximity.** The drag gesture selects the
+   closest pin within the hit radius. There is no active pin state. Long-pressing
+   away from any pin places the start pin. No serialization changes needed.
 
 ### Design decisions
 
-- **`activePinKey` in a dedicated context** (`ActivePinKeyContext`) rather than
-  folded into the existing `QuestionStateContext`. This isolates the transient UI
-  state from the persisted question state and avoids widening the
-  `QuestionStateValue` type for something that never survives across sessions.
+- **Proximity-based pin selection.** Both thermometer pins are equally
+  draggable. `usePinDrag` picks the closest pin within the hit radius on
+  long-press. No UI toggle or active pin state is needed.
 
-- **Pin drag restriction via early return, not gesture disable.** Rather than
-  disabling the pan gesture for inactive pins (which would prevent any drag),
-  `usePinDrag` checks `activePinKey` after identifying the closest pin and
-  silently returns if it doesn't match. This means the user can long-press
-  anywhere; the system just ignores the gesture if it hits the wrong pin.
-
-- **Dimmed pin uses a separate circle layer** with `filter={["==", "isActive", false]}`
-  rather than modifying the existing pin icon. The icon stays visible on top of
-  the gray circle; the active pin gets the orange glow, the inactive pin gets a
-  gray circle. This keeps layer complexity low — no conditional icon tinting or
-  symbol-layer duplication.
+- **Dimmed pin layer removed.** The inactive-pin dimmed circle layer
+  (`question-pin-dimmed`) was removed when `activePinKey` was deleted. Both
+  pins render with the same orange glow style.
 
 - **`handlePinChange(pin, position)` factory pattern.** After code review, the
   two near-identical handlers were merged into a single function accepting

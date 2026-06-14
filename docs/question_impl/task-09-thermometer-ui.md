@@ -33,10 +33,10 @@ approximate area-split read-out.
 
 ## Behavior
 
-- **Two pins via Task 04.** The screen owns an `activePin: "start" | "end"`
-  toggle and pushes it into the shared `activePinKey` state the map reads. Only
-  the active pin drags; the inactive one is shown fixed/dimmed. Map drag commits
-  through the per-pin commit path (Task 04) into the new updaters below.
+- **Two pins via Task 04.** Both pins respond to drag based on proximity
+  (closest pin within hit radius). There is no active pin selector. Map drag
+  commits through the per-pin commit path (Task 04) into the new updaters
+  below.
 - **Creation seeds an offset end pin.** Create with
   `previousPosition = currentGPS` and `currentPosition = currentGPS shifted a
 small amount` (e.g. ~300 m east, comfortably above the 100 m degenerate
@@ -85,7 +85,6 @@ Visible only when the active route is `question-detail` (same rule as
 
 ### `__tests__/ThermometerQuestionDetailScreen.test.tsx`
 
-- Renders both pin rows; toggling activePin updates the shared `activePinKey`.
 - "Set GPS" on a pin updates that pin via `updateThermometerPin` (GPS mocked).
 - Live distance reflects pin positions.
 - Answer selector disabled while degenerate (<100 m), enabled otherwise.
