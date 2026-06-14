@@ -442,7 +442,13 @@ function MainSheetContent({
                                 <Pressable
                                     accessibilityLabel="Set up a game"
                                     accessibilityRole="button"
-                                    onPress={() => onNavigate("play-area")}
+                                    onPress={() =>
+                                        onNavigate(
+                                            isPlayAreaSet(playArea)
+                                                ? "hiding-zone"
+                                                : "play-area",
+                                        )
+                                    }
                                     style={({ pressed }) => [
                                         styles.primaryButton,
                                         pressed ? styles.actionPressed : null,
