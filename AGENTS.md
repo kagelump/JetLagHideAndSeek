@@ -383,6 +383,15 @@ For UI, state, or config changes, also run `pnpm check` (lint + format +
 typecheck + perf-typecheck + POI-selector drift). Remember `pnpm check` does not
 run jest, so keep running `pnpm test` too.
 
+For **geometry / GEOS backend** changes (`src/shared/geometry/**`,
+`modules/native-geometry/**`), also run `pnpm test:geos` — the geos-wasm parity
+
+- golden-fixture gate (run each suite in its own process via
+  `scripts/run-geos-tests.mjs`; it is excluded from `pnpm test`). If a change
+  legitimately shifts a GEOS result, regenerate the golden file with
+  `pnpm data:geos-golden` and review the diff. CI runs this as the "GEOS parity"
+  step in `app-checks.yml`.
+
 For native accessibility, bottom-sheet, MapLibre, or app-start changes, run the
 Maestro stack when a simulator/dev build is available (`pnpm test:e2e:stack`,
 `pnpm test:e2e:ios:stack`). Otherwise use the GitHub Actions workflow as the

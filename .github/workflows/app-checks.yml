@@ -74,3 +74,11 @@ jobs:
 
             - name: Test
               run: pnpm test
+
+            # GEOS host parity (geos-wasm) — excluded from `pnpm test` because it
+            # needs --experimental-vm-modules. Runs each suite in its own process
+            # (see scripts/run-geos-tests.mjs) and asserts the committed golden
+            # fixtures, so a GEOS/backend change that drifts from the oracle fails
+            # here before reaching a device.
+            - name: GEOS parity
+              run: pnpm test:geos

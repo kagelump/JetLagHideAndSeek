@@ -204,11 +204,20 @@ Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO`.
   `NativeGeometryModule` (JNI symbols are
   `Java_expo_modules_nativegeometry_NativeGeometryModule_native*`). Reuse
   `geos-golden.json` to close the Kotlin axis of C1.
-- **WI-5 = CI (research D1/D2):** new `.github/workflows/native-geometry-tests.yml`.
-  iOS job (`macos-15`): boot sim → `xcodebuild test` (reuse the UDID-select block
-  from `maestro-e2e.yml`); no `expo run`, no signing, no Metro. Android job
-  (`reactivecircus/android-emulator-runner`): `connectedAndroidTest`. D1 is
-  unblocked by A1; D2 needs B1.
+- **WI-5 = CI (research D1/D2):**
+    - **Host parity gate — ✅ DONE.** `app-checks.yml` now runs `pnpm test:geos`
+      (the "GEOS parity" step) on every PR/master push, so the geos-wasm parity
+        - golden-fixture gate actually gates CI. This also required making the geos
+          suite deterministic: `pnpm test:geos` now runs each suite in its own
+          process (`scripts/run-geos-tests.mjs`) because geos-wasm's realm-escaping
+          `import()` trips "Test environment has been torn down" when a Jest worker is
+          reused across two geos files; `spikes/` is excluded from the geos config.
+    - **Device jobs — still pending** (blocked on WI-2/WI-4 targets existing):
+      new `.github/workflows/native-geometry-tests.yml`. iOS job (`macos-15`):
+      boot sim → `xcodebuild test` (reuse the UDID-select block from
+      `maestro-e2e.yml`); no `expo run`, no signing, no Metro. Android job
+      (`reactivecircus/android-emulator-runner`): `connectedAndroidTest`. D1 is
+      unblocked by A1; D2 needs B1.
 - **F1/F2 = sanitizers/concurrency:** seed a double-free, confirm ASan catches it;
   exercise lazy context init from N threads. Gated on a harness (A1 satisfies iOS).
 - **E1 final step (CI run):** infra fixes landed + locally verified
