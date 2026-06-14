@@ -992,7 +992,7 @@ describe("MapAppScreen", () => {
         expect(
             screen.getAllByText("Toei Subway").length,
         ).toBeGreaterThanOrEqual(1);
-        expect(screen.getByText("0 presets selected")).toBeTruthy();
+        expect(screen.getByText(/0 stations selected/)).toBeTruthy();
         fireEvent.press(screen.getByTestId("hiding-zone-menu-button"));
         expect(
             screen.getByTestId("hiding-zone-radius-meters").props.children,
@@ -1021,7 +1021,7 @@ describe("MapAppScreen", () => {
                 "hiding-zone-stations",
             ).props.shape;
 
-            expect(screen.getByText("1 preset selected")).toBeTruthy();
+            expect(screen.getByText(/stations selected/)).toBeTruthy();
             expect(screen.getByText("Added ✓")).toBeTruthy();
             expect(zoneShape.features.length).toBeGreaterThan(0);
             expect(["Polygon", "MultiPolygon"]).toContain(

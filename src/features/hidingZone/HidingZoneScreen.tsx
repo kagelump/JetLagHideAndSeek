@@ -82,9 +82,6 @@ export function HidingZoneScreen() {
         (p) => !selectedSet.has(p.id),
     );
 
-    // Accessibility label.
-    const currentAccessibilityLabel = `Hiding zone settings; radius ${radiusDisplayValue} ${radiusUnit}; stored as ${Math.round(radiusMeters)} m; ${selectedPresetIds.length} preset${selectedPresetIds.length === 1 ? "" : "s"} selected; ${clippedStations.length} station${clippedStations.length === 1 ? "" : "s"} in play area`;
-
     // Filter browse-all by search.
     const browsePresets = useMemo(() => {
         if (!browseSearch.trim()) return otherPresets;
@@ -120,27 +117,6 @@ export function HidingZoneScreen() {
                     </Pressable>
                 </View>
 
-                {/* Current card — clipped count vs total */}
-                <View
-                    accessible
-                    accessibilityLabel={currentAccessibilityLabel}
-                    style={styles.card}
-                    testID="current-hiding-zone-card"
-                >
-                    <Text style={styles.cardLabel}>Current</Text>
-                    <Text style={styles.currentName}>
-                        {selectedPresetIds.length} preset
-                        {selectedPresetIds.length === 1 ? "" : "s"} selected
-                    </Text>
-                    <Text style={styles.metadata}>
-                        {clippedStations.length} station
-                        {clippedStations.length === 1 ? "" : "s"} in play area
-                        {clippedStations.length !== allSelectedStations.length
-                            ? ` (${allSelectedStations.length} total)`
-                            : ""}
-                    </Text>
-                </View>
-
                 {/* Scoped view or browse-all */}
                 {noPlayArea ? (
                     // No play area: direct browse-all.
@@ -161,6 +137,21 @@ export function HidingZoneScreen() {
                                 <Text style={styles.sectionTitle}>
                                     Operators in your play area
                                 </Text>
+                                {(() => {
+                                    const totalOps = operatorPresets.length;
+                                    return (
+                                        <Text style={styles.operatorSummary}>
+                                            {totalOps} operator
+                                            {totalOps === 1 ? "" : "s"}
+                                            {" · "}
+                                            {clippedStations.length} station
+                                            {clippedStations.length === 1
+                                                ? ""
+                                                : "s"}{" "}
+                                            selected
+                                        </Text>
+                                    );
+                                })()}
                                 {unselectedOperators.length >= 2 && (
                                     <Pressable
                                         accessibilityLabel="Add all operators in play area"
@@ -651,32 +642,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "800",
     },
-    card: {
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        borderRadius: 8,
-        borderWidth: 1,
-        gap: 4,
-        marginTop: 12,
-        padding: 14,
-    },
-    cardLabel: {
-        color: colors.tint,
-        fontSize: 12,
-        fontWeight: "800",
-        letterSpacing: 0,
-        textTransform: "uppercase",
-    },
     container: {},
     colorDot: {
         borderRadius: 6,
         height: 12,
         width: 12,
-    },
-    currentName: {
-        color: colors.ink,
-        fontSize: 22,
-        fontWeight: "800",
     },
     emptyText: {
         color: colors.muted,
@@ -687,6 +657,12 @@ const styles = StyleSheet.create({
         color: colors.muted,
         fontSize: 13,
         lineHeight: 18,
+    },
+    operatorSummary: {
+        color: colors.muted,
+        fontSize: 13,
+        lineHeight: 18,
+        marginBottom: 8,
     },
     presetAction: {
         borderColor: colors.button,
