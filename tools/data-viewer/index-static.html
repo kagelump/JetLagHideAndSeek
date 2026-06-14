@@ -526,9 +526,7 @@
                     map.getCanvas().style.cursor = "pointer";
                     var p = e.features[0].properties;
                     var html = "<strong>" + p.name + "</strong>";
-                    if (p.operators)
-                        html +=
-                            "<br><em>" + p.operators + "</em>";
+                    if (p.operators) html += "<br><em>" + p.operators + "</em>";
                     if (p.routeNames)
                         html +=
                             '<br><span style="color:#666">' +
@@ -1337,10 +1335,7 @@
                         var p = e.features[0].properties;
                         var html = "<strong>" + p.name + "</strong>";
                         if (p.operators)
-                            html +=
-                                "<br><em>" +
-                                p.operators +
-                                "</em>";
+                            html += "<br><em>" + p.operators + "</em>";
                         if (p.routeNames)
                             html +=
                                 '<br><span style="color:#666">' +
