@@ -42,8 +42,7 @@ type PlayAreaScreenProps = {
 };
 
 export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
-    const { applyPreset, applyRelationId, cacheSource, playArea, presets } =
-        usePlayArea();
+    const { applyPreset, applyRelationId, playArea, presets } = usePlayArea();
     const { snapToIndex } = useSheetSnap();
     const [query, setQuery] = useState("");
     const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
@@ -55,13 +54,27 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
 
     const scrollRef = useRef<SheetScrollViewHandle>(null);
     const [searchSectionY, setSearchSectionY] = useState(0);
+    const [relationIdInput, setRelationIdInput] = useState("");
+    const [relationIdError, setRelationIdError] = useState<string | null>(null);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     const handleSearchFocus = useCallback(() => {
-        // Small delay to let the keyboard begin appearing before scrolling.
         setTimeout(() => {
             scrollRef.current?.scrollTo({ y: searchSectionY, animated: true });
         }, 100);
     }, [searchSectionY]);
+
+    const handleApplyRelationId = useCallback(async () => {
+        const trimmed = relationIdInput.trim();
+        if (!trimmed) return;
+        setRelationIdError(null);
+        const ok = await applyRelationId(trimmed);
+        if (!ok) {
+            setRelationIdError("Could not resolve this relation ID.");
+        } else {
+            snapToIndex(SHEET_SNAP_INDEX.medium);
+        }
+    }, [relationIdInput, applyRelationId, snapToIndex]);
 
     // ── Offline pack prompt ───────────────────────────────────────────────
     const catalog = usePackCatalog();
@@ -124,7 +137,6 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
             return;
         }
 
-        // Check for pack-derived admin levels first.
         const packInfo = findPackForPlayArea(playArea.bbox);
         if (packInfo) {
             const pack = buildPackAdminDivisionPack(packInfo);
@@ -132,7 +144,6 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
             return;
         }
 
-        // Fall back to geographic preset.
         if (isBboxInJapan(playArea.bbox)) {
             setAdminDivisionPresetName("japan");
         } else {
@@ -140,7 +151,6 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
         }
     }, [playArea.osmId, setAdminDivisionPack, setAdminDivisionPresetName]);
 
-    // Reset progress when the mutation settles, and dismiss on success.
     useEffect(() => {
         if (!installMutation.isPending && !installMutation.isError) {
             setInstallProgress(null);
@@ -189,6 +199,10 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
               ? "Download failed."
               : null;
 
+    const hasSearchQuery = debouncedQuery.trim().length > 0;
+    const showNoResults =
+        hasSearchQuery && !isSearching && !searchError && results.length === 0;
+
     return (
         <>
             <SheetScrollView
@@ -196,21 +210,45 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                 style={styles.container}
                 contentContainerStyle={styles.scrollContent}
             >
-                <View style={styles.card} testID="current-play-area-card">
-                    <Text style={styles.cardLabel}>Current</Text>
-                    <Text style={styles.currentName}>{playArea.label}</Text>
-                    <Text style={styles.metadata}>
-                        Relation {playArea.osmId}
+                <View style={styles.summaryHeader}>
+                    <Text style={styles.summaryLabel}>Current</Text>
+                    <Text style={styles.summaryTitle}>{playArea.label}</Text>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>
+                        Where are you playing?
                     </Text>
-                    <Text style={styles.metadata} testID="play-area-bbox">
-                        Bbox {formatBbox(playArea.bbox)}
-                    </Text>
-                    <Text
-                        style={styles.metadata}
-                        testID="play-area-cache-status"
-                    >
-                        Boundary cache: {cacheSource}
-                    </Text>
+                    {presets.map((preset) => {
+                        const isActive = preset.osmId === playArea.osmId;
+                        return (
+                            <Pressable
+                                accessibilityRole="button"
+                                key={preset.osmId}
+                                onPress={() => {
+                                    applyPreset(preset);
+                                    snapToIndex(SHEET_SNAP_INDEX.medium);
+                                }}
+                                style={({ pressed }) => [
+                                    styles.resultRow,
+                                    isActive ? styles.resultRowActive : null,
+                                    pressed ? styles.actionPressed : null,
+                                ]}
+                            >
+                                <View style={styles.resultCopy}>
+                                    <Text style={styles.resultTitle}>
+                                        {preset.label}
+                                    </Text>
+                                    {isActive ? (
+                                        <Text style={styles.activeBadge}>
+                                            In use
+                                        </Text>
+                                    ) : null}
+                                </View>
+                                <Text style={styles.chevron}>›</Text>
+                            </Pressable>
+                        );
+                    })}
                 </View>
 
                 <View
@@ -222,7 +260,7 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                         accessibilityLabel="Search play areas"
                         onChangeText={setQuery}
                         onFocus={handleSearchFocus}
-                        placeholder="Search for a city or ward"
+                        placeholder="Search a city or region"
                         style={styles.input}
                         testID="play-area-search-input"
                         value={query}
@@ -237,6 +275,9 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                                 : "Search failed."}
                         </Text>
                     ) : null}
+                    {showNoResults ? (
+                        <Text style={styles.noResults}>No matches found.</Text>
+                    ) : null}
                     {results.map((result) => (
                         <ResultRow
                             key={result.osmId}
@@ -250,33 +291,70 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Known presets</Text>
-                    {presets.map((preset) => (
-                        <Pressable
-                            accessibilityRole="button"
-                            key={preset.osmId}
-                            onPress={() => {
-                                applyPreset(preset);
-                                snapToIndex(SHEET_SNAP_INDEX.medium);
-                            }}
-                            style={({ pressed }) => [
-                                styles.resultRow,
-                                pressed ? styles.actionPressed : null,
-                            ]}
-                        >
-                            <View style={styles.resultCopy}>
-                                <Text style={styles.resultTitle}>
-                                    {preset.label}
+                    <Pressable
+                        accessibilityLabel="Toggle advanced options"
+                        accessibilityRole="button"
+                        onPress={() => setShowAdvanced((v) => !v)}
+                        style={({ pressed }) => [
+                            styles.advancedToggle,
+                            pressed ? styles.actionPressed : null,
+                        ]}
+                    >
+                        <Text style={styles.advancedToggleText}>Advanced</Text>
+                        <Text style={styles.advancedChevron}>
+                            {showAdvanced ? "−" : "+"}
+                        </Text>
+                    </Pressable>
+                    {showAdvanced ? (
+                        <View style={styles.advancedContent}>
+                            <TextInput
+                                accessibilityLabel="OSM relation ID"
+                                keyboardType="number-pad"
+                                onChangeText={setRelationIdInput}
+                                placeholder="OSM relation ID"
+                                style={styles.input}
+                                testID="play-area-relation-id-input"
+                                value={relationIdInput}
+                            />
+                            {relationIdError ? (
+                                <Text style={styles.error}>
+                                    {relationIdError}
                                 </Text>
-                                <Text style={styles.metadata}>
-                                    Relation {preset.osmId}
+                            ) : null}
+                            <Pressable
+                                accessibilityLabel="Apply relation ID"
+                                accessibilityRole="button"
+                                onPress={() => void handleApplyRelationId()}
+                                style={({ pressed }) => [
+                                    styles.applyButton,
+                                    pressed ? styles.actionPressed : null,
+                                ]}
+                                testID="play-area-apply-relation-id"
+                            >
+                                <Text style={styles.applyButtonText}>
+                                    Apply
                                 </Text>
-                            </View>
-                            <Text style={styles.chevron}>›</Text>
-                        </Pressable>
-                    ))}
+                            </Pressable>
+                        </View>
+                    ) : null}
                 </View>
             </SheetScrollView>
+
+            <View style={styles.stickyFooter}>
+                <Pressable
+                    accessibilityLabel="Continue to hiding zones"
+                    accessibilityRole="button"
+                    onPress={() => onNavigate("hiding-zone")}
+                    style={({ pressed }) => [
+                        styles.continueButton,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                    testID="play-area-continue"
+                >
+                    <Text style={styles.continueButtonText}>Continue</Text>
+                </Pressable>
+            </View>
+
             <OfflinePackModal
                 visible={showOfflineModal}
                 coverage={modalCoverage}
@@ -319,29 +397,46 @@ function ResultRow({
     );
 }
 
-function formatBbox(bbox: [number, number, number, number]) {
-    return `[${bbox.map((value) => value.toFixed(4)).join(", ")}]`;
-}
-
 const styles = StyleSheet.create({
     actionPressed: {
         opacity: 0.72,
     },
-    card: {
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        borderRadius: 8,
-        borderWidth: 1,
-        gap: 4,
-        marginTop: 12,
-        padding: 14,
-    },
-    cardLabel: {
+    activeBadge: {
         color: colors.tint,
         fontSize: 12,
         fontWeight: "800",
-        letterSpacing: 0,
-        textTransform: "uppercase",
+    },
+    advancedChevron: {
+        color: colors.tint,
+        fontSize: 18,
+        fontWeight: "800",
+    },
+    advancedContent: {
+        gap: 8,
+        marginTop: 10,
+    },
+    advancedToggle: {
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingVertical: 8,
+    },
+    advancedToggleText: {
+        color: colors.tint,
+        fontSize: 14,
+        fontWeight: "700",
+    },
+    applyButton: {
+        alignItems: "center",
+        backgroundColor: colors.tint,
+        borderRadius: 8,
+        justifyContent: "center",
+        minHeight: 44,
+    },
+    applyButtonText: {
+        color: colors.white,
+        fontSize: 15,
+        fontWeight: "800",
     },
     chevron: {
         color: colors.muted,
@@ -349,16 +444,16 @@ const styles = StyleSheet.create({
         lineHeight: 28,
     },
     container: {},
-    scrollContent: {
-        paddingHorizontal: 20,
-        paddingTop: 0,
-        // Extra bottom space so the search section can always scroll to the
-        // top when the keyboard appears, even with few/no results.
-        paddingBottom: 400,
+    continueButton: {
+        alignItems: "center",
+        backgroundColor: colors.tint,
+        borderRadius: 8,
+        justifyContent: "center",
+        minHeight: 50,
     },
-    currentName: {
-        color: colors.ink,
-        fontSize: 22,
+    continueButtonText: {
+        color: colors.white,
+        fontSize: 16,
         fontWeight: "800",
     },
     error: {
@@ -389,6 +484,12 @@ const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 18,
     },
+    noResults: {
+        color: colors.muted,
+        fontSize: 13,
+        fontStyle: "italic",
+        marginTop: 8,
+    },
     resultCopy: {
         flex: 1,
     },
@@ -406,10 +507,19 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 8,
     },
+    resultRowActive: {
+        backgroundColor: colors.tealTintBg,
+        borderColor: colors.tint,
+    },
     resultTitle: {
         color: colors.ink,
         fontSize: 16,
         fontWeight: "800",
+    },
+    scrollContent: {
+        paddingHorizontal: 20,
+        paddingTop: 0,
+        paddingBottom: 200,
     },
     section: {
         marginTop: 12,
@@ -419,5 +529,27 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "800",
         marginBottom: 10,
+    },
+    stickyFooter: {
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+    },
+    summaryHeader: {
+        marginBottom: 4,
+    },
+    summaryLabel: {
+        color: colors.tint,
+        fontSize: 12,
+        fontWeight: "800",
+        letterSpacing: 0.5,
+        textTransform: "uppercase",
+    },
+    summaryTitle: {
+        color: colors.ink,
+        fontSize: 22,
+        fontWeight: "800",
+        marginTop: 2,
     },
 });

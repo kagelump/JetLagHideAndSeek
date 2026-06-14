@@ -623,3 +623,24 @@ remaining collisions and fails the build with a clear error.
 | Conflation     | I1 invariant       | passed                     |
 | Emit           | japan-kanto bundle | 40 presets, 655 KB         |
 | Emit           | JR East in Kantō   | 1,027 stations, 157 routes |
+
+## Bottom-sheet snap behavior
+
+Snap points: `["18%", "42%", "88%"]` — compact (0), medium (1), large (2).
+
+- **42% (medium) is the resting state.** Every common operation must be
+  completable here without expanding. This is the test for "is this screen
+  done."
+- **88% (large) is reserved for deep browse only** — long search lists
+  (browse-all operators, candidate lists) and keyboard-active search fields.
+- **18% (compact) is glanceable** — just the grabber + a HUD line.
+
+`getRouteSnapIndex` in `AppBottomSheet.tsx` controls per-route default snap.
+Most routes rest at medium; only routes with long inline lists (matching,
+admin-divisions) default to large. Play-area and hiding-zone rest at medium;
+their search fields trigger a transient snap to large via the expand-on-search
+helper.
+
+When adding a new sheet route, ask: "Can the user complete the primary action
+at 42%?" If not, push secondary options into drill-ins rather than defaulting
+to 88%.

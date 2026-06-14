@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     },
     editorPrimaryButton: {
         alignItems: "center",
-        backgroundColor: colors.button,
+        backgroundColor: colors.tint,
         borderRadius: 6,
         flex: 1,
         paddingVertical: 10,

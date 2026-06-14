@@ -1121,6 +1121,7 @@ function GameModeProbe() {
                         adminDivisionPresetName: "generic",
                         gameMode: "hider",
                         labelLanguage: "english",
+                        seekingStartedAt: null,
                     })
                 }
             />

@@ -48,10 +48,11 @@ is reserved for deep browse** (global search, browse-all-regions).
 - A small helper for **transient snap expansion** (pop to 88% on
   search/keyboard, return to 42%) coordinated with `AppBottomSheet`.
 - Document the "42% resting / 88% deep-browse" rule in `implementation_notes.md`.
-- **Teal selected-fill reconciliation:** update `src/theme/colors.ts` and the
-  segmented/answer controls so the **selected segment fills teal** (today's
-  selected state uses the dark navy fill). Navy is retained only for the
-  Seeker/Hider mode chip. Mirrors `design-reference/colors.css`
+- **Teal selected-fill reconciliation:** Phase 1 already adds the teal tokens to
+  `src/theme/colors.ts` (`teal`, `tealTintBg`, `accentPress`). Phase 4's job is
+  to update the **segmented/answer controls** so the **selected segment fills
+  teal** (today's selected state uses the dark navy fill). Navy is retained only
+  for the Seeker/Hider mode chip. Mirrors `design-reference/colors.css`
   (`--fill-control: var(--teal)`).
 
 ## Design system mapping

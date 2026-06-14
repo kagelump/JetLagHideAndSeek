@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
     },
     answerButtonActive: {
-        backgroundColor: colors.button,
+        backgroundColor: colors.tint,
     },
     answerButtonDisabled: {
         opacity: 0.45,

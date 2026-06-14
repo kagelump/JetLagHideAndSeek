@@ -124,6 +124,7 @@ describe("AppStateV1 schema", () => {
             adminDivisionPresetName: "generic",
             gameMode: "seeker",
             labelLanguage: "native",
+            seekingStartedAt: null,
         });
         expect(state.questions).toEqual([]);
     });
@@ -251,6 +252,7 @@ describe("AppStateV1 schema", () => {
                 adminDivisionPresetName: "generic" as const,
                 gameMode: "seeker" as const,
                 labelLanguage: "native" as const,
+                seekingStartedAt: null,
             },
         };
         expect(migratePersistedAppState(state)).toEqual(state);

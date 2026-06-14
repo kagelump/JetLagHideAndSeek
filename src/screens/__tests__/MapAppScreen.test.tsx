@@ -1009,7 +1009,7 @@ describe("MapAppScreen", () => {
             ).props.shape;
 
             expect(screen.getByText("1 preset selected")).toBeTruthy();
-            expect(screen.getByText("Remove")).toBeTruthy();
+            expect(screen.getByText("Added ✓")).toBeTruthy();
             expect(zoneShape.features.length).toBeGreaterThan(0);
             expect(["Polygon", "MultiPolygon"]).toContain(
                 zoneShape.features[0].geometry.type,

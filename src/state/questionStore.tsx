@@ -64,6 +64,7 @@ type QuestionStateValue = {
     gameMode: GameMode;
     isRestored: boolean;
     labelLanguage: "native" | "english";
+    seekingStartedAt: number | null;
 };
 
 const QuestionStateContext = createContext<QuestionStateValue | null>(null);
@@ -91,6 +92,7 @@ const AdminDivisionPackContext = createContext<AdminDivisionNamePack>(
 const AdminDivisionPresetNameContext = createContext<AdminDivisionPresetName>(
     DEFAULT_ADMIN_DIVISION_PRESET_NAME,
 );
+const SeekingStartedAtContext = createContext<number | null>(null);
 const QuestionIdsContext = createContext<string[] | null>(null);
 const QuestionsByIdContext = createContext<Record<
     string,
@@ -111,6 +113,10 @@ export function useAdminDivisionPack(): AdminDivisionNamePack {
 
 export function useAdminDivisionPresetName(): AdminDivisionPresetName {
     return useContext(AdminDivisionPresetNameContext);
+}
+
+export function useSeekingStartedAt(): number | null {
+    return useContext(SeekingStartedAtContext);
 }
 
 export function useQuestionIds(): string[] {
@@ -160,6 +166,7 @@ type QuestionActionsValue = {
     setAdminDivisionPresetName: (name: AdminDivisionPresetName) => void;
     setGameMode: (mode: GameMode) => void;
     setLabelLanguage: (language: "native" | "english") => void;
+    setSeekingStartedAt: (timestamp: number | null) => void;
     setActivePinKey: (key: string | null) => void;
     updateQuestion: (
         questionId: string,
@@ -219,6 +226,7 @@ export type QuestionSettingsImportState = {
     adminDivisionPresetName: AdminDivisionPresetName;
     gameMode: GameMode;
     labelLanguage: "native" | "english";
+    seekingStartedAt: number | null;
 };
 
 type NormalizedQuestions = {
@@ -247,6 +255,9 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         useState<AdminDivisionPresetName>(DEFAULT_ADMIN_DIVISION_PRESET_NAME);
     const [isRestored, setIsRestored] = useState(false);
     const [activePinKey, setActivePinKeyState] = useState<string | null>(null);
+    const [seekingStartedAt, setSeekingStartedAtState] = useState<
+        number | null
+    >(null);
 
     const activeQuestion = useMemo(
         () =>
@@ -433,6 +444,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setActiveQuestionIdState(settings.activeQuestionId);
             setLabelLanguageState(settings.labelLanguage ?? "native");
             setGameModeState(settings.gameMode ?? "seeker");
+            setSeekingStartedAtState(settings.seekingStartedAt ?? null);
             const pack =
                 settings.adminDivisionPack ?? DEFAULT_ADMIN_DIVISION_PACK;
             setAdminDivisionPackState(pack);
@@ -456,6 +468,10 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setActivePinKeyState(key);
     }, []);
 
+    const setSeekingStartedAt = useCallback((timestamp: number | null) => {
+        setSeekingStartedAtState(timestamp);
+    }, []);
+
     const stateValue = useMemo<QuestionStateValue>(
         () => ({
             activeQuestionId,
@@ -465,6 +481,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             gameMode,
             isRestored,
             labelLanguage,
+            seekingStartedAt,
         }),
         [
             activeQuestionId,
@@ -474,6 +491,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             gameMode,
             isRestored,
             labelLanguage,
+            seekingStartedAt,
         ],
     );
 
@@ -491,6 +509,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setAdminDivisionPresetName,
             setGameMode,
             setLabelLanguage,
+            setSeekingStartedAt,
             updateQuestion,
         }),
         [
@@ -506,6 +525,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setAdminDivisionPresetName,
             setGameMode,
             setLabelLanguage,
+            setSeekingStartedAt,
             updateQuestion,
         ],
     );
@@ -533,11 +553,15 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                                         <AdminDivisionPresetNameContext.Provider
                                             value={adminDivisionPresetName}
                                         >
-                                            <ActivePinKeyContext.Provider
-                                                value={activePinKey}
+                                            <SeekingStartedAtContext.Provider
+                                                value={seekingStartedAt}
                                             >
-                                                {children}
-                                            </ActivePinKeyContext.Provider>
+                                                <ActivePinKeyContext.Provider
+                                                    value={activePinKey}
+                                                >
+                                                    {children}
+                                                </ActivePinKeyContext.Provider>
+                                            </SeekingStartedAtContext.Provider>
                                         </AdminDivisionPresetNameContext.Provider>
                                     </AdminDivisionPackContext.Provider>
                                 </GameModeContext.Provider>

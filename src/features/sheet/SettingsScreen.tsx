@@ -14,7 +14,10 @@ import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { POI_DATA_ATTRIBUTION } from "@/features/questions/matching/poiAttribution";
 import { ShareSetupModal } from "@/sharing/export/ShareSetupModal";
-import { useHidingZoneState } from "@/state/hidingZoneStore";
+import {
+    useHidingZoneDerived,
+    useHidingZoneState,
+} from "@/state/hidingZoneStore";
 import { clearAppCaches, useResetGame } from "@/state/maintenance";
 import { usePlayArea } from "@/state/playAreaStore";
 import {
@@ -29,10 +32,20 @@ type SettingsScreenProps = {
     onNavigate: (route: SheetRouteName) => void;
 };
 
+function SetupBadge({ done }: { done: boolean }) {
+    if (!done) return null;
+    return (
+        <View style={styles.badge}>
+            <Text style={styles.badgeText}>✓</Text>
+        </View>
+    );
+}
+
 export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
     const { cacheSource, playArea } = usePlayArea();
     const { radiusMeters, radiusUnit, selectedPresetIds } =
         useHidingZoneState();
+    const { selectedPresets, selectedStations } = useHidingZoneDerived();
     const questions = useQuestions();
     const labelLanguage = useLabelLanguage();
     const gameMode = useGameMode();
@@ -42,6 +55,10 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
         null,
     );
     const resetGame = useResetGame();
+
+    const playAreaDone = !!playArea;
+    const hidingZonesDone = selectedPresetIds.length > 0;
+    const setupComplete = playAreaDone && hidingZonesDone;
 
     const handleResetGame = () => {
         Alert.alert(
@@ -83,38 +100,53 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
 
     return (
         <SheetScrollView contentContainerStyle={styles.container}>
-            <Pressable
-                accessibilityLabel="Share game setup"
-                accessibilityRole="button"
-                onPress={() => setIsShareVisible(true)}
-                style={({ pressed }) => [
-                    styles.shareButton,
-                    pressed ? styles.actionPressed : null,
-                ]}
-                testID="settings-share-button"
-            >
-                <Text style={styles.shareButtonText} accessibilityLabel="Share">
-                    Share
-                </Text>
-            </Pressable>
-
             <View style={styles.actions}>
+                <Text style={styles.sectionHeading}>Set up your game</Text>
                 <SheetListRow
                     accessibilityLabel="Open Play Area settings"
                     description={`${playArea.label} · ${cacheSource}`}
                     onPress={() => onNavigate("play-area")}
                     testID="settings-play-area-row"
                     title="Play Area"
+                    trailing={<SetupBadge done={playAreaDone} />}
                 />
 
                 <SheetListRow
                     accessibilityLabel="Open Hiding Zones settings"
-                    description="Eligible transit stations for the hiding zone."
+                    description={
+                        hidingZonesDone
+                            ? `${selectedPresets.length} operators · ${selectedStations.length} stations`
+                            : "Pick eligible transit stations"
+                    }
                     onPress={() => onNavigate("hiding-zone")}
                     testID="settings-hiding-zone-row"
                     title="Hiding Zones"
+                    trailing={<SetupBadge done={hidingZonesDone} />}
                 />
 
+                <Pressable
+                    accessibilityLabel="Share game setup"
+                    accessibilityRole="button"
+                    onPress={() => setIsShareVisible(true)}
+                    style={({ pressed }) => [
+                        styles.shareRow,
+                        !setupComplete ? styles.shareRowInactive : null,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                    testID="settings-share-button"
+                >
+                    <View style={styles.shareRowCopy}>
+                        <Text style={styles.shareRowTitle}>Share</Text>
+                        <Text style={styles.shareRowDescription}>
+                            Send a link or QR code to players.
+                        </Text>
+                    </View>
+                    <Text style={styles.chevron}>›</Text>
+                </Pressable>
+            </View>
+
+            <View style={styles.actions}>
+                <Text style={styles.sectionHeading}>Supporting</Text>
                 <SheetListRow
                     accessibilityLabel="Open Offline Data settings"
                     description="Download offline POI packs for matching questions."
@@ -308,6 +340,24 @@ const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 18,
     },
+    badge: {
+        alignItems: "center",
+        backgroundColor: colors.tint,
+        borderRadius: 10,
+        height: 20,
+        justifyContent: "center",
+        width: 20,
+    },
+    badgeText: {
+        color: colors.white,
+        fontSize: 12,
+        fontWeight: "800",
+    },
+    chevron: {
+        color: colors.muted,
+        fontSize: 28,
+        lineHeight: 28,
+    },
     container: {
         paddingBottom: 40,
         paddingHorizontal: 20,
@@ -329,16 +379,34 @@ const styles = StyleSheet.create({
         marginTop: 24,
         textTransform: "uppercase",
     },
-    shareButton: {
-        alignSelf: "flex-end",
-        backgroundColor: colors.button,
+    shareRow: {
+        alignItems: "center",
+        backgroundColor: colors.card,
+        borderColor: colors.border,
         borderRadius: 8,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
+        borderWidth: 1,
+        flexDirection: "row",
+        gap: 12,
+        justifyContent: "space-between",
+        minHeight: 62,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
     },
-    shareButtonText: {
-        color: colors.white,
-        fontSize: 14,
-        fontWeight: "800",
+    shareRowCopy: {
+        flex: 1,
+    },
+    shareRowDescription: {
+        color: colors.muted,
+        fontSize: 13,
+        lineHeight: 18,
+        marginTop: 2,
+    },
+    shareRowInactive: {
+        opacity: 0.6,
+    },
+    shareRowTitle: {
+        color: colors.ink,
+        fontSize: 17,
+        fontWeight: "700",
     },
 });

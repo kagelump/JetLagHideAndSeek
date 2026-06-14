@@ -126,6 +126,15 @@ export function ShareSetupModal({
                         <View style={styles.headerCopy}>
                             <Text style={styles.eyebrow}>Share</Text>
                             <Text style={styles.title}>Game Setup</Text>
+                            <Text style={styles.setupSummary}>
+                                {playArea.label} ·{" "}
+                                {hidingZones.selectedPresetIds.length} preset
+                                {hidingZones.selectedPresetIds.length === 1
+                                    ? ""
+                                    : "s"}{" "}
+                                · {questions.length} question
+                                {questions.length === 1 ? "" : "s"}
+                            </Text>
                         </View>
                         <Pressable
                             accessibilityLabel="Close sharing"
@@ -278,6 +287,12 @@ const styles = StyleSheet.create({
         gap: 16,
         paddingBottom: 22,
     },
+    setupSummary: {
+        color: colors.muted,
+        fontSize: 13,
+        lineHeight: 18,
+        marginTop: 4,
+    },
     debugLabel: {
         color: colors.tint,
         fontSize: 10,
@@ -321,7 +336,7 @@ const styles = StyleSheet.create({
     },
     primaryButton: {
         alignItems: "center",
-        backgroundColor: colors.button,
+        backgroundColor: colors.tint,
         borderRadius: 8,
         flex: 1,
         paddingVertical: 14,

@@ -52,7 +52,7 @@ Captured from the design review (see `../epic.md` decisions log):
 
 ## Note on the live app's tokens
 
-The mock's `colors.css` is the target. `src/theme/colors.ts` must gain a
-"selected segment fills teal" treatment (today's selected state uses the dark
-fill); reconcile when implementing Phase 4. Map palette + paper surfaces already
-match.
+The mock's `colors.css` is the target. Phase 1 adds the teal tokens to
+`src/theme/colors.ts` (`teal`, `tealTintBg`, `accentPress`); Phase 4
+reconciles the segmented-control **selected-fill** treatment (teal instead
+of today's dark fill). Map palette + paper surfaces already match.

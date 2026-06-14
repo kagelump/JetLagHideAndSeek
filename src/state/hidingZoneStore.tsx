@@ -14,13 +14,14 @@ import {
     loadHidingZonePresets,
     onPackSourcesChanged,
 } from "@/features/hidingZone/hidingZoneData";
+import { useLabelLanguage } from "@/state/questionStore";
 import {
     buildHidingZoneFeatureCollection,
     buildRouteFeatureCollection,
     buildStationFeatureCollection,
+    getFilteredSelectedStations,
     getSelectedPresets,
     getSelectedRoutes,
-    getSelectedStations,
     getSuggestedPresetIds,
 } from "@/features/hidingZone/hidingZone";
 import type {
@@ -55,6 +56,7 @@ type HidingZoneStateValue = {
     radiusMeters: number;
     radiusUnit: HidingZoneUnit;
     selectedPresetIds: string[];
+    selectedRouteIds: Record<string, string[]>;
 };
 
 const HidingZoneStateContext = createContext<HidingZoneStateValue | null>(null);
@@ -78,6 +80,10 @@ type HidingZoneActionsValue = {
     markRestored: () => void;
     removePreset: (presetId: string) => void;
     replaceSetup: (nextSetup: HidingZoneImportState) => void;
+    setOperatorRouteSelection: (
+        presetId: string,
+        routeIds: string[] | null,
+    ) => void;
     setRadiusDisplayValue: (value: string) => void;
     setRadiusUnit: (unit: HidingZoneUnit) => void;
     togglePreset: (presetId: string) => void;
@@ -133,6 +139,9 @@ export function useHidingZoneDerived(): HidingZoneDerivedValue {
 export function HidingZoneProvider({ children }: { children: ReactNode }) {
     const { playArea } = usePlayArea();
     const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
+    const [selectedRouteIds, setSelectedRouteIds] = useState<
+        Record<string, string[]>
+    >({});
     const [radiusMeters, setRadiusMeters] = useState<number>(
         DEFAULT_RADIUS_METERS,
     );
@@ -196,16 +205,22 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
         [selectedPresets],
     );
     const selectedStations = useMemo(
-        () => getSelectedStations(selectedPresets, presets),
-        [selectedPresets, presets],
+        () =>
+            getFilteredSelectedStations(
+                selectedPresets,
+                selectedRouteIds,
+                presets,
+            ),
+        [selectedPresets, selectedRouteIds, presetsRevision],
     );
+    const labelLanguage = useLabelLanguage();
     const routeFeatures = useMemo(
-        () => buildRouteFeatureCollection(selectedPresets),
-        [selectedPresets],
+        () => buildRouteFeatureCollection(selectedPresets, labelLanguage),
+        [selectedPresets, labelLanguage],
     );
     const stationFeatures = useMemo(
-        () => buildStationFeatureCollection(selectedStations),
-        [selectedStations],
+        () => buildStationFeatureCollection(selectedStations, labelLanguage),
+        [selectedStations, labelLanguage],
     );
     const zoneFeatures = useMemo(
         () =>
@@ -240,6 +255,11 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             setSelectedPresetIds((current) =>
                 current.filter((id) => id !== presetId),
             );
+            setSelectedRouteIds((current) => {
+                const next = { ...current };
+                delete next[presetId];
+                return next;
+            });
         },
         [syncZoneGeometryRadius],
     );
@@ -264,6 +284,20 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             else addPreset(presetId);
         },
         [addPreset, removePreset, selectedPresetIds],
+    );
+
+    const setOperatorRouteSelection = useCallback(
+        (presetId: string, routeIds: string[] | null) => {
+            setSelectedRouteIds((current) => {
+                if (routeIds === null) {
+                    const next = { ...current };
+                    delete next[presetId];
+                    return next;
+                }
+                return { ...current, [presetId]: routeIds };
+            });
+        },
+        [],
     );
 
     const setRadiusDisplayValue = useCallback(
@@ -309,6 +343,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             radiusMeters,
             radiusUnit,
             selectedPresetIds,
+            selectedRouteIds,
         }),
         [
             isRestored,
@@ -316,6 +351,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             radiusMeters,
             radiusUnit,
             selectedPresetIds,
+            selectedRouteIds,
         ],
     );
 
@@ -325,6 +361,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             markRestored,
             removePreset,
             replaceSetup,
+            setOperatorRouteSelection,
             setRadiusDisplayValue,
             setRadiusUnit,
             togglePreset,
@@ -334,6 +371,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             markRestored,
             removePreset,
             replaceSetup,
+            setOperatorRouteSelection,
             setRadiusDisplayValue,
             setRadiusUnit,
             togglePreset,

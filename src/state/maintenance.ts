@@ -31,6 +31,7 @@ const defaultQuestionSettings = {
     adminDivisionPresetName: DEFAULT_ADMIN_DIVISION_PRESET_NAME,
     gameMode: "seeker" as const,
     labelLanguage: "native" as const,
+    seekingStartedAt: null as number | null,
 };
 
 // ─── Reset Game ────────────────────────────────────────────────────────────

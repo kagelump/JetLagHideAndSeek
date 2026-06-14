@@ -22,20 +22,30 @@ export function MapControls({
                 },
             ]}
         >
-            <MapControl label="🗺️" onPress={fitPlayArea} />
-            <MapControl label="📍" onPress={locateUser} />
+            <MapControl
+                accessibilityLabel="Fit play area"
+                label="🗺️"
+                onPress={fitPlayArea}
+            />
+            <MapControl
+                accessibilityLabel="Go to my location"
+                label="📍"
+                onPress={locateUser}
+            />
         </View>
     );
 }
 
 type MapControlProps = {
+    accessibilityLabel: string;
     label: string;
     onPress: () => void;
 };
 
-function MapControl({ label, onPress }: MapControlProps) {
+function MapControl({ accessibilityLabel, label, onPress }: MapControlProps) {
     return (
         <Pressable
+            accessibilityLabel={accessibilityLabel}
             accessibilityRole="button"
             onPress={onPress}
             style={({ pressed }) => [

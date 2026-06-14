@@ -232,6 +232,7 @@ describe("ImportScreen — question-request", () => {
                         },
                     ],
                     adminDivisionPresetName: "generic",
+                    seekingStartedAt: null,
                 },
             }),
         );
@@ -314,6 +315,7 @@ describe("ImportScreen — question-request", () => {
                         },
                     ],
                     adminDivisionPresetName: "generic",
+                    seekingStartedAt: null,
                 },
             }),
         );
@@ -386,6 +388,7 @@ describe("ImportScreen — question-request", () => {
                         },
                     ],
                     adminDivisionPresetName: "generic",
+                    seekingStartedAt: null,
                 },
             }),
         );
@@ -471,6 +474,7 @@ describe("ImportScreen — question-request", () => {
                         },
                     ],
                     adminDivisionPresetName: "generic",
+                    seekingStartedAt: null,
                 },
             }),
         );
@@ -552,6 +556,7 @@ describe("ImportScreen — question-request", () => {
                         },
                     ],
                     adminDivisionPresetName: "generic",
+                    seekingStartedAt: null,
                 },
             }),
         );
@@ -614,6 +619,7 @@ describe("ImportScreen — question-request", () => {
                         },
                     ],
                     adminDivisionPresetName: "generic",
+                    seekingStartedAt: null,
                 },
             }),
         );

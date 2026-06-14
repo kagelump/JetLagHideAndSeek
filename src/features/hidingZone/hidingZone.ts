@@ -157,8 +157,33 @@ export function getSelectedStations(
     return [...stations.values()];
 }
 
+export function getFilteredSelectedStations(
+    selectedPresets: HidingZonePreset[],
+    selectedRouteIds: Record<string, string[]>,
+    allPresets?: HidingZonePreset[],
+): TransitStation[] {
+    const hasFilter = Object.keys(selectedRouteIds).length > 0;
+    if (!hasFilter) return getSelectedStations(selectedPresets, allPresets);
+
+    // For presets with a route filter, narrow the selected presets to only
+    // include stations whose routeIds intersect the selection.
+    const filteredPresets = selectedPresets.map((preset) => {
+        const allowedRouteIds = selectedRouteIds[preset.id];
+        if (!allowedRouteIds) return preset;
+        const allowed = new Set(allowedRouteIds);
+        return {
+            ...preset,
+            stations: preset.stations.filter((s) =>
+                s.routeIds.some((id) => allowed.has(id)),
+            ),
+        };
+    });
+    return getSelectedStations(filteredPresets, allPresets);
+}
+
 export function buildRouteFeatureCollection(
     presets: HidingZonePreset[],
+    labelLanguage?: "native" | "english",
 ): RouteFeatureCollection {
     return {
         features: presets.flatMap((preset) =>
@@ -167,7 +192,11 @@ export function buildRouteFeatureCollection(
                 properties: {
                     color: route.color || preset.defaultColor,
                     id: route.id,
-                    name: route.name,
+                    name:
+                        labelLanguage === "english" && route.nameEn
+                            ? route.nameEn
+                            : route.name,
+                    nameEn: route.nameEn || undefined,
                     presetId: preset.id,
                 },
                 type: "Feature" as const,
@@ -179,6 +208,7 @@ export function buildRouteFeatureCollection(
 
 export function buildStationFeatureCollection(
     stations: TransitStation[],
+    labelLanguage?: "native" | "english",
 ): StationFeatureCollection {
     return {
         features: stations.flatMap((station) => {
@@ -195,7 +225,11 @@ export function buildStationFeatureCollection(
                 properties: {
                     color,
                     id: station.id,
-                    name: station.name,
+                    name:
+                        labelLanguage === "english" && station.nameEn
+                            ? station.nameEn
+                            : station.name,
+                    nameEn: station.nameEn || undefined,
                     ringCount: routeColors.length,
                     ringIndex,
                 },

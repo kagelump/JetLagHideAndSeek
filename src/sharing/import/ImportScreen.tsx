@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { getImportErrorMessage } from "@/sharing/errors";
@@ -19,7 +19,9 @@ export function ImportScreen() {
     const hidingZoneStore = useHidingZoneActions();
     const questionStore = useQuestionActions();
     const [applyError, setApplyError] = useState<string | null>(null);
+    const [pastedLink, setPastedLink] = useState("");
 
+    const hasParam = !!d;
     const parsed = useMemo(() => parseImportPayload(d), [d]);
     const preview = useMemo(
         () =>
@@ -52,6 +54,35 @@ export function ImportScreen() {
         });
         if (!result.ok) {
             setApplyError(result.error);
+            return;
+        }
+        router.replace("/");
+    };
+
+    const handlePasteImport = () => {
+        const trimmed = pastedLink.trim();
+        if (!trimmed) return;
+        const result = parseImportPayload(trimmed);
+        if (!result.ok) {
+            setApplyError(getImportErrorMessage(result.error));
+            return;
+        }
+        const importResult = applyImport({
+            envelope: result.envelope,
+            stores: {
+                hidingZones: hidingZoneStore,
+                playArea: playAreaStore,
+                questions: {
+                    ...questionStore,
+                    importAdminDivisions: (pack, presetName) => {
+                        questionStore.setAdminDivisionPack(pack);
+                        questionStore.setAdminDivisionPresetName(presetName);
+                    },
+                },
+            },
+        });
+        if (!importResult.ok) {
+            setApplyError(importResult.error);
             return;
         }
         router.replace("/");
@@ -125,7 +156,7 @@ export function ImportScreen() {
                             </Pressable>
                         </View>
                     </>
-                ) : (
+                ) : hasParam ? (
                     <>
                         <Text style={styles.title}>Invalid Share Link</Text>
                         <Text style={styles.detail} testID="import-error">
@@ -145,6 +176,64 @@ export function ImportScreen() {
                                 Return to Map
                             </Text>
                         </Pressable>
+                    </>
+                ) : (
+                    <>
+                        <Text style={styles.title}>Join a game</Text>
+                        <Text style={styles.detail}>
+                            Paste a share link from the organizer to import
+                            their game setup.
+                        </Text>
+                        <TextInput
+                            accessibilityLabel="Paste share link"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            onChangeText={setPastedLink}
+                            placeholder="Paste share link here"
+                            placeholderTextColor={colors.muted}
+                            style={styles.pasteInput}
+                            testID="import-paste-input"
+                            value={pastedLink}
+                        />
+                        {applyError ? (
+                            <Text style={styles.error}>{applyError}</Text>
+                        ) : null}
+                        <View style={styles.buttonRow}>
+                            <Pressable
+                                accessibilityLabel="Cancel"
+                                accessibilityRole="button"
+                                onPress={cancel}
+                                style={({ pressed }) => [
+                                    styles.secondaryButton,
+                                    pressed ? styles.actionPressed : null,
+                                ]}
+                                testID="import-cancel-button"
+                            >
+                                <Text style={styles.secondaryButtonText}>
+                                    Cancel
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                accessibilityLabel="Import game setup"
+                                accessibilityRole="button"
+                                disabled={!pastedLink.trim()}
+                                onPress={handlePasteImport}
+                                style={({ pressed }) => [
+                                    styles.primaryButton,
+                                    !pastedLink.trim()
+                                        ? styles.primaryButtonDisabled
+                                        : null,
+                                    pressed && pastedLink.trim()
+                                        ? styles.actionPressed
+                                        : null,
+                                ]}
+                                testID="import-paste-confirm"
+                            >
+                                <Text style={styles.primaryButtonText}>
+                                    Import
+                                </Text>
+                            </Pressable>
+                        </View>
                     </>
                 )}
             </View>
@@ -193,6 +282,18 @@ const styles = StyleSheet.create({
         padding: 20,
         width: "100%",
     },
+    pasteInput: {
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        color: colors.ink,
+        fontSize: 15,
+        marginTop: 12,
+        minHeight: 44,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
     previewCard: {
         backgroundColor: colors.card,
         borderColor: colors.border,
@@ -217,10 +318,13 @@ const styles = StyleSheet.create({
     },
     primaryButton: {
         alignItems: "center",
-        backgroundColor: colors.button,
+        backgroundColor: colors.tint,
         borderRadius: 8,
         flex: 1,
         paddingVertical: 14,
+    },
+    primaryButtonDisabled: {
+        opacity: 0.45,
     },
     primaryButtonText: {
         color: colors.white,

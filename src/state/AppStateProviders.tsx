@@ -229,6 +229,7 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
                         questionState.adminDivisionPresetName,
                     gameMode: questionState.gameMode,
                     labelLanguage: questionState.labelLanguage,
+                    seekingStartedAt: questionState.seekingStartedAt,
                 },
                 questions,
             }),

@@ -22,7 +22,14 @@ export function QuestionsScreen({ onNavigate }: QuestionsScreenProps) {
 
     return (
         <SheetScrollView contentContainerStyle={styles.scrollContent}>
-            {questions.length > 0 && (
+            {questions.length === 0 ? (
+                <View style={styles.emptyCard}>
+                    <Text style={styles.emptyTitle}>No questions yet</Text>
+                    <Text style={styles.emptyDescription}>
+                        Add one and the map starts narrowing down the hider.
+                    </Text>
+                </View>
+            ) : (
                 <View style={styles.list}>
                     {questions.map((question, index) => {
                         const definition = getQuestionDefinition(question.type);
@@ -153,6 +160,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         gap: 4,
         padding: 14,
+    },
+    emptyDescription: {
+        color: colors.muted,
+        fontSize: 13,
+        lineHeight: 18,
     },
     emptyTitle: {
         color: colors.ink,

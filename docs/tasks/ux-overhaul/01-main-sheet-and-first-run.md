@@ -73,8 +73,18 @@ the map starts narrowing down the hider."_ + the existing Add CTA.
 - **Map-control a11y labels:** "Fit play area" / "Go to my location" on the two
   `MapControls` buttons.
 
+## Teal token setup
+
+Phase 1 is the first phase to use the teal accent on interactive controls.
+**Add the teal tokens to `src/theme/colors.ts` now** — `teal` (`#1f6f78`),
+`tealTintBg` (`#e6f2ef`), and `accentPress` (`#195a62`) — so Phase 1
+components reference theme tokens rather than hardcoded hex values. Phase 4
+then only needs to reconcile the segmented-control **selected-fill** behavior
+(teal instead of navy); it does not re-introduce the tokens.
+
 ## Files likely touched
 
+- `src/theme/colors.ts` (add teal / tealTintBg / accentPress tokens)
 - `src/features/sheet/MainDrawer.tsx` (main route content + first-run state)
 - `src/features/questions/QuestionsScreen.tsx` (empty state)
 - `src/features/map/MapControls.tsx` (a11y labels)

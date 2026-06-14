@@ -37,6 +37,9 @@ export function QuestionLocationSelector({
                 {center[1].toFixed(5)}
                 {","} {center[0].toFixed(5)}
             </Text>
+            <Text style={styles.hint}>
+                Long-press the map to drop or drag the pin.
+            </Text>
             {showSetToLocationButton ? (
                 <Pressable
                     accessibilityLabel={setToLocationAccessibilityLabel}
@@ -60,6 +63,13 @@ export function QuestionLocationSelector({
 const styles = StyleSheet.create({
     actionPressed: {
         opacity: 0.72,
+    },
+    hint: {
+        color: colors.muted,
+        fontSize: 12,
+        fontStyle: "italic",
+        lineHeight: 16,
+        marginTop: 4,
     },
     locationButton: {
         alignItems: "center",

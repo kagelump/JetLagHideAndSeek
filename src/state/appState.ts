@@ -281,6 +281,7 @@ export const appStateQuestionSettingsSchema = z.object({
     adminDivisionPresetName: adminDivisionPresetNameSchema.default("generic"),
     gameMode: z.enum(["hider", "seeker"]).default("seeker"),
     labelLanguage: z.enum(["native", "english"]).default("native"),
+    seekingStartedAt: z.number().nullable().default(null),
 });
 
 export const appStateV1Schema = z.object({
@@ -348,6 +349,7 @@ export function createAppStateV1({
                 questionSettings?.adminDivisionPresetName ?? "generic",
             gameMode: questionSettings?.gameMode ?? "seeker",
             labelLanguage: questionSettings?.labelLanguage ?? "native",
+            seekingStartedAt: questionSettings?.seekingStartedAt ?? null,
         },
         questions: questions ? [...questions] : [],
         version: 1,
@@ -455,5 +457,6 @@ export function appStateQuestionSettingsToImportState(
         adminDivisionPresetName: questionSettings.adminDivisionPresetName,
         gameMode: questionSettings.gameMode,
         labelLanguage: questionSettings.labelLanguage,
+        seekingStartedAt: questionSettings.seekingStartedAt ?? null,
     };
 }

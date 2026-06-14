@@ -1,4 +1,5 @@
 export const colors = {
+    accentPress: "#195a62",
     background: "#f7f4ee",
     border: "#d9d4ca",
     button: "#111827",
@@ -11,6 +12,7 @@ export const colors = {
     measuringLine: "#ff0000",
     muted: "#667085",
     panel: "#fffefa",
+    tealTintBg: "#e6f2ef",
     tint: "#1f6f78",
     white: "#ffffff",
 };

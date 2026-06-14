@@ -25,11 +25,24 @@ import {
     partitionPresetsByScope,
 } from "./hidingZone";
 
+type DrillDownState = {
+    preset: HidingZonePreset;
+};
+
 export function HidingZoneScreen() {
-    const { radiusDisplayValue, radiusMeters, radiusUnit, selectedPresetIds } =
-        useHidingZoneState();
-    const { setRadiusDisplayValue, setRadiusUnit, togglePreset } =
-        useHidingZoneActions();
+    const {
+        radiusDisplayValue,
+        radiusMeters,
+        radiusUnit,
+        selectedPresetIds,
+        selectedRouteIds,
+    } = useHidingZoneState();
+    const {
+        setRadiusDisplayValue,
+        setRadiusUnit,
+        setOperatorRouteSelection,
+        togglePreset,
+    } = useHidingZoneActions();
     const { presets, selectedStations: allSelectedStations } =
         useHidingZoneDerived();
     const { playArea } = usePlayArea();
@@ -38,6 +51,7 @@ export function HidingZoneScreen() {
     const [showBrowseAll, setShowBrowseAll] = useState(false);
     const [browseSearch, setBrowseSearch] = useState("");
     const [showRadiusModal, setShowRadiusModal] = useState(false);
+    const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
 
     // Per-preset station counts within the play area.
     const playAreaStats = useMemo(
@@ -173,6 +187,9 @@ export function HidingZoneScreen() {
                                     const stats = playAreaStats?.find(
                                         (s) => s.presetId === preset.id,
                                     );
+                                    const customRoutes =
+                                        selectedRouteIds[preset.id];
+                                    const isCustom = customRoutes !== undefined;
                                     return (
                                         <PresetRow
                                             isSelected={selectedSet.has(
@@ -183,9 +200,17 @@ export function HidingZoneScreen() {
                                             onToggle={() =>
                                                 togglePreset(preset.id)
                                             }
+                                            onDrillDown={() =>
+                                                setDrillDown({ preset })
+                                            }
+                                            customRouteCount={
+                                                isCustom
+                                                    ? customRoutes.length
+                                                    : undefined
+                                            }
                                             subtitle={
                                                 stats
-                                                    ? `${stats.stationsInArea} stations in your play area · ${preset.routes.length} line${preset.routes.length === 1 ? "" : "s"}`
+                                                    ? `${stats.stationsInArea} stations · ${preset.routes.length} line${preset.routes.length === 1 ? "" : "s"}`
                                                     : undefined
                                             }
                                         />
@@ -333,6 +358,19 @@ export function HidingZoneScreen() {
                     </Pressable>
                 </Pressable>
             </Modal>
+
+            {drillDown ? (
+                <OperatorDrillDown
+                    preset={drillDown.preset}
+                    selectedRouteIds={
+                        selectedRouteIds[drillDown.preset.id] ?? null
+                    }
+                    onSetRouteSelection={(routeIds) =>
+                        setOperatorRouteSelection(drillDown.preset.id, routeIds)
+                    }
+                    onBack={() => setDrillDown(null)}
+                />
+            ) : null}
         </>
     );
 }
@@ -387,17 +425,23 @@ function PresetSection({
 function PresetRow({
     isSelected,
     onToggle,
+    onDrillDown,
     preset,
+    customRouteCount,
     subtitle,
 }: {
     isSelected: boolean;
     onToggle: () => void;
+    onDrillDown?: () => void;
     preset: HidingZonePreset;
+    customRouteCount?: number;
     subtitle?: string;
 }) {
     const metaLine =
         subtitle ??
         `${preset.routes.length} line${preset.routes.length === 1 ? "" : "s"} · ${preset.stations.length} station${preset.stations.length === 1 ? "" : "s"}`;
+
+    const isCustom = customRouteCount !== undefined;
 
     return (
         <Pressable
@@ -413,17 +457,165 @@ function PresetRow({
         >
             <View style={styles.presetCopy}>
                 <Text style={styles.presetTitle}>{preset.label}</Text>
-                <Text style={styles.metadata}>{metaLine}</Text>
+                <Text style={styles.metadata}>
+                    {isCustom
+                        ? `Custom · ${customRouteCount} line${customRouteCount === 1 ? "" : "s"}`
+                        : metaLine}
+                </Text>
             </View>
-            <Text
-                style={[
-                    styles.presetAction,
-                    isSelected ? styles.presetActionSelected : null,
-                ]}
-            >
-                {isSelected ? "Remove" : "Add"}
-            </Text>
+            <View style={styles.presetTrailing}>
+                <Text
+                    style={[
+                        styles.presetAction,
+                        isSelected ? styles.presetActionSelected : null,
+                    ]}
+                >
+                    {isSelected ? "Added ✓" : "Add"}
+                </Text>
+                {onDrillDown ? (
+                    <Pressable
+                        accessibilityLabel={`Pick lines for ${preset.label}`}
+                        accessibilityRole="button"
+                        hitSlop={8}
+                        onPress={onDrillDown}
+                        style={({ pressed: p }) => [
+                            styles.drillDownChevron,
+                            p ? styles.actionPressed : null,
+                        ]}
+                        testID={`hiding-zone-drill-down-${preset.id}`}
+                    >
+                        <Text style={styles.drillDownChevronText}>›</Text>
+                    </Pressable>
+                ) : null}
+            </View>
         </Pressable>
+    );
+}
+
+function OperatorDrillDown({
+    preset,
+    selectedRouteIds,
+    onSetRouteSelection,
+    onBack,
+}: {
+    preset: HidingZonePreset;
+    selectedRouteIds: string[] | null;
+    onSetRouteSelection: (routeIds: string[] | null) => void;
+    onBack: () => void;
+}) {
+    const isAll = selectedRouteIds === null;
+    const selectedSet = new Set(
+        selectedRouteIds ?? preset.routes.map((r) => r.id),
+    );
+
+    const toggleRoute = (routeId: string) => {
+        const next = new Set(selectedSet);
+        if (next.has(routeId)) {
+            next.delete(routeId);
+        } else {
+            next.add(routeId);
+        }
+        const allRouteIds = preset.routes.map((r) => r.id);
+        const isAllSelected = allRouteIds.every((id) => next.has(id));
+        onSetRouteSelection(isAllSelected ? null : [...next]);
+    };
+
+    const toggleAll = () => {
+        onSetRouteSelection(isAll ? preset.routes.map((r) => r.id) : null);
+    };
+
+    return (
+        <View style={styles.drillDownOverlay}>
+            <View style={styles.drillDownHeader}>
+                <Pressable
+                    accessibilityLabel="Back"
+                    accessibilityRole="button"
+                    onPress={onBack}
+                    style={({ pressed }) => [
+                        styles.drillDownBack,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                >
+                    <Text style={styles.drillDownBackText}>‹ Back</Text>
+                </Pressable>
+                <Text style={styles.drillDownTitle}>{preset.label}</Text>
+                <View style={styles.drillDownSpacer} />
+            </View>
+            <SheetScrollView contentContainerStyle={styles.drillDownContent}>
+                <Pressable
+                    accessibilityLabel={
+                        isAll ? "Deselect all lines" : "Select all lines"
+                    }
+                    accessibilityRole="button"
+                    onPress={toggleAll}
+                    style={({ pressed }) => [
+                        styles.presetRow,
+                        !isAll ? styles.presetRowSelected : null,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                >
+                    <View style={styles.presetCopy}>
+                        <Text style={styles.presetTitle}>All lines</Text>
+                        <Text style={styles.metadata}>
+                            {preset.routes.length} line
+                            {preset.routes.length === 1 ? "" : "s"}
+                        </Text>
+                    </View>
+                    <Text
+                        style={[
+                            styles.presetAction,
+                            !isAll ? styles.presetActionSelected : null,
+                        ]}
+                    >
+                        {!isAll ? "Selected ✓" : "Select"}
+                    </Text>
+                </Pressable>
+                {preset.routes.map((route) => {
+                    const isActive = selectedSet.has(route.id);
+                    return (
+                        <Pressable
+                            accessibilityLabel={`${route.name}, ${isActive ? "Selected" : "Not selected"}`}
+                            accessibilityRole="button"
+                            key={route.id}
+                            onPress={() => toggleRoute(route.id)}
+                            style={({ pressed }) => [
+                                styles.presetRow,
+                                isActive ? styles.presetRowSelected : null,
+                                pressed ? styles.actionPressed : null,
+                            ]}
+                        >
+                            <View style={styles.routeColorDot}>
+                                <View
+                                    style={[
+                                        styles.colorDot,
+                                        {
+                                            backgroundColor:
+                                                route.color ||
+                                                preset.defaultColor,
+                                        },
+                                    ]}
+                                />
+                            </View>
+                            <View style={styles.presetCopy}>
+                                <Text style={styles.presetTitle}>
+                                    {route.name}
+                                </Text>
+                            </View>
+                            <Text
+                                style={[
+                                    styles.presetAction,
+                                    isActive
+                                        ? styles.presetActionSelected
+                                        : null,
+                                ]}
+                            >
+                                {isActive ? "✓" : ""}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+            </SheetScrollView>
+        </View>
     );
 }
 
@@ -433,7 +625,7 @@ const styles = StyleSheet.create({
     },
     addAllRow: {
         alignItems: "center",
-        backgroundColor: colors.button,
+        backgroundColor: colors.tint,
         borderRadius: 8,
         flexDirection: "row",
         justifyContent: "center",
@@ -476,6 +668,11 @@ const styles = StyleSheet.create({
         textTransform: "uppercase",
     },
     container: {},
+    colorDot: {
+        borderRadius: 6,
+        height: 12,
+        width: 12,
+    },
     currentName: {
         color: colors.ink,
         fontSize: 22,
@@ -628,5 +825,68 @@ const styles = StyleSheet.create({
         color: colors.ink,
         fontSize: 18,
         fontWeight: "800",
+    },
+    drillDownOverlay: {
+        backgroundColor: colors.background,
+        bottom: 0,
+        left: 0,
+        position: "absolute",
+        right: 0,
+        top: 0,
+        zIndex: 10,
+    },
+    drillDownHeader: {
+        alignItems: "center",
+        borderBottomColor: colors.border,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        flexDirection: "row",
+        gap: 8,
+        minHeight: 44,
+        paddingHorizontal: 20,
+        paddingVertical: 4,
+    },
+    drillDownBack: {
+        minHeight: 44,
+        minWidth: 72,
+        justifyContent: "center",
+    },
+    drillDownBackText: {
+        color: colors.tint,
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    drillDownTitle: {
+        color: colors.ink,
+        flex: 1,
+        fontSize: 16,
+        fontWeight: "700",
+        textAlign: "center",
+    },
+    drillDownSpacer: {
+        minWidth: 72,
+    },
+    drillDownContent: {
+        paddingHorizontal: 20,
+        paddingTop: 8,
+        paddingBottom: 40,
+    },
+    drillDownChevron: {
+        justifyContent: "center",
+        minHeight: 44,
+        minWidth: 32,
+        alignItems: "center",
+    },
+    drillDownChevronText: {
+        color: colors.muted,
+        fontSize: 28,
+        lineHeight: 28,
+    },
+    presetTrailing: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 4,
+    },
+    routeColorDot: {
+        paddingRight: 4,
     },
 });

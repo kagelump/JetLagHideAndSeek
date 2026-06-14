@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
     },
     unitButtonActive: {
-        backgroundColor: colors.button,
+        backgroundColor: colors.tint,
     },
     unitButtonText: {
         color: colors.ink,
