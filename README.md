@@ -1,8 +1,46 @@
 # Hide & Seek Mapper
 
+> **Forked from [taibeled/JetLagHideAndSeek](https://github.com/taibeled/JetLagHideAndSeek)**
+> and rewritten as a native mobile app. The web original works well for casual
+> use, but real games push against browser limits in ways the fork addresses.
+
 A mobile app for generating interactive maps to explore hiding possibilities in
 _Jet Lag: The Game_ — Hide & Seek. Built with Expo SDK 54 and React Native,
 centered on a native MapLibre map and an Apple Maps-style bottom sheet.
+
+## Why a Native Rewrite?
+
+The original web app is a great proof of concept, but two hard browser limits
+make it unreliable for the kinds of games Jet Lag actually plays:
+
+- **Web storage limits crash large games** — Browsers cap local storage at a
+  small, unpredictable per-origin quota. A game spanning Tokyo with hundreds of
+  hiding zones and thousands of POIs routinely exhausts it, crashing the tab
+  mid-game with no recovery path.
+- **The public Overpass API is too fragile** — Overpass is a volunteer-run
+  shared service. The complex multi-category queries the game needs (parks,
+  museums, stations, transit lines, …) frequently time out, return partial
+  results, or get rate-limited during a game — exactly when you can't retry.
+
+This fork solves both at the architecture level:
+
+| Problem               | Web App                                  | This Fork                                                                 |
+| --------------------- | ---------------------------------------- | ------------------------------------------------------------------------- |
+| Data storage          | Browser local storage (per-origin quota) | Native filesystem via AsyncStorage + offline packs, no practical limit    |
+| POI / transit lookups | Live Overpass API queries                | Pre-built spatial index (kdbush) over bundled OSM data — offline, instant |
+| Transit presets       | Overpass-dependent                       | Offline packs with GTFS-conflated station + route geometry                |
+
+Beyond those two core fixes, the rewrite also adds things a browser app can't
+easily do:
+
+- **Bottom sheet navigation** — Apple Maps-style drawer via `@gorhom/bottom-sheet`
+  keeps the map visible while adjusting settings.
+- **Transit line colors** — Per-route line colors from GTFS data, shown on
+  hiding-zone overlays and matching-question maps.
+- **Native geometry (GEOS)** — Buffer, union, and dissolve operations run in
+  native C++ via GEOS, orders of magnitude faster than Turf.js alone.
+- **Deep link sharing** — Versioned share links and QR codes let players send
+  full game configurations (play area, hiding zones, questions) to each other.
 
 ## Features
 
