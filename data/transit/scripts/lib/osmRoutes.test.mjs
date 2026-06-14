@@ -943,10 +943,7 @@ describe("lineDisplayName", () => {
     });
 
     it("strips 列車 prefix (fullwidth space)", () => {
-        assert.equal(
-            lineDisplayName("列車　東急東横線"),
-            "東急東横線",
-        );
+        assert.equal(lineDisplayName("列車　東急東横線"), "東急東横線");
     });
 
     it("strips 列車 prefix (regular space)", () => {
@@ -965,10 +962,7 @@ describe("lineDisplayName", () => {
     });
 
     it("does not strip Train/列車 when it is part of the name (not prefix)", () => {
-        assert.equal(
-            lineDisplayName("AirTrain JFK"),
-            "AirTrain JFK",
-        );
+        assert.equal(lineDisplayName("AirTrain JFK"), "AirTrain JFK");
     });
 
     it("strips 列車 prefix in lineNameKey too", () => {

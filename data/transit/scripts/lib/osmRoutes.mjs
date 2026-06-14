@@ -407,8 +407,11 @@ export function processOsmRoutes(
         collapsed.push({
             ...representative,
             name:
-                lineDisplayName(representative.name, directionTokens, stripPrefixes) ||
-                representative.name,
+                lineDisplayName(
+                    representative.name,
+                    directionTokens,
+                    stripPrefixes,
+                ) || representative.name,
             memberStationIds: [...memberSet],
             wayIds: [...waySet],
             _hasPassengerTag:
