@@ -166,13 +166,10 @@ Committed artifacts:
 2. Add the new version's SHA-256 to the `KNOWN_HASHES` table in `fetch-geos.sh`.
 3. Run `pnpm geos:fetch && pnpm geos:build:ios && pnpm geos:build:android`.
 4. Verify symbol exports (C API visible, C++ hidden) on both platforms.
-5. **Run the parity gate: `pnpm test:geos` must pass** — the golden fixtures
-   (`modules/native-geometry/__fixtures__/geos-golden.json`) are keyed on
-   engine-independent invariants (area ratio / bbox tolerance / type / null), so
-   they hold across GEOS 3.x. If the new version legitimately shifts a result
-   outside tolerance, regenerate with `pnpm data:geos-golden` and review the diff
-   before committing. (The device XCTest / instrumented suites — once landed —
-   load the same JSON, so a drift surfaces on-host first.)
+5. **Run the parity gates:**
+    - `pnpm test:geos` must pass (host-side geos-wasm 3.13 parity).
+    - `xcodebuild test -scheme NativeGeometryTests-Package -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO` must pass (device-side GEOS 3.14.1 golden fixture parity). Run from `modules/native-geometry/`.
+    - The golden fixtures (`modules/native-geometry/__fixtures__/geos-golden.json`) are keyed on engine-independent invariants (area ratio / bbox tolerance / type / null). If the new version legitimately shifts a result outside tolerance, regenerate with the XCTest `testRegenerateGoldenFixtures` method and review the diff before committing.
 6. Commit the new artifacts.
 
 ### Binary budget

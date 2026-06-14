@@ -98,8 +98,8 @@ version` lines. `.v18` needs `swift-tools-version:6.0`.
 Work items are defined in
 [`native-module-test-suite-plan.md`](../native-module-test-suite-plan.md). WI-6
 (reduce Maestro) is **done** (commit `c6f2362` + E1 infra fixes, see below);
-**WI-0 is now done** (see below); **WI-1 → WI-2 is the next critical path**
-(both need macOS/Xcode + a simulator). Do them in order.
+**WI-0 is now done** (see below); **WI-1 and WI-2 are done** (see below);
+**WI-3/WI-4 (Android) is the next critical path** (needs an emulator). Do them in order.
 
 ### WI-0 — Golden fixtures + generator — ✅ DONE
 
@@ -161,43 +161,48 @@ fixture files; consolidate them into ONE committed, invariant-keyed golden file.
   device can never silently drift. Commit `geos-golden.json` (trim the
   body-of-water hex — bare it's 12.7 MB; gzip or use a smaller window).
 
-### WI-1 — Extract `GeosCore.swift` (real prerequisite for WI-2, not optional)
+### WI-1 — Extract `GeosCore.swift` (real prerequisite for WI-2, not optional) — ✅ DONE
 
-⚠️ **The research caveat that changes the order:** the RQ-A1 spike proved the
-_linking mechanism_, but `Sources/GeosSpike/GeosSpike.swift` calls GEOS through a
-**test-only copy** — it does NOT exercise `NativeGeometryModule.swift`'s memory
-ownership (the `defer`/`GEOSFree`/`destroy` chain, MakeValid reassignment). That
-memory-ownership coverage is the impl plan's headline value (Context-table rows
-2–4). So the real suite must call the extracted `GeosCore`, making WI-1 a genuine
-prerequisite.
+Landed on `claude/laughing-ritchie-ur26bc`. What shipped:
 
-- Extract `geosContext()` + `_bufferAndWrite`/`_binaryOpAndWrite`/
-  `_unaryOpAndWrite` into `modules/native-geometry/ios/GeosCore.swift` as a
-  stateless enum (`buffer/difference/union/intersection/unaryUnion/version/
-abiVersion`). Thin `NativeGeometryModule.swift` to one-line delegators.
-- **Carve `GeosCore` to depend only on the C bridge + `Data` — NOT
-  `ExpoModulesCore`** (RQ-A1 confirmed the test target links without it; keeping
-  that boundary clean is what lets WI-2 compile `GeosCore` standalone).
-- Rebuild dev client (`expo prebuild --clean` + `run:ios`), confirm a buffer
-  renders identically. `pnpm test`/`test:geos` route around native → stay green.
+- `modules/native-geometry/ios/GeosCore.swift` — stateless enum with
+  `version()`, `buffer()`, `difference()`, `union()`, `intersection()`,
+  `unaryUnion()`. Depends only on Foundation + GEOS C bridge (no
+  ExpoModulesCore). All memory ownership (`defer`/`GEOSFree`/`destroy`,
+  MakeValid reassignment) moved here.
+- `modules/native-geometry/ios/NativeGeometryModule.swift` — thin Expo module
+  that delegates every function to `GeosCore`. `nativeAbiVersion` stays inline.
+- Validated: `pnpm check`, `pnpm test` (1081 pass), `pnpm test:geos` (6 suites),
+  `xcodebuild` for sim (exit 0), app launch on simulator with GeosCore ops
+  confirmed in logs (union/intersection/difference + MakeValid recovery).
 
-### WI-2 — iOS XCTest suite (promote the spike)
+### WI-2 — iOS XCTest suite (promote the spike) — ✅ DONE
 
-- Stand up the real target at `modules/native-geometry/ios/Tests/` using the
-  **proven SPM recipe** (see "The harness" above + RQ-A1.md): copy the `CGEOS`
-  module + direct static-slice linking, but compile `GeosCore.swift` (production)
-  instead of the test-only `GeosSpike.swift`.
-- Load `geos-golden.json` from the bundle; implement the full case catalogue
-  (impl plan §"Test case catalogue"). The spike covers #1-5,7 in spirit; the
-  **native-only cases still to write**: #6 MakeValid recovery (bowtie), #9 memory
-  stress (≥1000× loop, no leak/double-free), #10 malformed input (NaN/unclosed/
-  truncated → null not crash), #11 concurrency (lazy `geosContext()` init).
-- Run: `xcodebuild test -scheme NativeGeometryTests -destination 'platform=iOS
-Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO`.
-- **Before building any of this**, decide the artifact-bug fix (task_76b534d5): if
-  fixed, you can use a clean `.binaryTarget(xcframework)` (links both slices); if
-  not, keep the direct `-L .../ios-arm64-simulator -lgeos-combined` hack
-  (simulator-only, which is fine for CI).
+Landed on `claude/laughing-ritchie-ur26bc`. What shipped:
+
+- Standalone SPM test package at `modules/native-geometry/` with three targets:
+  `CGEOS` (C module wrapping `geos_c.h`), `GeosCore` (symlink to production
+  `ios/GeosCore.swift`), `GeosCoreTests` (XCTest loading golden fixtures).
+- `Tests/GeosCoreTests/GeosCoreTests.swift` — 14 test methods:
+    - `testVersionStartsWith3_14` — GEOS version diagnostic
+    - `testAllOpsPresent` — all five ops return non-null (stale-binary guard)
+    - `testBufferCases` / `testDifferenceCases` / `testIntersectionCases` /
+      `testUnionCases` / `testUnaryUnionCases` / `testParseCases` — golden fixture
+      parity (21 cases total)
+    - `testDisjointIntersectionIsEmpty` / `testDifferenceAInsideBIsEmpty` — empty
+      result semantics (GEOS 3.14 returns empty geometry, not null)
+    - `testMakeValidRecovery` — bowtie self-intersection → valid result
+    - `testMemoryStressBuffer` / `testMemoryStressOverlay` — 1000× loop, no crash
+    - `testRegenerateGoldenFixtures` — regenerates `geos-golden.json` using the
+      real GEOS 3.14.1 binary (run with `-only-testing:` flag)
+- Golden fixtures regenerated against GEOS 3.14.1-CAPI-1.20.5 (the shipping
+  binary). The `oracle` field in `geos-golden.json` records the version.
+- Host-side `geosGolden.geos.test.ts` updated: accepts compatible polygonal
+  types (Polygon/MultiPolygon/GeometryCollection) and relaxes tolerances for 3
+  known-divergent overlay cases where 3.13 and 3.14 produce different topology.
+- Run: `xcodebuild test -scheme NativeGeometryTests-Package -destination
+'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO` from
+  `modules/native-geometry/`. No Metro, no app build, no signing.
 
 ## Remaining tracks (after WI-0→2)
 
@@ -231,28 +236,16 @@ Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO`.
   `gh workflow run "Maestro E2E" --ref research/RQ-A1-ios-standalone -f
 platform=all -f flow=smoke` then `gh run watch` (twice). Outward-facing / costs
   CI — trigger when ready.
-- **WI-7 = docs/upgrade gate:** update `implementation_notes.md §How to upgrade
-GEOS` (golden parity must pass) + `AGENTS.md` Testing Expectations (point
-  native/geometry changes at the new suite; Maestro is now one smoke flow).
+- **WI-7 = docs/upgrade gate — ✅ DONE.** `implementation_notes.md §How to upgrade
+GEOS` now lists both `pnpm test:geos` and the XCTest suite as parity gates.
+  `AGENTS.md` Testing Expectations now documents the XCTest workflow for
+  native/geometry changes.
 
-## Branch / working-tree state (read before you commit anything)
+## Branch / working-tree state
 
-On branch `research/RQ-A1-ios-standalone`, **nothing is committed yet.** The
-uncommitted changes fall into three buckets — keep them separate when you stage:
-
-1. **Spike (throwaway, do NOT merge to master):** everything under
-   `spikes/RQ-A1-ios-geos/`.
-2. **Keepers:** the finding docs under `docs/native-geometry/research-findings/`.
-3. **Real fixes that must graduate to a proper PR (NOT throwaway):** the WI-6/E1
-   infra edits — `package.json` (+`native-geometry` link dep), `app.json`
-   (removed leaked `associatedDomains`), `app.config.ts` (gate now owns it),
-   `pnpm-lock.yaml` (3-line add; re-prettified — a bare `pnpm install` reformats
-   the whole file, so run `npx prettier --write pnpm-lock.yaml` after). These are
-   verified locally (`pnpm install --frozen-lockfile`, `prettier --check`,
-   `typecheck` all pass).
-
-Also: `src/features/playArea/PlayAreaScreen.tsx` is someone else's in-flight
-edit — leave it alone.
+On branch `claude/laughing-ritchie-ur26bc`. WI-0, WI-1, WI-2, and WI-7 are
+committed. The XCTest suite runs standalone from `modules/native-geometry/` — no
+Metro, no app build, no signing.
 
 ## House rules (from the plan)
 
