@@ -10,13 +10,13 @@ centered on a native MapLibre map and an Apple Maps-style bottom sheet.
 
 ## Why a Native Rewrite?
 
-The original web app is a great proof of concept, but two hard browser limits
-make it unreliable for the kinds of games Jet Lag actually plays:
+The original web app is great for small contained games, but two hard browser limits
+make it unreliable for playing in larger play areas like Tokyo:
 
 - **Web storage limits crash large games** — Browsers cap local storage at a
   small, unpredictable per-origin quota. A game spanning Tokyo with hundreds of
-  hiding zones and thousands of POIs routinely exhausts it, crashing the tab
-  mid-game with no recovery path.
+  station hiding zones and thousands of POIs routinely exhausts it, crashing the tab
+  and evicting the cache mid-game with no recovery path.
 - **The public Overpass API is too fragile** — Overpass is a volunteer-run
   shared service. The complex multi-category queries the game needs (parks,
   museums, stations, transit lines, …) frequently time out, return partial
@@ -41,6 +41,8 @@ easily do:
   native C++ via GEOS, orders of magnitude faster than Turf.js alone.
 - **Deep link sharing** — Versioned share links and QR codes let players send
   full game configurations (play area, hiding zones, questions) to each other.
+
+This app is tuned specifically to play JetLag: Hide & Seek in the Tokyo 23 wards.
 
 ## Features
 
