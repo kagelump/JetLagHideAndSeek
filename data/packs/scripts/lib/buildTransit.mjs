@@ -431,6 +431,7 @@ function toStationContribution(rec) {
         lon: rec.lon,
         mergeKey: sourceId,
         name: rec.name,
+        nameEn: rec.nameEn || undefined,
         routeIds: [],
         sourceId,
     };

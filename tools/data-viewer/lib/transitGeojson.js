@@ -84,9 +84,11 @@
             var preset = sorted[pi];
             // Build routeId → route name lookup for this preset
             var routeNameById = new Map();
+            var routeNameEnById = new Map();
             for (var ri2 = 0; ri2 < preset.routes.length; ri2++) {
                 var rt = preset.routes[ri2];
                 routeNameById.set(rt.id, rt.name);
+                if (rt.nameEn) routeNameEnById.set(rt.id, rt.nameEn);
             }
             var presetLabel = preset.label || preset.operator || preset.id;
             for (var si = 0; si < preset.stations.length; si++) {
@@ -108,6 +110,11 @@
                         return routeNameById.get(rid);
                     })
                     .filter(Boolean);
+                var stationRouteNamesEn = stationRouteIds
+                    .map(function (rid) {
+                        return routeNameEnById.get(rid);
+                    })
+                    .filter(Boolean);
                 var existing = stations.get(station.mergeKey);
                 if (existing) {
                     existing.routeIds = [
@@ -123,6 +130,12 @@
                         ...new Set([
                             ...(existing.routeNames || []),
                             ...stationRouteNames,
+                        ]),
+                    ];
+                    existing.routeNamesEn = [
+                        ...new Set([
+                            ...(existing.routeNamesEn || []),
+                            ...stationRouteNamesEn,
                         ]),
                     ];
                     existing.operators = [
@@ -150,6 +163,7 @@
                         routeColors: routeColors,
                         routeIds: stationRouteIds.slice().sort(),
                         routeNames: stationRouteNames.slice(),
+                        routeNamesEn: stationRouteNamesEn.slice(),
                         operators: [presetLabel],
                         sourceStationIds: [station.id],
                     });
@@ -176,6 +190,7 @@
                         color: route.color || preset.defaultColor,
                         id: route.id,
                         name: route.name,
+                        nameEn: route.nameEn || undefined,
                         presetId: preset.id,
                     },
                 });
@@ -208,7 +223,12 @@
                         color: routeColors[ci],
                         id: station.id,
                         name: station.name,
+                        nameEn: station.nameEn || undefined,
                         routeNames: (station.routeNames || []).join(", "),
+                        routeNamesEn:
+                            (station.routeNamesEn || []).length > 0
+                                ? station.routeNamesEn.join(", ")
+                                : undefined,
                         operators: (station.operators || []).join(", "),
                         ringCount: routeColors.length,
                         ringIndex: ci,
@@ -275,7 +295,12 @@
                         color: routeColors[wi],
                         id: station.id,
                         name: station.name,
+                        nameEn: station.nameEn || undefined,
                         routeNames: (station.routeNames || []).join(", "),
+                        routeNamesEn:
+                            (station.routeNamesEn || []).length > 0
+                                ? station.routeNamesEn.join(", ")
+                                : undefined,
                         operators: (station.operators || []).join(", "),
                         wedgeCount: routeColors.length,
                         wedgeIndex: wi,
@@ -342,7 +367,12 @@
                     color: color,
                     id: station.id,
                     name: station.name,
+                    nameEn: station.nameEn || undefined,
                     routeNames: (station.routeNames || []).join(", "),
+                    routeNamesEn:
+                        (station.routeNamesEn || []).length > 0
+                            ? station.routeNamesEn.join(", ")
+                            : undefined,
                     operators: (station.operators || []).join(", "),
                     wedgeCount:
                         station.routeColors && station.routeColors.length > 0

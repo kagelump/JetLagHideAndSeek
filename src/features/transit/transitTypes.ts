@@ -10,6 +10,8 @@ export type TransitRoute = {
     geometry: MultiLineString;
     id: string;
     name: string;
+    /** Best English / romanized name (from OSM name:en tag on route relations). */
+    nameEn?: string;
     sourceId: string;
 };
 

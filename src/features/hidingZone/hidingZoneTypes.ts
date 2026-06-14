@@ -40,6 +40,7 @@ export type RouteFeatureProperties = {
     color: string;
     id: string;
     name: string;
+    nameEn?: string;
     presetId: string;
 };
 
@@ -47,6 +48,7 @@ export type StationFeatureProperties = {
     color: string;
     id: string;
     name: string;
+    nameEn?: string;
     ringCount: number;
     ringIndex: number;
 };

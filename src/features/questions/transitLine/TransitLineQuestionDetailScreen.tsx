@@ -15,6 +15,7 @@ import {
 } from "@/state/hidingZoneStore";
 import {
     updateQuestionCenter,
+    useLabelLanguage,
     useQuestionActions,
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
@@ -28,10 +29,19 @@ export function TransitLineQuestionDetailScreen({
 }) {
     const { radiusMeters } = useHidingZoneState();
     const { selectedRoutes, selectedStations } = useHidingZoneDerived();
+    const labelLanguage = useLabelLanguage();
 
     const routeNames = useMemo(
-        () => new Map(selectedRoutes.map((route) => [route.id, route.name])),
-        [selectedRoutes],
+        () =>
+            new Map(
+                selectedRoutes.map((route) => [
+                    route.id,
+                    labelLanguage === "english" && route.nameEn
+                        ? route.nameEn
+                        : route.name,
+                ]),
+            ),
+        [selectedRoutes, labelLanguage],
     );
     const lineOptions = useMemo(
         () =>
@@ -116,7 +126,10 @@ export function TransitLineQuestionDetailScreen({
                     const isSelected = line.id === question.lineId;
                     return (
                         <Pressable
-                            accessibilityLabel={getLineAccessibilityLabel(line)}
+                            accessibilityLabel={getLineAccessibilityLabel(
+                                line,
+                                labelLanguage,
+                            )}
                             accessibilityRole="button"
                             key={line.id}
                             onPress={() =>
@@ -149,7 +162,10 @@ export function TransitLineQuestionDetailScreen({
                                     numberOfLines={1}
                                     style={styles.closestStationName}
                                 >
-                                    {line.closestStation?.station.name ??
+                                    {(labelLanguage === "english" &&
+                                    line.closestStation?.station.nameEn
+                                        ? line.closestStation?.station.nameEn
+                                        : line.closestStation?.station.name) ??
                                         "No station"}
                                 </Text>
                                 <Text style={styles.closestStationDistance}>
@@ -170,13 +186,20 @@ export function TransitLineQuestionDetailScreen({
 
 type TransitLineOption = ReturnType<typeof getTransitLineOptions>[number];
 
-function getLineAccessibilityLabel(line: TransitLineOption): string {
-    const station = line.closestStation?.station.name ?? "No station";
+function getLineAccessibilityLabel(
+    line: TransitLineOption,
+    labelLanguage: "native" | "english",
+): string {
+    const st = line.closestStation?.station;
+    const stationName =
+        labelLanguage === "english" && st?.nameEn
+            ? st.nameEn
+            : (st?.name ?? "No station");
     const distance =
         line.distanceMeters === null
             ? "No distance"
             : formatStationDistance(line.distanceMeters);
-    return `${line.name}, closest station ${station}, ${distance}`;
+    return `${line.name}, closest station ${stationName}, ${distance}`;
 }
 
 const styles = StyleSheet.create({

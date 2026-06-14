@@ -360,6 +360,13 @@ export function processOsmRoutes(
                         directionTokens,
                         stripPrefixes,
                     ) || line.name,
+                nameEn: line.nameEn
+                    ? lineDisplayName(
+                          line.nameEn,
+                          directionTokens,
+                          stripPrefixes,
+                      ) || line.nameEn
+                    : undefined,
             });
             continue;
         }
@@ -380,6 +387,13 @@ export function processOsmRoutes(
                         directionTokens,
                         stripPrefixes,
                     ) || single.name,
+                nameEn: single.nameEn
+                    ? lineDisplayName(
+                          single.nameEn,
+                          directionTokens,
+                          stripPrefixes,
+                      ) || single.nameEn
+                    : undefined,
             });
             continue;
         }
@@ -412,6 +426,13 @@ export function processOsmRoutes(
                     directionTokens,
                     stripPrefixes,
                 ) || representative.name,
+            nameEn: representative.nameEn
+                ? lineDisplayName(
+                      representative.nameEn,
+                      directionTokens,
+                      stripPrefixes,
+                  ) || representative.nameEn
+                : undefined,
             memberStationIds: [...memberSet],
             wayIds: [...waySet],
             _hasPassengerTag:
@@ -636,6 +657,7 @@ function buildLine(
 
     const lineId = createOsmElementId("relation", id);
     const name = tags.name || tags.ref || `Line ${id}`;
+    const nameEn = tags["name:en"] || undefined;
     // colour (British spelling) or color — validate as hex; drop CSS names
     const colorRaw = tags.colour || tags.color || undefined;
     const colorCandidate = colorRaw
@@ -1001,6 +1023,7 @@ function buildLine(
     return {
         id: lineId,
         name,
+        nameEn: nameEn || undefined,
         color: color || undefined,
         sourceId: String(id),
         operator,

@@ -19,6 +19,7 @@
  * @typedef {object} TransitLine
  * @property {string} id
  * @property {string} name
+ * @property {string} [nameEn]
  * @property {string} color
  * @property {string} sourceId
  * @property {string} [operator]
@@ -104,6 +105,7 @@ export function attachRoutesToPresets(presets, lines, normalizeOp) {
             targetPreset.routes.push({
                 id: line.id,
                 name: line.name,
+                nameEn: line.nameEn || undefined,
                 color: line.color || targetPreset.defaultColor,
                 sourceId: line.sourceId,
                 geometry: line.geometry,

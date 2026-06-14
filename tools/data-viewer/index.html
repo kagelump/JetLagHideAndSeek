@@ -289,6 +289,8 @@
                 var geom = feature.geometry;
                 var lines = [];
                 if (props.name) lines.push("Name: " + props.name);
+                if (props.nameEn && props.nameEn !== props.name)
+                    lines.push("Name (EN): " + props.nameEn);
                 if (props.id) lines.push("ID: " + props.id);
                 if (
                     geom &&
@@ -304,6 +306,11 @@
                     );
                 }
                 if (props.routeNames) lines.push("Routes: " + props.routeNames);
+                if (
+                    props.routeNamesEn &&
+                    props.routeNamesEn !== props.routeNames
+                )
+                    lines.push("Routes (EN): " + props.routeNamesEn);
                 if (props.operators)
                     lines.push("Operators: " + props.operators);
                 if (props.wedgeCount != null)
@@ -628,11 +635,21 @@
                     map.getCanvas().style.cursor = "pointer";
                     var p = e.features[0].properties;
                     var html = "<strong>" + p.name + "</strong>";
+                    if (p.nameEn && p.nameEn !== p.name)
+                        html +=
+                            '<br><span style="color:#888;font-size:12px">' +
+                            p.nameEn +
+                            "</span>";
                     if (p.operators) html += "<br><em>" + p.operators + "</em>";
                     if (p.routeNames)
                         html +=
                             '<br><span style="color:#666">' +
                             p.routeNames +
+                            "</span>";
+                    if (p.routeNamesEn && p.routeNamesEn !== p.routeNames)
+                        html +=
+                            '<br><span style="color:#888;font-size:12px">' +
+                            p.routeNamesEn +
                             "</span>";
                     if (p.wedgeCount && p.wedgeCount > 1) {
                         html +=
@@ -1279,12 +1296,22 @@
                         map.getCanvas().style.cursor = "pointer";
                         var p = e.features[0].properties;
                         var html = "<strong>" + p.name + "</strong>";
+                        if (p.nameEn && p.nameEn !== p.name)
+                            html +=
+                                '<br><span style="color:#888;font-size:12px">' +
+                                p.nameEn +
+                                "</span>";
                         if (p.operators)
                             html += "<br><em>" + p.operators + "</em>";
                         if (p.routeNames)
                             html +=
                                 '<br><span style="color:#666">' +
                                 p.routeNames +
+                                "</span>";
+                        if (p.routeNamesEn && p.routeNamesEn !== p.routeNames)
+                            html +=
+                                '<br><span style="color:#888;font-size:12px">' +
+                                p.routeNamesEn +
                                 "</span>";
                         if (p.wedgeCount && p.wedgeCount > 1) {
                             html +=
