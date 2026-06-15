@@ -242,7 +242,6 @@ public enum GeosCore {
 
         #if DEBUG
         let tValid0 = CFAbsoluteTimeGetCurrent()
-        var tMakeValidMs: Double = 0
         #endif
         let validA = GEOSisValid_r(ctx, geomA!)
         if validA != 1 {
@@ -284,8 +283,8 @@ public enum GeosCore {
 
         #if DEBUG
         let tTotalMs = (CFAbsoluteTimeGetCurrent() - tTotal0) * 1000
-        NSLog("[GeosCore] %@ parse=%.2fms valid=%.2fms makeValid=%.2fms op=%.2fms total=%.2fms (wkbA=%ld bytes, wkbB=%ld bytes)",
-              opName, tParseMs, tValidMs, tMakeValidMs, tOpMs, tTotalMs,
+        NSLog("[GeosCore] %@ parse=%.2fms valid=%.2fms op=%.2fms total=%.2fms (wkbA=%ld bytes, wkbB=%ld bytes)",
+              opName, tParseMs, tValidMs, tOpMs, tTotalMs,
               wkbA.count, wkbB.count)
         #endif
 
