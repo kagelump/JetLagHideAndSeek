@@ -235,6 +235,9 @@ regions:
               "JR West":
                   - "西日本旅客鉄道"
                   - "JR西日本"
+              "Yurikamome":
+                  - "ゆりかもめ"
+                  - "株式会社ゆりかもめ"
           routeColors: &japan_route_colors
               東急東横線: "#DA0442"
               # Tokyo Metro lines
