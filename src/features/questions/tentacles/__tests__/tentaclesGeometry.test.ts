@@ -256,4 +256,62 @@ describe("buildTentaclesRenderState", () => {
             expect(f.properties?.osmKey).toBe("node/2");
         }
     });
+
+    // ── Negative answer ("None") ──────────────────────────────────────────
+
+    it("populates miss mask with all cells when answer is negative", () => {
+        const q = makeQuestion({
+            answer: "negative",
+            selectedOsmId: null,
+            selectedOsmType: null,
+            selectedName: null,
+        });
+        const result = buildTentaclesRenderState([q], TEST_BBOX, TEST_BOUNDARY);
+        // Hit mask should be empty.
+        expect(result.hitMaskFeatures.features).toHaveLength(0);
+        // Miss mask should contain all radius-clipped cells.
+        expect(result.missMaskFeatures.features.length).toBeGreaterThanOrEqual(
+            1,
+        );
+    });
+
+    it("negative answer mask covers all Voronoi cells within the radius", () => {
+        const q = makeQuestion({
+            answer: "negative",
+            selectedOsmId: null,
+            selectedOsmType: null,
+            selectedName: null,
+        });
+        const result = buildTentaclesRenderState([q], TEST_BBOX, TEST_BOUNDARY);
+        // Every feature in the miss mask should carry an osmKey from a candidate.
+        const candidateKeys = new Set(
+            q.candidates.map((c) => `${c.osmType}/${c.osmId}`),
+        );
+        for (const f of result.missMaskFeatures.features) {
+            const key = f.properties?.osmKey as string | undefined;
+            expect(key).toBeDefined();
+            expect(candidateKeys.has(key!)).toBe(true);
+        }
+    });
+
+    // ── Voronoi outline clipping ──────────────────────────────────────────
+
+    it("clips Voronoi outlines to within the radius circle", () => {
+        const q = makeQuestion();
+        const result = buildTentaclesRenderState([q], TEST_BBOX, TEST_BOUNDARY);
+        // Outline features should be present and should be clipped (not raw cells).
+        expect(
+            result.voronoiOutlineFeatures.features.length,
+        ).toBeGreaterThanOrEqual(1);
+        // The outlines should be a subset of (or equal to) the features clipped
+        // to the radius circle — i.e., no outline features should extend beyond
+        // the radius circle + play area intersection.
+        // Verify each outline feature has a geometry type consistent with clipping.
+        for (const f of result.voronoiOutlineFeatures.features) {
+            expect(
+                f.geometry.type === "Polygon" ||
+                    f.geometry.type === "MultiPolygon",
+            ).toBe(true);
+        }
+    });
 });

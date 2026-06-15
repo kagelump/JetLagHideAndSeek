@@ -16,6 +16,7 @@ import type { OsmFeature } from "@/features/questions/matching/matchingTypes";
 import type { QuestionState } from "@/features/questions/questionTypes";
 import { haversineDistanceMeters } from "@/shared/geojson";
 import type { Bbox, Position } from "@/shared/geojson";
+import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
 
 import type { TentaclesQuestion, TentaclesRenderState } from "./tentaclesTypes";
 import { EMPTY_TENTACLES_RENDER_STATE } from "./tentaclesTypes";
@@ -204,8 +205,37 @@ function buildSingleTentaclesRenderState(
     };
     const clippedToRadius = clipCellsToPlayArea(cells, radiusBoundary);
 
-    // 5a. Voronoi outlines: clip raw cells to play area (visual only).
-    const outlines = clipCellsToPlayArea(cells, playAreaBoundary);
+    // 5a. Voronoi outlines: clip cells to the intersection of the radius
+    // circle and the play-area boundary. Build the intersection boundary by
+    // intersecting the radius circle with each play-area polygon.
+    const backend = getGeometryBackend();
+    const intersectionBoundaryFeatures: Feature<Polygon | MultiPolygon>[] = [];
+    for (const bf of playAreaBoundary.features) {
+        const geom = bf.geometry;
+        if (geom.type !== "Polygon" && geom.type !== "MultiPolygon") {
+            continue;
+        }
+        try {
+            const intersected = backend.intersection(radiusCircle, {
+                type: "Feature",
+                properties: {},
+                geometry: geom,
+            });
+            if (intersected) {
+                intersectionBoundaryFeatures.push(intersected);
+            }
+        } catch {
+            // Degenerate intersection — skip this boundary piece.
+        }
+    }
+    const intersectionBoundary: FeatureCollection<Polygon | MultiPolygon> =
+        intersectionBoundaryFeatures.length > 0
+            ? {
+                  type: "FeatureCollection",
+                  features: intersectionBoundaryFeatures,
+              }
+            : radiusBoundary;
+    const outlines = clipCellsToPlayArea(cells, intersectionBoundary);
 
     // 5b. poiFeatures: in-radius candidates as point features.
     const poiFeats: Feature<
@@ -228,9 +258,11 @@ function buildSingleTentaclesRenderState(
     let hitMaskFeatures: FeatureCollection<Polygon | MultiPolygon>;
     let missMaskFeatures: FeatureCollection<Polygon | MultiPolygon>;
 
-    const isAnswered = q.answer === "positive" && selectedOsmKey !== null;
+    const isAnsweredPositive =
+        q.answer === "positive" && selectedOsmKey !== null;
+    const isAnsweredNegative = q.answer === "negative";
 
-    if (isAnswered) {
+    if (isAnsweredPositive) {
         hitMaskFeatures = {
             type: "FeatureCollection",
             features: clippedToRadius.features.filter(
@@ -242,6 +274,13 @@ function buildSingleTentaclesRenderState(
             features: clippedToRadius.features.filter(
                 (f) => f.properties?.osmKey !== selectedOsmKey,
             ),
+        };
+    } else if (isAnsweredNegative) {
+        // "None" — all cells within the radius are excluded (miss).
+        hitMaskFeatures = { type: "FeatureCollection", features: [] };
+        missMaskFeatures = {
+            type: "FeatureCollection",
+            features: clippedToRadius.features,
         };
     } else {
         hitMaskFeatures = { type: "FeatureCollection", features: [] };

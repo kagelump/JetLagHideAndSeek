@@ -203,7 +203,9 @@ const tentaclesDistanceOptionSchema = z.enum(["2km", "25km"]);
 
 const tentaclesQuestionWireSchema = z
     .object({
-        answer: z.enum(["unanswered", "positive"]).default("unanswered"),
+        answer: z
+            .enum(["unanswered", "positive", "negative"])
+            .default("unanswered"),
         candidates: z
             .array(
                 z.object({

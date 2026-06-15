@@ -129,6 +129,7 @@ jest.mock("@maplibre/maplibre-react-native", () => {
         LineLayer: createMapComponent("map-line-layer"),
         MapView,
         OfflineManager,
+        Callout: createMapComponent("map-callout"),
         PointAnnotation: createMapComponent("map-point-annotation"),
         ShapeSource: createMapComponent("map-shape-source"),
         SymbolLayer: createMapComponent("map-symbol-layer"),

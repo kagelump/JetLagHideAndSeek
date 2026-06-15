@@ -4,7 +4,7 @@ import {
     setAccessToken,
     UserLocation,
 } from "@maplibre/maplibre-react-native";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
@@ -53,6 +53,7 @@ import {
 } from "./PlayAreaMaskLayers";
 import { MeasuringLayers } from "./MeasuringLayers";
 import { RadarQuestionLayers } from "./RadarQuestionLayers";
+import { TentaclesPoiLayer } from "./TentaclesPoiLayer";
 import { TentaclesRadiusLayer } from "./TentaclesRadiusLayer";
 import { ThermometerPreviewLayer } from "./ThermometerPreviewLayer";
 import { usePinDrag } from "./usePinDrag";
@@ -99,6 +100,7 @@ export function NativeMap({
 }: NativeMapProps) {
     const cameraRef = useRef<CameraHandle | null>(null);
     const mapRef = useRef<any>(null);
+    const [calloutDismissKey, setCalloutDismissKey] = useState(0);
     const insets = useSafeAreaInsets();
     const { height } = useSafeAreaFrame();
     const { routeFeatures, stationFeatures, zoneFeatures } =
@@ -300,6 +302,15 @@ export function NativeMap({
         markAppMapReady();
     }, [fitPlayArea, markAppMapReady]);
 
+    const handleMapPress = useCallback(
+        (event?: unknown) => {
+            // Dismiss any POI callout on map background tap.
+            setCalloutDismissKey((k: number) => k + 1);
+            onPress?.(event);
+        },
+        [onPress],
+    );
+
     // Auto-fit the camera when the play area changes (user selects a new area).
     const isFirstRender = useRef(true);
     useEffect(() => {
@@ -319,7 +330,7 @@ export function NativeMap({
                     logoEnabled={false}
                     mapStyle={mapStyle}
                     onDidFinishLoadingMap={handleMapReady}
-                    onPress={onPress}
+                    onPress={handleMapPress}
                     ref={mapRef}
                     scrollEnabled={!pinDrag.isDragging}
                     style={styles.map}
@@ -375,6 +386,11 @@ export function NativeMap({
                         visible={isQuestionDetailRoute}
                     />
                     <TentaclesRadiusLayer
+                        tentacles={questionMapRenderState.tentacles}
+                        visible={isQuestionDetailRoute}
+                    />
+                    <TentaclesPoiLayer
+                        calloutDismissKey={calloutDismissKey}
                         tentacles={questionMapRenderState.tentacles}
                         visible={isQuestionDetailRoute}
                     />

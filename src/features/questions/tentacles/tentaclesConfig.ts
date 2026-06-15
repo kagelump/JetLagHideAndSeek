@@ -4,7 +4,7 @@ import type { QuestionState } from "@/features/questions/questionTypes";
 
 export const tentaclesQuestionConfig = {
     answerMapBehavior: {
-        negative: "none",
+        negative: "darken-inside",
         positive: "none",
     },
     answerModel: "poi",

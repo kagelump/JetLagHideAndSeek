@@ -56,4 +56,14 @@ describe("tentaclesQuestionConfig", () => {
             "Tentacles: Museum (2km) — Tokyo National Museum",
         );
     });
+
+    it("has darken-inside map behavior for negative answer", () => {
+        expect(tentaclesQuestionConfig.answerMapBehavior.negative).toBe(
+            "darken-inside",
+        );
+    });
+
+    it("has none map behavior for positive answer (poi model)", () => {
+        expect(tentaclesQuestionConfig.answerMapBehavior.positive).toBe("none");
+    });
 });

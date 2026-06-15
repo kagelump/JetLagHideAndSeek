@@ -13,6 +13,7 @@ import type {
 } from "@/features/questions/tentacles/tentaclesTypes";
 import {
     resetTentaclesAnswer,
+    selectTentaclesNone,
     selectTentaclesPoi,
     useQuestionActions,
 } from "@/state/questionStore";
@@ -94,6 +95,14 @@ export function TentaclesQuestionDetailScreen({
         );
     }, [question.id, updateQuestion]);
 
+    const handleSelectNone = useCallback(() => {
+        updateQuestion(question.id, (current) =>
+            current.type === "tentacles"
+                ? selectTentaclesNone(current)
+                : current,
+        );
+    }, [question.id, updateQuestion]);
+
     // Auto-search when center or category changes.
     const [searchGeneration, setSearchGeneration] = useState(0);
     const searchRunningRef = useRef(false);
@@ -128,6 +137,7 @@ export function TentaclesQuestionDetailScreen({
 
     const isSelected =
         question.selectedOsmId !== null && question.selectedOsmType !== null;
+    const isNoneSelected = question.answer === "negative";
 
     const distanceLabel = question.distanceOption;
 
@@ -281,13 +291,39 @@ export function TentaclesQuestionDetailScreen({
                 )}
             </View>
 
+            {/* None option — the hider is not near any candidate */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Hider is not near any</Text>
+                <Pressable
+                    accessibilityLabel="Select None — hider is not near any candidate"
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isNoneSelected }}
+                    onPress={handleSelectNone}
+                    style={({ pressed }) => [
+                        styles.noneButton,
+                        isNoneSelected ? styles.noneButtonActive : null,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                    testID="tentacles-none-button"
+                >
+                    <Text
+                        style={[
+                            styles.noneButtonText,
+                            isNoneSelected ? styles.noneButtonTextActive : null,
+                        ]}
+                    >
+                        (None)
+                    </Text>
+                </Pressable>
+            </View>
+
             {/* Answer + Reset */}
-            {isSelected ? (
+            {isSelected || isNoneSelected ? (
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Answer</Text>
                     <View style={styles.answerRow}>
                         <Text style={styles.answerText}>
-                            {question.selectedName}
+                            {isNoneSelected ? "(None)" : question.selectedName}
                         </Text>
                         <Pressable
                             accessibilityLabel="Reset tentacles answer"
@@ -389,6 +425,29 @@ const styles = StyleSheet.create({
         color: colors.muted,
         fontSize: 13,
         fontWeight: "700",
+    },
+    noneButton: {
+        alignItems: "center",
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        justifyContent: "center",
+        marginTop: 6,
+        minHeight: 46,
+        paddingHorizontal: 14,
+    },
+    noneButtonActive: {
+        backgroundColor: colors.button,
+        borderColor: colors.button,
+    },
+    noneButtonText: {
+        color: colors.ink,
+        fontSize: 14,
+        fontWeight: "800",
+    },
+    noneButtonTextActive: {
+        color: colors.white,
     },
     metadata: {
         color: colors.muted,

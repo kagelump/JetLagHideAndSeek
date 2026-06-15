@@ -318,14 +318,24 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         // For poi-model questions, clear the entire selection (not just
         // `answer`) so `normalizeQuestionState`'s re-derivation doesn't
         // restore `answer: "positive"` from a still-present `selectedOsmId`.
+        // Preserve an explicit "negative" answer (e.g. tentacles "None") since
+        // it's a valid answered state with no selection to drift.
         const resetQuestion = isPoiAnswerModel(question.type)
-            ? {
-                  ...question,
-                  answer: "unanswered" as const,
-                  selectedOsmId: null as null,
-                  selectedOsmType: null as null,
-                  selectedName: null as null,
-              }
+            ? question.answer === "negative"
+                ? {
+                      ...question,
+                      answer: "negative" as const,
+                      selectedOsmId: null as null,
+                      selectedOsmType: null as null,
+                      selectedName: null as null,
+                  }
+                : {
+                      ...question,
+                      answer: "unanswered" as const,
+                      selectedOsmId: null as null,
+                      selectedOsmType: null as null,
+                      selectedName: null as null,
+                  }
             : { ...question, answer: "unanswered" as const };
         const imported = normalizeQuestionState({
             ...resetQuestion,
@@ -706,6 +716,23 @@ export function selectTentaclesPoi(
 }
 
 /**
+ * Select "None" as the Tentacles answer — the hider is not closest to any
+ * candidate. Sets `answer: "negative"` and clears all selected fields atomically.
+ */
+export function selectTentaclesNone(
+    question: TentaclesQuestion,
+): TentaclesQuestion {
+    return {
+        ...question,
+        answer: "negative",
+        selectedOsmId: null,
+        selectedOsmType: null,
+        selectedName: null,
+        updatedAt: new Date().toISOString(),
+    };
+}
+
+/**
  * Reset a Tentacles question's POI selection.
  * Clears all three selected fields AND sets `answer: "unanswered"` atomically.
  * No UI component or generic action may write a Tentacles `answer` directly.
@@ -843,7 +870,12 @@ function normalizeQuestionState(question: unknown): QuestionState {
     // Re-derive `answer` for poi-model questions from canonical `selectedOsmId`
     // so any historically-inconsistent persisted/shared payload is repaired on
     // load. The derived status is "positive" iff a POI is selected.
+    // Preserve an explicit "negative" answer (e.g. tentacles "None") — it is a
+    // valid answered state with no POI selection to drift from.
     if (isPoiAnswerQuestion(question)) {
+        if (question.answer === "negative") {
+            return question;
+        }
         const derivedAnswer = derivePoiAnswer(question.selectedOsmId);
         if (question.answer !== derivedAnswer) {
             return { ...question, answer: derivedAnswer };

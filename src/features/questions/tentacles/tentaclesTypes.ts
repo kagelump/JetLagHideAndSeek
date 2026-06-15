@@ -49,12 +49,11 @@ export type TentaclesQuestion = BaseQuestion & {
     /**
      * The answer to a Tentacles question is the *named POI* the hider is
      * closest to, represented by `selectedOsmId` / `selectedOsmType` /
-     * `selectedName`. The legacy `answer` status field is retained only so
-     * generic store/list code can ask "is this answered?" — it is
-     * "unanswered" until a POI is chosen, then "positive". There is no
-     * meaningful "negative". See Task 02 (answer model).
+     * `selectedName`. The `answer` status field is "unanswered" until a POI
+     * is chosen ("positive") or the seeker asserts the hider is not near any
+     * candidate ("negative" — the "None" option).
      */
-    answer: "unanswered" | "positive";
+    answer: "unanswered" | "positive" | "negative";
     candidates: (OsmFeature & { distanceMeters?: number })[];
     category: TentaclesCategory;
     /** Seeker's position – center of the radius search. */

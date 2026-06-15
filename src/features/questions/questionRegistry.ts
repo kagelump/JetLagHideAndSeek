@@ -68,9 +68,15 @@ export function getQuestionAnswerStatus(
     question: QuestionState,
 ): "answered" | "unanswered" {
     if (isPoiAnswerModel(question.type)) {
-        return "selectedOsmId" in question && question.selectedOsmId !== null
-            ? "answered"
-            : "unanswered";
+        // POI-model questions are answered when a POI is selected OR when the
+        // answer is explicitly negative (e.g. tentacles "None").
+        if (
+            ("selectedOsmId" in question && question.selectedOsmId !== null) ||
+            question.answer === "negative"
+        ) {
+            return "answered";
+        }
+        return "unanswered";
     }
     return question.answer === "unanswered" ? "unanswered" : "answered";
 }

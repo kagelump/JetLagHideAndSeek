@@ -336,4 +336,143 @@ describe("TentaclesQuestionDetailScreen", () => {
             screen.getByText("No candidates found within range."),
         ).toBeTruthy();
     });
+
+    // ── None option tests ────────────────────────────────────────────────
+
+    it("renders the None button", () => {
+        const q = makeQuestion();
+        const screen = renderWithProvider(q);
+
+        expect(screen.getByTestId("tentacles-none-button")).toBeTruthy();
+        expect(screen.getByText("(None)")).toBeTruthy();
+    });
+
+    it("selecting None sets answer to negative", async () => {
+        const q = makeQuestion();
+        const screen = renderWithProvider(q);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("tentacles-none-button")).toBeTruthy();
+        });
+
+        fireEvent.press(screen.getByTestId("tentacles-none-button"));
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-answer")).toHaveTextContent(
+                "negative",
+            );
+        });
+    });
+
+    it("selecting None after a POI clears the selection", async () => {
+        const q = makeQuestion({
+            candidates: [
+                {
+                    lat: 35.71,
+                    lon: 139.77,
+                    name: "Tokyo Museum",
+                    osmId: 1,
+                    osmType: "node",
+                    tags: { tourism: "museum" },
+                    distanceMeters: 800,
+                },
+            ],
+        });
+        const screen = renderWithProvider(q);
+
+        // Select a POI first.
+        await waitFor(() => {
+            expect(screen.getByTestId("tentacles-candidate-1")).toBeTruthy();
+        });
+        fireEvent.press(screen.getByTestId("tentacles-candidate-1"));
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-answer")).toHaveTextContent(
+                "positive",
+            );
+        });
+
+        // Now select None.
+        fireEvent.press(screen.getByTestId("tentacles-none-button"));
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-answer")).toHaveTextContent(
+                "negative",
+            );
+            expect(screen.getByTestId("probe-selected-name")).toHaveTextContent(
+                "none",
+            );
+        });
+    });
+
+    it("selecting a POI after None clears None", async () => {
+        const q = makeQuestion({
+            candidates: [
+                {
+                    lat: 35.71,
+                    lon: 139.77,
+                    name: "Tokyo Museum",
+                    osmId: 1,
+                    osmType: "node",
+                    tags: { tourism: "museum" },
+                    distanceMeters: 800,
+                },
+            ],
+        });
+        const screen = renderWithProvider(q);
+
+        // Select None first.
+        await waitFor(() => {
+            expect(screen.getByTestId("tentacles-none-button")).toBeTruthy();
+        });
+        fireEvent.press(screen.getByTestId("tentacles-none-button"));
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-answer")).toHaveTextContent(
+                "negative",
+            );
+        });
+
+        // Now select a POI.
+        fireEvent.press(screen.getByTestId("tentacles-candidate-1"));
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-answer")).toHaveTextContent(
+                "positive",
+            );
+            expect(screen.getByTestId("probe-selected-name")).toHaveTextContent(
+                "Tokyo Museum",
+            );
+        });
+    });
+
+    it("reset clears both POI selection and None", async () => {
+        const q = makeQuestion({
+            answer: "negative",
+            candidates: [
+                {
+                    lat: 35.71,
+                    lon: 139.77,
+                    name: "Tokyo Museum",
+                    osmId: 1,
+                    osmType: "node",
+                    tags: { tourism: "museum" },
+                    distanceMeters: 800,
+                },
+            ],
+        });
+        const screen = renderWithProvider(q);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("tentacles-reset-answer")).toBeTruthy();
+        });
+
+        fireEvent.press(screen.getByTestId("tentacles-reset-answer"));
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-answer")).toHaveTextContent(
+                "unanswered",
+            );
+        });
+    });
 });
