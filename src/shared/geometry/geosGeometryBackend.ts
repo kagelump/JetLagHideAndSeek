@@ -40,6 +40,10 @@ import {
 
 // ─── Overlay helpers (G5) ─────────────────────────────────────────────────
 
+type GeosOutcome =
+    | { status: "native"; feature: Feature<Polygon | MultiPolygon> | null }
+    | { status: "fallback" };
+
 /**
  * Shared encode → call native → decode pipeline for binary overlay ops.
  *
@@ -53,10 +57,11 @@ function binaryGeosOp(
     a: Feature<Polygon | MultiPolygon>,
     b: Feature<Polygon | MultiPolygon>,
     nativeFn: (wkbA: Uint8Array, wkbB: Uint8Array) => Uint8Array | null,
-): Feature<Polygon | MultiPolygon> | null {
+): GeosOutcome {
     const geomA = a.geometry;
     const geomB = b.geometry;
-    if (!geomA || !geomB) return null;
+    // can't do topology on null geometries — fall back to JS to match its behavior
+    if (!geomA || !geomB) return { status: "fallback" };
 
     const tEncode0 = __DEV__ ? performance.now() : 0;
 
@@ -78,7 +83,7 @@ function binaryGeosOp(
 
     // nativeFn returns null when the op is missing from the native binary
     // (W2e per-op guard) — fall back to JS in that case too.
-    if (!resultWkb) return null;
+    if (!resultWkb) return { status: "fallback" };
 
     // Decode result WKB.
     const tDecode0 = __DEV__ ? performance.now() : 0;
@@ -94,12 +99,16 @@ function binaryGeosOp(
         );
     }
 
-    if (!decoded) return null; // empty result (e.g. disjoint intersection)
+    // empty result (e.g. disjoint intersection)
+    if (!decoded) return { status: "native", feature: null };
 
     return {
-        type: "Feature",
-        properties: {},
-        geometry: decoded,
+        status: "native",
+        feature: {
+            type: "Feature",
+            properties: {},
+            geometry: decoded,
+        },
     };
 }
 
@@ -365,22 +374,21 @@ export const geosGeometryBackend: GeometryBackend = {
                 return jsGeometryBackend.difference(a, b);
             }
 
-            const result = binaryGeosOp(a, b, differenceWKB);
-            // binaryGeosOp returns null when native returns null — that means
-            // empty result (a wholly inside b), not an error. Fall through
-            // to JS only on exception (catch block below).
-            if (result) {
+            const outcome = binaryGeosOp(a, b, differenceWKB);
+            // Native ran: trust the result, including an empty one (a wholly
+            // inside b). Only the "fallback" status means native couldn't run.
+            if (outcome.status === "native") {
                 const ms = performance.now() - t0;
                 console.log(
-                    `[geos] difference ${a.geometry.type} vs ${b.geometry.type} → ${result.geometry.type} in ${ms.toFixed(0)}ms`,
+                    `[geos] difference ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                 );
-                return result;
+                return outcome.feature;
             }
-            // Native returned null (empty result) — try JS fallback.
+            // Native unavailable — try JS fallback.
             const jsResult = jsGeometryBackend.difference(a, b);
             const ms = performance.now() - t0;
             console.log(
-                `[geos] difference → native null, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                `[geos] difference → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
             );
             return jsResult;
         } catch (err) {
@@ -404,18 +412,18 @@ export const geosGeometryBackend: GeometryBackend = {
                 return jsGeometryBackend.union(a, b);
             }
 
-            const result = binaryGeosOp(a, b, unionWKB);
-            if (result) {
+            const outcome = binaryGeosOp(a, b, unionWKB);
+            if (outcome.status === "native") {
                 const ms = performance.now() - t0;
                 console.log(
-                    `[geos] union ${a.geometry.type} vs ${b.geometry.type} → ${result.geometry.type} in ${ms.toFixed(0)}ms`,
+                    `[geos] union ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                 );
-                return result;
+                return outcome.feature;
             }
             const jsResult = jsGeometryBackend.union(a, b);
             const ms = performance.now() - t0;
             console.log(
-                `[geos] union → native null, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                `[geos] union → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
             );
             return jsResult;
         } catch (err) {
@@ -442,18 +450,18 @@ export const geosGeometryBackend: GeometryBackend = {
                 return jsGeometryBackend.intersection(a, b);
             }
 
-            const result = binaryGeosOp(a, b, intersectionWKB);
-            if (result) {
+            const outcome = binaryGeosOp(a, b, intersectionWKB);
+            if (outcome.status === "native") {
                 const ms = performance.now() - t0;
                 console.log(
-                    `[geos] intersection ${a.geometry.type} vs ${b.geometry.type} → ${result.geometry.type} in ${ms.toFixed(0)}ms`,
+                    `[geos] intersection ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                 );
-                return result;
+                return outcome.feature;
             }
             const jsResult = jsGeometryBackend.intersection(a, b);
             const ms = performance.now() - t0;
             console.log(
-                `[geos] intersection → native null, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                `[geos] intersection → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
             );
             return jsResult;
         } catch (err) {
