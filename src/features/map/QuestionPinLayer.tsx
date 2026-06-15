@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { FeatureCollection, Point } from "geojson";
 
 import questionPinImage from "../../../assets/map/question-pin.png";
+import questionPinStartImage from "../../../assets/map/question-pin-start.png";
 
 import type { MapPin } from "./getQuestionPins";
 import type { PinDragState } from "./usePinDrag";
@@ -11,6 +12,15 @@ import {
     MLShapeSource,
     MLSymbolLayer,
 } from "./mapLibrePrimitives";
+
+/** Pin color for each variant, used by the glow circle. */
+const PIN_COLORS: Record<string, string> = {
+    center: "#e46f4d",
+    start: "#4a90d9",
+    end: "#e46f4d",
+};
+
+const DEFAULT_PIN_COLOR = "#e46f4d";
 
 type QuestionPinLayerProps = {
     canMove: boolean;
@@ -26,7 +36,10 @@ export function QuestionPinLayer({
     pinDrag,
 }: QuestionPinLayerProps) {
     const questionPinImages = useMemo(
-        () => ({ "question-pin": questionPinImage }),
+        () => ({
+            "question-pin": questionPinImage,
+            "question-pin-start": questionPinStartImage,
+        }),
         [],
     );
     const { isDragging, draggedPinKey, draftCoordinate } = pinDrag;
@@ -47,6 +60,7 @@ export function QuestionPinLayer({
                     properties: {
                         pinKey: pin.key,
                         isDragging: isPinDragging,
+                        pinColor: PIN_COLORS[pin.key] ?? DEFAULT_PIN_COLOR,
                     },
                 };
             }),
@@ -62,7 +76,11 @@ export function QuestionPinLayer({
                     id="question-pin-glow-base"
                     style={{
                         circleBlur: 0.75,
-                        circleColor: "#e46f4d",
+                        circleColor: [
+                            "to-color",
+                            ["get", "pinColor"],
+                            DEFAULT_PIN_COLOR,
+                        ],
                         circleOpacity: canMove ? 0.3 : 0.15,
                         circleRadius: 24,
                         circleTranslate: [0, -31],
@@ -85,7 +103,13 @@ export function QuestionPinLayer({
                         iconAllowOverlap: true,
                         iconAnchor: "bottom",
                         iconIgnorePlacement: true,
-                        iconImage: "question-pin",
+                        iconImage: [
+                            "match",
+                            ["get", "pinKey"],
+                            "start",
+                            "question-pin-start",
+                            "question-pin",
+                        ],
                         iconSize: 0.42,
                     }}
                 />

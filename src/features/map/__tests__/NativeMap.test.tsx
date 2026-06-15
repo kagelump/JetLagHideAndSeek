@@ -499,12 +499,22 @@ describe("NativeMap", () => {
             .getAllByTestId("map-images")
             .find((l) => l.props.images["question-pin"]);
         expect(images).toBeTruthy();
+        const startImages = screen
+            .getAllByTestId("map-images")
+            .find((l) => l.props.images["question-pin-start"]);
+        expect(startImages).toBeTruthy();
 
         const iconLayer = screen
             .getAllByTestId("map-symbol-layer")
             .find((l) => l.props.id === "question-pin-icon");
         expect(iconLayer).toBeTruthy();
-        expect(iconLayer?.props.style.iconImage).toBe("question-pin");
+        expect(iconLayer?.props.style.iconImage).toEqual([
+            "match",
+            ["get", "pinKey"],
+            "start",
+            "question-pin-start",
+            "question-pin",
+        ]);
     });
 
     it("renders the active pin for transit line questions", async () => {

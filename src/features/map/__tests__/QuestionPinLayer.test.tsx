@@ -102,7 +102,12 @@ describe("QuestionPinLayer", () => {
             .getAllByTestId("map-circle-layer")
             .find((l) => l.props.id === "question-pin-glow-base");
         expect(baseGlow).toBeTruthy();
-        expect(baseGlow?.props.style.circleColor).toBe("#e46f4d");
+        // Data-driven color: uses MapLibre expression
+        expect(baseGlow?.props.style.circleColor).toEqual([
+            "to-color",
+            ["get", "pinColor"],
+            "#e46f4d",
+        ]);
         expect(baseGlow?.props.style.circleRadius).toBe(24);
 
         const dragGlow = screen
@@ -112,6 +117,20 @@ describe("QuestionPinLayer", () => {
         expect(dragGlow?.props.style.circleColor).toBe("#ffffff");
         expect(dragGlow?.props.style.circleRadius).toBe(60);
         expect(dragGlow?.props.filter).toEqual(["==", "isDragging", true]);
+    });
+
+    it("uses blue glow color for thermometer start pin", () => {
+        const screen = render(
+            <QuestionPinLayer
+                canMove={true}
+                pins={[{ key: "start", position: [139.7, 35.66] }]}
+                pinDrag={mockPinDrag}
+            />,
+        );
+        const source = screen.getByTestId("map-shape-source");
+        expect(source.props.shape.features[0].properties.pinColor).toBe(
+            "#4a90d9",
+        );
     });
 
     it("reduces glow opacity when canMove is false", () => {
@@ -145,6 +164,13 @@ describe("QuestionPinLayer", () => {
             .getAllByTestId("map-symbol-layer")
             .find((l) => l.props.id === "question-pin-icon");
         expect(iconLayer).toBeTruthy();
-        expect(iconLayer?.props.style.iconImage).toBe("question-pin");
+        // Data-driven icon: uses MapLibre match expression
+        expect(iconLayer?.props.style.iconImage).toEqual([
+            "match",
+            ["get", "pinKey"],
+            "start",
+            "question-pin-start",
+            "question-pin",
+        ]);
     });
 });
