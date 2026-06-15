@@ -28,7 +28,8 @@
         "plugins": [
             "expo-router",
             "@maplibre/maplibre-react-native",
-            "expo-splash-screen"
+            "expo-splash-screen",
+            "@react-native-community/datetimepicker"
         ],
         "splash": {
             "image": "./assets/splash.png",
