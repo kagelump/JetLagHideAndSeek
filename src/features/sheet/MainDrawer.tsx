@@ -10,11 +10,16 @@ import {
     ActivityIndicator,
     BackHandler,
     Dimensions,
+    Modal,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+import DateTimePicker, {
+    type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
     runOnJS,
@@ -371,231 +376,278 @@ function MainSheetContent({
 
     const elapsedMs = seekingStartedAt !== null ? now - seekingStartedAt : null;
 
-    const handleStartSeeking = useCallback(() => {
-        setSeekingStartedAt(Date.now());
-    }, [setSeekingStartedAt]);
+    // Seek time modal state
+    const [showSeekTimeModal, setShowSeekTimeModal] = useState(false);
+    const [seekTimeDraft, setSeekTimeDraft] = useState(() => {
+        // Default to the current seeking start time, or now
+        if (seekingStartedAt !== null) {
+            return new Date(seekingStartedAt);
+        }
+        const now = new Date();
+        now.setMinutes(0, 0, 0);
+        return now;
+    });
+
+    const handleOpenSeekTime = useCallback(() => {
+        const base =
+            seekingStartedAt !== null ? new Date(seekingStartedAt) : new Date();
+        setSeekTimeDraft(base);
+        setShowSeekTimeModal(true);
+    }, [seekingStartedAt]);
+
+    const handleSetSeekTime = useCallback(() => {
+        setSeekingStartedAt(seekTimeDraft.getTime());
+        setShowSeekTimeModal(false);
+    }, [seekTimeDraft, setSeekingStartedAt]);
 
     return (
-        <View style={styles.container}>
-            <View style={styles.hudContent}>
-                {showFirstRun ? (
-                    <>
-                        <View style={styles.firstRunContent}>
-                            <View>
-                                <Text style={styles.eyebrow}>
-                                    Hide & Seek Mapper
-                                </Text>
-                                <Text style={styles.title}>
-                                    Set up your game
-                                </Text>
-                                <Text style={styles.description}>
-                                    You{"'"}re the seeker. Ask the hider
-                                    questions, record their answers, and watch
-                                    the map narrow down where they can be.
-                                </Text>
-                            </View>
-                            <View style={styles.firstRunActions}>
-                                <Pressable
-                                    accessibilityLabel="Set up a game"
-                                    accessibilityRole="button"
-                                    onPress={() =>
-                                        onNavigate(
-                                            isPlayAreaSet(playArea)
-                                                ? "hiding-zone"
-                                                : "play-area",
-                                        )
-                                    }
-                                    style={({ pressed }) => [
-                                        styles.primaryButton,
-                                        pressed ? styles.actionPressed : null,
-                                    ]}
-                                    testID="main-setup-game"
-                                >
-                                    <Text style={styles.primaryButtonText}>
-                                        Set up a game
+        <>
+            <View style={styles.container}>
+                <View style={styles.hudContent}>
+                    {showFirstRun ? (
+                        <>
+                            <View style={styles.firstRunContent}>
+                                <View>
+                                    <Text style={styles.eyebrow}>
+                                        Hide & Seek Mapper
                                     </Text>
-                                </Pressable>
-                                <Pressable
-                                    accessibilityLabel="Join a game"
-                                    accessibilityRole="button"
-                                    onPress={() => onNavigate("settings")}
-                                    style={({ pressed }) => [
-                                        styles.subtleButton,
-                                        pressed ? styles.actionPressed : null,
-                                    ]}
-                                    testID="main-join-game"
-                                >
-                                    <Text style={styles.subtleButtonText}>
-                                        Join a game
+                                    <Text style={styles.title}>
+                                        Set up your game
                                     </Text>
-                                </Pressable>
-                            </View>
-                            <Text style={styles.exploreHint}>
-                                …or just explore the map.
-                            </Text>
-                        </View>
-                        <View style={styles.navRows}>
-                            <DrawerAction
-                                title="Questions"
-                                description=""
-                                isActive={false}
-                                onPress={() => onNavigate("questions")}
-                                testID="main-questions-row"
-                            />
-                            <DrawerAction
-                                title="Settings"
-                                description=""
-                                isActive={false}
-                                onPress={() => onNavigate("settings")}
-                                testID="main-settings-row"
-                            />
-                        </View>
-                    </>
-                ) : (
-                    <>
-                        <View style={styles.hudHeader}>
-                            <View>
-                                <Text style={styles.eyebrow}>Current game</Text>
-                                <Text style={styles.title}>
-                                    {playArea.label}
-                                </Text>
-                            </View>
-                            <Pressable
-                                accessibilityLabel={`Switch to ${gameMode === "hider" ? "seeker" : "hider"} mode`}
-                                accessibilityRole="button"
-                                onPress={() =>
-                                    setGameMode(
-                                        gameMode === "hider"
-                                            ? "seeker"
-                                            : "hider",
-                                    )
-                                }
-                                style={({ pressed }) => [
-                                    styles.modeChip,
-                                    pressed ? styles.actionPressed : null,
-                                ]}
-                                testID="main-mode-chip"
-                            >
-                                <Text style={styles.modeChipText}>
-                                    {gameMode === "hider" ? "Hider" : "Seeker"}
-                                </Text>
-                            </Pressable>
-                        </View>
-
-                        <View style={styles.statCard}>
-                            <View style={styles.statItem}>
-                                {elapsedMs !== null ? (
-                                    <Text style={styles.statNumber}>
-                                        {formatElapsed(elapsedMs)}
+                                    <Text style={styles.description}>
+                                        You{"'"}re the seeker. Ask the hider
+                                        questions, record their answers, and
+                                        watch the map narrow down where they can
+                                        be.
                                     </Text>
-                                ) : (
+                                </View>
+                                <View style={styles.firstRunActions}>
                                     <Pressable
-                                        accessibilityLabel="Set seeking start time"
+                                        accessibilityLabel="Set up a game"
                                         accessibilityRole="button"
-                                        onPress={handleStartSeeking}
+                                        onPress={() =>
+                                            onNavigate(
+                                                isPlayAreaSet(playArea)
+                                                    ? "hiding-zone"
+                                                    : "play-area",
+                                            )
+                                        }
                                         style={({ pressed }) => [
-                                            styles.naAffordance,
+                                            styles.primaryButton,
                                             pressed
                                                 ? styles.actionPressed
                                                 : null,
                                         ]}
-                                        testID="main-start-seeking"
+                                        testID="main-setup-game"
                                     >
-                                        <Text style={styles.naText}>N/A</Text>
-                                        <Text style={styles.naHint}>
-                                            Tap to start
+                                        <Text style={styles.primaryButtonText}>
+                                            Set up a game
                                         </Text>
                                     </Pressable>
-                                )}
-                                <Text style={styles.statLabel}>Hide time</Text>
+                                    <Pressable
+                                        accessibilityLabel="Join a game"
+                                        accessibilityRole="button"
+                                        onPress={() => onNavigate("settings")}
+                                        style={({ pressed }) => [
+                                            styles.subtleButton,
+                                            pressed
+                                                ? styles.actionPressed
+                                                : null,
+                                        ]}
+                                        testID="main-join-game"
+                                    >
+                                        <Text style={styles.subtleButtonText}>
+                                            Join a game
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                                <Text style={styles.exploreHint}>
+                                    …or just explore the map.
+                                </Text>
                             </View>
-                            <Pressable
-                                accessibilityLabel="Stations remaining"
-                                accessibilityRole="button"
-                                onPress={() => onNavigate("station-detail")}
-                                style={({ pressed }) => [
-                                    styles.statItem,
-                                    pressed ? styles.actionPressed : null,
-                                ]}
-                                testID="main-stations-remaining"
-                            >
-                                {isComputing ? (
-                                    <ActivityIndicator
-                                        color={colors.tint}
-                                        style={styles.statSpinner}
-                                    />
-                                ) : (
-                                    <Text style={styles.statNumber}>
-                                        {remainingCount}
+                            <View style={styles.navRows}>
+                                <DrawerAction
+                                    title="Questions"
+                                    description=""
+                                    isActive={false}
+                                    onPress={() => onNavigate("questions")}
+                                    testID="main-questions-row"
+                                />
+                                <DrawerAction
+                                    title="Settings"
+                                    description=""
+                                    isActive={false}
+                                    onPress={() => onNavigate("settings")}
+                                    testID="main-settings-row"
+                                />
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            <View style={styles.hudHeader}>
+                                <View>
+                                    <Text style={styles.eyebrow}>
+                                        Current game
                                     </Text>
-                                )}
-                                <Text style={styles.statLabel}>
-                                    Stations remaining
-                                </Text>
-                            </Pressable>
-                            <View style={styles.statItem}>
-                                <Text style={styles.statNumber}>
-                                    {eliminationPct !== null
-                                        ? `${eliminationPct}%`
-                                        : "—"}
-                                </Text>
-                                <Text style={styles.statLabel}>Eliminated</Text>
+                                    <Text style={styles.title}>
+                                        {playArea.label}
+                                    </Text>
+                                </View>
+                                <Pressable
+                                    accessibilityLabel={`Switch to ${gameMode === "hider" ? "seeker" : "hider"} mode`}
+                                    accessibilityRole="button"
+                                    onPress={() =>
+                                        setGameMode(
+                                            gameMode === "hider"
+                                                ? "seeker"
+                                                : "hider",
+                                        )
+                                    }
+                                    style={({ pressed }) => [
+                                        styles.modeChip,
+                                        pressed ? styles.actionPressed : null,
+                                    ]}
+                                    testID="main-mode-chip"
+                                >
+                                    <Text style={styles.modeChipText}>
+                                        {gameMode === "hider"
+                                            ? "Hider"
+                                            : "Seeker"}
+                                    </Text>
+                                </Pressable>
                             </View>
-                        </View>
 
-                        <Pressable
-                            accessibilityLabel="Add question"
-                            accessibilityRole="button"
-                            onPress={() => onNavigate("add-question")}
-                            style={({ pressed }) => [
-                                styles.primaryButton,
-                                pressed ? styles.actionPressed : null,
-                            ]}
-                            testID="main-add-question"
-                        >
-                            <Text style={styles.primaryButtonText}>
-                                + Add Question
-                            </Text>
-                        </Pressable>
+                            <View style={styles.statCard}>
+                                <Pressable
+                                    accessibilityLabel={
+                                        elapsedMs !== null
+                                            ? "Seek time"
+                                            : "Set seeking start time"
+                                    }
+                                    accessibilityRole="button"
+                                    onPress={handleOpenSeekTime}
+                                    style={({ pressed }) => [
+                                        styles.statItem,
+                                        pressed ? styles.actionPressed : null,
+                                    ]}
+                                    testID="main-seek-time"
+                                >
+                                    {elapsedMs !== null ? (
+                                        <Text style={styles.statNumber}>
+                                            {formatElapsed(elapsedMs)}
+                                        </Text>
+                                    ) : (
+                                        <>
+                                            <Text style={styles.naText}>
+                                                N/A
+                                            </Text>
+                                            <Text style={styles.naHint}>
+                                                Tap to start
+                                            </Text>
+                                        </>
+                                    )}
+                                    <Text style={styles.statLabel}>
+                                        Seek time
+                                    </Text>
+                                </Pressable>
+                                <Pressable
+                                    accessibilityLabel="Stations remaining"
+                                    accessibilityRole="button"
+                                    onPress={() => onNavigate("station-detail")}
+                                    style={({ pressed }) => [
+                                        styles.statItem,
+                                        pressed ? styles.actionPressed : null,
+                                    ]}
+                                    testID="main-stations-remaining"
+                                >
+                                    {isComputing ? (
+                                        <ActivityIndicator
+                                            color={colors.tint}
+                                            style={styles.statSpinner}
+                                        />
+                                    ) : (
+                                        <Text style={styles.statNumber}>
+                                            {remainingCount}
+                                        </Text>
+                                    )}
+                                    <Text style={styles.statLabel}>
+                                        Stations remaining
+                                    </Text>
+                                </Pressable>
+                                <View style={styles.statItem}>
+                                    <Text style={styles.statNumber}>
+                                        {eliminationPct !== null
+                                            ? `${eliminationPct}%`
+                                            : "—"}
+                                    </Text>
+                                    <Text style={styles.statLabel}>
+                                        Eliminated
+                                    </Text>
+                                </View>
+                            </View>
 
-                        <View style={styles.navRows}>
-                            <DrawerAction
-                                title="Questions"
-                                description={`${questionIds.length} asked · tap to review`}
-                                isActive={false}
-                                onPress={() => onNavigate("questions")}
-                                testID="main-questions-row"
-                            />
-                            <DrawerAction
-                                title="Settings"
-                                description="Play area, hiding zones, sharing"
-                                isActive={false}
-                                onPress={() => onNavigate("settings")}
-                                testID="main-settings-row"
-                            />
-                        </View>
-
-                        {selectedPresetIds.length === 0 ? (
                             <Pressable
-                                accessibilityLabel="Finish setting up your game"
+                                accessibilityLabel="Add question"
                                 accessibilityRole="button"
-                                onPress={() => onNavigate("settings")}
+                                onPress={() => onNavigate("add-question")}
                                 style={({ pressed }) => [
-                                    styles.nudge,
+                                    styles.primaryButton,
                                     pressed ? styles.actionPressed : null,
                                 ]}
-                                testID="main-setup-nudge"
+                                testID="main-add-question"
                             >
-                                <View style={styles.nudgeDot} />
-                                <Text style={styles.nudgeText}>
-                                    Setup · pick hiding zones to start
+                                <Text style={styles.primaryButtonText}>
+                                    + Add Question
                                 </Text>
                             </Pressable>
-                        ) : null}
-                    </>
-                )}
+
+                            <View style={styles.navRows}>
+                                <DrawerAction
+                                    title="Questions"
+                                    description={`${questionIds.length} asked · tap to review`}
+                                    isActive={false}
+                                    onPress={() => onNavigate("questions")}
+                                    testID="main-questions-row"
+                                />
+                                <DrawerAction
+                                    title="Settings"
+                                    description="Play area, hiding zones, sharing"
+                                    isActive={false}
+                                    onPress={() => onNavigate("settings")}
+                                    testID="main-settings-row"
+                                />
+                            </View>
+
+                            {selectedPresetIds.length === 0 ? (
+                                <Pressable
+                                    accessibilityLabel="Finish setting up your game"
+                                    accessibilityRole="button"
+                                    onPress={() => onNavigate("settings")}
+                                    style={({ pressed }) => [
+                                        styles.nudge,
+                                        pressed ? styles.actionPressed : null,
+                                    ]}
+                                    testID="main-setup-nudge"
+                                >
+                                    <View style={styles.nudgeDot} />
+                                    <Text style={styles.nudgeText}>
+                                        Setup · pick hiding zones to start
+                                    </Text>
+                                </Pressable>
+                            ) : null}
+                        </>
+                    )}
+                </View>
             </View>
-        </View>
+            {showSeekTimeModal ? (
+                <SeekTimeModal
+                    draft={seekTimeDraft}
+                    onCancel={() => setShowSeekTimeModal(false)}
+                    onChange={setSeekTimeDraft}
+                    onSet={handleSetSeekTime}
+                />
+            ) : null}
+        </>
     );
 }
 
@@ -603,7 +655,80 @@ function formatElapsed(ms: number): string {
     const totalMinutes = Math.floor(ms / 60_000);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    return `${hours}:${String(minutes).padStart(2, "0")}hr`;
+    if (hours < 1) {
+        return `${minutes} min`;
+    }
+    return `${hours}:${String(minutes).padStart(2, "0")} hr`;
+}
+
+type SeekTimeModalProps = {
+    draft: Date;
+    onCancel: () => void;
+    onChange: (d: Date) => void;
+    onSet: () => void;
+};
+
+function SeekTimeModal({
+    draft,
+    onCancel,
+    onChange,
+    onSet,
+}: SeekTimeModalProps) {
+    const handleChange = useCallback(
+        (_event: DateTimePickerEvent, date?: Date) => {
+            if (date) onChange(date);
+        },
+        [onChange],
+    );
+
+    return (
+        <Modal
+            animationType="slide"
+            onRequestClose={onCancel}
+            transparent
+            visible
+        >
+            <Pressable onPress={onCancel} style={styles.modalBackdrop}>
+                <Pressable style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Pressable
+                            accessibilityLabel="Cancel"
+                            accessibilityRole="button"
+                            hitSlop={12}
+                            onPress={onCancel}
+                            style={styles.modalCancelButton}
+                        >
+                            <Text style={styles.modalCancelText}>Cancel</Text>
+                        </Pressable>
+                        <Text style={styles.modalHeaderTitle}>
+                            Seeking start time
+                        </Text>
+                        <Pressable
+                            accessibilityLabel="Set time"
+                            accessibilityRole="button"
+                            hitSlop={12}
+                            onPress={onSet}
+                            style={styles.modalDoneButton}
+                            testID="seek-time-modal-set"
+                        >
+                            <Text style={styles.modalDoneText}>Set</Text>
+                        </Pressable>
+                    </View>
+                    <View style={styles.timePickerBody}>
+                        <DateTimePicker
+                            display={
+                                Platform.OS === "ios" ? "spinner" : "default"
+                            }
+                            is24Hour
+                            mode="time"
+                            onChange={handleChange}
+                            value={draft}
+                        />
+                    </View>
+                </Pressable>
+            </Pressable>
+        </Modal>
+    );
 }
 
 function ChildSheetShell({
@@ -992,5 +1117,53 @@ const styles = StyleSheet.create({
         color: colors.muted,
         fontSize: 28,
         lineHeight: 28,
+    },
+    // Seek time modal
+    modalBackdrop: {
+        backgroundColor: "rgba(0,0,0,0.4)",
+        flex: 1,
+        justifyContent: "flex-end",
+    },
+    modalCancelButton: {
+        minWidth: 72,
+    },
+    modalCancelText: {
+        color: colors.muted,
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    modalContainer: {
+        backgroundColor: colors.background,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        paddingBottom: 40,
+    },
+    modalDoneButton: {
+        alignItems: "flex-end",
+        minWidth: 72,
+    },
+    modalDoneText: {
+        color: colors.tint,
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    modalHeader: {
+        alignItems: "center",
+        borderBottomColor: colors.border,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    modalHeaderTitle: {
+        color: colors.ink,
+        fontSize: 18,
+        fontWeight: "800",
+    },
+    timePickerBody: {
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingVertical: 12,
     },
 });
