@@ -17,11 +17,11 @@ audited for their own quality.
 
 ## Cross-cutting metrics (non-test `src/`)
 
-| Signal | Count | Read |
-| --- | --- | --- |
-| `console.*` calls in production paths | **143** | Many in geometry/question hot paths, not `__DEV__`-gated |
-| `as any` / `as unknown as` / `@ts-ignore` | **53** | Concentrated at geometry + wire-codec boundaries |
-| Source files > 600 lines (non-test) | **9** | Listed below; 4 are > 850 lines |
+| Signal                                    | Count   | Read                                                     |
+| ----------------------------------------- | ------- | -------------------------------------------------------- |
+| `console.*` calls in production paths     | **143** | Many in geometry/question hot paths, not `__DEV__`-gated |
+| `as any` / `as unknown as` / `@ts-ignore` | **53**  | Concentrated at geometry + wire-codec boundaries         |
+| Source files > 600 lines (non-test)       | **9**   | Listed below; 4 are > 850 lines                          |
 
 Files over 600 lines: `measuring/lineMeasuringGeometry.ts` (1486),
 `measuring/parityHarness.ts` (1404), `sheet/MainDrawer.tsx` (1041),
@@ -33,24 +33,24 @@ Files over 600 lines: `measuring/lineMeasuringGeometry.ts` (1486),
 
 ## Top-line ranking
 
-| # | Finding | Severity | Subsystem |
-| --- | --- | --- | --- |
-| 1 | Question schemas + normalization triplicated across persistence/wire/minified | **Critical** | state / sharing |
-| 2 | Eligibility-mask pipeline duplicated `MainDrawer` ↔ `NativeMap` (polarity-sensitive) | **Critical** | sheet / map |
-| 3 | GEOS op pipeline reimplemented in 4 languages → 3-surface parity tax | **High** | geometry / native |
-| 4 | Hand-maintained 871-line wire codec full of unchecked double-casts | **High** | sharing |
-| 5 | Persistence migrator wipes **all** state on any single validation failure | **High** | state |
-| 6 | `MainDrawer` god module + hand-rolled router/animation state machine | **High** | sheet |
-| 7 | Network-boundary data (catalog/pack payloads) parsed with raw casts, no Zod | **High** | offline / data |
-| 8 | `parityHarness.ts` (1404 lines of test scaffolding) lives in production `src/` | **High** | questions |
-| 9 | `lineMeasuringGeometry.ts` god file (1486 lines) | **High** | questions |
-| 10 | 53 unsafe casts erase type safety at the riskiest (geometry) boundaries | **High** | cross-cutting |
-| 11 | WKB decoder discards correct native results on GeometryCollection output | **Medium** | geometry |
-| 12 | Unconditional `console.*` (143) in geometry/question hot paths | **Medium** | cross-cutting |
-| 13 | Data pipelines (geofabrik/transit/packs) duplicate extraction logic | **Medium** | data |
-| 14 | ABI / version constants hand-synced across 4 files; silent JS degradation | **Medium** | geometry / state |
-| 15 | Cross-store coupling + module-level mutable globals | **Medium** | state |
-| 16 | UI/animation magic numbers bypass `appConfig` + `colors` tokens | **Low–Medium** | UI |
+| #   | Finding                                                                               | Severity       | Subsystem         |
+| --- | ------------------------------------------------------------------------------------- | -------------- | ----------------- |
+| 1   | Question schemas + normalization triplicated across persistence/wire/minified         | **Critical**   | state / sharing   |
+| 2   | Eligibility-mask pipeline duplicated `MainDrawer` ↔ `NativeMap` (polarity-sensitive) | **Critical**   | sheet / map       |
+| 3   | GEOS op pipeline reimplemented in 4 languages → 3-surface parity tax                  | **High**       | geometry / native |
+| 4   | Hand-maintained 871-line wire codec full of unchecked double-casts                    | **High**       | sharing           |
+| 5   | Persistence migrator wipes **all** state on any single validation failure             | **High**       | state             |
+| 6   | `MainDrawer` god module + hand-rolled router/animation state machine                  | **High**       | sheet             |
+| 7   | Network-boundary data (catalog/pack payloads) parsed with raw casts, no Zod           | **High**       | offline / data    |
+| 8   | `parityHarness.ts` (1404 lines of test scaffolding) lives in production `src/`        | **High**       | questions         |
+| 9   | `lineMeasuringGeometry.ts` god file (1486 lines)                                      | **High**       | questions         |
+| 10  | 53 unsafe casts erase type safety at the riskiest (geometry) boundaries               | **High**       | cross-cutting     |
+| 11  | WKB decoder discards correct native results on GeometryCollection output              | **Medium**     | geometry          |
+| 12  | Unconditional `console.*` (143) in geometry/question hot paths                        | **Medium**     | cross-cutting     |
+| 13  | Data pipelines (geofabrik/transit/packs) duplicate extraction logic                   | **Medium**     | data              |
+| 14  | ABI / version constants hand-synced across 4 files; silent JS degradation             | **Medium**     | geometry / state  |
+| 15  | Cross-store coupling + module-level mutable globals                                   | **Medium**     | state             |
+| 16  | UI/animation magic numbers bypass `appConfig` + `colors` tokens                       | **Low–Medium** | UI                |
 
 ---
 
@@ -69,7 +69,7 @@ The same two normalizations (legacy-radius rename, re-derive POI `answer` from
 imperative type-guards in `questionStore.tsx:819-872`, Zod `.transform`s in
 `appState.ts:128-150/209-248` and `schema.ts:123-145/204-243`, and manual
 object-building in `minified.ts:707-754`. The repo docs note this invariant has
-*already* caused a mask-polarity bug.
+_already_ caused a mask-polarity bug.
 
 **Impact:** a category added in one schema but forgotten in another silently
 drops questions on reload/import — and combined with finding #5 can wipe the
@@ -78,7 +78,7 @@ user's entire setup. This is the root cause that makes #4 and #5 dangerous.
 **Remediation:** extract shared leaf schemas (enums, candidate, the radius
 transform, a single `derivePoiAnswer` transform) into one module
 (`src/sharing/wire/questionSchemas.ts`) that persistence, wire, and minified all
-derive from. Make the Zod schemas the *only* normalizer; have
+derive from. Make the Zod schemas the _only_ normalizer; have
 `questionStore` import paths run through `appStateQuestionsSchema.parse` and
 delete the bespoke `normalizeQuestionState` + guards (`questionStore.tsx:819-904`).
 
@@ -155,8 +155,8 @@ version handling is split across `codec.ts:48-72`, `minified.ts:235-238`,
 transition state machine (`:78-203`, with `transitionIdRef`/`cleanupTimerRef`
 race guards and a `setTimeout` cleanup that can leave stale state on fast
 double-navigation), the route switch (`:271-341`), the first-run + active-game
-HUD with elimination math (`:343-626`), and geometry helpers — a *navigation
-shell* importing `buildCombinedEligibilityMask` and `geomAreaM2`. The route graph
+HUD with elimination math (`:343-626`), and geometry helpers — a _navigation
+shell_ importing `buildCombinedEligibilityMask` and `geomAreaM2`. The route graph
 has **three** sources of truth that must be hand-synced: the `SheetRouteName`
 union, the `routeDepth` map (`sheetNav.ts:3-15`), and the `getBackTarget` switch.
 
@@ -173,7 +173,7 @@ is by contrast a healthy thin coordinator — leave it.
 installed index, and pack payloads via `JSON.parse(...) as ...`
 (`:127,451,564,778,808,831,859`) — no Zod validation, contrasting sharply with
 the careful schemas everywhere else in the app. The file does correctly verify
-sha256 + MD5 integrity (`:421-447,493,538-552`), so blob *corruption* is caught,
+sha256 + MD5 integrity (`:421-447,493,538-552`), so blob _corruption_ is caught,
 but a **schema-shaped** change in catalog/payload structure flows straight into
 typed code as unchecked `any`-ish data. Empty `catch {}` blocks abound
 (`:128,199,361,428,...`).
@@ -252,9 +252,10 @@ logs station counts on every `getPresetPlayAreaStats` call (invoked from a
 `data/geofabrik/scripts/lib`, `data/transit/scripts/lib`, and
 `data/packs/scripts/lib` each carry overlapping OSM-extraction concerns (line
 stitching / way-stitch, polygon dissolve, operator/name normalization, OSM route
-+ station extraction). `osmRoutes.mjs` (1318) and `extract-measuring-bundles.mjs`
-(1211) are god files; the packs pipeline reportedly mirrors transit. The repo
-already deprecated `data/odpt/` for `data/transit/` — same drift risk here.
+
+- station extraction). `osmRoutes.mjs` (1318) and `extract-measuring-bundles.mjs`
+  (1211) are god files; the packs pipeline reportedly mirrors transit. The repo
+  already deprecated `data/odpt/` for `data/transit/` — same drift risk here.
 
 **Remediation:** factor a shared `data/lib/osm/` (stitching, dissolve,
 normalization, route/station extraction) consumed by all three pipelines; the
@@ -325,15 +326,16 @@ files.
 decoupling, #16 tokens + magic numbers.
 
 ### Healthy areas worth preserving as models
+
 - `MapAppScreen.tsx` (111 lines) — a genuinely thin coordinator.
 - `questionRegistry.ts` / `coreTypes.ts` — a clean, non-leaky type registry.
 - Native memory management — every error path frees its GEOS handles across all
   three native impls (the geometry debt is duplication + silent fallback, not
   leaks).
 - Pack blob integrity — sha256 + MD5 verification is in place (the gap is
-  *schema* validation, not corruption).
+  _schema_ validation, not corruption).
 
 ---
 
-*Generated 2026-06-15. Line references are against the audited revision; re-grep
-before acting on any single citation.*
+_Generated 2026-06-15. Line references are against the audited revision; re-grep
+before acting on any single citation._

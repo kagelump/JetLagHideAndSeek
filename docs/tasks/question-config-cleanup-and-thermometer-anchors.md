@@ -416,7 +416,7 @@ guarantees the sheet label and the shared string always agree.
       while resolving, `No station nearby` when none within 2 km.
 - [ ] Moving a pin clears its stale station label, then re-resolves.
 - [ ] Share prompt for a fully-placed thermometer reads `"I went {distance} from
-  {start} to {end} — am I hotter or colder?"`, degrading to coords-only and
+{start} to {end} — am I hotter or colder?"`, degrading to coords-only and
       then to the static line.
 - [ ] New question-state fields persist (appState) and round-trip (wire) with
       `null` defaults; old payloads still parse.
