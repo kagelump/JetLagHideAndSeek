@@ -662,3 +662,54 @@ helper.
 When adding a new sheet route, ask: "Can the user complete the primary action
 at 42%?" If not, push secondary options into drill-ins rather than defaulting
 to 88%.
+
+## Map POI callouts / info bubbles (2026-06-15)
+
+Interactive map callouts (tap a POI → name bubble) are rendered as a
+**screen-space React Native overlay over the map, not a MapLibre annotation.**
+
+Do **not** use `MarkerView`/`PointAnnotation` for this. On iOS `MarkerView`
+collapses to `PointAnnotation`, a UIView-backed annotation that positions itself
+by measuring its React child's frame against the native add/remove cycle. That
+design is the root of three separate failures we hit:
+
+- **Top-left flash.** When the annotation is (re)added it paints at the origin
+  for a frame before the frame/centerOffset settle. `MLRNPointAnnotation.m`
+  even has a comment about this; `_setCenterOffset:` early-returns on a 0×0
+  frame and `setMap:` skips adding until the frame is set. A 0×0 child (e.g. a
+  hidden placeholder) re-triggers it.
+- **Anchoring quirks.** Default anchor is the view center, so the bubble sits
+  _on_ the POI rather than above it.
+- **Nil-subview crash.** Conditionally mounting/unmounting it among MapView
+  children reorders native subviews by index and crashes in
+  `-[MLRNMapView insertReactSubview:atIndex:]`.
+
+The robust pattern (shipped):
+
+- `useMapCallout` owns one callout `{ coordinate, id, title }`. Any layer's
+  `ShapeSource` `onPress` feeds `showCalloutFromPress` — it's generalized, not
+  per-question. Background taps (`handleMapPress`) call `dismissCallout`.
+- `NativeMap` projects `callout.coordinate` to a pixel point via the map ref's
+  `getPointInView` (async over the bridge) and stores it in state. It clears the
+  point on `callout.id` change so a new callout never paints at the previous
+  POI's stale point.
+- **Hide while moving, snap on settle.** A JS-positioned overlay can't track a
+  native 60fps gesture without visibly lagging — each reprojection is an async
+  `getPointInView` round-trip, so a bubble dragged along behind the map looks
+  broken. Instead, `onRegionWillChange` sets an `isCameraMoving` flag that hides
+  the bubble (`point={null}`), and `onRegionDidChange` clears it and reprojects,
+  snapping the bubble back onto the POI. `regionDidChangeDebounceTime={60}`
+  re-shows it promptly instead of the default 500ms.
+- `MapPoiCallout` is a plain absolutely-positioned `View` rendered as a sibling
+  of `MapView` (after `MapControls`), measured via `onLayout` and offset by
+  half-width / full-height + a gap so the tail tip lands above the POI. It
+  renders at `opacity: 0` until measured to avoid a one-frame jump.
+
+Known trade-offs: the bubble disappears during an active pan/zoom and reappears
+when the map settles (the deliberate alternative to a visibly lagging bubble);
+and there's no flip-below logic for a POI near the very top edge yet.
+
+Regression guards live in `NativeMap.test.tsx` ("nil-subview crash regression"):
+no `: null}` and no `&&`-conditional rendering of native children in any map
+layer file, and no dynamic `key` on `ML*` primitives. The `&&` check was added
+after the callout crash slipped past the `: null}`-only check.

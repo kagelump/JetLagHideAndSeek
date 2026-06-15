@@ -562,16 +562,19 @@ describe("nil-subview crash regression", () => {
 
     const mapDir = resolve(process.cwd(), "src", "features", "map");
 
-    it("contains no : null} conditional child in any map layer file", () => {
-        // A `: null}` on a JSX line inside the MapView tree indicates a
-        // conditional mount/unmount of a native child — the exact pattern that
-        // triggers the nil-subview crash in
-        // -[MLRNMapView insertReactSubview:atIndex:].
-        // The invariant is: never conditionally mount/unmount a native child of
-        // MLMapView. Keep every child permanently mounted and toggle it via an
-        // empty FeatureCollection shape or a visible flag. Scan every layer
-        // file, not just NativeMap — the bisector crash lived in
-        // ThermometerPreviewLayer.tsx and slipped past a NativeMap-only check.
+    it("contains no conditionally-mounted child in any map layer file", () => {
+        // Conditionally mounting/unmounting a native child of MLMapView is the
+        // exact pattern that triggers the nil-subview crash in
+        // -[MLRNMapView insertReactSubview:atIndex:]. Two JSX forms express it:
+        //   {cond ? <ML.../> : null}   -> a `: null}` line
+        //   {cond && <ML.../>}          -> a `&& (` / `&& <` line
+        // The `&&` form is what reintroduced the tentacles POI callout crash;
+        // it slipped past a `: null}`-only check. The invariant is: never
+        // conditionally mount/unmount a native child of MLMapView. Keep every
+        // child permanently mounted and toggle it via an empty FeatureCollection
+        // shape, a `visible` flag, or (for overlays) toggled inner content.
+        // Scan every layer file, not just NativeMap — the bisector crash lived
+        // in ThermometerPreviewLayer.tsx and slipped past a NativeMap-only check.
         const tsxFiles = readdirSync(mapDir, { recursive: true }).filter(
             (f: string) => f.endsWith(".tsx") && !f.includes("__tests__"),
         );
@@ -579,7 +582,14 @@ describe("nil-subview crash regression", () => {
         const violations: string[] = [];
         for (const relPath of tsxFiles) {
             const source = readFileSync(join(mapDir, relPath), "utf-8");
-            if (source.includes(": null}")) violations.push(relPath);
+            if (source.includes(": null}")) {
+                violations.push(`${relPath} (: null})`);
+            }
+            // `&&` never appears in these files except as JSX short-circuit
+            // rendering, so any occurrence is a conditional mount.
+            if (/&&\s*[(<]/.test(source)) {
+                violations.push(`${relPath} (&& conditional render)`);
+            }
         }
 
         expect(violations).toEqual([]);

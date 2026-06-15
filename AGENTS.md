@@ -219,6 +219,25 @@ focused feature/store and let the map render derived data.
   but is not the source of truth for geometry.
 - Use bundled fixtures for deterministic tests; mock networked Overpass/Photon
   paths in Jest.
+- **Never conditionally mount/unmount a native child of `MapView`**, and never
+  put a dynamic `key` on an `ML*` primitive. Both reorder native subviews and
+  crash in `-[MLRNMapView insertReactSubview:atIndex:]` (the "nil-subview"
+  path). Keep every layer permanently mounted and toggle it via an empty
+  `FeatureCollection` shape or a `visible` flag. `NativeMap.test.tsx` enforces
+  this (no `: null}`, no `&&`-conditional render, no dynamic ML key in any map
+  layer file).
+- **Interactive map callouts/info bubbles are screen-space RN overlays, not
+  MapLibre annotations.** Do not use `MarkerView`/`PointAnnotation` — on iOS
+  they measure their React child's frame against the native add/remove cycle and
+  cause a top-left flash, anchoring quirks, and the nil-subview crash. The POI
+  callout is generalized: `useMapCallout` holds one callout, any layer's
+  `ShapeSource` `onPress` feeds `showCalloutFromPress`, `NativeMap` projects the
+  coordinate via `getPointInView`, and `MapPoiCallout` renders an
+  absolutely-positioned bubble over the map. A JS-positioned overlay can't track
+  a native gesture without lag, so the bubble hides while the camera moves
+  (`onRegionWillChange`) and snaps back on settle (`onRegionDidChange`) — don't
+  reproject per-frame on `onRegionIsChanging`. See `docs/implementation_notes.md`
+  → "Map POI callouts".
 
 ## Bottom Sheet Rules
 
