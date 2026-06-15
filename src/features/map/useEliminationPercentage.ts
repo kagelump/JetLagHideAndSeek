@@ -53,10 +53,31 @@ export function useEliminationPercentage(): number | null {
             ],
         );
 
+        const playAreaArea = featureCollectionArea(playArea.boundary as any);
         const maskArea = featureCollectionArea(mask);
-        const eliminated = 1 - maskArea / zoneArea;
-        return Math.max(0, Math.min(100, Math.round(eliminated * 100)));
+        return zoneEliminationPercent(playAreaArea, maskArea, zoneArea);
     }, [playArea.boundary, zoneFeatures, questionMapRenderState]);
+}
+
+/**
+ * Convert mask geometry areas into the "% of the hiding zone eliminated" stat.
+ *
+ * `buildCombinedEligibilityMask` returns the INELIGIBLE region of the entire
+ * play area (the grey-out layer), not the eligible region. The eligible area is
+ * always a subset of the hiding zone (the zone is a required constraint), so we
+ * derive it as `playArea − mask`, then express elimination as the fraction of
+ * the zone that is no longer eligible. Result is clamped to [0, 100] and
+ * rounded to a whole percent.
+ */
+export function zoneEliminationPercent(
+    playAreaArea: number,
+    maskArea: number,
+    zoneArea: number,
+): number {
+    if (zoneArea <= 0) return 0;
+    const eligibleArea = Math.max(0, playAreaArea - maskArea);
+    const eliminated = 1 - eligibleArea / zoneArea;
+    return Math.max(0, Math.min(100, Math.round(eliminated * 100)));
 }
 
 function featureCollectionArea(fc: GeoJsonFeatureCollection): number {
