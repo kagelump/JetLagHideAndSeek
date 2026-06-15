@@ -208,6 +208,23 @@ Store thinning ships one arch per device, so the per-device cost is one slice.
   (round cap, round join), single-owner geometry pointer (no double-free).
 - Android (`NativeGeometryModule.kt` + `native-geometry-jni.cpp`): same
   semantics, thread-safe context init (`std::call_once`).
+- **Single-source op core (2026-06-16, audit #3):** the
+  parse→validate→MakeValid→op→write→free pipeline lives once in
+  `modules/native-geometry/ios/geos_ops.{h,cpp}` (`extern "C"`, owns the GEOS
+  context + the MakeValid recovery). It is the canonical file (in `ios/` to
+  match the `GeosCore.swift` convention) symlinked into `Sources/CGEOS/` and
+  `android/src/main/cpp/`, and compiled into all three targets (podspec
+  `source_files`, SwiftPM CGEOS auto-discovery, `CMakeLists.txt`). `GeosCore.swift`
+  and `native-geometry-jni.cpp` are now thin `Data`/`jbyteArray` ⇄ `GeosWkbBuffer`
+  shims that forward to `geos_ops_*`; `GeosBridge.kt`/`NativeGeometryModule.swift`
+  are unchanged. The result buffer is a malloc'd copy (decoupled from the GEOS
+  context) freed via `geos_ops_free`, so callers need no GEOS handle. GEOS
+  notice/error diagnostics route through a settable `geos_ops_set_log` callback
+  (NSLog on iOS, `__android_log` on Android); per-op success logging was dropped
+  (audit #12). Editing the GEOS op semantics now means editing one C++ file +
+  rebuilding the dev client. The wasm oracle (`geosWasmNode.ts`
+  `parseAndValidate`) mirrors the same MakeValid policy so golden fixtures stay
+  faithful to native runtime behavior.
 
 **On-host GEOS parity (geos-wasm):** done. The GEOS buffer math is validated
 against the `@turf/buffer` oracle in Jest — no device required. See the runbook

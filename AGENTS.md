@@ -432,9 +432,18 @@ For **geometry / GEOS backend** changes (`src/shared/geometry/**`,
   `pnpm data:geos-golden` and review the diff. CI runs this as the "GEOS parity"
   step in `app-checks.yml`.
 
-For native GEOS changes that affect the Swift code path (`GeosCore.swift`,
-`NativeGeometryModule.swift`), also run the XCTest suite against the real
-vendored GEOS 3.14.1 on the simulator:
+The GEOS op pipeline (parse→validate→MakeValid→op→write→free) is single-sourced
+in `modules/native-geometry/ios/geos_ops.{h,cpp}` (`extern "C"`, symlinked into
+`Sources/CGEOS/` + `android/src/main/cpp/`, compiled into all three native
+targets). `GeosCore.swift` and `native-geometry-jni.cpp` are thin marshalling
+shims over it. So a change to op semantics is **one** edit — but it affects both
+the Swift and Android code paths, so run **both** native suites below (plus the
+host parity gate and, for the wasm oracle, `geosWasmNode.ts`'s `parseAndValidate`
+must keep the same MakeValid policy).
+
+For native GEOS changes that affect the Swift code path (`geos_ops.cpp`,
+`GeosCore.swift`, `NativeGeometryModule.swift`), also run the XCTest suite
+against the real vendored GEOS 3.14.1 on the simulator:
 
 ```bash
 xcodebuild test -scheme NativeGeometryTests-Package \
@@ -457,8 +466,9 @@ xcodebuild test -scheme NativeGeometryTests-Package \
 Then verify the host-side parity still passes (`pnpm test:geos`). The golden
 fixture oracle field records which GEOS version generated it.
 
-For native GEOS changes that affect the Android code path (`GeosBridge.kt`,
-`NativeGeometryModule.kt`, `native-geometry-jni.cpp`), also run the instrumented
+For native GEOS changes that affect the Android code path (`geos_ops.cpp`,
+`GeosBridge.kt`, `NativeGeometryModule.kt`, `native-geometry-jni.cpp`), also run
+the instrumented
 suite against the real vendored GEOS on a booted emulator. It loads the **same**
 `geos-golden.json` and asserts the same invariants as the iOS XCTest suite,
 closing the Kotlin axis of cross-engine parity. Needs a fresh

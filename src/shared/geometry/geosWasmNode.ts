@@ -39,6 +39,9 @@ interface GeosInstance {
     GEOSDifference(a: number, b: number): number;
     GEOSUnion(a: number, b: number): number;
     GEOSIntersection(a: number, b: number): number;
+    /** 1 = valid, 0 = invalid, 2 = exception. */
+    GEOSisValid(geom: number): number;
+    GEOSMakeValid(geom: number): number;
 }
 
 let geosInstance: GeosInstance | null = null;
@@ -68,6 +71,26 @@ function wkbToGeom(wkb: Uint8Array): number | null {
     const geom = geosInstance!.GEOSGeomFromWKB_buf(inPtr, wkb.length);
     M._free(inPtr);
     return geom || null;
+}
+
+/**
+ * Parse WKB and, if the geometry is invalid, recover it with MakeValid —
+ * matching the native iOS/Android op core (`geos_ops.cpp`). Keeping this in
+ * lockstep is what makes the wasm path a faithful oracle: golden fixtures
+ * generated here must reflect the same validity policy the app runs at
+ * runtime. Returns the (possibly recovered) geometry, or `null` on parse /
+ * recovery failure. Takes ownership of the parsed handle.
+ */
+function parseAndValidate(wkb: Uint8Array): number | null {
+    const geom = wkbToGeom(wkb);
+    if (!geom) return null;
+
+    if (geosInstance!.GEOSisValid(geom) !== 1) {
+        const fixed = geosInstance!.GEOSMakeValid(geom);
+        geosInstance!.GEOSGeom_destroy(geom);
+        return fixed || null;
+    }
+    return geom;
 }
 
 /** Serialize a GEOS geometry pointer into a little-endian WKB buffer. */
@@ -138,7 +161,7 @@ export function bufferWKB(
 ): Uint8Array | null {
     ensureGeos();
 
-    const geom = wkbToGeom(wkb);
+    const geom = parseAndValidate(wkb);
     if (!geom) return null;
 
     const params = geosInstance!.GEOSBufferParams_create();
@@ -165,7 +188,7 @@ export function bufferWKB(
 export function unaryUnionWKB(wkb: Uint8Array): Uint8Array | null {
     ensureGeos();
 
-    const geom = wkbToGeom(wkb);
+    const geom = parseAndValidate(wkb);
     if (!geom) return null;
 
     const unioned = geosInstance!.GEOSUnaryUnion(geom);
@@ -182,8 +205,8 @@ const binary =
     (a: Uint8Array, b: Uint8Array): Uint8Array | null => {
         ensureGeos();
 
-        const ga = wkbToGeom(a);
-        const gb = wkbToGeom(b);
+        const ga = parseAndValidate(a);
+        const gb = parseAndValidate(b);
         if (!ga || !gb) {
             if (ga) geosInstance!.GEOSGeom_destroy(ga);
             if (gb) geosInstance!.GEOSGeom_destroy(gb);
