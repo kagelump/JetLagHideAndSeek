@@ -81,6 +81,21 @@ export function ShareSetupModal({
     );
     const canShowQr = link.length <= 2500;
 
+    useEffect(() => {
+        if (visible) {
+            console.log("[ShareSetup] Generated link:", link);
+        }
+    }, [visible, link]);
+
+    useEffect(() => {
+        if (debugMode === "full") {
+            console.log(
+                "[ShareSetup] Full JSON envelope:",
+                JSON.stringify(envelope, null, 2),
+            );
+        }
+    }, [debugMode, envelope]);
+
     const handleLinkTripleTap = () => {
         tapCountRef.current += 1;
         if (tapTimerRef.current) clearTimeout(tapTimerRef.current);

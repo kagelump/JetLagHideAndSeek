@@ -138,6 +138,30 @@ export function eligibleArea(
 }
 
 /**
+ * Baseline eligible area (m²): the hiding zone clipped to the play-area
+ * boundary, with NO question constraints applied. This is the correct
+ * denominator for the elimination stats — the zone polygons (station circles)
+ * can spill outside the boundary, and that spillover is never eligible hiding
+ * space. Using the raw {@link featureCollectionArea} of the zone instead would
+ * report phantom elimination (e.g. ~6%) even with zero questions, since the
+ * numerator ({@link eligibleArea}) is always clipped to the boundary.
+ */
+export function zoneBaselineArea(
+    boundary: GeoJsonFeatureCollection,
+    zoneFeatures: GeoJsonFeatureCollection,
+): number {
+    const mask = buildCombinedEligibilityMask(
+        boundary as any,
+        [zoneFeatures] as any,
+        [],
+    );
+    return Math.max(
+        0,
+        featureCollectionArea(boundary) - featureCollectionArea(mask),
+    );
+}
+
+/**
  * The hero / total stat: the fraction of the hiding zone no longer eligible,
  * expressed as a whole percent in [0, 100].
  */

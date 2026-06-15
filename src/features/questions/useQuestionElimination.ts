@@ -3,8 +3,8 @@ import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 import {
     eligibleArea,
-    featureCollectionArea,
     questionContributionPercent,
+    zoneBaselineArea,
     zoneEliminationPercent,
 } from "@/features/map/eliminationMath";
 import {
@@ -53,12 +53,12 @@ export function useQuestionElimination(
         if (!playArea.boundary || zoneFeatures.features.length === 0)
             return null;
 
-        const zoneArea = featureCollectionArea(zoneFeatures as any);
-        if (zoneArea <= 0) return null;
-
         const boundary = playArea.boundary as FeatureCollection<
             Polygon | MultiPolygon
         >;
+
+        const zoneArea = zoneBaselineArea(boundary as any, zoneFeatures as any);
+        if (zoneArea <= 0) return null;
 
         const effectiveQuestions = liveOverride
             ? questions.map((q) =>

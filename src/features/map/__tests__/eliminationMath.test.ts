@@ -3,6 +3,7 @@ import {
     eligibleArea,
     featureCollectionArea,
     questionContributionPercent,
+    zoneBaselineArea,
     zoneEliminationPercent,
 } from "../eliminationMath";
 import type { GeoJsonFeatureCollection } from "../geojsonTypes";
@@ -151,6 +152,36 @@ describe("eligibleArea", () => {
         });
         const area = eligibleArea(boundary, zone, renderState);
         expect(area).toBeCloseTo(featureCollectionArea(zone) / 2, 0);
+    });
+});
+
+describe("zoneBaselineArea", () => {
+    it("equals the full zone when it sits inside the boundary", () => {
+        const boundary = squareFC(0, 0, 10, 10);
+        const zone = squareFC(2, 2, 8, 8);
+        expect(zoneBaselineArea(boundary, zone)).toBeCloseTo(
+            featureCollectionArea(zone),
+            0,
+        );
+    });
+
+    it("clips zone area that spills outside the boundary", () => {
+        // Zone extends past the right edge of the boundary; only the half inside
+        // counts. Using the raw zone area as the denominator would report
+        // phantom elimination (the spillover) even with no questions.
+        const boundary = squareFC(0, 0, 10, 10);
+        const zone = squareFC(5, 0, 15, 10);
+        const baseline = zoneBaselineArea(boundary, zone);
+        expect(baseline).toBeCloseTo(featureCollectionArea(zone) / 2, 0);
+        expect(baseline).toBeLessThan(featureCollectionArea(zone));
+    });
+
+    it("reports 0% eliminated against its own baseline with no questions", () => {
+        const boundary = squareFC(0, 0, 10, 10);
+        const zone = squareFC(5, 0, 15, 10);
+        const baseline = zoneBaselineArea(boundary, zone);
+        const eligible = eligibleArea(boundary, zone, makeRenderState());
+        expect(zoneEliminationPercent(eligible, baseline)).toBe(0);
     });
 });
 
