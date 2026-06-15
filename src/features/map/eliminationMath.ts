@@ -73,13 +73,26 @@ function pushConstraint(
 }
 
 /**
+ * Per-family mask overrides. When a family is present here, its supplied
+ * hit/miss collection replaces the one in the render state for that polarity.
+ * The map overlay uses this to substitute the thermometer hit mask with a
+ * live-drag aggregate without forking the constraint-assembly logic.
+ */
+export type EligibilityMaskOverrides = Partial<
+    Record<QuestionRenderKey, Partial<MaskFamily>>
+>;
+
+/**
  * Assemble the required/excluded constraint arrays for
  * `buildCombinedEligibilityMask` from the hiding-zone features and a question
- * render state.
+ * render state. `overrides` lets a caller swap a family's hit/miss collection
+ * (e.g. the map overlay's live thermometer-drag mask) while keeping the single
+ * shared polarity/decomposition policy in {@link MASK_RULES}.
  */
 export function buildEligibilityConstraints(
     zoneFeatures: GeoJsonFeatureCollection,
     renderState: QuestionMapRenderState,
+    overrides?: EligibilityMaskOverrides,
 ): {
     required: GeoJsonFeatureCollection[];
     excluded: GeoJsonFeatureCollection[];
@@ -90,9 +103,14 @@ export function buildEligibilityConstraints(
     for (const key of Object.keys(MASK_RULES) as QuestionRenderKey[]) {
         const rule = MASK_RULES[key];
         const family = renderState[key] as unknown as MaskFamily;
-        pushConstraint(required, family.hitMaskFeatures, rule.hit);
-        if (rule.miss !== "none" && family.missMaskFeatures) {
-            pushConstraint(excluded, family.missMaskFeatures, rule.miss);
+        const override = overrides?.[key];
+        const hitMaskFeatures =
+            override?.hitMaskFeatures ?? family.hitMaskFeatures;
+        const missMaskFeatures =
+            override?.missMaskFeatures ?? family.missMaskFeatures;
+        pushConstraint(required, hitMaskFeatures, rule.hit);
+        if (rule.miss !== "none" && missMaskFeatures) {
+            pushConstraint(excluded, missMaskFeatures, rule.miss);
         }
     }
 

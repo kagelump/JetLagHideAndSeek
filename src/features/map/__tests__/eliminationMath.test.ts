@@ -133,6 +133,91 @@ describe("buildEligibilityConstraints", () => {
         const allFeatures = required.flatMap((c) => c.features);
         expect(allFeatures).toContainEqual(thermoHit.features[0]);
     });
+
+    it("routes hit masks to required and miss masks to excluded (polarity)", () => {
+        // Mask polarity convention (AGENTS.md / maskBuilder): hit masks are
+        // REQUIRED (intersected), miss masks are EXCLUDED (subtracted). A family
+        // with both polarities must split across the two arrays.
+        const zone = squareFC(0, 0, 10, 10);
+        const hit = squareFC(0, 0, 5, 10);
+        const miss = squareFC(5, 0, 10, 10);
+        const renderState = makeRenderState({
+            radar: { hitMaskFeatures: hit, missMaskFeatures: miss },
+        });
+
+        const { required, excluded } = buildEligibilityConstraints(
+            zone,
+            renderState,
+        );
+        expect(required.flatMap((c) => c.features)).toContainEqual(
+            hit.features[0],
+        );
+        expect(required.flatMap((c) => c.features)).not.toContainEqual(
+            miss.features[0],
+        );
+        expect(excluded.flatMap((c) => c.features)).toContainEqual(
+            miss.features[0],
+        );
+    });
+
+    it("passes the transit-line hit mask as one whole constraint (union, not separate)", () => {
+        // Per-station circles on a line must be a single OR constraint;
+        // decomposing them would intersect non-overlapping circles to empty.
+        const zone = squareFC(0, 0, 10, 10);
+        const transitHit: GeoJsonFeatureCollection = {
+            type: "FeatureCollection",
+            features: [
+                squareFC(0, 0, 2, 2).features[0],
+                squareFC(8, 8, 10, 10).features[0],
+            ],
+        };
+        const renderState = makeRenderState({
+            transitLine: {
+                hitMaskFeatures: transitHit,
+                missMaskFeatures: emptyFC(),
+            },
+        });
+
+        const { required } = buildEligibilityConstraints(zone, renderState);
+        // The two-feature collection appears as a single multi-feature
+        // constraint, not two single-feature constraints.
+        expect(required).toContain(transitHit);
+    });
+
+    it("ignores a thermometer miss mask (miss: none)", () => {
+        // Thermometer only ever narrows toward the hotter side; its miss
+        // polarity contributes nothing. Even a populated miss mask is dropped.
+        const zone = squareFC(0, 0, 10, 10);
+        const thermoMiss = squareFC(5, 0, 10, 10);
+        const renderState = makeRenderState({
+            thermometer: {
+                hitMaskFeatures: squareFC(0, 0, 5, 10),
+                missMaskFeatures: thermoMiss,
+            },
+        });
+        const { excluded } = buildEligibilityConstraints(zone, renderState);
+        expect(excluded.flatMap((c) => c.features)).not.toContainEqual(
+            thermoMiss.features[0],
+        );
+    });
+
+    it("substitutes a family's hit mask via the override seam (live thermometer drag)", () => {
+        // The map overlay swaps the static thermometer hit mask for a live
+        // drag aggregate. The override must win; the render-state value drops.
+        const zone = squareFC(0, 0, 10, 10);
+        const staticHit = squareFC(0, 0, 5, 10);
+        const liveHit = squareFC(0, 0, 8, 10);
+        const renderState = makeRenderState({
+            thermometer: { hitMaskFeatures: staticHit },
+        });
+
+        const { required } = buildEligibilityConstraints(zone, renderState, {
+            thermometer: { hitMaskFeatures: liveHit },
+        });
+        const allFeatures = required.flatMap((c) => c.features);
+        expect(allFeatures).toContainEqual(liveHit.features[0]);
+        expect(allFeatures).not.toContainEqual(staticHit.features[0]);
+    });
 });
 
 describe("eligibleArea", () => {

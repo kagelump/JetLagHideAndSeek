@@ -41,11 +41,11 @@ import { MapControls } from "./MapControls";
 import { MapPoiCallout } from "./MapPoiCallout";
 import { buildOsmRasterStyleJson } from "./mapStyle";
 import {
-    asSeparateMaskConstraints,
     buildCombinedEligibilityMask,
     buildPlayAreaMask,
     buildPlayAreaMaskFromMetadata,
 } from "./maskBuilder";
+import { buildEligibilityConstraints } from "./eliminationMath";
 import { OsmMatchingLayers } from "./OsmMatchingLayers";
 import { PlayAreaBoundaryLayer } from "./PlayAreaBoundaryLayer";
 import {
@@ -232,43 +232,24 @@ export function NativeMap({
     const combinedInsideMask = useMemo(() => {
         if (!playAreaIsSet)
             return { type: "FeatureCollection" as const, features: [] };
+        // Single source of truth for constraint polarity/decomposition:
+        // buildEligibilityConstraints + MASK_RULES (shared with the HUD,
+        // per-question contribution, and station-elimination stats). The
+        // overlay differs only in substituting the live thermometer-drag hit
+        // mask, passed here as an override so the assembly logic stays unforked.
+        const { required, excluded } = buildEligibilityConstraints(
+            zoneFeatures as any,
+            questionMapRenderState,
+            {
+                thermometer: {
+                    hitMaskFeatures: thermometerHitMaskFeatures as any,
+                },
+            },
+        );
         return buildCombinedEligibilityMask(
             playArea.boundary,
-            [
-                zoneFeatures,
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.radar.hitMaskFeatures,
-                ),
-                // Transit-line hit mask contains one circle per station
-                // on the selected line. asSeparateMaskConstraints would
-                // decompose them into individual required constraints,
-                // and buildCombinedEligibilityMask intersects all required
-                // constraints — producing an empty result for any line
-                // with non-overlapping station circles. Pass the whole
-                // collection so the circles are treated as a union.
-                questionMapRenderState.transitLine.hitMaskFeatures,
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.osmMatching.hitMaskFeatures,
-                ),
-                ...asSeparateMaskConstraints(thermometerHitMaskFeatures),
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.tentacles.hitMaskFeatures,
-                ),
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.measuring.hitMaskFeatures,
-                ),
-            ],
-            [
-                questionMapRenderState.radar.missMaskFeatures,
-                questionMapRenderState.transitLine.missMaskFeatures,
-                questionMapRenderState.osmMatching.missMaskFeatures,
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.tentacles.missMaskFeatures,
-                ),
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.measuring.missMaskFeatures,
-                ),
-            ],
+            required as any,
+            excluded as any,
         );
     }, [
         playAreaIsSet,

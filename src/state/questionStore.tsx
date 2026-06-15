@@ -22,7 +22,6 @@ import {
     type QuestionAnswer,
     type QuestionState,
     type QuestionsImportState,
-    type QuestionType,
 } from "@/features/questions/questionTypes";
 import {
     type RadarDistanceOption,
@@ -40,7 +39,7 @@ import {
     derivePoiAnswer,
     isPoiAnswerModel,
 } from "@/features/questions/questionRegistry";
-import { normalizeTransitLineQuestion } from "@/features/questions/transitLine/transitLineNormalization";
+import { questionSchema } from "@/sharing/wire/questionSchemas";
 import { assertNever } from "@/shared/assertNever";
 import { offsetPosition, type Position } from "@/shared/geojson";
 import {
@@ -849,94 +848,17 @@ function createDefaultQuestion(
     }
 }
 
+/**
+ * Normalize a persisted/imported question through the single shared question
+ * schema ({@link questionSchema}): legacy `radius` → `radar`, default-filling,
+ * transit-line repair, and POI-answer re-derivation (preserving an explicit
+ * tentacles "None"). This is the only normalizer — the wire and persistence
+ * paths derive from the same schema, so they cannot drift. Falls back to the
+ * input on parse failure to stay as lenient as the old imperative guards.
+ */
 function normalizeQuestionState(question: unknown): QuestionState {
-    if (isLegacyRadiusQuestion(question)) {
-        return {
-            center: question.center,
-            createdAt: question.createdAt,
-            answer: "unanswered",
-            distanceMeters: question.radiusMeters,
-            distanceOption: question.radiusOption,
-            distanceUnit: question.radiusUnit,
-            id: question.id,
-            isLocked: false,
-            type: "radar",
-            updatedAt: question.updatedAt,
-        };
-    }
-    if (isRadarQuestionWithoutAnswer(question)) {
-        return {
-            ...question,
-            answer: "unanswered",
-        };
-    }
-    if (isMatchingQuestion(question)) {
-        return normalizeTransitLineQuestion(question);
-    }
-    // Re-derive `answer` for poi-model questions from canonical `selectedOsmId`
-    // so any historically-inconsistent persisted/shared payload is repaired on
-    // load. The derived status is "positive" iff a POI is selected.
-    // Preserve an explicit "negative" answer (e.g. tentacles "None") — it is a
-    // valid answered state with no POI selection to drift from.
-    if (isPoiAnswerQuestion(question)) {
-        if (question.answer === "negative") {
-            return question;
-        }
-        const derivedAnswer = derivePoiAnswer(question.selectedOsmId);
-        if (question.answer !== derivedAnswer) {
-            return { ...question, answer: derivedAnswer };
-        }
-        return question;
-    }
-    return question as QuestionState;
-}
-
-function isLegacyRadiusQuestion(value: unknown): value is {
-    center: Position;
-    createdAt: string;
-    id: string;
-    radiusMeters: number;
-    radiusOption: RadarDistanceOption;
-    radiusUnit: DistanceUnit;
-    type: "radius";
-    updatedAt: string;
-} {
-    return (
-        typeof value === "object" &&
-        value !== null &&
-        "type" in value &&
-        value.type === "radius"
-    );
-}
-
-function isRadarQuestionWithoutAnswer(
-    value: unknown,
-): value is Omit<RadarQuestion, "answer"> {
-    return (
-        typeof value === "object" &&
-        value !== null &&
-        "type" in value &&
-        value.type === "radar" &&
-        !("answer" in value)
-    );
-}
-
-function isMatchingQuestion(
-    value: unknown,
-): value is Extract<QuestionState, { type: "matching" }> {
-    return (
-        typeof value === "object" &&
-        value !== null &&
-        "type" in value &&
-        value.type === "matching"
-    );
-}
-
-function isPoiAnswerQuestion(
-    value: unknown,
-): value is Extract<QuestionState, { type: "tentacles" }> {
-    if (typeof value !== "object" || value === null || !("type" in value)) {
-        return false;
-    }
-    return isPoiAnswerModel(value.type as QuestionType);
+    const parsed = questionSchema.safeParse(question);
+    return parsed.success
+        ? (parsed.data as QuestionState)
+        : (question as QuestionState);
 }

@@ -372,9 +372,21 @@ focused feature/store and let the map render derived data.
 - Radar stores `distanceMeters`, `distanceOption`, and `distanceUnit`. Presets
   are `500m`, `1km`, `2km`, `5km`, `10km`, `15km`, `40km`, `80km`, `150km`, plus
   `other`.
+- The per-question Zod schemas, enums, candidate schema, and the two
+  normalizations live **once** in `src/sharing/wire/questionSchemas.ts`.
+  Persistence (`appState.ts`), the full-key wire (`schema.ts`), the minified
+  codec (`minified.ts`), and the store all derive from it — never re-declare a
+  per-question schema or normalization elsewhere (that triplication caused a
+  silent question-drop bug). `questionStore.normalizeQuestionState` is a thin
+  `questionSchema.safeParse`.
 - Legacy persisted/shared `type: "radius"` payloads normalize to `type: "radar"`
-  on restore/import (`questionStore.tsx`, `appState.ts`, `sharing/wire/schema.ts`).
-  Preserve this unless the app-state/wire version is intentionally bumped.
+  via the shared schema's transform. Preserve this unless the app-state/wire
+  version is intentionally bumped.
+- POI-answer normalization (`normalizePoiAnswer` in `questionSchemas.ts`)
+  re-derives a tentacles answer from `selectedOsmId`, but **preserves an
+  explicit `"negative"`** ("None" — a valid answered state). The minified codec
+  carries it via the `"n"` answer code; persistence and both wire paths round-
+  trip it. Don't reintroduce an unconditional re-derive (it once dropped "None").
 - Question map overlays come from derived question render state before reaching
   `NativeMap`. Keep MapLibre layer ordering conservative; don't teach `NativeMap`
   every future question family directly.
@@ -388,6 +400,15 @@ focused feature/store and let the map render derived data.
   the excluded list — do not assume "negative answer → push the miss-named
   mask" (that inverted station-name-length eliminations once). Add a
   polarity test at the render-state level for every new answer path.
+- Constraint assembly (which family's hit/miss mask is split per-feature vs.
+  passed whole, and its polarity) is single-sourced in the `MASK_RULES` table +
+  `buildEligibilityConstraints` in `src/features/map/eliminationMath.ts`. Both
+  the elimination stats (`useStationElimination`, `useEliminationPercentage`)
+  and the `NativeMap` overlay (`combinedInsideMask`) call it — the overlay
+  passes the live thermometer-drag mask via the `overrides` param. Add a new
+  family to `MASK_RULES`, not to a hand-rolled call site, so the two consumers
+  cannot diverge. The render-state polarity tests live in
+  `eliminationMath.test.ts`.
 
 ## Testing Expectations
 
