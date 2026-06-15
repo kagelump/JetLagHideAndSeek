@@ -15,7 +15,9 @@ Pod::Spec.new do |s|
   # and relying on the auto-generated module map. Swift sees GEOS symbols
   # because geos_bridge.h is listed among the source files.
 
-  s.source_files = "*.swift", "geos_bridge.h"
+  # geos_ops.{h,cpp} is the shared GEOS op core compiled into the pod; Swift
+  # reaches its C functions through geos_bridge.h (which includes geos_ops.h).
+  s.source_files = "*.swift", "geos_bridge.h", "geos_ops.h", "geos_ops.cpp"
   s.public_header_files = "geos_bridge.h"
 
   # Vendored GEOS xcframework (committed artifact).
@@ -23,8 +25,11 @@ Pod::Spec.new do |s|
 
   s.dependency "ExpoModulesCore"
 
-  # Link C++ standard library (GEOS is C++ under the hood).
+  # Link C++ standard library (GEOS is C++ under the hood). Pin the C++
+  # standard so the shared core (geos_ops.cpp — lambdas, brace-init,
+  # std::call_once) builds the same here as in the SPM target + Android NDK.
   s.pod_target_xcconfig = {
-    "OTHER_LDFLAGS" => "-lc++"
+    "OTHER_LDFLAGS" => "-lc++",
+    "CLANG_CXX_LANGUAGE_STANDARD" => "c++17"
   }
 end

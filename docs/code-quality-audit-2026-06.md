@@ -56,49 +56,30 @@ Files over 600 lines: `measuring/lineMeasuringGeometry.ts` (1486),
 
 ## 1. Single-source-of-truth: schema & normalization triplication — **Critical**
 
-The per-question Zod schemas exist as **two near-identical copies** plus a
-**third hand-divergent minified copy**:
-`src/state/appState.ts:40-258`, `src/sharing/wire/schema.ts:35-252`,
-`src/sharing/wire/minified.ts:95-202`. The category enums, `radarDistanceOption`
-schema, candidate schema, and the legacy `radius`→`radar` transform are
-duplicated verbatim. The minified copy deliberately loosens `category` to
-`z.string().min(1)`, so the wire path won't even reject a bad category.
-
-The same two normalizations (legacy-radius rename, re-derive POI `answer` from
-`selectedOsmId`) are then **reimplemented four times with three mechanisms**:
-imperative type-guards in `questionStore.tsx:819-872`, Zod `.transform`s in
-`appState.ts:128-150/209-248` and `schema.ts:123-145/204-243`, and manual
-object-building in `minified.ts:707-754`. The repo docs note this invariant has
-_already_ caused a mask-polarity bug.
-
-**Impact:** a category added in one schema but forgotten in another silently
-drops questions on reload/import — and combined with finding #5 can wipe the
-user's entire setup. This is the root cause that makes #4 and #5 dangerous.
-
-**Remediation:** extract shared leaf schemas (enums, candidate, the radius
-transform, a single `derivePoiAnswer` transform) into one module
-(`src/sharing/wire/questionSchemas.ts`) that persistence, wire, and minified all
-derive from. Make the Zod schemas the _only_ normalizer; have
-`questionStore` import paths run through `appStateQuestionsSchema.parse` and
-delete the bespoke `normalizeQuestionState` + guards (`questionStore.tsx:819-904`).
+Status: Done
 
 ## 2. Eligibility-mask pipeline duplicated, polarity-sensitive — **Critical**
 
-`src/features/sheet/MainDrawer.tsx:372-416` (`MainSheetContent`) and
-`src/features/map/NativeMap.tsx:108-166` build the **same**
-`buildCombinedEligibilityMask` call — identical hit/miss constraint ordering for
-all 6 question types and the same `asSeparateMaskConstraints` decomposition. One
-copy drives the map overlay, the other drives the "Eliminated %" HUD stat, so
-they can diverge with **no error** — they just disagree. The `AGENTS.md`
-mask-polarity rule warns that a single inverted constraint silently breaks
-elimination.
-
-**Remediation:** extract one `useCombinedEligibilityMask()` hook / selector over
-`questionMapRenderState`; both consumers call it. The polarity test then has a
-single target. Also delete the duplicate `asSeparateMaskConstraints` in
-`MainDrawer.tsx:647-655` in favor of the one in `maskBuilder.ts`.
+Status: Done
 
 ## 3. GEOS op pipeline reimplemented in 4 languages — **High**
+
+Status: Done — extracted the shared C core
+`modules/native-geometry/ios/geos_ops.{h,cpp}` (the one
+parse→validate→MakeValid→op→write→free state machine, `extern "C"`). It is the
+single source compiled into the iOS pod, the SPM test package, and the Android
+`.so` (symlinked into `Sources/CGEOS/` + `android/src/main/cpp/`; wired into the
+podspec, `Package.swift`/CGEOS auto-discovery, and `CMakeLists.txt`).
+`GeosCore.swift` and `native-geometry-jni.cpp` are now thin marshalling shims
+(`Data`/`jbyteArray` ⇄ `GeosWkbBuffer`); `GeosBridge.kt` and
+`NativeGeometryModule.swift` are unchanged. The wasm helper
+(`geosWasmNode.ts`) now applies the **same** MakeValid recovery
+(`parseAndValidate`) so the geos-wasm oracle matches native runtime behavior on
+invalid input — closing the divergence called out below. ABI stays at 2 (the
+WKB function surface is unchanged). Native rebuild + the iOS XCTest / Android
+instrumented suites validate the binary side; the host geos-wasm parity gate
+(`pnpm test:geos`) passes. The residual GeometryCollection decode gap is audit
+item #11.
 
 The identical "parse WKB → `GEOSisValid_r` → `GEOSMakeValid_r` recovery → run op
 → `GEOSGeomToWKB_buf` → free" sequence is hand-written in Swift
@@ -119,19 +100,7 @@ the divergence explicitly. Collapses 3 native logic surfaces toward 1.
 
 ## 4. Hand-maintained 871-line wire codec, unchecked double-casts — **High**
 
-`src/sharing/wire/minified.ts`. `unminifyQuestion` (`:581-776`) reads every
-field via `q[FIELD_MAP.x] as SomeType` (dozens of unchecked casts), and
-`minify/unminifyEnvelope` end with `return ... as unknown as WireEnvelopeMinified`
-(`:532`) and `as unknown as AppStateEnvelopeV1` (`:870`) — fully bypassing the
-type system at the most error-prone boundary. Single-char field codes are reused
-across question types (`r`, `du`) creating aliasing hazards invisible to the
-compiler. `REVERSE_FIELD_MAP` (`:62-68`) appears built-but-unused.
-
-**Remediation:** generate the minified schema **and** the minify/unminify maps
-from one field-descriptor table (full key, short key, type) rather than
-maintaining `FIELD_MAP`, the reverse map, the Zod schema, and the imperative
-codec separately. Replace `as unknown as` returns with structurally-typed
-objects and round-trip-parse the output through the schema in dev.
+Status: Done
 
 ## 5. Persistence migrator wipes everything on one bad slice — **High**
 

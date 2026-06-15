@@ -13,14 +13,22 @@ set_target_properties(geos PROPERTIES
     IMPORTED_LOCATION "${GEOS_LIB_DIR}/libgeos.a"
 )
 
-# JNI wrapper shared library.
+# JNI wrapper shared library. native-geometry-jni.cpp is a thin marshalling
+# shim; the GEOS op pipeline lives in the shared core geos_ops.cpp (symlinked
+# from ios/geos_ops.cpp — the single source compiled into every native target).
 add_library(native-geometry-jni SHARED
     src/main/cpp/native-geometry-jni.cpp
+    src/main/cpp/geos_ops.cpp
 )
 
 target_include_directories(native-geometry-jni PRIVATE
     ${GEOS_INCLUDE_DIR}
 )
+
+# Pin C++17 (the shared core geos_ops.cpp uses lambdas, brace-init,
+# std::call_once). Matches the SPM target + pod so the one core builds
+# identically everywhere.
+target_compile_features(native-geometry-jni PRIVATE cxx_std_17)
 
 target_link_libraries(native-geometry-jni
     geos
