@@ -38,6 +38,7 @@ import {
 import type { MapPin } from "./getQuestionPins";
 import { HidingZoneLayers } from "./HidingZoneLayers";
 import { MapControls } from "./MapControls";
+import { MapPoiCallout } from "./MapPoiCallout";
 import { buildOsmRasterStyleJson } from "./mapStyle";
 import {
     asSeparateMaskConstraints,
@@ -56,6 +57,7 @@ import { RadarQuestionLayers } from "./RadarQuestionLayers";
 import { TentaclesPoiLayer } from "./TentaclesPoiLayer";
 import { TentaclesRadiusLayer } from "./TentaclesRadiusLayer";
 import { ThermometerPreviewLayer } from "./ThermometerPreviewLayer";
+import { useMapCallout } from "./useMapCallout";
 import { usePinDrag } from "./usePinDrag";
 import { useUserLocation } from "./useUserLocation";
 import { VoronoiOutlineLayers } from "./VoronoiOutlineLayers";
@@ -80,8 +82,6 @@ type NativeMapProps = {
         position: Position,
     ) => void;
     onPress?: (event?: unknown) => void;
-    /** Called on long press with no nearby pin — should place a new pin. */
-    onPlacePin?: (position: Position) => void;
     /** Called during thermometer pin drag with live P1/P2 coordinates. */
     onThermometerDragUpdate?: (update: ThermometerDragUpdate | null) => void;
     pins: MapPin[];
@@ -93,14 +93,20 @@ export function NativeMap({
     isQuestionDetailRoute,
     onPinCommit,
     onPress,
-    onPlacePin,
     onThermometerDragUpdate,
     pins,
     questionId,
 }: NativeMapProps) {
     const cameraRef = useRef<CameraHandle | null>(null);
     const mapRef = useRef<any>(null);
-    const [calloutDismissKey, setCalloutDismissKey] = useState(0);
+    const { callout, dismissCallout, showCalloutFromPress } = useMapCallout();
+    // Screen-space pixel point for the callout's coordinate. The bubble is a
+    // plain overlay (see MapPoiCallout), so we project the coordinate via the
+    // map and reproject on camera changes to keep it pinned to the POI.
+    const [calloutPoint, setCalloutPoint] = useState<{
+        x: number;
+        y: number;
+    } | null>(null);
     const insets = useSafeAreaInsets();
     const { height } = useSafeAreaFrame();
     const { routeFeatures, stationFeatures, zoneFeatures } =
@@ -116,7 +122,6 @@ export function NativeMap({
         canMove,
         mapRef,
         onCommit: onPinCommit,
-        onPlace: onPlacePin,
         questionId,
     });
 
@@ -304,12 +309,64 @@ export function NativeMap({
 
     const handleMapPress = useCallback(
         (event?: unknown) => {
-            // Dismiss any POI callout on map background tap.
-            setCalloutDismissKey((k: number) => k + 1);
+            const e = event as { features?: readonly unknown[] } | undefined;
+            // Only dismiss the POI callout on background taps — taps that hit
+            // a feature (e.g. a tentacles POI marker) are handled by that
+            // feature's own onPress, and dismissing here would race with the
+            // callout it's about to show.
+            const isBackgroundTap = !e?.features || e.features.length === 0;
+            if (isBackgroundTap) {
+                dismissCallout();
+            }
             onPress?.(event);
         },
-        [onPress],
+        [onPress, dismissCallout],
     );
+
+    // Project the callout coordinate to a screen point. Async over the native
+    // bridge; failures (e.g. mid-gesture) are ignored and retried on the next
+    // camera event.
+    const projectCallout = useCallback(async () => {
+        const coordinate = callout?.coordinate;
+        const map = mapRef.current as {
+            getPointInView?: (c: Position) => Promise<[number, number]>;
+        } | null;
+        if (!coordinate || !map?.getPointInView) {
+            setCalloutPoint(null);
+            return;
+        }
+        try {
+            const p = await map.getPointInView(coordinate);
+            if (p) setCalloutPoint({ x: p[0], y: p[1] });
+        } catch {
+            // Projection can fail while the map is settling; leave the last
+            // point in place and let the next camera event reproject.
+        }
+    }, [callout]);
+
+    // Hide immediately when the target POI changes or clears, so we never show
+    // the new callout at the previous POI's stale screen point for a frame.
+    useEffect(() => {
+        setCalloutPoint(null);
+    }, [callout?.id]);
+
+    // (Re)project whenever the callout changes.
+    useEffect(() => {
+        void projectCallout();
+    }, [projectCallout]);
+
+    // A JS-positioned overlay can't track a native 60fps gesture without
+    // visibly lagging (each reprojection is an async bridge round-trip). So we
+    // hide the bubble while the camera moves and snap it back onto the POI when
+    // the map settles, rather than dragging a stale point behind the map.
+    const [isCameraMoving, setIsCameraMoving] = useState(false);
+    const handleRegionWillChange = useCallback(() => {
+        setIsCameraMoving(true);
+    }, []);
+    const handleRegionDidChange = useCallback(() => {
+        setIsCameraMoving(false);
+        void projectCallout();
+    }, [projectCallout]);
 
     // Auto-fit the camera when the play area changes (user selects a new area).
     const isFirstRender = useRef(true);
@@ -331,7 +388,12 @@ export function NativeMap({
                     mapStyle={mapStyle}
                     onDidFinishLoadingMap={handleMapReady}
                     onPress={handleMapPress}
+                    onRegionDidChange={handleRegionDidChange}
+                    onRegionWillChange={handleRegionWillChange}
                     ref={mapRef}
+                    // Re-show the settled callout promptly instead of waiting
+                    // the default 500ms debounce after the camera stops.
+                    regionDidChangeDebounceTime={60}
                     scrollEnabled={!pinDrag.isDragging}
                     style={styles.map}
                     testID="native-map"
@@ -390,7 +452,7 @@ export function NativeMap({
                         visible={isQuestionDetailRoute}
                     />
                     <TentaclesPoiLayer
-                        calloutDismissKey={calloutDismissKey}
+                        onPoiPress={showCalloutFromPress}
                         tentacles={questionMapRenderState.tentacles}
                         visible={isQuestionDetailRoute}
                     />
@@ -417,6 +479,15 @@ export function NativeMap({
                     fitPlayArea={fitPlayArea}
                     locateUser={locateUser}
                     topInset={insets.top}
+                />
+
+                {/* Single, map-wide POI callout fed by any layer's ShapeSource
+                     press (see useMapCallout). Rendered as a screen-space
+                     overlay over the map, not a MapLibre annotation. */}
+                <MapPoiCallout
+                    callout={callout}
+                    onDismiss={dismissCallout}
+                    point={isCameraMoving ? null : calloutPoint}
                 />
             </View>
         </GestureDetector>

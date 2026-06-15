@@ -37,9 +37,7 @@ export function QuestionLocationSelector({
                 {center[1].toFixed(5)}
                 {","} {center[0].toFixed(5)}
             </Text>
-            <Text style={styles.hint}>
-                Long-press the map to drop or drag the pin.
-            </Text>
+            <Text style={styles.hint}>Long-press a pin to drag it.</Text>
             {showSetToLocationButton ? (
                 <Pressable
                     accessibilityLabel={setToLocationAccessibilityLabel}

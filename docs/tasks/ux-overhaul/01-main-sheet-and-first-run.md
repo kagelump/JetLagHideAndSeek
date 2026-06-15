@@ -69,7 +69,7 @@ the map starts narrowing down the hider."_ + the existing Add CTA.
 ### Discoverability fixes
 
 - **Long-press pin hint:** a muted line in the question-detail location section,
-  e.g. _"Long-press the map to drop or drag the pin."_
+  e.g. _"Long-press a pin to drag it."_
 - **Map-control a11y labels:** "Fit play area" / "Go to my location" on the two
   `MapControls` buttons.
 
@@ -99,6 +99,6 @@ then only needs to reconcile the segmented-control **selected-fill** behavior
   welcome.
 - Zero-question list shows a helpful empty state.
 - VoiceOver/TalkBack announces meaningful labels for both map controls.
-- The long-press-to-place-pin affordance is discoverable in question detail.
+- The long-press-to-drag-pin affordance is discoverable in question detail.
 - Tests: render tests for first-run vs HUD vs empty states; a11y label
   assertions for map controls. `pnpm test` + `pnpm check`.

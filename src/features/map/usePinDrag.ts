@@ -34,8 +34,6 @@ type UsePinDragOptions = {
         getPointInView: (coordinate: Position) => Promise<[number, number]>;
     } | null>;
     onCommit: (questionId: string, pinKey: string, position: Position) => void;
-    /** Called when a long press lands with no nearby pin to drag. */
-    onPlace?: (position: Position) => void;
     questionId: string | null;
 };
 
@@ -44,7 +42,6 @@ export function usePinDrag({
     canMove,
     mapRef,
     onCommit,
-    onPlace,
     questionId,
 }: UsePinDragOptions): PinDragState {
     const [isDragging, setIsDragging] = useState(false);
@@ -139,27 +136,12 @@ export function usePinDrag({
                     setIsDragging(true);
                 } else {
                     isDraggingRef.current = false;
-                    // No nearby pin — place a new one if onPlace is provided.
-                    if (onPlace) {
-                        try {
-                            const coordinate =
-                                await mapRef.current?.getCoordinateFromView([
-                                    absoluteX,
-                                    absoluteY,
-                                ]);
-                            if (coordinate) {
-                                onPlace(coordinate);
-                            }
-                        } catch {
-                            // ignore projection errors
-                        }
-                    }
                 }
             } catch {
                 isDraggingRef.current = false;
             }
         },
-        [onPlace, pins, mapRef],
+        [pins, mapRef],
     );
 
     const handleDragUpdate = useCallback(

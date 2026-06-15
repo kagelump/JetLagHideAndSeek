@@ -73,12 +73,7 @@ Difficulty: **[E]** easy (≤half day), **[M]** medium (1–2 days), **[H]** har
 - **[E]** Set to my location button should be smaller or placed in a better location.
     - Direction: `QuestionLocationSelector` — compact icon button next to the
       coordinate row.
-- **[M]** Tap to set pin should be reversed, tap + hold to set pin instead (assuming there isn't another pin nearby)
-    - This is partially implemented, but it should be set on lift, so it doesn't interfere with panning the map.
-    - Direction: `usePinDrag.ts` — long-press currently places at gesture
-      start; move the `onPlace` commit into the gesture end handler and feed
-      it the final drag coordinate. Watch the pan-vs-place arbitration
-      (`pinHitRadiusPx` = 50).
+- **[M]** ~~Tap to set pin should be reversed, tap + hold to set pin instead~~ **(resolved: removed)** — The long-press-on-empty-area-to-place-pin affordance (`onPlace`/`onPlacePin`) was removed entirely (2026-06-15). Pins are now set only via the "Set to My Location" button (or background GPS on creation) and repositioned by long-press dragging. This eliminates gesture conflicts with map scrolling, zooming, and POI taps.
 - **[M]** Add some sort of loading / calculating animation when work (masking, etc) is being done.
     - Direction: mask/clip work runs synchronously inside the
       `useQuestionMapRenderState` memo on the JS thread, so a spinner can't

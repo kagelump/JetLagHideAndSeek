@@ -824,15 +824,16 @@ required constraint (intersection = correct narrowing behavior).
     ```
 
 2. **`"center" in activeQuestion` is true for thermometer.** `ThermometerQuestion`
-   extends `BaseQuestion` which includes `center`. This means `handleMapPress` in
-   `MapAppScreen` fires for thermometer questions, calling `handlePinCommit` with
-   `pinKey="center"`. Since `updateQuestionCenter` is a no-op for thermometer,
-   the map tap is effectively dead — by design (only drag-to-move for two-pin
-   questions).
+   extends `BaseQuestion` which includes `center`. The map-tap-to-place-pin
+   affordance (`onPlacePin`/`handlePlacePin`) was removed entirely (2026-06-15);
+   pins are now set via "Set to My Location" and repositioned by long-press drag.
+   Thermometer uses only drag-to-move for its two pins, matching the rest of the
+   system.
 
 3. **Both pins are draggable by proximity.** The drag gesture selects the
    closest pin within the hit radius. There is no active pin state. Long-pressing
-   away from any pin places the start pin. No serialization changes needed.
+   away from any pin does nothing (onPlacePin was removed 2026-06-15). No
+   serialization changes needed.
 
 ### Design decisions
 

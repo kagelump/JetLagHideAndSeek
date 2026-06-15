@@ -40,9 +40,10 @@ only for async gesture guards and cleanup.
 
 ### 3. Revisit map-press pin movement deferral
 
-`NativeMap` still uses `setTimeout(..., 0)` before committing a map-tap pin
-move. Document the ordering issue being avoided or replace it with an explicit
-drag/press guard.
+~~`NativeMap` still uses `setTimeout(..., 0)` before committing a map-tap pin
+move.~~ **(OBSOLETE 2026-06-15)** The map-tap-to-place-pin affordance
+(`onPlacePin`/`handlePlacePin`) has been removed. Pins are now set via "Set to
+My Location" and repositioned by long-press drag only.
 
 ### 4. Keep new question overlays outside `NativeMap`
 

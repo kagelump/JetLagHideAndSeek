@@ -49,16 +49,6 @@ export function MapAppScreen() {
         }
     }, []);
 
-    const handlePlacePin = useCallback(
-        (position: [number, number]) => {
-            if (!activeQuestion || isLocked || !isQuestionDetailRoute) return;
-            if ("center" in activeQuestion) {
-                handlePinCommit(activeQuestion.id, "center", position);
-            }
-        },
-        [activeQuestion, handlePinCommit, isLocked, isQuestionDetailRoute],
-    );
-
     const handleSheetIndexChange = useCallback((index: number) => {
         sheetIndexRef.current = index;
         setSheetIndex(index);
@@ -85,7 +75,6 @@ export function MapAppScreen() {
                     isQuestionDetailRoute={isQuestionDetailRoute}
                     onPinCommit={handlePinCommit}
                     onPress={handleMapPress}
-                    onPlacePin={handlePlacePin}
                     onThermometerDragUpdate={handleDragUpdate}
                     pins={pins}
                     questionId={questionId}

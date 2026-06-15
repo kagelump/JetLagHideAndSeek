@@ -53,8 +53,7 @@ computes `canMove`, and passes everything down.
 
 ### Map tap behavior
 
-- Single-pin questions (radar/matching/measuring/tentacles): tapping the map
-  still moves the center pin.
+- Single-pin questions (radar/matching/measuring/tentacles): map tap collapses the sheet. Pins are set via the "Set to My Location" button and repositioned by long-press dragging.
 - Thermometer: map tap does nothing. Pins are drag-only.
 
 ### Thermometer default positions
