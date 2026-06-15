@@ -1,12 +1,6 @@
-import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { SlideUpModal } from "@/components/SlideUpModal";
 import { colors } from "@/theme/colors";
 import {
     measuringCategoriesBySection,
@@ -28,110 +22,101 @@ export function MeasuringCategoryModal({
     onClose,
 }: MeasuringCategoryModalProps) {
     return (
-        <Modal
-            animationType="slide"
-            onRequestClose={onClose}
-            transparent
+        <SlideUpModal
+            onClose={onClose}
+            scrimColor="rgba(0,0,0,0.4)"
             visible={visible}
         >
-            <View style={styles.backdrop}>
-                <View style={styles.container}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>Choose Category</Text>
-                        <Pressable
-                            accessibilityLabel="Close category picker"
-                            accessibilityRole="button"
-                            hitSlop={12}
-                            onPress={onClose}
-                            style={({ pressed }) => [
-                                styles.closeButton,
-                                pressed ? styles.actionPressed : null,
-                            ]}
-                            testID="measuring-category-modal-close"
-                        >
-                            <Text style={styles.closeButtonText}>Done</Text>
-                        </Pressable>
-                    </View>
-
-                    <ScrollView
-                        contentContainerStyle={styles.scrollContent}
-                        keyboardShouldPersistTaps="handled"
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Choose Category</Text>
+                    <Pressable
+                        accessibilityLabel="Close category picker"
+                        accessibilityRole="button"
+                        hitSlop={12}
+                        onPress={onClose}
+                        style={({ pressed }) => [
+                            styles.closeButton,
+                            pressed ? styles.actionPressed : null,
+                        ]}
+                        testID="measuring-category-modal-close"
                     >
-                        {(
-                            Object.entries(measuringCategoriesBySection) as [
-                                MeasuringCategorySection,
-                                (typeof measuringCategoriesBySection)[MeasuringCategorySection],
-                            ][]
-                        ).map(([section, configs]) => {
-                            const implemented = configs.filter(
-                                (
-                                    c,
-                                ): c is (typeof configs)[number] & {
-                                    implemented: true;
-                                } => c.implemented,
-                            );
-                            if (implemented.length === 0) return null;
-                            return (
-                                <View key={section} style={styles.section}>
-                                    <Text style={styles.sectionLabel}>
-                                        {section}
-                                    </Text>
-                                    {implemented.map((config) => {
-                                        const isSelected =
-                                            selectedCategory ===
-                                            config.category;
-                                        return (
-                                            <Pressable
-                                                accessibilityLabel={`${config.title} measuring category`}
-                                                accessibilityRole="button"
-                                                accessibilityState={{
-                                                    selected: isSelected,
-                                                }}
-                                                key={config.category}
-                                                onPress={() => {
-                                                    onSelect(config.category);
-                                                    onClose();
-                                                }}
+                        <Text style={styles.closeButtonText}>Done</Text>
+                    </Pressable>
+                </View>
+
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {(
+                        Object.entries(measuringCategoriesBySection) as [
+                            MeasuringCategorySection,
+                            (typeof measuringCategoriesBySection)[MeasuringCategorySection],
+                        ][]
+                    ).map(([section, configs]) => {
+                        const implemented = configs.filter(
+                            (
+                                c,
+                            ): c is (typeof configs)[number] & {
+                                implemented: true;
+                            } => c.implemented,
+                        );
+                        if (implemented.length === 0) return null;
+                        return (
+                            <View key={section} style={styles.section}>
+                                <Text style={styles.sectionLabel}>
+                                    {section}
+                                </Text>
+                                {implemented.map((config) => {
+                                    const isSelected =
+                                        selectedCategory === config.category;
+                                    return (
+                                        <Pressable
+                                            accessibilityLabel={`${config.title} measuring category`}
+                                            accessibilityRole="button"
+                                            accessibilityState={{
+                                                selected: isSelected,
+                                            }}
+                                            key={config.category}
+                                            onPress={() => {
+                                                onSelect(config.category);
+                                                onClose();
+                                            }}
+                                            style={[
+                                                styles.row,
+                                                isSelected
+                                                    ? styles.rowSelected
+                                                    : null,
+                                            ]}
+                                            testID={`measuring-category-modal-${config.category}`}
+                                        >
+                                            <View
                                                 style={[
-                                                    styles.row,
+                                                    styles.radio,
                                                     isSelected
-                                                        ? styles.rowSelected
+                                                        ? styles.radioSelected
                                                         : null,
                                                 ]}
-                                                testID={`measuring-category-modal-${config.category}`}
-                                            >
-                                                <View
-                                                    style={[
-                                                        styles.radio,
-                                                        isSelected
-                                                            ? styles.radioSelected
-                                                            : null,
-                                                    ]}
-                                                />
-                                                <Text style={styles.rowTitle}>
-                                                    {config.title}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })}
-                                </View>
-                            );
-                        })}
-                    </ScrollView>
-                </View>
+                                            />
+                                            <Text style={styles.rowTitle}>
+                                                {config.title}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        );
+                    })}
+                </ScrollView>
             </View>
-        </Modal>
+        </SlideUpModal>
     );
 }
 
 const styles = StyleSheet.create({
     actionPressed: {
         opacity: 0.72,
-    },
-    backdrop: {
-        backgroundColor: "rgba(0,0,0,0.4)",
-        flex: 1,
-        justifyContent: "flex-end",
     },
     closeButton: {
         paddingHorizontal: 8,

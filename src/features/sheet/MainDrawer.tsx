@@ -10,7 +10,6 @@ import {
     ActivityIndicator,
     BackHandler,
     Dimensions,
-    Modal,
     Platform,
     Pressable,
     StyleSheet,
@@ -28,6 +27,7 @@ import Animated, {
     withTiming,
 } from "react-native-reanimated";
 
+import { SlideUpModal } from "@/components/SlideUpModal";
 import { HidingZoneScreen } from "@/features/hidingZone/HidingZoneScreen";
 import { useEliminationPercentage } from "@/features/map/useEliminationPercentage";
 import { useStationElimination } from "@/features/map/useStationElimination";
@@ -571,7 +571,7 @@ function MainSheetContent({
                                         </Text>
                                     )}
                                     <Text style={styles.statLabel}>
-                                        Stations remaining
+                                        Stations
                                     </Text>
                                 </Pressable>
                                 <View style={styles.statItem}>
@@ -682,52 +682,43 @@ function SeekTimeModal({
     );
 
     return (
-        <Modal
-            animationType="slide"
-            onRequestClose={onCancel}
-            transparent
-            visible
-        >
-            <Pressable onPress={onCancel} style={styles.modalBackdrop}>
-                <Pressable style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Pressable
-                            accessibilityLabel="Cancel"
-                            accessibilityRole="button"
-                            hitSlop={12}
-                            onPress={onCancel}
-                            style={styles.modalCancelButton}
-                        >
-                            <Text style={styles.modalCancelText}>Cancel</Text>
-                        </Pressable>
-                        <Text style={styles.modalHeaderTitle}>
-                            Seeking start time
-                        </Text>
-                        <Pressable
-                            accessibilityLabel="Set time"
-                            accessibilityRole="button"
-                            hitSlop={12}
-                            onPress={onSet}
-                            style={styles.modalDoneButton}
-                            testID="seek-time-modal-set"
-                        >
-                            <Text style={styles.modalDoneText}>Set</Text>
-                        </Pressable>
-                    </View>
-                    <View style={styles.timePickerBody}>
-                        <DateTimePicker
-                            display={
-                                Platform.OS === "ios" ? "spinner" : "default"
-                            }
-                            is24Hour
-                            mode="time"
-                            onChange={handleChange}
-                            value={draft}
-                        />
-                    </View>
-                </Pressable>
+        <SlideUpModal onClose={onCancel} scrimColor="rgba(0,0,0,0.4)" visible>
+            <Pressable style={styles.modalContainer}>
+                <View style={styles.modalHeader}>
+                    <Pressable
+                        accessibilityLabel="Cancel"
+                        accessibilityRole="button"
+                        hitSlop={12}
+                        onPress={onCancel}
+                        style={styles.modalCancelButton}
+                    >
+                        <Text style={styles.modalCancelText}>Cancel</Text>
+                    </Pressable>
+                    <Text style={styles.modalHeaderTitle}>
+                        Seeking start time
+                    </Text>
+                    <Pressable
+                        accessibilityLabel="Set time"
+                        accessibilityRole="button"
+                        hitSlop={12}
+                        onPress={onSet}
+                        style={styles.modalDoneButton}
+                        testID="seek-time-modal-set"
+                    >
+                        <Text style={styles.modalDoneText}>Set</Text>
+                    </Pressable>
+                </View>
+                <View style={styles.timePickerBody}>
+                    <DateTimePicker
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        is24Hour
+                        mode="time"
+                        onChange={handleChange}
+                        value={draft}
+                    />
+                </View>
             </Pressable>
-        </Modal>
+        </SlideUpModal>
     );
 }
 
@@ -1119,11 +1110,6 @@ const styles = StyleSheet.create({
         lineHeight: 28,
     },
     // Seek time modal
-    modalBackdrop: {
-        backgroundColor: "rgba(0,0,0,0.4)",
-        flex: 1,
-        justifyContent: "flex-end",
-    },
     modalCancelButton: {
         minWidth: 72,
     },

@@ -1,6 +1,5 @@
 import {
     Linking,
-    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -8,6 +7,7 @@ import {
     View,
 } from "react-native";
 
+import { SlideUpModal } from "@/components/SlideUpModal";
 import { formatStationDistance } from "@/features/questions/radar/radarGeometry";
 import { haversineDistanceMeters } from "@/shared/geojson";
 import type { Position } from "@/shared/geojson";
@@ -73,132 +73,122 @@ export function OsmFeatureDetailModal({
         : [];
 
     return (
-        <Modal
-            animationType="slide"
-            onRequestClose={onClose}
-            transparent
-            visible={visible}
-        >
-            <View style={styles.scrim}>
-                <View style={styles.modal}>
-                    <View style={styles.header}>
-                        <Text style={styles.title}>{displayName}</Text>
-                        <Pressable
-                            accessibilityLabel="Close POI detail"
-                            accessibilityRole="button"
-                            onPress={onClose}
-                            style={styles.closeButton}
-                            testID="poi-detail-close"
-                        >
-                            <Text style={styles.closeText}>Close</Text>
-                        </Pressable>
-                    </View>
-
-                    <ScrollView
-                        contentContainerStyle={styles.content}
-                        keyboardShouldPersistTaps="handled"
+        <SlideUpModal onClose={onClose} visible={visible}>
+            <View style={styles.modal}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>{displayName}</Text>
+                    <Pressable
+                        accessibilityLabel="Close POI detail"
+                        accessibilityRole="button"
+                        onPress={onClose}
+                        style={styles.closeButton}
+                        testID="poi-detail-close"
                     >
-                        {/* ── Key Info ─────────────────────────────── */}
-                        <View style={styles.infoCard}>
-                            <Text style={styles.categoryBadge}>
-                                {categoryTitle}
-                            </Text>
+                        <Text style={styles.closeText}>Close</Text>
+                    </Pressable>
+                </View>
 
-                            {distance !== null ? (
-                                <InfoRow label="Distance" value={distance} />
-                            ) : null}
+                <ScrollView
+                    contentContainerStyle={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* ── Key Info ─────────────────────────────── */}
+                    <View style={styles.infoCard}>
+                        <Text style={styles.categoryBadge}>
+                            {categoryTitle}
+                        </Text>
 
-                            {feature ? (
-                                <>
-                                    <InfoRow
-                                        label="Coordinates"
-                                        value={`${formatCoordinate(feature.lat)}, ${formatCoordinate(feature.lon)}`}
-                                    />
-                                    <View style={styles.infoRow}>
-                                        <Text style={styles.infoLabel}>
-                                            OSM ID
-                                        </Text>
-                                        <Pressable
-                                            onPress={() =>
-                                                Linking.openURL(
-                                                    `https://www.openstreetmap.org/${feature.osmType}/${feature.osmId}`,
-                                                )
-                                            }
-                                        >
-                                            <Text style={styles.osmLink}>
-                                                {feature.osmType}/
-                                                {feature.osmId}
-                                            </Text>
-                                        </Pressable>
-                                    </View>
-                                    <InfoRow
-                                        label="OSM Type"
-                                        value={feature.osmType}
-                                    />
-                                </>
-                            ) : null}
-
-                            {feature?.iata ? (
-                                <InfoRow label="IATA" value={feature.iata} />
-                            ) : null}
-
-                            {feature?.nameLength !== undefined ? (
-                                <InfoRow
-                                    label="Name Length"
-                                    value={`${feature.nameLength} characters`}
-                                />
-                            ) : null}
-                        </View>
-
-                        {/* ── Tags ────────────────────────────────── */}
-                        <Text style={styles.sectionHeading}>Tags</Text>
-                        <View style={styles.tagsCard}>
-                            {tagEntries.length > 0 ? (
-                                tagEntries.map(([key, value]) => (
-                                    <View key={key} style={styles.tagRow}>
-                                        <Text style={styles.tagKey}>{key}</Text>
-                                        <Text
-                                            style={styles.tagValue}
-                                            numberOfLines={3}
-                                        >
-                                            {value}
-                                        </Text>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text style={styles.emptyTags}>
-                                    No tags available
-                                </Text>
-                            )}
-                        </View>
-
-                        {/* ── External Links ──────────────────────── */}
-                        {feature ? (
-                            <Pressable
-                                accessibilityLabel="Open in Google Maps"
-                                accessibilityRole="link"
-                                onPress={() =>
-                                    Linking.openURL(
-                                        `https://www.google.com/maps/search/?api=1&query=${feature.lat},${feature.lon}`,
-                                    )
-                                }
-                                style={styles.googleMapsButton}
-                                testID="poi-detail-google-maps"
-                            >
-                                <Text style={styles.googleMapsText}>
-                                    Open in Google Maps
-                                </Text>
-                            </Pressable>
+                        {distance !== null ? (
+                            <InfoRow label="Distance" value={distance} />
                         ) : null}
 
-                        {/* ── Attribution ─────────────────────────── */}
-                        <Text style={styles.attribution}>
-                            {POI_DATA_ATTRIBUTION.text}
-                        </Text>
-                    </ScrollView>
-                </View>
+                        {feature ? (
+                            <>
+                                <InfoRow
+                                    label="Coordinates"
+                                    value={`${formatCoordinate(feature.lat)}, ${formatCoordinate(feature.lon)}`}
+                                />
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>OSM ID</Text>
+                                    <Pressable
+                                        onPress={() =>
+                                            Linking.openURL(
+                                                `https://www.openstreetmap.org/${feature.osmType}/${feature.osmId}`,
+                                            )
+                                        }
+                                    >
+                                        <Text style={styles.osmLink}>
+                                            {feature.osmType}/{feature.osmId}
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                                <InfoRow
+                                    label="OSM Type"
+                                    value={feature.osmType}
+                                />
+                            </>
+                        ) : null}
+
+                        {feature?.iata ? (
+                            <InfoRow label="IATA" value={feature.iata} />
+                        ) : null}
+
+                        {feature?.nameLength !== undefined ? (
+                            <InfoRow
+                                label="Name Length"
+                                value={`${feature.nameLength} characters`}
+                            />
+                        ) : null}
+                    </View>
+
+                    {/* ── Tags ────────────────────────────────── */}
+                    <Text style={styles.sectionHeading}>Tags</Text>
+                    <View style={styles.tagsCard}>
+                        {tagEntries.length > 0 ? (
+                            tagEntries.map(([key, value]) => (
+                                <View key={key} style={styles.tagRow}>
+                                    <Text style={styles.tagKey}>{key}</Text>
+                                    <Text
+                                        style={styles.tagValue}
+                                        numberOfLines={3}
+                                    >
+                                        {value}
+                                    </Text>
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.emptyTags}>
+                                No tags available
+                            </Text>
+                        )}
+                    </View>
+
+                    {/* ── External Links ──────────────────────── */}
+                    {feature ? (
+                        <Pressable
+                            accessibilityLabel="Open in Google Maps"
+                            accessibilityRole="link"
+                            onPress={() =>
+                                Linking.openURL(
+                                    `https://www.google.com/maps/search/?api=1&query=${feature.lat},${feature.lon}`,
+                                )
+                            }
+                            style={styles.googleMapsButton}
+                            testID="poi-detail-google-maps"
+                        >
+                            <Text style={styles.googleMapsText}>
+                                Open in Google Maps
+                            </Text>
+                        </Pressable>
+                    ) : null}
+
+                    {/* ── Attribution ─────────────────────────── */}
+                    <Text style={styles.attribution}>
+                        {POI_DATA_ATTRIBUTION.text}
+                    </Text>
+                </ScrollView>
             </View>
-        </Modal>
+        </SlideUpModal>
     );
 }
 
@@ -290,11 +280,6 @@ const styles = StyleSheet.create({
         maxHeight: "88%",
         padding: 20,
         width: "100%",
-    },
-    scrim: {
-        backgroundColor: "rgba(23, 32, 42, 0.32)",
-        flex: 1,
-        justifyContent: "flex-end",
     },
     sectionHeading: {
         color: colors.muted,

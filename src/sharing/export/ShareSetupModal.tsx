@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-    Modal,
     NativeModules,
     Pressable,
     ScrollView,
@@ -10,6 +9,7 @@ import {
     View,
 } from "react-native";
 
+import { SlideUpModal } from "@/components/SlideUpModal";
 import type { PlayArea } from "@/features/map/playArea";
 import { extractWireState } from "@/features/questions/matching/adminDivisionConfig";
 import type { QuestionsImportState } from "@/features/questions/questionTypes";
@@ -129,153 +129,136 @@ export function ShareSetupModal({
     };
 
     return (
-        <Modal
-            animationType="slide"
-            onRequestClose={onClose}
-            transparent
-            visible={visible}
-        >
-            <View style={styles.scrim}>
-                <View style={styles.modal}>
-                    <View style={styles.header}>
-                        <View style={styles.headerCopy}>
-                            <Text style={styles.eyebrow}>Share</Text>
-                            <Text style={styles.title}>Game Setup</Text>
-                            <Text style={styles.setupSummary}>
-                                {playArea.label} ·{" "}
-                                {hidingZones.selectedPresetIds.length} preset
-                                {hidingZones.selectedPresetIds.length === 1
-                                    ? ""
-                                    : "s"}{" "}
-                                · {questions.length} question
-                                {questions.length === 1 ? "" : "s"}
-                            </Text>
-                        </View>
-                        <Pressable
-                            accessibilityLabel="Close sharing"
-                            accessibilityRole="button"
-                            onPress={onClose}
-                            style={({ pressed }) => [
-                                styles.closeButton,
-                                pressed ? styles.actionPressed : null,
-                            ]}
-                            testID="share-setup-close-button"
-                        >
-                            <Text style={styles.closeText}>Close</Text>
-                        </Pressable>
+        <SlideUpModal onClose={onClose} visible={visible}>
+            <View style={styles.modal}>
+                <View style={styles.header}>
+                    <View style={styles.headerCopy}>
+                        <Text style={styles.eyebrow}>Share</Text>
+                        <Text style={styles.title}>Game Setup</Text>
+                        <Text style={styles.setupSummary}>
+                            {playArea.label} ·{" "}
+                            {hidingZones.selectedPresetIds.length} preset
+                            {hidingZones.selectedPresetIds.length === 1
+                                ? ""
+                                : "s"}{" "}
+                            · {questions.length} question
+                            {questions.length === 1 ? "" : "s"}
+                        </Text>
+                    </View>
+                    <Pressable
+                        accessibilityLabel="Close sharing"
+                        accessibilityRole="button"
+                        onPress={onClose}
+                        style={({ pressed }) => [
+                            styles.closeButton,
+                            pressed ? styles.actionPressed : null,
+                        ]}
+                        testID="share-setup-close-button"
+                    >
+                        <Text style={styles.closeText}>Close</Text>
+                    </Pressable>
+                </View>
+
+                <ScrollView contentContainerStyle={styles.content}>
+                    <View style={styles.summary} testID="share-setup-summary">
+                        <Text style={styles.summaryLabel}>Current setup</Text>
+                        <Text style={styles.summaryTitle}>
+                            {playArea.label}
+                        </Text>
+                        <Text style={styles.summaryDetail}>
+                            {hidingZones.selectedPresetIds.length} preset
+                            {hidingZones.selectedPresetIds.length === 1
+                                ? ""
+                                : "s"}{" "}
+                            selected · {Math.round(hidingZones.radiusMeters)}m
+                            radius
+                        </Text>
                     </View>
 
-                    <ScrollView contentContainerStyle={styles.content}>
+                    {canShowQr ? (
+                        <View style={styles.qrShell} testID="share-setup-qr">
+                            <QRCodeView
+                                backgroundColor={colors.card}
+                                color={colors.ink}
+                                size={220}
+                                value={link}
+                            />
+                        </View>
+                    ) : (
                         <View
-                            style={styles.summary}
-                            testID="share-setup-summary"
+                            style={styles.warning}
+                            testID="share-setup-qr-warning"
                         >
-                            <Text style={styles.summaryLabel}>
-                                Current setup
+                            <Text style={styles.warningTitle}>
+                                QR code unavailable
                             </Text>
-                            <Text style={styles.summaryTitle}>
-                                {playArea.label}
-                            </Text>
-                            <Text style={styles.summaryDetail}>
-                                {hidingZones.selectedPresetIds.length} preset
-                                {hidingZones.selectedPresetIds.length === 1
-                                    ? ""
-                                    : "s"}{" "}
-                                selected ·{" "}
-                                {Math.round(hidingZones.radiusMeters)}m radius
+                            <Text style={styles.warningDetail}>
+                                This custom setup link is too large for a QR
+                                code. Copy or share the link instead.
                             </Text>
                         </View>
+                    )}
 
-                        {canShowQr ? (
-                            <View
-                                style={styles.qrShell}
-                                testID="share-setup-qr"
-                            >
-                                <QRCodeView
-                                    backgroundColor={colors.card}
-                                    color={colors.ink}
-                                    size={220}
-                                    value={link}
-                                />
-                            </View>
-                        ) : (
-                            <View
-                                style={styles.warning}
-                                testID="share-setup-qr-warning"
-                            >
-                                <Text style={styles.warningTitle}>
-                                    QR code unavailable
-                                </Text>
-                                <Text style={styles.warningDetail}>
-                                    This custom setup link is too large for a QR
-                                    code. Copy or share the link instead.
-                                </Text>
-                            </View>
-                        )}
-
-                        <Pressable
-                            onPress={handleLinkTripleTap}
-                            testID="share-setup-link"
-                        >
-                            {debugMode !== false ? (
-                                <Text style={styles.debugLabel}>
-                                    {debugMode === "full"
-                                        ? "Full JSON"
-                                        : "Minified JSON"}
-                                </Text>
-                            ) : null}
-                            <Text selectable style={styles.linkText}>
+                    <Pressable
+                        onPress={handleLinkTripleTap}
+                        testID="share-setup-link"
+                    >
+                        {debugMode !== false ? (
+                            <Text style={styles.debugLabel}>
                                 {debugMode === "full"
-                                    ? JSON.stringify(envelope, null, 2)
-                                    : debugMode === "minified"
-                                      ? JSON.stringify(
-                                            minifyEnvelope(envelope),
-                                            null,
-                                            2,
-                                        )
-                                      : link}
-                            </Text>
-                        </Pressable>
-
-                        <View style={styles.buttonRow}>
-                            <Pressable
-                                accessibilityLabel="Copy share link"
-                                accessibilityRole="button"
-                                onPress={copyLink}
-                                style={({ pressed }) => [
-                                    styles.secondaryButton,
-                                    pressed ? styles.actionPressed : null,
-                                ]}
-                                testID="share-setup-copy-button"
-                            >
-                                <Text style={styles.secondaryButtonText}>
-                                    Copy Link
-                                </Text>
-                            </Pressable>
-                            <Pressable
-                                accessibilityLabel="Open native share sheet"
-                                accessibilityRole="button"
-                                onPress={shareLink}
-                                style={({ pressed }) => [
-                                    styles.primaryButton,
-                                    pressed ? styles.actionPressed : null,
-                                ]}
-                                testID="share-setup-native-button"
-                            >
-                                <Text style={styles.primaryButtonText}>
-                                    Share
-                                </Text>
-                            </Pressable>
-                        </View>
-                        {status ? (
-                            <Text style={styles.status} testID="share-status">
-                                {status}
+                                    ? "Full JSON"
+                                    : "Minified JSON"}
                             </Text>
                         ) : null}
-                    </ScrollView>
-                </View>
+                        <Text selectable style={styles.linkText}>
+                            {debugMode === "full"
+                                ? JSON.stringify(envelope, null, 2)
+                                : debugMode === "minified"
+                                  ? JSON.stringify(
+                                        minifyEnvelope(envelope),
+                                        null,
+                                        2,
+                                    )
+                                  : link}
+                        </Text>
+                    </Pressable>
+
+                    <View style={styles.buttonRow}>
+                        <Pressable
+                            accessibilityLabel="Copy share link"
+                            accessibilityRole="button"
+                            onPress={copyLink}
+                            style={({ pressed }) => [
+                                styles.secondaryButton,
+                                pressed ? styles.actionPressed : null,
+                            ]}
+                            testID="share-setup-copy-button"
+                        >
+                            <Text style={styles.secondaryButtonText}>
+                                Copy Link
+                            </Text>
+                        </Pressable>
+                        <Pressable
+                            accessibilityLabel="Open native share sheet"
+                            accessibilityRole="button"
+                            onPress={shareLink}
+                            style={({ pressed }) => [
+                                styles.primaryButton,
+                                pressed ? styles.actionPressed : null,
+                            ]}
+                            testID="share-setup-native-button"
+                        >
+                            <Text style={styles.primaryButtonText}>Share</Text>
+                        </Pressable>
+                    </View>
+                    {status ? (
+                        <Text style={styles.status} testID="share-status">
+                            {status}
+                        </Text>
+                    ) : null}
+                </ScrollView>
             </View>
-        </Modal>
+        </SlideUpModal>
     );
 }
 
@@ -369,11 +352,6 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         padding: 18,
-    },
-    scrim: {
-        backgroundColor: "rgba(23, 32, 42, 0.32)",
-        flex: 1,
-        justifyContent: "flex-end",
     },
     secondaryButton: {
         alignItems: "center",

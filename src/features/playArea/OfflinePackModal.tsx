@@ -1,12 +1,12 @@
 import {
     ActivityIndicator,
-    Modal,
     Pressable,
     StyleSheet,
     Text,
     View,
 } from "react-native";
 
+import { SlideUpModal } from "@/components/SlideUpModal";
 import type { CoverageStatus } from "@/features/offline/coverage";
 import { formatBytes } from "@/features/offline/regionPacks";
 import type { InstallProgress } from "@/features/offline/regionPacks";
@@ -141,49 +141,39 @@ export function OfflinePackModal({
     if (!isActionable && !isInstalling && !installError) return null;
 
     return (
-        <Modal
-            animationType="slide"
-            onRequestClose={onDismiss}
-            transparent
+        <SlideUpModal
+            onClose={onDismiss}
+            scrimColor="rgba(0,0,0,0.4)"
             visible={visible}
         >
-            <View style={styles.backdrop}>
-                <View style={styles.container}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>
-                            Download game data
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Download game data</Text>
+                    <Pressable
+                        accessibilityLabel="Not now"
+                        accessibilityRole="button"
+                        hitSlop={12}
+                        onPress={onDismiss}
+                        style={({ pressed }) => [
+                            styles.closeButton,
+                            pressed ? styles.actionPressed : null,
+                        ]}
+                        testID="offline-pack-modal-dismiss"
+                    >
+                        <Text style={styles.closeButtonText}>
+                            {isInstalling ? "Hide" : "Not now"}
                         </Text>
-                        <Pressable
-                            accessibilityLabel="Not now"
-                            accessibilityRole="button"
-                            hitSlop={12}
-                            onPress={onDismiss}
-                            style={({ pressed }) => [
-                                styles.closeButton,
-                                pressed ? styles.actionPressed : null,
-                            ]}
-                            testID="offline-pack-modal-dismiss"
-                        >
-                            <Text style={styles.closeButtonText}>
-                                {isInstalling ? "Hide" : "Not now"}
-                            </Text>
-                        </Pressable>
-                    </View>
-                    {body}
+                    </Pressable>
                 </View>
+                {body}
             </View>
-        </Modal>
+        </SlideUpModal>
     );
 }
 
 const styles = StyleSheet.create({
     actionPressed: {
         opacity: 0.72,
-    },
-    backdrop: {
-        backgroundColor: "rgba(0,0,0,0.4)",
-        flex: 1,
-        justifyContent: "flex-end",
     },
     bold: {
         fontWeight: "800",

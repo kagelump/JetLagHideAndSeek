@@ -1,12 +1,6 @@
-import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { SlideUpModal } from "@/components/SlideUpModal";
 import { formatStationDistance } from "@/features/questions/radar/radarGeometry";
 import { colors } from "@/theme/colors";
 
@@ -43,85 +37,78 @@ export function OsmMatchingCandidatesModal({
     visible,
 }: OsmMatchingCandidatesModalProps) {
     return (
-        <Modal
-            animationType="slide"
-            onRequestClose={onClose}
-            transparent
-            visible={visible}
-        >
-            <View style={styles.scrim}>
-                <View style={styles.modal}>
-                    <View style={styles.header}>
-                        <Text style={styles.title}>All {categoryTitle}s</Text>
-                        <Pressable
-                            accessibilityLabel="Close full candidate list"
-                            accessibilityRole="button"
-                            onPress={onClose}
-                            style={styles.closeButton}
-                            testID="osm-matching-all-modal-close"
-                        >
-                            <Text style={styles.closeText}>Close</Text>
-                        </Pressable>
-                    </View>
-
-                    <ScrollView
-                        contentContainerStyle={styles.list}
-                        keyboardShouldPersistTaps="handled"
+        <SlideUpModal onClose={onClose} visible={visible}>
+            <View style={styles.modal}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>All {categoryTitle}s</Text>
+                    <Pressable
+                        accessibilityLabel="Close full candidate list"
+                        accessibilityRole="button"
+                        onPress={onClose}
+                        style={styles.closeButton}
+                        testID="osm-matching-all-modal-close"
                     >
-                        {candidates.map((candidate) => {
-                            const isSelected =
-                                selectedOsmId === candidate.osmId &&
-                                selectedOsmType === candidate.osmType;
-                            return (
-                                <Pressable
-                                    accessibilityLabel={`${formatCandidateName(candidate, labelLanguage)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
-                                    accessibilityRole="button"
-                                    key={`${candidate.osmType}-${candidate.osmId}`}
-                                    onPress={() => {
-                                        const candId = candidate.osmId;
-                                        const candType = candidate.osmType;
-                                        const isSelected =
-                                            selectedOsmId === candId &&
-                                            selectedOsmType === candType;
-                                        if (isSelected && onShowDetail) {
-                                            onShowDetail(candidate);
-                                        } else {
-                                            onSelect(candidate);
-                                        }
-                                    }}
-                                    style={[
-                                        styles.candidateRow,
-                                        isSelected
-                                            ? styles.candidateRowSelected
-                                            : null,
-                                    ]}
-                                    testID={`osm-matching-all-candidate-${candidate.osmId}`}
-                                >
-                                    <View style={styles.candidateCopy}>
-                                        <Text
-                                            style={styles.candidateName}
-                                            numberOfLines={1}
-                                        >
-                                            {formatCandidateName(
-                                                candidate,
-                                                labelLanguage,
-                                            )}
-                                        </Text>
-                                    </View>
-                                    {candidate.distanceMeters !== undefined ? (
-                                        <Text style={styles.candidateDistance}>
-                                            {formatStationDistance(
-                                                candidate.distanceMeters,
-                                            )}
-                                        </Text>
-                                    ) : null}
-                                </Pressable>
-                            );
-                        })}
-                    </ScrollView>
+                        <Text style={styles.closeText}>Close</Text>
+                    </Pressable>
                 </View>
+
+                <ScrollView
+                    contentContainerStyle={styles.list}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {candidates.map((candidate) => {
+                        const isSelected =
+                            selectedOsmId === candidate.osmId &&
+                            selectedOsmType === candidate.osmType;
+                        return (
+                            <Pressable
+                                accessibilityLabel={`${formatCandidateName(candidate, labelLanguage)}${candidate.distanceMeters !== undefined ? `, ${formatStationDistance(candidate.distanceMeters)}` : ""}`}
+                                accessibilityRole="button"
+                                key={`${candidate.osmType}-${candidate.osmId}`}
+                                onPress={() => {
+                                    const candId = candidate.osmId;
+                                    const candType = candidate.osmType;
+                                    const isSelected =
+                                        selectedOsmId === candId &&
+                                        selectedOsmType === candType;
+                                    if (isSelected && onShowDetail) {
+                                        onShowDetail(candidate);
+                                    } else {
+                                        onSelect(candidate);
+                                    }
+                                }}
+                                style={[
+                                    styles.candidateRow,
+                                    isSelected
+                                        ? styles.candidateRowSelected
+                                        : null,
+                                ]}
+                                testID={`osm-matching-all-candidate-${candidate.osmId}`}
+                            >
+                                <View style={styles.candidateCopy}>
+                                    <Text
+                                        style={styles.candidateName}
+                                        numberOfLines={1}
+                                    >
+                                        {formatCandidateName(
+                                            candidate,
+                                            labelLanguage,
+                                        )}
+                                    </Text>
+                                </View>
+                                {candidate.distanceMeters !== undefined ? (
+                                    <Text style={styles.candidateDistance}>
+                                        {formatStationDistance(
+                                            candidate.distanceMeters,
+                                        )}
+                                    </Text>
+                                ) : null}
+                            </Pressable>
+                        );
+                    })}
+                </ScrollView>
             </View>
-        </Modal>
+        </SlideUpModal>
     );
 }
 
@@ -184,11 +171,6 @@ const styles = StyleSheet.create({
         maxHeight: "88%",
         padding: 20,
         width: "100%",
-    },
-    scrim: {
-        backgroundColor: "rgba(23, 32, 42, 0.32)",
-        flex: 1,
-        justifyContent: "flex-end",
     },
     title: {
         color: colors.ink,
