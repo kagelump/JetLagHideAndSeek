@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
-import { derivePoiAnswer } from "@/features/questions/questionRegistry";
 import type { TentaclesCategory } from "@/features/questions/tentacles/tentaclesTypes";
 import { normalizeTransitLineQuestion } from "@/features/questions/transitLine/transitLineNormalization";
 import {
     matchingCategorySchema,
     measuringCategorySchema,
+    normalizePoiAnswer,
     tentaclesCategorySchema,
 } from "@/sharing/wire/questionSchemas";
 
@@ -166,7 +166,10 @@ const thermometerQuestionMinifiedSchema = z.object({
 // ── Tentacles ────────────────────────────────────────────────────────────
 
 const tentaclesQuestionMinifiedSchema = z.object({
-    [FIELD_MAP.answer]: z.enum(["p"]).optional(),
+    // "n" carries an explicit "None" answer (negative) — the one POI-answer
+    // state that cannot be re-derived from `selectedOsmId`. "p" is redundant
+    // with a present selection but accepted for symmetry.
+    [FIELD_MAP.answer]: z.enum(["p", "n"]).optional(),
     [FIELD_MAP.candidates]: z.array(compactCandidateSchema).optional(),
     [FIELD_MAP.category]: tentaclesCategorySchema,
     [FIELD_MAP.center]: compactCoordSchema,
@@ -710,15 +713,15 @@ function unminifyQuestion(
         const compactCandidates = q[FIELD_MAP.candidates] as
             | z.infer<typeof compactCandidateSchema>[]
             | undefined;
-        // Re-derive `answer` from the canonical `selectedOsmId` so a minified
-        // payload that says `e:"p"` without a `selectedOsmId` is repaired to
-        // `unanswered` on decode — symmetry with the zod transforms on the
-        // full-key schemas and `normalizeQuestionState` in the store.
+        // Run through the shared `normalizePoiAnswer`: an explicit "negative"
+        // ("None") is preserved, while any other answer is re-derived from the
+        // canonical `selectedOsmId` (so `e:"p"` without a selection repairs to
+        // `unanswered`) — identical to the full-key schema + store paths.
         const selectedOsmId: number | null | undefined = q[
             FIELD_MAP.selectedOsmId
         ] as number | null | undefined;
-        return {
-            answer: derivePoiAnswer(selectedOsmId ?? null),
+        return normalizePoiAnswer({
+            answer: resolvedAnswer,
             candidates: compactCandidates?.map(uncompactCandidate) ?? [],
             category: ((q[FIELD_MAP.category] as string | undefined) ??
                 "museum") as TentaclesCategory,
@@ -746,9 +749,9 @@ function unminifyQuestion(
                 (q[FIELD_MAP.selectedName] as string | null | undefined) ??
                 null,
             isLocked: false,
-            type: "tentacles",
+            type: "tentacles" as const,
             updatedAt: createdAt,
-        };
+        });
     }
 
     // Radar fallback (questionType undefined or "r")

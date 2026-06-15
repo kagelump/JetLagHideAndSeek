@@ -43,13 +43,14 @@ Plan for the two **Critical** findings in
 > regression suite `__tests__/questionSchemas.test.ts` (7 tests). `pnpm check` +
 > full jest suite (90 suites / 1149 tests) green.
 >
-> **Known remaining limitation (out of scope — item #4):** the _minified_ wire
-> format still cannot carry a tentacles `"negative"` — its answer enum is `["p"]`
-> and `unminifyQuestion` re-derives from `selectedOsmId`. So sharing a game with
-> a tentacles "None" answer via link/QR loses that answer (persistence and the
-> full-key wire path now preserve it correctly). This is a compression-layer
-> limitation belonging to the minified-codec rework (audit #4), not the schema
-> consolidation.
+> **Follow-up — tentacles share, now FIXED (2026-06-16):** the _minified_ wire
+> format previously could not carry a tentacles `"negative"` (its answer enum
+> was `["p"]` and `unminifyQuestion` re-derived from `selectedOsmId`), so sharing
+> a game with a tentacles "None" answer via link/QR lost it. Fixed by widening
+> the minified answer enum to `["p", "n"]` and routing `unminifyQuestion`'s
+> tentacles branch through the shared `normalizePoiAnswer` (preserve negative,
+> else re-derive). Added a minified round-trip regression test. Persistence,
+> full-key wire, and minified link/QR now all preserve a tentacles "None".
 
 ### Current state (verified)
 

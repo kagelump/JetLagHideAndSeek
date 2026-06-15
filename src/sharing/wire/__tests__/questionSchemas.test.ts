@@ -1,6 +1,7 @@
 import { appStateQuestionsSchema } from "@/state/appState";
 import {
     minifyEnvelope,
+    unminifyEnvelope,
     wireEnvelopeMinifiedSchema,
 } from "@/sharing/wire/minified";
 import { questionWireSchema } from "@/sharing/wire/schema";
@@ -63,6 +64,38 @@ describe("shared question schema — POI answer normalization", () => {
             }),
         ]);
         expect(parsed[0].answer).toBe("positive");
+    });
+
+    // Regression: the minified link/QR codec could not carry a tentacles "None"
+    // (negative) answer — its answer enum was ["p"] and unminify re-derived from
+    // selectedOsmId, silently dropping it when sharing a game.
+    it("round-trips a tentacles negative through the minified codec", () => {
+        const envelope: AppStateEnvelopeV1 = {
+            kind: "app-state",
+            payload: {
+                gameId: "g-none",
+                metadata: {
+                    createdAt: "2026-06-16T00:00:00.000Z",
+                    updatedAt: "2026-06-16T00:00:00.000Z",
+                },
+                questions: [
+                    questionWireSchema.parse(
+                        tentaclesQuestion({ answer: "negative" }),
+                    ),
+                ],
+            },
+            version: 1,
+        };
+
+        const mini = minifyEnvelope(envelope);
+        // The minified payload validates against the (now-widened) schema.
+        expect(wireEnvelopeMinifiedSchema.safeParse(mini).success).toBe(true);
+
+        const restored = unminifyEnvelope(mini);
+        if (restored.kind !== "app-state") {
+            throw new Error("expected app-state envelope");
+        }
+        expect(restored.payload.questions?.[0]?.answer).toBe("negative");
     });
 });
 
