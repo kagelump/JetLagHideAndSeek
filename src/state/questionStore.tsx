@@ -678,9 +678,11 @@ export function updateThermometerPin(
     pin: "start" | "end",
     position: Position,
 ): ThermometerQuestion {
+    const isStart = pin === "start";
     return {
         ...question,
-        [pin === "start" ? "previousPosition" : "currentPosition"]: position,
+        [isStart ? "previousPosition" : "currentPosition"]: position,
+        [isStart ? "previousStation" : "currentStation"]: null,
         updatedAt: new Date().toISOString(),
     };
 }
@@ -803,6 +805,8 @@ function createDefaultQuestion(
                 createdAt: now,
                 id: createQuestionId(),
                 isLocked: false,
+                nearestPoiName: null,
+                seekerDistanceMeters: null,
                 seekerDistanceUnit: "m",
                 type: "measuring",
                 updatedAt: now,
@@ -812,6 +816,8 @@ function createDefaultQuestion(
                 answer: "unanswered",
                 previousPosition: center,
                 currentPosition: offsetPosition(center, 300, 90),
+                previousStation: null,
+                currentStation: null,
                 createdAt: now,
                 id: createQuestionId(),
                 isLocked: false,

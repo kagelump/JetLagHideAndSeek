@@ -668,6 +668,8 @@ function unminifyQuestion(
             seekerDistanceUnit:
                 (q[FIELD_MAP.distanceUnit] as "m" | "km" | "mi" | undefined) ??
                 "m",
+            seekerDistanceMeters: null,
+            nearestPoiName: null,
             isLocked: false,
             type: "measuring",
             updatedAt: createdAt,
@@ -694,6 +696,8 @@ function unminifyQuestion(
                 currPos && currPos.length === 2
                     ? uncompactCoord(currPos[0], currPos[1])
                     : null,
+            previousStation: null,
+            currentStation: null,
             createdAt,
             id:
                 (q[FIELD_MAP.id] as string | undefined) ??

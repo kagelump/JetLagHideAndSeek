@@ -74,10 +74,7 @@ export function QuestionsScreen({ onNavigate }: QuestionsScreenProps) {
                                 >
                                     <View style={styles.questionCopy}>
                                         <Text style={styles.questionTitle}>
-                                            {typeof definition.title ===
-                                            "function"
-                                                ? definition.title(question)
-                                                : `${definition.title} ${index + 1}`}
+                                            {definition.title(question, index)}
                                         </Text>
                                         <Text style={styles.metadata}>
                                             {definition.summary(

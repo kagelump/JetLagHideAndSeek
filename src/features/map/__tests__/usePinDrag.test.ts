@@ -31,6 +31,8 @@ function makeThermometerQuestion(
         answer: "unanswered",
         previousPosition,
         currentPosition,
+        previousStation: null,
+        currentStation: null,
         createdAt: "2026-05-18T00:00:00.000Z",
         id: "thermometer-1",
         isLocked: false,

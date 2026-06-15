@@ -177,9 +177,16 @@ const appStateMeasuringQuestionSchema = z.object({
     createdAt: z.string().min(1),
     id: z.string().min(1),
     isLocked: z.boolean().default(false),
+    nearestPoiName: z.string().nullable().default(null),
+    seekerDistanceMeters: z.number().nullable().default(null),
     seekerDistanceUnit: z.enum(["m", "km", "mi"]).default("m"),
     type: z.literal("measuring"),
     updatedAt: z.string().min(1),
+});
+
+const appStateThermometerStationSchema = z.object({
+    name: z.string().nullable().default(null),
+    distanceMeters: z.number().nullable().default(null),
 });
 
 const appStateThermometerQuestionSchema = z.object({
@@ -187,6 +194,8 @@ const appStateThermometerQuestionSchema = z.object({
     createdAt: z.string().min(1),
     previousPosition: positionSchema.nullable().default(null),
     currentPosition: positionSchema.nullable().default(null),
+    previousStation: appStateThermometerStationSchema.nullable().default(null),
+    currentStation: appStateThermometerStationSchema.nullable().default(null),
     id: z.string().min(1),
     isLocked: z.boolean().default(false),
     type: z.literal("thermometer"),

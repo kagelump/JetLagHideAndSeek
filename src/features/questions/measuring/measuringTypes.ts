@@ -45,9 +45,18 @@ export type MeasuringQuestion = BaseQuestion & {
     category: MeasuringCategory;
     /** Seeker's position – used as the search anchor to find nearby POIs. */
     center: Position;
-    /** Display unit preference. Distance is derived-on-render from the
-     *  bundled POI data — it is not stored in the question. */
+    /** Display unit preference for the seeker's distance value. */
     seekerDistanceUnit: DistanceUnit;
+    /**
+     * Resolved distance from the seeker's center to the nearest feature of the
+     * selected category. null until resolved (e.g. by the measure-on-render
+     * pipeline or an explicit lookup).
+     */
+    seekerDistanceMeters: number | null;
+    /**
+     * Name of the nearest feature to the seeker's center. null until resolved.
+     */
+    nearestPoiName: string | null;
 };
 
 export type MeasuringRenderState = {

@@ -2,17 +2,22 @@ import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
+import type { ThermometerStationAnchor } from "@/features/questions/thermometer/thermometerTypes";
 import type { ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
 import { useThermometerDrag } from "@/features/questions/thermometer/ThermometerDragContext";
+import { useThermometerStationAnchors } from "@/features/questions/thermometer/useThermometerStationAnchors";
 import { useQuestionElimination } from "@/features/questions/useQuestionElimination";
-import { haversineDistanceMeters } from "@/shared/geojson";
+import { formatCoordinate, haversineDistanceMeters } from "@/shared/geojson";
 import { fromMeters } from "@/shared/distanceUnits";
 import { useQuestionActions } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
-import type { Position } from "@/shared/geojson";
 
-function formatCoord(pos: Position): string {
-    return `${pos[1].toFixed(4)}, ${pos[0].toFixed(4)}`;
+function formatStationLabel(anchor: ThermometerStationAnchor | null): string {
+    if (!anchor) return "…"; // resolving
+    if (anchor.name == null) return "No station nearby";
+    const m = anchor.distanceMeters ?? 0;
+    const dist = m < 1000 ? `${Math.round(m)} m` : `${fromMeters(m, "km")} km`;
+    return `${anchor.name} (${dist})`;
 }
 
 type ThermometerQuestionDetailScreenProps = {
@@ -25,6 +30,8 @@ export function ThermometerQuestionDetailScreen({
     updateQuestion,
 }: ThermometerQuestionDetailScreenProps) {
     const drag = useThermometerDrag();
+    useThermometerStationAnchors(question, updateQuestion);
+
     // While dragging a pin, feed the live positions in so the elimination stats
     // update in real time (drag.p1/p2 map to previous/current position).
     const liveOverride = useMemo(
@@ -90,9 +97,17 @@ export function ThermometerQuestionDetailScreen({
                             testID="thermometer-start-pos"
                         >
                             {startPosition
-                                ? formatCoord(startPosition)
+                                ? formatCoordinate(startPosition)
                                 : "Not set"}
                         </Text>
+                        {startPosition ? (
+                            <Text
+                                style={styles.stationLabel}
+                                testID="thermometer-start-station"
+                            >
+                                {formatStationLabel(question.previousStation)}
+                            </Text>
+                        ) : null}
                     </View>
                     <View style={styles.positionCol}>
                         <Text style={styles.positionLabel}>End</Text>
@@ -100,8 +115,18 @@ export function ThermometerQuestionDetailScreen({
                             style={styles.positionValue}
                             testID="thermometer-end-pos"
                         >
-                            {endPosition ? formatCoord(endPosition) : "Not set"}
+                            {endPosition
+                                ? formatCoordinate(endPosition)
+                                : "Not set"}
                         </Text>
+                        {endPosition ? (
+                            <Text
+                                style={styles.stationLabel}
+                                testID="thermometer-end-station"
+                            >
+                                {formatStationLabel(question.currentStation)}
+                            </Text>
+                        ) : null}
                     </View>
                 </View>
             </View>
@@ -165,6 +190,12 @@ const styles = StyleSheet.create({
     positionValue: {
         color: colors.ink,
         fontSize: 13,
+        fontWeight: "600",
+        marginTop: 2,
+    },
+    stationLabel: {
+        color: colors.muted,
+        fontSize: 12,
         fontWeight: "600",
         marginTop: 2,
     },

@@ -29,17 +29,12 @@ describe("matchingQuestionConfig", () => {
     it("is a valid QuestionDefinition with the matching type", () => {
         expect(matchingQuestionConfig.type).toBe("matching");
         expect(matchingQuestionConfig.implemented).toBe(true);
-        expect(matchingQuestionConfig.title).toBe("Matching");
+        expect(matchingQuestionConfig.title(makeMockMatchingQuestion())).toBe(
+            "Matching",
+        );
     });
 
     describe("summary function", () => {
-        it("returns empty string for non-matching questions", () => {
-            const result = matchingQuestionConfig.summary({
-                type: "radar",
-            } as any);
-            expect(result).toBe("");
-        });
-
         it("includes category title for park question without target", () => {
             const question = makeMockMatchingQuestion({ category: "park" });
             const result = matchingQuestionConfig.summary(question);
@@ -61,7 +56,7 @@ describe("matchingQuestionConfig", () => {
                 lineName: "Ginza Line",
             });
             const result = matchingQuestionConfig.summary(question);
-            expect(result).toBe("Transit line: Ginza Line");
+            expect(result).toBe("Same transit line: Ginza Line");
         });
 
         it("shows transit line placeholder when line not selected", () => {
@@ -69,7 +64,7 @@ describe("matchingQuestionConfig", () => {
                 category: "transit-line",
             });
             const result = matchingQuestionConfig.summary(question);
-            expect(result).toBe("Transit line: not selected");
+            expect(result).toBe("Same transit line: not selected");
         });
 
         it("shows station-name-length placeholder when target not selected", () => {
@@ -111,6 +106,45 @@ describe("matchingQuestionConfig", () => {
             });
             const result = matchingQuestionConfig.summary(question);
             expect(result).toBe("Station's Name Length: Unknown Station");
+        });
+    });
+
+    describe("sharePrompt", () => {
+        it("returns transit-line prompt with line name", () => {
+            const question = makeMockMatchingQuestion({
+                category: "transit-line",
+                lineName: "Ginza Line",
+            });
+            expect(matchingQuestionConfig.sharePrompt(question)).toBe(
+                "Are you on the Ginza Line?",
+            );
+        });
+
+        it("returns transit-line prompt without line name", () => {
+            const question = makeMockMatchingQuestion({
+                category: "transit-line",
+                lineName: null,
+            });
+            expect(matchingQuestionConfig.sharePrompt(question)).toBe(
+                "Which transit line are you on?",
+            );
+        });
+
+        it("returns matching prompt with target name", () => {
+            const question = makeMockMatchingQuestion({
+                category: "park",
+                targetName: "Yoyogi Park",
+            });
+            expect(matchingQuestionConfig.sharePrompt(question)).toBe(
+                "Do we match on Park (Yoyogi Park)?",
+            );
+        });
+
+        it("returns matching prompt without target name", () => {
+            const question = makeMockMatchingQuestion({ category: "park" });
+            expect(matchingQuestionConfig.sharePrompt(question)).toBe(
+                "Do we match on Park?",
+            );
         });
     });
 });

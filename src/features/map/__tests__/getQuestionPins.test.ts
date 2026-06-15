@@ -48,6 +48,8 @@ function measuringQuestion(): Extract<QuestionState, { type: "measuring" }> {
         id: "q-measuring",
         isLocked: false,
         seekerDistanceUnit: "m",
+        seekerDistanceMeters: null,
+        nearestPoiName: null,
         type: "measuring",
         updatedAt: "2026-06-01T00:00:00.000Z",
     };
@@ -80,6 +82,8 @@ function thermometerQuestion(
         answer: "unanswered",
         previousPosition,
         currentPosition,
+        previousStation: null,
+        currentStation: null,
         createdAt: "2026-06-01T00:00:00.000Z",
         id: "q-thermometer",
         isLocked: false,

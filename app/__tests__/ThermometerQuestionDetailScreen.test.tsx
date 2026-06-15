@@ -25,6 +25,14 @@ jest.mock("@/features/questions/useQuestionElimination", () => ({
     useQuestionElimination: () => null,
 }));
 
+// Mock the spatial station lookup so the per-pin station label is deterministic.
+const mockFindMatching = jest.fn();
+
+jest.mock("@/features/questions/matching/osmMatchingCache", () => ({
+    findMatchingFeaturesWithIndex: (...args: unknown[]) =>
+        mockFindMatching(...args),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -36,9 +44,11 @@ function makeThermometerQuestion(
         answer: "unanswered",
         createdAt: "2026-06-06T00:00:00.000Z",
         currentPosition: [139.72, 35.7],
+        currentStation: null,
         id: "q-thermometer-1",
         isLocked: false,
         previousPosition: [139.7, 35.7],
+        previousStation: null,
         type: "thermometer",
         updatedAt: "2026-06-06T00:00:00.000Z",
         ...overrides,
@@ -122,6 +132,12 @@ function renderWithProvider(initialQuestion: ThermometerQuestion) {
 describe("ThermometerQuestionDetailScreen", () => {
     beforeEach(() => {
         mockRequestUserCoordinate.mockReset();
+        // Default: no station nearby. Individual tests override as needed.
+        mockFindMatching.mockReset();
+        mockFindMatching.mockResolvedValue({
+            candidates: [],
+            source: "memory",
+        });
     });
 
     it("shows live distance between pins", async () => {
@@ -214,10 +230,40 @@ describe("ThermometerQuestionDetailScreen", () => {
         });
 
         expect(screen.getByTestId("thermometer-start-pos")).toHaveTextContent(
-            "35.7500, 139.7500",
+            "(35.75000, 139.75000)",
         );
         expect(screen.getByTestId("thermometer-end-pos")).toHaveTextContent(
-            "35.8000, 139.8000",
+            "(35.80000, 139.80000)",
         );
+    });
+
+    it("shows the resolved station name and distance under each pin", async () => {
+        mockFindMatching.mockResolvedValue({
+            candidates: [{ name: "Shibuya", distanceMeters: 300 }],
+            source: "memory",
+        });
+        const question = makeThermometerQuestion();
+        const screen = renderWithProvider(question);
+
+        await waitFor(() => {
+            expect(
+                screen.getByTestId("thermometer-start-station"),
+            ).toHaveTextContent("Shibuya (300 m)");
+            expect(
+                screen.getByTestId("thermometer-end-station"),
+            ).toHaveTextContent("Shibuya (300 m)");
+        });
+    });
+
+    it("shows 'No station nearby' when the lookup finds nothing", async () => {
+        // beforeEach already stubs an empty candidate list.
+        const question = makeThermometerQuestion();
+        const screen = renderWithProvider(question);
+
+        await waitFor(() => {
+            expect(
+                screen.getByTestId("thermometer-start-station"),
+            ).toHaveTextContent("No station nearby");
+        });
     });
 });

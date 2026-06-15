@@ -12,6 +12,13 @@ export type Position = [number, number];
 
 export type Bbox = [number, number, number, number];
 
+/** Format a [lng, lat] position as "(lat, lng)" with 5 decimal places. */
+export function formatCoordinate(center: Position): string {
+    const lat = center[1].toFixed(5);
+    const lon = center[0].toFixed(5);
+    return `(${lat}, ${lon})`;
+}
+
 // ---------------------------------------------------------------------------
 // Geometry helpers
 // ---------------------------------------------------------------------------

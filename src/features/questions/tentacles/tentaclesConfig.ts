@@ -1,6 +1,8 @@
 import { getCategoryTitle } from "@/features/questions/matching/matchingCategories";
+import { indexedTitle } from "@/features/questions/indexedTitle";
 import type { QuestionDefinition } from "@/features/questions/questionRegistry";
-import type { QuestionState } from "@/features/questions/questionTypes";
+import type { TentaclesQuestion } from "@/features/questions/tentacles/tentaclesTypes";
+import { formatCoordinate } from "@/shared/geojson";
 
 export const tentaclesQuestionConfig = {
     answerMapBehavior: {
@@ -14,11 +16,11 @@ export const tentaclesQuestionConfig = {
     implemented: true,
     listTitle: "Tentacles",
     mapBehavior: {},
-    summary: (question: QuestionState) =>
-        question.type === "tentacles"
-            ? `Tentacles: ${getCategoryTitle(question.category)} (${question.distanceOption}) — ${question.selectedName ?? "Unanswered"}`
-            : "",
+    sharePrompt: (question) =>
+        `What is the closest ${getCategoryTitle(question.category).toLowerCase()} within ${question.distanceOption} of ${formatCoordinate(question.center)}?`,
+    summary: (question) =>
+        `Tentacles: ${getCategoryTitle(question.category)} (${question.distanceOption}) — ${question.selectedName ?? "Unanswered"}`,
     time: "5 minutes",
-    title: "Tentacles",
+    title: indexedTitle("Tentacles"),
     type: "tentacles",
-} satisfies QuestionDefinition;
+} satisfies QuestionDefinition<TentaclesQuestion>;

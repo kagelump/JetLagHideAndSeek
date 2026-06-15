@@ -1,7 +1,7 @@
 import { tentaclesQuestionConfig } from "../tentaclesConfig";
-import type { QuestionState } from "@/features/questions/questionTypes";
+import type { TentaclesQuestion } from "../tentaclesTypes";
 
-function makeTentaclesStub(): QuestionState {
+function makeTentaclesStub(): TentaclesQuestion {
     return {
         answer: "unanswered",
         candidates: [],
@@ -24,7 +24,9 @@ describe("tentaclesQuestionConfig", () => {
     it("is a valid QuestionDefinition with the tentacles type", () => {
         expect(tentaclesQuestionConfig.type).toBe("tentacles");
         expect(tentaclesQuestionConfig.implemented).toBe(true);
-        expect(tentaclesQuestionConfig.title).toBe("Tentacles");
+        expect(tentaclesQuestionConfig.title(makeTentaclesStub())).toBe(
+            "Tentacles",
+        );
         expect(tentaclesQuestionConfig.time).toBe("5 minutes");
         expect(tentaclesQuestionConfig.cost).toBe("Draw 4, pick 2");
     });
@@ -48,10 +50,10 @@ describe("tentaclesQuestionConfig", () => {
 
     it("shows selected name in summary when answered", () => {
         const answered = makeTentaclesStub();
-        const stubbed = {
+        const stubbed: TentaclesQuestion = {
             ...answered,
             selectedName: "Tokyo National Museum",
-        } as QuestionState;
+        };
         expect(tentaclesQuestionConfig.summary(stubbed)).toBe(
             "Tentacles: Museum (2km) — Tokyo National Museum",
         );
@@ -65,5 +67,11 @@ describe("tentaclesQuestionConfig", () => {
 
     it("has none map behavior for positive answer (poi model)", () => {
         expect(tentaclesQuestionConfig.answerMapBehavior.positive).toBe("none");
+    });
+
+    it("has a share prompt", () => {
+        expect(tentaclesQuestionConfig.sharePrompt(makeTentaclesStub())).toBe(
+            "What is the closest museum within 2km of (35.66000, 139.70000)?",
+        );
     });
 });

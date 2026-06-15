@@ -248,6 +248,8 @@ describe("buildQuestionMapRenderState measuring", () => {
         id: "measuring-1",
         isLocked: false,
         seekerDistanceUnit: "m",
+        seekerDistanceMeters: null,
+        nearestPoiName: null,
         type: "measuring",
         updatedAt: "2026-06-07T00:00:00.000Z",
     };

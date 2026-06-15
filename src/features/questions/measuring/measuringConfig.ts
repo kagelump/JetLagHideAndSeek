@@ -1,5 +1,8 @@
+import { indexedTitle } from "@/features/questions/indexedTitle";
 import type { QuestionDefinition } from "@/features/questions/questionRegistry";
-import type { QuestionState } from "@/features/questions/questionTypes";
+import type { MeasuringQuestion } from "@/features/questions/measuring/measuringTypes";
+import { getMeasuringCategoryTitle } from "@/features/questions/measuring/measuringCategories";
+import { fromMeters } from "@/shared/distanceUnits";
 
 export const measuringQuestionConfig = {
     answerLabels: {
@@ -17,9 +20,24 @@ export const measuringQuestionConfig = {
     implemented: true,
     listTitle: "Measuring",
     mapBehavior: {},
-    summary: (question: QuestionState) =>
-        question.type === "measuring" ? `Measuring: ${question.category}` : "",
+    sharePrompt: (question) => {
+        const categoryTitle = getMeasuringCategoryTitle(
+            question.category,
+        ).toLowerCase();
+        if (question.seekerDistanceMeters != null) {
+            const dist = fromMeters(
+                question.seekerDistanceMeters,
+                question.seekerDistanceUnit,
+            );
+            const unit = question.seekerDistanceUnit;
+            const poi = question.nearestPoiName ?? "unknown";
+            return `I am ${dist} ${unit} away from the nearest ${categoryTitle} (${poi}). Are you closer or farther from a ${categoryTitle} than me?`;
+        }
+        return `Are you closer to a ${categoryTitle} than me?`;
+    },
+    summary: (question) =>
+        `Measuring: ${getMeasuringCategoryTitle(question.category)}`,
     time: "5 minutes",
-    title: "Measuring",
+    title: indexedTitle("Measuring"),
     type: "measuring",
-} satisfies QuestionDefinition;
+} satisfies QuestionDefinition<MeasuringQuestion>;

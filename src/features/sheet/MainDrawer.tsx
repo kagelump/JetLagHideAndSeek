@@ -770,9 +770,7 @@ function QuestionDetailShell({
     const title = activeQuestion
         ? (() => {
               const def = getQuestionDefinition(activeQuestion.type);
-              return typeof def.title === "function"
-                  ? def.title(activeQuestion)
-                  : def.title;
+              return def.title(activeQuestion);
           })()
         : undefined;
 

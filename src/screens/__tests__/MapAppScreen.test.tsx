@@ -701,7 +701,9 @@ describe("MapAppScreen", () => {
 
         expect(screen.getByTestId("questions-add-question-row")).toBeTruthy();
         expect(screen.getByText("Matching 1")).toBeTruthy();
-        expect(screen.getByText("Transit line: not selected")).toBeTruthy();
+        expect(
+            screen.getByText("Same transit line: not selected"),
+        ).toBeTruthy();
     });
 
     it("always uses a carousel for radar distance options", async () => {

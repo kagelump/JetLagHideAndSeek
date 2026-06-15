@@ -1,5 +1,20 @@
+import { indexedTitle } from "@/features/questions/indexedTitle";
 import type { QuestionDefinition } from "@/features/questions/questionRegistry";
-import type { QuestionState } from "@/features/questions/questionTypes";
+import type {
+    ThermometerQuestion,
+    ThermometerStationAnchor,
+} from "@/features/questions/thermometer/thermometerTypes";
+import { fromMeters } from "@/shared/distanceUnits";
+import { formatCoordinate, haversineDistanceMeters } from "@/shared/geojson";
+import type { Position } from "@/shared/geojson";
+
+function describeAnchor(
+    anchor: ThermometerStationAnchor | null,
+    pos: Position,
+): string {
+    const coord = formatCoordinate(pos);
+    return anchor?.name ? `${anchor.name} ${coord}` : coord;
+}
 
 export const thermometerQuestionConfig = {
     answerLabels: {
@@ -17,15 +32,24 @@ export const thermometerQuestionConfig = {
     implemented: true,
     listTitle: "Thermometer",
     mapBehavior: {},
-    summary: (question: QuestionState) =>
-        question.type === "thermometer"
-            ? question.answer !== "unanswered"
-                ? question.answer === "positive"
-                    ? "Hotter"
-                    : "Colder"
-                : ""
+    sharePrompt: (question) => {
+        const { previousPosition: from, currentPosition: to } = question;
+        if (!from || !to) {
+            return "Am I getting closer to you?"; // pins not both set
+        }
+        const meters = haversineDistanceMeters(from[1], from[0], to[1], to[0]);
+        const distance = `${fromMeters(meters, "km")} km`;
+        const start = describeAnchor(question.previousStation, from);
+        const end = describeAnchor(question.currentStation, to);
+        return `I went ${distance} from ${start} to ${end} — am I hotter or colder?`;
+    },
+    summary: (question) =>
+        question.answer !== "unanswered"
+            ? question.answer === "positive"
+                ? "Hotter"
+                : "Colder"
             : "",
     time: "5 minutes",
-    title: "Thermometer",
+    title: indexedTitle("Thermometer"),
     type: "thermometer",
-} satisfies QuestionDefinition;
+} satisfies QuestionDefinition<ThermometerQuestion>;

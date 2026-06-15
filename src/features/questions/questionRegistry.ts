@@ -13,7 +13,15 @@ import { thermometerQuestionConfig } from "@/features/questions/thermometer/ther
 
 export type QuestionAnswerModel = "binary" | "poi";
 
-export type QuestionDefinition = {
+/**
+ * Per-type question configuration. Members that operate on the question are
+ * written in **method-shorthand syntax** (e.g. `sharePrompt(q: T): string`, not
+ * an arrow property) on purpose: method params are checked **bivariantly**, which
+ * lets each narrowly-typed config (e.g. `QuestionDefinition<RadarQuestion>`)
+ * satisfy the homogeneous `questionDefinitions` record. Converting them to arrow
+ * properties will break `pnpm typecheck`.
+ */
+export type QuestionDefinition<T extends QuestionState = QuestionState> = {
     answerLabels?: QuestionAnswerLabels;
     answerMapBehavior: Record<
         Exclude<QuestionAnswer, "unanswered">,
@@ -26,9 +34,16 @@ export type QuestionDefinition = {
     implemented: boolean;
     listTitle: string;
     mapBehavior: Record<string, never>;
-    summary: (question: QuestionState, index: number) => string;
+    /** Human-readable question text sent to the hider via share. */
+    sharePrompt(question: T): string;
+    /** Subtitle shown under the question title in the question list. */
+    summary(question: T, index: number): string;
     time: string;
-    title: string | ((question: QuestionState) => string);
+    /**
+     * Display title for the question. The optional index is the question's
+     * 0-based position in the list; detail views omit it.
+     */
+    title(question: T, index?: number): string;
     type: QuestionType;
 };
 

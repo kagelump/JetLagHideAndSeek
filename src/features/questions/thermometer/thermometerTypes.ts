@@ -12,6 +12,14 @@ import type {
 } from "@/features/questions/coreTypes";
 import type { Position } from "@/shared/geojson";
 
+/** Nearest rail station to a thermometer pin, resolved from POI data. */
+export type ThermometerStationAnchor = {
+    /** Station display name, or null when none was found within the radius. */
+    name: string | null;
+    /** Distance in meters from the pin to that station. null when unresolved. */
+    distanceMeters: number | null;
+};
+
 export type ThermometerQuestion = BaseQuestion & {
     type: "thermometer";
     answer: QuestionAnswer; // positive = hotter, negative = colder
@@ -19,6 +27,10 @@ export type ThermometerQuestion = BaseQuestion & {
     previousPosition: Position | null;
     /** Seeker's position after travel. null until set by the user. */
     currentPosition: Position | null;
+    /** Closest-station anchor for previousPosition. null = not yet resolved. */
+    previousStation: ThermometerStationAnchor | null;
+    /** Closest-station anchor for currentPosition. null = not yet resolved. */
+    currentStation: ThermometerStationAnchor | null;
 };
 
 export type ThermometerRenderState = {
