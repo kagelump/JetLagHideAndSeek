@@ -24,6 +24,7 @@ import Animated, {
 
 import { HidingZoneScreen } from "@/features/hidingZone/HidingZoneScreen";
 import { buildCombinedEligibilityMask } from "@/features/map/maskBuilder";
+import { zoneEliminationPercent } from "@/features/map/useEliminationPercentage";
 import { PlayAreaScreen } from "@/features/playArea/PlayAreaScreen";
 import { isPlayAreaSet } from "@/features/map/playArea";
 import { AddQuestionScreen } from "@/features/questions/AddQuestionScreen";
@@ -410,9 +411,9 @@ function MainSheetContent({
             ],
         );
 
+        const playAreaArea = featureCollectionArea(playArea.boundary as any);
         const maskArea = featureCollectionArea(mask);
-        const eliminated = 1 - maskArea / zoneArea;
-        return Math.max(0, Math.min(100, Math.round(eliminated * 100)));
+        return zoneEliminationPercent(playAreaArea, maskArea, zoneArea);
     }, [playArea.boundary, zoneFeatures, questionMapRenderState]);
 
     const handleStartSeeking = useCallback(() => {
