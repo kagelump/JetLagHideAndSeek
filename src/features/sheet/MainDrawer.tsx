@@ -23,8 +23,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { HidingZoneScreen } from "@/features/hidingZone/HidingZoneScreen";
-import { buildCombinedEligibilityMask } from "@/features/map/maskBuilder";
-import { zoneEliminationPercent } from "@/features/map/useEliminationPercentage";
+import { useEliminationPercentage } from "@/features/map/useEliminationPercentage";
 import { PlayAreaScreen } from "@/features/playArea/PlayAreaScreen";
 import { isPlayAreaSet } from "@/features/map/playArea";
 import { AddQuestionScreen } from "@/features/questions/AddQuestionScreen";
@@ -41,7 +40,6 @@ import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";
 import { getQuestionDefinition } from "@/features/questions/questionRegistry";
-import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
 import {
     useHidingZoneDerived,
     useHidingZoneState,
@@ -54,9 +52,7 @@ import {
     useQuestionIds,
     useSeekingStartedAt,
 } from "@/state/questionStore";
-import { geomAreaM2 } from "@/shared/geometry/parityMetrics";
 import { colors } from "@/theme/colors";
-import type { GeoJsonFeatureCollection } from "@/features/map/geojsonTypes";
 
 const SHEET_WIDTH = Dimensions.get("window").width;
 const TRANSITION_MS = 300;
@@ -351,9 +347,9 @@ function MainSheetContent({
     const gameMode = useGameMode();
     const { setGameMode, setSeekingStartedAt } = useQuestionActions();
     const { selectedPresetIds } = useHidingZoneState();
-    const { selectedStations, zoneFeatures } = useHidingZoneDerived();
+    const { selectedStations } = useHidingZoneDerived();
     const seekingStartedAt = useSeekingStartedAt();
-    const questionMapRenderState = useQuestionMapRenderState();
+    const eliminationPct = useEliminationPercentage();
 
     const showFirstRun =
         !isPlayAreaSet(playArea) ||
@@ -368,53 +364,6 @@ function MainSheetContent({
     }, [seekingStartedAt]);
 
     const elapsedMs = seekingStartedAt !== null ? now - seekingStartedAt : null;
-
-    // Elimination percentage: piggyback on the existing mask computation.
-    const eliminationPct = useMemo(() => {
-        if (!playArea.boundary || zoneFeatures.features.length === 0)
-            return null;
-
-        const zoneArea = featureCollectionArea(zoneFeatures as any);
-        if (zoneArea <= 0) return null;
-
-        const mask = buildCombinedEligibilityMask(
-            playArea.boundary as any,
-            [
-                zoneFeatures as any,
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.radar.hitMaskFeatures as any,
-                ),
-                questionMapRenderState.transitLine.hitMaskFeatures as any,
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.osmMatching.hitMaskFeatures as any,
-                ),
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.thermometer.hitMaskFeatures as any,
-                ),
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.tentacles.hitMaskFeatures as any,
-                ),
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.measuring.hitMaskFeatures as any,
-                ),
-            ],
-            [
-                questionMapRenderState.radar.missMaskFeatures as any,
-                questionMapRenderState.transitLine.missMaskFeatures as any,
-                questionMapRenderState.osmMatching.missMaskFeatures as any,
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.tentacles.missMaskFeatures as any,
-                ),
-                ...asSeparateMaskConstraints(
-                    questionMapRenderState.measuring.missMaskFeatures as any,
-                ),
-            ],
-        );
-
-        const playAreaArea = featureCollectionArea(playArea.boundary as any);
-        const maskArea = featureCollectionArea(mask);
-        return zoneEliminationPercent(playAreaArea, maskArea, zoneArea);
-    }, [playArea.boundary, zoneFeatures, questionMapRenderState]);
 
     const handleStartSeeking = useCallback(() => {
         setSeekingStartedAt(Date.now());
@@ -631,28 +580,6 @@ function formatElapsed(ms: number): string {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return `${hours}:${String(minutes).padStart(2, "0")}hr`;
-}
-
-function featureCollectionArea(fc: GeoJsonFeatureCollection): number {
-    let total = 0;
-    for (const feature of fc.features) {
-        if (!feature?.geometry) continue;
-        const { type } = feature.geometry;
-        if (type === "Polygon" || type === "MultiPolygon") {
-            total += geomAreaM2(feature.geometry as any);
-        }
-    }
-    return total;
-}
-
-function asSeparateMaskConstraints(
-    fc: GeoJsonFeatureCollection,
-): GeoJsonFeatureCollection[] {
-    if (fc.features.length === 0) return [];
-    return fc.features.map((feature: any) => ({
-        features: [feature],
-        type: "FeatureCollection" as const,
-    }));
 }
 
 function ChildSheetShell({

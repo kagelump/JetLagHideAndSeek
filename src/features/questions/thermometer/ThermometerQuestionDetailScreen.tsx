@@ -1,9 +1,10 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
 import type { ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
 import { useThermometerDrag } from "@/features/questions/thermometer/ThermometerDragContext";
-import { useThermometerElimination } from "@/features/questions/thermometer/useThermometerElimination";
+import { useQuestionElimination } from "@/features/questions/useQuestionElimination";
 import { haversineDistanceMeters } from "@/shared/geojson";
 import { fromMeters } from "@/shared/distanceUnits";
 import { useQuestionActions } from "@/state/questionStore";
@@ -24,7 +25,20 @@ export function ThermometerQuestionDetailScreen({
     updateQuestion,
 }: ThermometerQuestionDetailScreenProps) {
     const drag = useThermometerDrag();
-    const eliminationPct = useThermometerElimination();
+    // While dragging a pin, feed the live positions in so the elimination stats
+    // update in real time (drag.p1/p2 map to previous/current position).
+    const liveOverride = useMemo(
+        () =>
+            drag
+                ? {
+                      ...question,
+                      previousPosition: drag.p1,
+                      currentPosition: drag.p2,
+                  }
+                : null,
+        [drag, question],
+    );
+    const elimination = useQuestionElimination(question.id, liveOverride);
     const startPosition = question.previousPosition;
     const endPosition = question.currentPosition;
 
@@ -100,12 +114,13 @@ export function ThermometerQuestionDetailScreen({
                 >
                     {fromMeters(distanceMeters, "km")} km
                 </Text>
-                {eliminationPct !== null ? (
+                {elimination !== null ? (
                     <Text
                         style={styles.eliminationValue}
                         testID="thermometer-elimination"
                     >
-                        {eliminationPct}% eliminated
+                        {elimination.totalPct}% eliminated (+
+                        {elimination.byThisPct}% by this question)
                     </Text>
                 ) : null}
                 {isDegenerate ? (

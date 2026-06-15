@@ -9,6 +9,7 @@ import type {
 import { haversineDistanceMeters } from "@/shared/geojson";
 import type { Position } from "@/shared/geojson";
 import {
+    buildSingleThermometerRenderState,
     buildThermometerRenderState,
     clearThermometerGeometryCache,
 } from "../thermometerGeometry";
@@ -639,6 +640,95 @@ describe("buildThermometerRenderState", () => {
 
         // Re-querying should still return correct geometry (cache miss + recompute).
         expect(reQueried.hitMaskFeatures.features.length).toBeGreaterThan(0);
+    });
+});
+
+// ─── Multi-question / per-question isolation ─────────────────────────────────
+//
+// Regression guards for the cross-question leaks that affected a second
+// thermometer: the family aggregate must include EVERY answered thermometer's
+// mask (so dragging one keeps the others in the eligibility mask), while the
+// preview/bisector for a single question must reflect THAT question only.
+
+function travelLineCoords(
+    fc: FeatureCollection<LineString | Polygon>,
+): Position[] | null {
+    const line = fc.features.find(
+        (f) =>
+            f.geometry.type === "LineString" &&
+            f.properties?.role === "travel-line",
+    );
+    return line ? (line.geometry.coordinates as Position[]) : null;
+}
+
+describe("buildThermometerRenderState — multiple questions", () => {
+    beforeEach(() => {
+        clearThermometerGeometryCache();
+    });
+
+    it("includes the mask of every answered thermometer in the family aggregate", () => {
+        const eastWest = makeThermometerQuestion({
+            id: "q-ew",
+            answer: "positive", // hotter → mask near P2_EAST (east half)
+            previousPosition: P1_WEST,
+            currentPosition: P2_EAST,
+        });
+        const southNorth = makeThermometerQuestion({
+            id: "q-sn",
+            answer: "positive", // hotter → mask near P2_NORTH (north half)
+            previousPosition: P1_SOUTH,
+            currentPosition: P2_NORTH,
+        });
+
+        const state = buildThermometerRenderState(
+            [eastWest, southNorth],
+            TEST_BOUNDARY,
+        );
+
+        // SE corner is east (in the E–W mask) but south (outside the S–N mask):
+        // only present if the E–W question's mask is included.
+        expect(
+            pointInFeatureCollection([0.009, 0.001], state.hitMaskFeatures),
+        ).toBe(true);
+        // NW corner is north (in the S–N mask) but west (outside the E–W mask):
+        // only present if the S–N question's mask is included.
+        expect(
+            pointInFeatureCollection([0.001, 0.009], state.hitMaskFeatures),
+        ).toBe(true);
+    });
+});
+
+describe("buildSingleThermometerRenderState — per-question isolation", () => {
+    beforeEach(() => {
+        clearThermometerGeometryCache();
+    });
+
+    it("returns the preview and bisector for the given question only", () => {
+        const southNorth = makeThermometerQuestion({
+            id: "q-sn",
+            answer: "unanswered",
+            previousPosition: P1_SOUTH,
+            currentPosition: P2_NORTH,
+        });
+
+        const state = buildSingleThermometerRenderState(
+            southNorth,
+            TEST_BOUNDARY,
+        );
+
+        // Travel line must be this question's segment, not a phantom one.
+        expect(travelLineCoords(state.previewFeatures)).toEqual([
+            P1_SOUTH,
+            P2_NORTH,
+        ]);
+
+        // N–S travel ⇒ a roughly horizontal (E–W) bisector.
+        const bisector = state.bisectorLine;
+        expect(bisector).not.toBeNull();
+        const [start, end] = bisector!.geometry.coordinates;
+        const dLon = Math.abs(end[0] - start[0]);
+        const dLat = Math.abs(end[1] - start[1]);
+        expect(dLon).toBeGreaterThan(dLat);
     });
 });
 

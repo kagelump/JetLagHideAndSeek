@@ -508,11 +508,16 @@ export function buildThermometerRenderState(
 }
 
 /**
- * Build render state for a single thermometer question, with full-state LRU
- * caching. Populates the per-component caches as a side effect so multi-question
- * callers can compose without re-computation.
+ * Build render state (preview, bisector, and half-plane mask) for a single
+ * thermometer question, with full-state LRU caching. Populates the per-component
+ * caches as a side effect so multi-question callers can compose without
+ * re-computation.
+ *
+ * Exported so the map can render the preview/bisector for the *active* question
+ * only — the multi-question aggregate (`buildThermometerRenderState`) is for the
+ * combined mask and must not drive the single-line preview.
  */
-function buildSingleThermometerRenderState(
+export function buildSingleThermometerRenderState(
     q: ThermometerQuestion,
     playAreaBoundary: FeatureCollection<Polygon | MultiPolygon>,
 ): ThermometerRenderState {

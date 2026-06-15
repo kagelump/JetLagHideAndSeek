@@ -562,16 +562,27 @@ describe("nil-subview crash regression", () => {
 
     const mapDir = resolve(process.cwd(), "src", "features", "map");
 
-    it("contains no : null} conditional child in NativeMap", () => {
-        const source = readFileSync(join(mapDir, "NativeMap.tsx"), "utf-8");
+    it("contains no : null} conditional child in any map layer file", () => {
         // A `: null}` on a JSX line inside the MapView tree indicates a
         // conditional mount/unmount of a native child — the exact pattern that
         // triggers the nil-subview crash in
         // -[MLRNMapView insertReactSubview:atIndex:].
         // The invariant is: never conditionally mount/unmount a native child of
         // MLMapView. Keep every child permanently mounted and toggle it via an
-        // empty FeatureCollection shape or a visible flag.
-        expect(source).not.toContain(": null}");
+        // empty FeatureCollection shape or a visible flag. Scan every layer
+        // file, not just NativeMap — the bisector crash lived in
+        // ThermometerPreviewLayer.tsx and slipped past a NativeMap-only check.
+        const tsxFiles = readdirSync(mapDir, { recursive: true }).filter(
+            (f: string) => f.endsWith(".tsx") && !f.includes("__tests__"),
+        );
+
+        const violations: string[] = [];
+        for (const relPath of tsxFiles) {
+            const source = readFileSync(join(mapDir, relPath), "utf-8");
+            if (source.includes(": null}")) violations.push(relPath);
+        }
+
+        expect(violations).toEqual([]);
     });
 
     it("contains no dynamic key on ML* primitives in map layer files", () => {

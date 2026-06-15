@@ -20,9 +20,9 @@ jest.mock("@/shared/location", () => ({
         mockRequestUserCoordinate(...args),
 }));
 
-// Mock useThermometerElimination — tested separately via geometry tests.
-jest.mock("@/features/questions/thermometer/useThermometerElimination", () => ({
-    useThermometerElimination: () => null,
+// Mock useQuestionElimination — elimination math is tested separately.
+jest.mock("@/features/questions/useQuestionElimination", () => ({
+    useQuestionElimination: () => null,
 }));
 
 // ---------------------------------------------------------------------------

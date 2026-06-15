@@ -23,12 +23,11 @@ import { isPlayAreaSet } from "@/features/map/playArea";
 import type { Position } from "@/shared/geojson";
 import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
 import {
-    buildBisectorLine,
-    buildHalfPlane,
-    buildThermometerPreviewFeatures,
+    buildSingleThermometerRenderState,
+    buildThermometerRenderState,
 } from "@/features/questions/thermometer/thermometerGeometry";
 import type { ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
-import type { QuestionMapRenderState } from "@/features/questions/radar/radarTypes";
+import { EMPTY_THERMOMETER_RENDER_STATE } from "@/features/questions/thermometer/thermometerTypes";
 
 import { QuestionPinLayer } from "./QuestionPinLayer";
 import {
@@ -119,110 +118,97 @@ export function NativeMap({
         questionId,
     });
 
-    // Live thermometer state during drag: recomputes preview features,
-    // bisector line, and mask from draft pin positions so the geometry
-    // tracks the finger in real time.
-    const liveThermometerState = useMemo(() => {
-        if (
-            !pinDrag.isDragging ||
-            !pinDrag.draftCoordinate ||
-            !pinDrag.draggedPinKey
-        ) {
-            return null;
-        }
-        const thermometerQ = questions.find(
-            (q): q is ThermometerQuestion => q.type === "thermometer",
-        );
-        if (!thermometerQ) return null;
+    const playAreaBoundary = playAreaIsSet
+        ? (playArea.boundary as import("geojson").FeatureCollection<
+              import("geojson").Polygon | import("geojson").MultiPolygon
+          >)
+        : null;
 
-        const { draggedPinKey, draftCoordinate } = pinDrag;
+    // The thermometer question currently open on the detail sheet. Preview and
+    // bisector are derived from THIS question alone — never the family aggregate,
+    // which would otherwise leak the first thermometer's line onto the second.
+    const activeThermometer = useMemo(() => {
+        const question =
+            questions.find(
+                (q): q is ThermometerQuestion =>
+                    q.type === "thermometer" && q.id === questionId,
+            ) ?? null;
+        if (!question) return null;
+
+        const dragging =
+            pinDrag.isDragging &&
+            pinDrag.draftCoordinate != null &&
+            pinDrag.draggedPinKey != null;
         const p1 =
-            draggedPinKey === "start"
-                ? draftCoordinate
-                : thermometerQ.previousPosition;
+            dragging && pinDrag.draggedPinKey === "start"
+                ? pinDrag.draftCoordinate
+                : question.previousPosition;
         const p2 =
-            draggedPinKey === "end"
-                ? draftCoordinate
-                : thermometerQ.currentPosition;
-        if (!p1 || !p2) return null;
+            dragging && pinDrag.draggedPinKey === "end"
+                ? pinDrag.draftCoordinate
+                : question.currentPosition;
 
-        const boundary = playAreaIsSet
-            ? (playArea.boundary as import("geojson").FeatureCollection<
-                  import("geojson").Polygon | import("geojson").MultiPolygon
-              >)
-            : null;
-
-        const previewFeatures = buildThermometerPreviewFeatures(p1, p2);
-        const bisectorLine = boundary
-            ? buildBisectorLine(p1, p2, playArea.bbox)
-            : null;
-
-        let hitMaskFeatures: import("geojson").FeatureCollection<
-            import("geojson").Polygon | import("geojson").MultiPolygon
-        > = { type: "FeatureCollection", features: [] };
-        if (
-            boundary &&
-            (thermometerQ.answer === "positive" ||
-                thermometerQ.answer === "negative")
-        ) {
-            hitMaskFeatures = buildHalfPlane(
-                p1,
-                p2,
-                thermometerQ.answer,
-                boundary,
-                playArea.bbox,
-            );
-        }
-
-        return {
-            bisectorLine,
-            hitMaskFeatures,
-            previewFeatures,
-            _dragP1: p1,
-            _dragP2: p2,
+        // Question with the live drag positions applied (used to recompute its
+        // geometry without mutating the store).
+        const liveQuestion: ThermometerQuestion = {
+            ...question,
+            previousPosition: p1,
+            currentPosition: p2,
         };
+        return { dragging, liveQuestion };
     }, [
+        questions,
+        questionId,
         pinDrag.isDragging,
         pinDrag.draftCoordinate,
         pinDrag.draggedPinKey,
         pinDrag.revision,
+    ]);
+
+    // Preview + bisector for the active question only.
+    const activeThermometerRender = useMemo(() => {
+        if (!activeThermometer || !playAreaBoundary) {
+            return EMPTY_THERMOMETER_RENDER_STATE;
+        }
+        return buildSingleThermometerRenderState(
+            activeThermometer.liveQuestion,
+            playAreaBoundary,
+        );
+    }, [activeThermometer, playAreaBoundary]);
+
+    // Combined thermometer hit mask for ALL thermometers. While dragging the
+    // active question, rebuild the family aggregate with the active question's
+    // live positions so other thermometers stay in the eligibility mask.
+    const thermometerHitMaskFeatures = useMemo(() => {
+        if (!activeThermometer?.dragging || !playAreaBoundary) {
+            return questionMapRenderState.thermometer.hitMaskFeatures;
+        }
+        const { liveQuestion } = activeThermometer;
+        const effectiveQuestions = questions.map((q) =>
+            q.id === liveQuestion.id ? liveQuestion : q,
+        );
+        return buildThermometerRenderState(effectiveQuestions, playAreaBoundary)
+            .hitMaskFeatures;
+    }, [
+        activeThermometer,
+        playAreaBoundary,
         questions,
-        playAreaIsSet,
-        playArea.boundary,
-        playArea.bbox,
+        questionMapRenderState.thermometer.hitMaskFeatures,
     ]);
 
     // Report live thermometer coordinates to the parent so the sheet can
     // show live distance and elimination percentage during drag.
-    const liveDragCoords = useMemo(
-        () =>
-            liveThermometerState
-                ? {
-                      p1: liveThermometerState._dragP1,
-                      p2: liveThermometerState._dragP2,
-                  }
-                : null,
-        [liveThermometerState],
-    );
+    const liveDragCoords = useMemo(() => {
+        if (!activeThermometer?.dragging) return null;
+        const { previousPosition: p1, currentPosition: p2 } =
+            activeThermometer.liveQuestion;
+        return p1 && p2 ? { p1, p2 } : null;
+    }, [activeThermometer]);
     const onThermometerDragUpdateRef = useRef(onThermometerDragUpdate);
     onThermometerDragUpdateRef.current = onThermometerDragUpdate;
     useEffect(() => {
         onThermometerDragUpdateRef.current?.(liveDragCoords);
     }, [liveDragCoords]);
-
-    // Strip internal drag-coordinate fields before passing to the render state.
-    const thermometerRenderState = liveThermometerState
-        ? {
-              bisectorLine: liveThermometerState.bisectorLine,
-              hitMaskFeatures: liveThermometerState.hitMaskFeatures,
-              previewFeatures: liveThermometerState.previewFeatures,
-          }
-        : null;
-
-    // Override the thermometer portion of the render state during drag.
-    const effectiveRenderState: QuestionMapRenderState = thermometerRenderState
-        ? { ...questionMapRenderState, thermometer: thermometerRenderState }
-        : questionMapRenderState;
 
     const playAreaMask = useMemo(
         () =>
@@ -257,9 +243,7 @@ export function NativeMap({
                 ...asSeparateMaskConstraints(
                     questionMapRenderState.osmMatching.hitMaskFeatures,
                 ),
-                ...asSeparateMaskConstraints(
-                    effectiveRenderState.thermometer.hitMaskFeatures,
-                ),
+                ...asSeparateMaskConstraints(thermometerHitMaskFeatures),
                 ...asSeparateMaskConstraints(
                     questionMapRenderState.tentacles.hitMaskFeatures,
                 ),
@@ -289,7 +273,7 @@ export function NativeMap({
         questionMapRenderState.transitLine.missMaskFeatures,
         questionMapRenderState.osmMatching.hitMaskFeatures,
         questionMapRenderState.osmMatching.missMaskFeatures,
-        effectiveRenderState.thermometer.hitMaskFeatures,
+        thermometerHitMaskFeatures,
         questionMapRenderState.tentacles.hitMaskFeatures,
         questionMapRenderState.tentacles.missMaskFeatures,
         questionMapRenderState.measuring.hitMaskFeatures,
@@ -384,7 +368,10 @@ export function NativeMap({
                         visible={isQuestionDetailRoute}
                     />
                     <ThermometerPreviewLayer
-                        thermometer={effectiveRenderState.thermometer}
+                        bisectorLine={activeThermometerRender.bisectorLine}
+                        previewFeatures={
+                            activeThermometerRender.previewFeatures
+                        }
                         visible={isQuestionDetailRoute}
                     />
                     <TentaclesRadiusLayer

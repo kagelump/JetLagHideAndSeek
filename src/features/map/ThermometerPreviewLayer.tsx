@@ -1,10 +1,12 @@
-import type { Feature, LineString } from "geojson";
+import type { Feature, FeatureCollection, LineString, Polygon } from "geojson";
 
-import type { ThermometerRenderState } from "@/features/questions/thermometer/thermometerTypes";
 import { MLLineLayer, MLShapeSource } from "./mapLibrePrimitives";
 
 type ThermometerPreviewLayerProps = {
-    thermometer: ThermometerRenderState;
+    /** Travel line + range rings for the question currently being edited. */
+    previewFeatures: FeatureCollection<LineString | Polygon>;
+    /** Perpendicular bisector for the active question (null when unavailable). */
+    bisectorLine: Feature<LineString> | null;
     visible: boolean;
 };
 
@@ -13,19 +15,31 @@ const EMPTY_FEATURES = {
     type: "FeatureCollection",
 } as const;
 
+const EMPTY_LINE_FEATURES: FeatureCollection<LineString> = {
+    features: [],
+    type: "FeatureCollection",
+};
+
 const BISECTOR_SOURCE_ID = "thermometer-bisector";
 
 export function ThermometerPreviewLayer({
-    thermometer,
+    previewFeatures: activePreviewFeatures,
+    bisectorLine,
     visible,
 }: ThermometerPreviewLayerProps) {
-    const previewFeatures = visible
-        ? thermometer.previewFeatures
-        : EMPTY_FEATURES;
+    const previewFeatures = visible ? activePreviewFeatures : EMPTY_FEATURES;
 
-    const bisectorShape: Feature<LineString> | null = visible
-        ? thermometer.bisectorLine
-        : null;
+    // Always keep the bisector ShapeSource mounted — even with an empty
+    // collection — so the source id stays registered in the MapLibre style.
+    // Conditionally mounting/unmounting native children crashes MapLibre RN
+    // (NSInvalidArgumentException: object cannot be nil in insertReactSubview).
+    const bisectorShape: FeatureCollection<LineString> =
+        visible && bisectorLine
+            ? {
+                  type: "FeatureCollection",
+                  features: [bisectorLine],
+              }
+            : EMPTY_LINE_FEATURES;
 
     return (
         <>
@@ -75,18 +89,16 @@ export function ThermometerPreviewLayer({
                     }}
                 />
             </MLShapeSource>
-            {bisectorShape ? (
-                <MLShapeSource id={BISECTOR_SOURCE_ID} shape={bisectorShape}>
-                    <MLLineLayer
-                        id="thermometer-bisector-line"
-                        style={{
-                            lineColor: "#5a9fd4",
-                            lineDasharray: [6, 4],
-                            lineWidth: 2,
-                        }}
-                    />
-                </MLShapeSource>
-            ) : null}
+            <MLShapeSource id={BISECTOR_SOURCE_ID} shape={bisectorShape}>
+                <MLLineLayer
+                    id="thermometer-bisector-line"
+                    style={{
+                        lineColor: "#5a9fd4",
+                        lineDasharray: [6, 4],
+                        lineWidth: 2,
+                    }}
+                />
+            </MLShapeSource>
         </>
     );
 }
