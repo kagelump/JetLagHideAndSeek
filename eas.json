@@ -31,7 +31,8 @@
                 "releaseStatus": "completed"
             },
             "ios": {
-                "appleTeamId": "442BWTA4F4"
+                "appleTeamId": "442BWTA4F4",
+                "ascAppId": "6776217435"
             }
         }
     }
