@@ -7,6 +7,7 @@ import {
     useState,
 } from "react";
 import {
+    ActivityIndicator,
     BackHandler,
     Dimensions,
     Pressable,
@@ -24,7 +25,9 @@ import Animated, {
 
 import { HidingZoneScreen } from "@/features/hidingZone/HidingZoneScreen";
 import { useEliminationPercentage } from "@/features/map/useEliminationPercentage";
+import { useStationElimination } from "@/features/map/useStationElimination";
 import { PlayAreaScreen } from "@/features/playArea/PlayAreaScreen";
+import { StationDetailScreen } from "@/features/sheet/StationDetailScreen";
 import { isPlayAreaSet } from "@/features/map/playArea";
 import { AddQuestionScreen } from "@/features/questions/AddQuestionScreen";
 import { MatchingQuestionScreen } from "@/features/questions/MatchingQuestionScreen";
@@ -40,10 +43,7 @@ import { SettingsScreen } from "@/features/sheet/SettingsScreen";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";
 import { getQuestionDefinition } from "@/features/questions/questionRegistry";
-import {
-    useHidingZoneDerived,
-    useHidingZoneState,
-} from "@/state/hidingZoneStore";
+import { useHidingZoneState } from "@/state/hidingZoneStore";
 import { usePlayArea } from "@/state/playAreaStore";
 import {
     useGameMode,
@@ -331,6 +331,12 @@ function renderRouteContent(
                     onNavigate={onNavigate}
                 />
             );
+        case "station-detail":
+            return (
+                <ChildSheetShell onBack={() => onNavigate("main")}>
+                    <StationDetailScreen />
+                </ChildSheetShell>
+            );
         default: {
             return <MainSheetContent onNavigate={onNavigate} />;
         }
@@ -347,9 +353,9 @@ function MainSheetContent({
     const gameMode = useGameMode();
     const { setGameMode, setSeekingStartedAt } = useQuestionActions();
     const { selectedPresetIds } = useHidingZoneState();
-    const { selectedStations } = useHidingZoneDerived();
     const seekingStartedAt = useSeekingStartedAt();
     const eliminationPct = useEliminationPercentage();
+    const { remainingCount, isComputing } = useStationElimination();
 
     const showFirstRun =
         !isPlayAreaSet(playArea) ||
@@ -503,12 +509,30 @@ function MainSheetContent({
                                 )}
                                 <Text style={styles.statLabel}>Hide time</Text>
                             </View>
-                            <View style={styles.statItem}>
-                                <Text style={styles.statNumber}>
-                                    {selectedStations.length}
+                            <Pressable
+                                accessibilityLabel="Stations remaining"
+                                accessibilityRole="button"
+                                onPress={() => onNavigate("station-detail")}
+                                style={({ pressed }) => [
+                                    styles.statItem,
+                                    pressed ? styles.actionPressed : null,
+                                ]}
+                                testID="main-stations-remaining"
+                            >
+                                {isComputing ? (
+                                    <ActivityIndicator
+                                        color={colors.tint}
+                                        style={styles.statSpinner}
+                                    />
+                                ) : (
+                                    <Text style={styles.statNumber}>
+                                        {remainingCount}
+                                    </Text>
+                                )}
+                                <Text style={styles.statLabel}>
+                                    Stations remaining
                                 </Text>
-                                <Text style={styles.statLabel}>Stations</Text>
-                            </View>
+                            </Pressable>
                             <View style={styles.statItem}>
                                 <Text style={styles.statNumber}>
                                     {eliminationPct !== null
@@ -930,6 +954,9 @@ const styles = StyleSheet.create({
         fontSize: 26,
         fontWeight: "900",
         fontVariant: ["tabular-nums"],
+    },
+    statSpinner: {
+        height: 26,
     },
     subtleButton: {
         alignItems: "center",

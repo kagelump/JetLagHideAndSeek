@@ -12,6 +12,7 @@ const routeDepth: Record<SheetRouteName, number> = {
     "offline-data": 2,
     "admin-divisions": 2,
     "geometry-parity": 2,
+    "station-detail": 1,
 };
 
 export function getNavDirection(
@@ -40,5 +41,7 @@ export function getBackTarget(route: SheetRouteName): SheetRouteName | null {
         case "admin-divisions":
         case "geometry-parity":
             return "settings";
+        case "station-detail":
+            return "main";
     }
 }

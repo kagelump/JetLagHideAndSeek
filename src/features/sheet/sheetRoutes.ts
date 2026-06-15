@@ -9,7 +9,8 @@ export type SheetRouteName =
     | "hiding-zone"
     | "offline-data"
     | "admin-divisions"
-    | "geometry-parity";
+    | "geometry-parity"
+    | "station-detail";
 
 export const SHEET_SNAP_INDEX = {
     compact: 0,
