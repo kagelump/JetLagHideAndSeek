@@ -5,6 +5,8 @@ import { StyleSheet, View } from "react-native";
 import { getQuestionPins } from "@/features/map/getQuestionPins";
 import { NativeMap } from "@/features/map/NativeMap";
 import { useMapPinCommit } from "@/features/map/useMapPinCommit";
+import { ThermometerDragProvider } from "@/features/questions/thermometer/ThermometerDragContext";
+import { useThermometerDrag } from "@/features/questions/thermometer/useThermometerDrag";
 import {
     AppBottomSheet,
     type BottomSheetHandle,
@@ -28,6 +30,7 @@ export function MapAppScreen() {
     const isQuestionDetailRoute = sheetRoute === "question-detail";
     const handlePinCommit = useMapPinCommit();
     const { activeQuestion } = useQuestionDerived();
+    const { dragState, handleDragUpdate } = useThermometerDrag();
 
     const allPins = useMemo(
         () => getQuestionPins(activeQuestion),
@@ -74,29 +77,32 @@ export function MapAppScreen() {
     }, []);
 
     return (
-        <View style={styles.screen}>
-            <StatusBar style="dark" />
-            <NativeMap
-                canMove={canMove}
-                isQuestionDetailRoute={isQuestionDetailRoute}
-                onPinCommit={handlePinCommit}
-                onPress={handleMapPress}
-                onPlacePin={handlePlacePin}
-                pins={pins}
-                questionId={questionId}
-            />
-            <FabButton
-                accessibilityHidden={sheetIndex !== -1}
-                onPress={handleFabPress}
-            />
-            <SheetSnapProvider snapToIndex={handleSheetSnap}>
-                <AppBottomSheet
-                    ref={bottomSheetRef}
-                    onIndexChange={handleSheetIndexChange}
-                    onRouteChange={handleSheetRouteChange}
+        <ThermometerDragProvider value={dragState}>
+            <View style={styles.screen}>
+                <StatusBar style="dark" />
+                <NativeMap
+                    canMove={canMove}
+                    isQuestionDetailRoute={isQuestionDetailRoute}
+                    onPinCommit={handlePinCommit}
+                    onPress={handleMapPress}
+                    onPlacePin={handlePlacePin}
+                    onThermometerDragUpdate={handleDragUpdate}
+                    pins={pins}
+                    questionId={questionId}
                 />
-            </SheetSnapProvider>
-        </View>
+                <FabButton
+                    accessibilityHidden={sheetIndex !== -1}
+                    onPress={handleFabPress}
+                />
+                <SheetSnapProvider snapToIndex={handleSheetSnap}>
+                    <AppBottomSheet
+                        ref={bottomSheetRef}
+                        onIndexChange={handleSheetIndexChange}
+                        onRouteChange={handleSheetRouteChange}
+                    />
+                </SheetSnapProvider>
+            </View>
+        </ThermometerDragProvider>
     );
 }
 

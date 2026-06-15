@@ -2,6 +2,8 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
 import type { ThermometerQuestion } from "@/features/questions/thermometer/thermometerTypes";
+import { useThermometerDrag } from "@/features/questions/thermometer/ThermometerDragContext";
+import { useThermometerElimination } from "@/features/questions/thermometer/useThermometerElimination";
 import { haversineDistanceMeters } from "@/shared/geojson";
 import { fromMeters } from "@/shared/distanceUnits";
 import { useQuestionActions } from "@/state/questionStore";
@@ -21,10 +23,12 @@ export function ThermometerQuestionDetailScreen({
     question,
     updateQuestion,
 }: ThermometerQuestionDetailScreenProps) {
+    const drag = useThermometerDrag();
+    const eliminationPct = useThermometerElimination();
     const startPosition = question.previousPosition;
     const endPosition = question.currentPosition;
 
-    const distanceMeters =
+    const committedDistanceMeters =
         startPosition && endPosition
             ? haversineDistanceMeters(
                   startPosition[1],
@@ -33,6 +37,8 @@ export function ThermometerQuestionDetailScreen({
                   endPosition[0],
               )
             : 0;
+
+    const distanceMeters = drag ? drag.distanceMeters : committedDistanceMeters;
 
     const isDegenerate = distanceMeters < 100;
 
@@ -94,6 +100,14 @@ export function ThermometerQuestionDetailScreen({
                 >
                     {fromMeters(distanceMeters, "km")} km
                 </Text>
+                {eliminationPct !== null ? (
+                    <Text
+                        style={styles.eliminationValue}
+                        testID="thermometer-elimination"
+                    >
+                        {eliminationPct}% eliminated
+                    </Text>
+                ) : null}
                 {isDegenerate ? (
                     <Text
                         style={styles.warningText}
@@ -114,6 +128,12 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: "800",
         marginTop: 8,
+    },
+    eliminationValue: {
+        color: colors.tint,
+        fontSize: 14,
+        fontWeight: "700",
+        marginTop: 4,
     },
     positionCol: { flex: 1 },
     positionLabel: {

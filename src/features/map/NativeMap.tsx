@@ -66,6 +66,11 @@ const MLMapView = MapView as ComponentType<any>;
 const MLCamera = Camera as ComponentType<any>;
 const MLUserLocation = UserLocation as ComponentType<any>;
 
+type ThermometerDragUpdate = {
+    p1: Position;
+    p2: Position;
+};
+
 type NativeMapProps = {
     canMove: boolean;
     isQuestionDetailRoute: boolean;
@@ -77,6 +82,8 @@ type NativeMapProps = {
     onPress?: (event?: unknown) => void;
     /** Called on long press with no nearby pin — should place a new pin. */
     onPlacePin?: (position: Position) => void;
+    /** Called during thermometer pin drag with live P1/P2 coordinates. */
+    onThermometerDragUpdate?: (update: ThermometerDragUpdate | null) => void;
     pins: MapPin[];
     questionId: string | null;
 };
@@ -87,6 +94,7 @@ export function NativeMap({
     onPinCommit,
     onPress,
     onPlacePin,
+    onThermometerDragUpdate,
     pins,
     questionId,
 }: NativeMapProps) {
@@ -170,6 +178,8 @@ export function NativeMap({
             bisectorLine,
             hitMaskFeatures,
             previewFeatures,
+            _dragP1: p1,
+            _dragP2: p2,
         };
     }, [
         pinDrag.isDragging,
@@ -182,9 +192,36 @@ export function NativeMap({
         playArea.bbox,
     ]);
 
+    // Report live thermometer coordinates to the parent so the sheet can
+    // show live distance and elimination percentage during drag.
+    const liveDragCoords = useMemo(
+        () =>
+            liveThermometerState
+                ? {
+                      p1: liveThermometerState._dragP1,
+                      p2: liveThermometerState._dragP2,
+                  }
+                : null,
+        [liveThermometerState],
+    );
+    const onThermometerDragUpdateRef = useRef(onThermometerDragUpdate);
+    onThermometerDragUpdateRef.current = onThermometerDragUpdate;
+    useEffect(() => {
+        onThermometerDragUpdateRef.current?.(liveDragCoords);
+    }, [liveDragCoords]);
+
+    // Strip internal drag-coordinate fields before passing to the render state.
+    const thermometerRenderState = liveThermometerState
+        ? {
+              bisectorLine: liveThermometerState.bisectorLine,
+              hitMaskFeatures: liveThermometerState.hitMaskFeatures,
+              previewFeatures: liveThermometerState.previewFeatures,
+          }
+        : null;
+
     // Override the thermometer portion of the render state during drag.
-    const effectiveRenderState: QuestionMapRenderState = liveThermometerState
-        ? { ...questionMapRenderState, thermometer: liveThermometerState }
+    const effectiveRenderState: QuestionMapRenderState = thermometerRenderState
+        ? { ...questionMapRenderState, thermometer: thermometerRenderState }
         : questionMapRenderState;
 
     const playAreaMask = useMemo(
