@@ -88,22 +88,7 @@ export function featureToLineStrings(feature) {
 
 // ─── Bbox computation ────────────────────────────────────────────────────────
 
-export function computeBbox(coords) {
-    let minX = Infinity,
-        minY = Infinity,
-        maxX = -Infinity,
-        maxY = -Infinity;
-    const walk = (c) => {
-        if (typeof c[0] === "number") {
-            if (c[0] < minX) minX = c[0];
-            if (c[0] > maxX) maxX = c[0];
-            if (c[1] < minY) minY = c[1];
-            if (c[1] > maxY) maxY = c[1];
-        } else c.forEach(walk);
-    };
-    walk(coords);
-    return [minX, minY, maxX, maxY];
-}
+export { computeBbox, bboxesIntersect } from "../../../lib/geo/index.mjs";
 
 // ─── Polygon helpers (for polygon-dissolve mode) ────────────────────────────
 
@@ -263,13 +248,6 @@ export function simplifyPolygonFeature(feature, tolerance) {
         };
     }
     return feature;
-}
-
-/**
- * Returns true when two bboxes intersect (inclusive).
- */
-export function bboxesIntersect(a, b) {
-    return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
 }
 
 // ─── Simplification ──────────────────────────────────────────────────────────

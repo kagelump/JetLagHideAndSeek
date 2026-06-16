@@ -6,6 +6,8 @@
  * candidate within range is always found even when straddling a cell edge.
  */
 
+import { haversineKm } from "../../../lib/geo/index.mjs";
+
 /**
  * @param {number} meters - distance in meters
  * @param {number} lat - reference latitude (for degree-width approximation)
@@ -76,17 +78,10 @@ export function gridNeighbors(grid, lat, lon, maxDistM, excludeIndex) {
 }
 
 /**
- * Haversine distance in meters between two [lat, lon] pairs.
+ * Haversine distance in meters between two (lat, lon) pairs.
+ * Delegates to the shared haversineKm (returns km) and converts to meters.
+ * Legacy signature: takes individual lat/lon arguments.
  */
 export function haversineM(lat1, lon1, lat2, lon2) {
-    const R = 6371000;
-    const toRad = (deg) => (deg * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const rlat1 = toRad(lat1);
-    const rlat2 = toRad(lat2);
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(rlat1) * Math.cos(rlat2) * Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return haversineKm([lon1, lat1], [lon2, lat2]) * 1000;
 }
