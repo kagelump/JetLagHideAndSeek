@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
         fontWeight: "800",
     },
     actionSheetButtonTextDestructive: {
-        color: "#b42318",
+        color: colors.danger,
     },
     container: {},
     emptyDetail: {

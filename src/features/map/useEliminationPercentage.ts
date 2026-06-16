@@ -18,16 +18,13 @@ export function useEliminationPercentage(): number | null {
         if (!playArea.boundary || zoneFeatures.features.length === 0)
             return null;
 
-        const zoneArea = zoneBaselineArea(
-            playArea.boundary as any,
-            zoneFeatures as any,
-        );
+        const zoneArea = zoneBaselineArea(playArea.boundary, zoneFeatures);
         if (zoneArea <= 0) return null;
 
         return zoneEliminationPercent(
             eligibleArea(
-                playArea.boundary as any,
-                zoneFeatures as any,
+                playArea.boundary,
+                zoneFeatures,
                 questionMapRenderState,
             ),
             zoneArea,

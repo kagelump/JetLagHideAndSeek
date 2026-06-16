@@ -8,6 +8,7 @@ import { clipStationsToPlayArea } from "@/features/hidingZone/hidingZone";
 import type { TransitStation } from "@/features/hidingZone/hidingZoneTypes";
 import type { GeoJsonFeatureCollection } from "@/features/map/geojsonTypes";
 import { buildCombinedEligibilityMask } from "@/features/map/maskBuilder";
+import type { MaskFeatureCollection } from "@/features/map/maskBuilder";
 import { buildEligibilityConstraints } from "@/features/map/eliminationMath";
 import type { QuestionMapRenderState } from "@/features/questions/radar/radarTypes";
 import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
@@ -75,7 +76,7 @@ function circleBbox(lat: number, lon: number, radiusMeters: number): Bbox {
 }
 
 /** Walk a FeatureCollection's coordinates and return its bbox, or null if empty. */
-function fcBbox(fc: GeoJsonFeatureCollection): Bbox | null {
+function fcBbox(fc: MaskFeatureCollection): Bbox | null {
     let west = Infinity;
     let south = Infinity;
     let east = -Infinity;
@@ -129,15 +130,21 @@ function bboxString(bb: Bbox | null): string {
  */
 function renderStateSignature(rs: QuestionMapRenderState): string {
     const parts: string[] = [];
-    for (const [key, family] of Object.entries(rs)) {
+    for (const key of Object.keys(rs) as (keyof QuestionMapRenderState)[]) {
+        const family = rs[key];
         if (!family || typeof family !== "object") continue;
-        const hitFc: GeoJsonFeatureCollection | undefined =
+        const hitFc: MaskFeatureCollection | undefined =
             "hitMaskFeatures" in family
-                ? (family as any).hitMaskFeatures
+                ? (family as { hitMaskFeatures: MaskFeatureCollection })
+                      .hitMaskFeatures
                 : undefined;
-        const missFc: GeoJsonFeatureCollection | undefined =
+        const missFc: MaskFeatureCollection | undefined =
             "missMaskFeatures" in family
-                ? (family as any).missMaskFeatures
+                ? (
+                      family as {
+                          missMaskFeatures?: MaskFeatureCollection;
+                      }
+                  ).missMaskFeatures
                 : undefined;
         const hitCount = hitFc?.features?.length ?? 0;
         const missCount = missFc?.features?.length ?? 0;
@@ -167,7 +174,7 @@ export function clearStationEliminationCache(): void {
 // ---------------------------------------------------------------------------
 
 function fcToSingleFeature(
-    fc: GeoJsonFeatureCollection,
+    fc: MaskFeatureCollection,
 ): Feature<Polygon | MultiPolygon> | null {
     if (fc.features.length === 0) return null;
     return fc.features[0] as Feature<Polygon | MultiPolygon>;
@@ -193,11 +200,8 @@ function fcToSingleFeature(
  */
 export function computeStationElimination(
     stations: TransitStation[],
-    zoneFeatures: {
-        features: Array<{ geometry: { type: string; coordinates: unknown } }>;
-        type: "FeatureCollection";
-    },
-    boundary: GeoJsonFeatureCollection | null,
+    zoneFeatures: MaskFeatureCollection,
+    boundary: MaskFeatureCollection | null,
     radiusMeters: number,
     playAreaBbox: Bbox | undefined,
     questionRenderState: QuestionMapRenderState,
@@ -239,14 +243,10 @@ export function computeStationElimination(
 
     // Build the combined eligibility mask (ineligible region).
     const { required, excluded } = buildEligibilityConstraints(
-        zoneFeatures as any,
+        zoneFeatures,
         questionRenderState,
     );
-    const mask = buildCombinedEligibilityMask(
-        boundary as any,
-        required as any,
-        excluded as any,
-    );
+    const mask = buildCombinedEligibilityMask(boundary, required, excluded);
 
     // Fast path: empty mask → all stations remaining.
     if (mask.features.length === 0) {
@@ -339,8 +339,8 @@ export function computeStationElimination(
  */
 function buildCacheKey(
     stations: TransitStation[],
-    zoneFeatures: { features: Array<unknown>; type: string },
-    boundary: GeoJsonFeatureCollection | null,
+    zoneFeatures: MaskFeatureCollection,
+    boundary: MaskFeatureCollection | null,
     radiusMeters: number,
     questionRenderState: QuestionMapRenderState,
 ): string {
@@ -361,8 +361,8 @@ function buildCacheKey(
  */
 export function getCachedResult(
     stations: TransitStation[],
-    zoneFeatures: { features: Array<unknown>; type: string },
-    boundary: GeoJsonFeatureCollection | null,
+    zoneFeatures: MaskFeatureCollection,
+    boundary: MaskFeatureCollection | null,
     radiusMeters: number,
     questionRenderState: QuestionMapRenderState,
 ): StationEliminationResult | null {
@@ -385,8 +385,8 @@ export function getCachedResult(
 /** Store a result in the module-level cache. */
 function putCachedResult(
     stations: TransitStation[],
-    zoneFeatures: { features: Array<unknown>; type: string },
-    boundary: GeoJsonFeatureCollection | null,
+    zoneFeatures: MaskFeatureCollection,
+    boundary: MaskFeatureCollection | null,
     radiusMeters: number,
     questionRenderState: QuestionMapRenderState,
     result: StationEliminationResult,
@@ -481,21 +481,14 @@ export function useStationElimination(): StationEliminationResult {
             if (computeId !== computeIdRef.current) return; // stale
             const r = computeStationElimination(
                 stations,
-                zf as any,
+                zf,
                 boundary,
                 radiusMeters,
                 bbox,
                 qrs,
             );
             if (computeId !== computeIdRef.current) return; // stale
-            putCachedResult(
-                stations,
-                zf as any,
-                boundary,
-                radiusMeters,
-                qrs,
-                r,
-            );
+            putCachedResult(stations, zf, boundary, radiusMeters, qrs, r);
             setResult(r);
         });
 

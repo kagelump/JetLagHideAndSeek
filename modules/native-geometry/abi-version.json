@@ -1,0 +1,4 @@
+{
+    "//": "Single source of truth for the native ABI version. Bump whenever the WKB function surface changes. The TS index.ts reads this at build time. Swift/Kotlin must be kept in sync manually — the native test suites assert they match.",
+    "nativeAbiVersion": 2
+}

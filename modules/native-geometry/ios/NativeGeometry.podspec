@@ -18,7 +18,7 @@ Pod::Spec.new do |s|
   # geos_ops.{h,cpp} is the shared GEOS op core compiled into the pod; Swift
   # reaches its C functions through geos_bridge.h (which includes geos_ops.h).
   s.source_files = "*.swift", "geos_bridge.h", "geos_ops.h", "geos_ops.cpp"
-  s.public_header_files = "geos_bridge.h"
+  s.public_header_files = "geos_bridge.h", "geos_ops.h"
 
   # Vendored GEOS xcframework (committed artifact).
   s.vendored_frameworks = "libgeos.xcframework"

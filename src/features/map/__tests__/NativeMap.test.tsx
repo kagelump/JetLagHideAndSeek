@@ -1,3 +1,8 @@
+jest.mock("../mapCenter", () => ({
+    setLastKnownMapCenter: jest.fn(),
+    getLastKnownMapCenter: jest.fn(),
+}));
+
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Location from "expo-location";
 import type { ReactElement } from "react";
@@ -542,6 +547,49 @@ describe("NativeMap", () => {
                     .features[0].geometry.coordinates,
             ).toEqual(defaultPlayArea.center);
         });
+    });
+
+    it("stores the map center from onRegionDidChange events", () => {
+        const { setLastKnownMapCenter } = jest.requireMock("../mapCenter") as {
+            setLastKnownMapCenter: jest.Mock;
+        };
+
+        const screen = renderWithSafeArea(
+            <NativeMap
+                canMove={false}
+                isQuestionDetailRoute={false}
+                onPinCommit={jest.fn()}
+                pins={[]}
+                questionId={null}
+            />,
+        );
+
+        fireEvent(screen.getByTestId("native-map"), "onRegionDidChange", {
+            geometry: { coordinates: [139.7, 35.7] },
+        });
+
+        expect(setLastKnownMapCenter).toHaveBeenCalledWith([139.7, 35.7]);
+    });
+
+    it("does not call setLastKnownMapCenter when event payload lacks coordinates", () => {
+        const { setLastKnownMapCenter } = jest.requireMock("../mapCenter") as {
+            setLastKnownMapCenter: jest.Mock;
+        };
+        setLastKnownMapCenter.mockClear();
+
+        const screen = renderWithSafeArea(
+            <NativeMap
+                canMove={false}
+                isQuestionDetailRoute={false}
+                onPinCommit={jest.fn()}
+                pins={[]}
+                questionId={null}
+            />,
+        );
+
+        fireEvent(screen.getByTestId("native-map"), "onRegionDidChange", {});
+
+        expect(setLastKnownMapCenter).not.toHaveBeenCalled();
     });
 });
 

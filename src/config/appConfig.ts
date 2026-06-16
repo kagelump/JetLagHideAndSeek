@@ -168,6 +168,37 @@ export const APP_CONFIG = {
             : "auto") as "auto" | "js" | "geos",
     },
 
+    animation: {
+        /** Sheet transition duration in milliseconds. */
+        sheetTransitionMs: 300,
+        /** Minimum horizontal translation to trigger swipe-back (px). */
+        swipeBackThreshold: 80,
+        /** Minimum velocity to trigger swipe-back (px/s). */
+        swipeBackVelocity: 500,
+    },
+
+    camera: {
+        /** Viewport bottom-padding factor (fraction of screen height reserved for the sheet). */
+        topPaddingFactor: 0.48,
+        /** Additional top inset padding (px), added to safe-area topInset. */
+        topPaddingMin: 120,
+        /** Horizontal padding (left/right) in px. */
+        sidePadding: 40,
+    },
+
+    search: {
+        /** Debounce delay for search input in milliseconds. */
+        debounceMs: 350,
+        /** Minimum query length before triggering a search. */
+        minQueryLength: 2,
+        /** Delay before auto-focusing the search input on mount (ms). */
+        inputDelayMs: 400,
+        /** Delay before scrolling to search section after focus (ms). */
+        scrollDelayMs: 100,
+        /** Maximum number of search results to display. */
+        resultLimit: 10,
+    },
+
     offline: {
         /**
          * URL to the v2 packs catalog (GitHub Pages).
@@ -185,6 +216,9 @@ export const APP_CONFIG = {
 
 // ─── Convenience re-exports ──────────────────────────────────────────
 
+export const ANIMATION = APP_CONFIG.animation;
+export const CAMERA = APP_CONFIG.camera;
+export const SEARCH = APP_CONFIG.search;
 export const MEASURING_LINE = APP_CONFIG.measuring.line;
 export const MEASURING_POINT = APP_CONFIG.measuring.point;
 export const HIDING_ZONE = APP_CONFIG.hidingZone;

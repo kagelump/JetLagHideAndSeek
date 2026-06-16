@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { AbiMismatchBanner } from "@/features/map/AbiMismatchBanner";
 import { getQuestionPins } from "@/features/map/getQuestionPins";
 import { NativeMap } from "@/features/map/NativeMap";
 import { useMapPinCommit } from "@/features/map/useMapPinCommit";
@@ -70,6 +71,7 @@ export function MapAppScreen() {
         <ThermometerDragProvider value={dragState}>
             <View style={styles.screen}>
                 <StatusBar style="dark" />
+                <AbiMismatchBanner />
                 <NativeMap
                     canMove={canMove}
                     isQuestionDetailRoute={isQuestionDetailRoute}

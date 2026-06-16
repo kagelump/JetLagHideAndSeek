@@ -11,12 +11,12 @@ export const WORLD_MASK_RING: Position[] = [
     [-180, -85],
 ];
 
-type PolygonFeatureCollection = {
-    features: PolygonFeature[];
+export type MaskFeatureCollection = {
+    features: readonly MaskFeature[];
     type: "FeatureCollection";
 };
 
-type PolygonFeature = {
+export type MaskFeature = {
     geometry: {
         coordinates: unknown;
         type: "Polygon" | "MultiPolygon";
@@ -101,24 +101,24 @@ function getMaskHoleRing(
 }
 
 export function buildCombinedInsideMask(
-    playArea: PolygonFeatureCollection,
-    ...cutouts: PolygonFeatureCollection[]
+    playArea: MaskFeatureCollection,
+    ...cutouts: MaskFeatureCollection[]
 ): GeoJsonFeatureCollection {
     return buildCombinedEligibilityMask(playArea, cutouts);
 }
 
 const MAX_MASK_CACHE_SIZE = MAP.maxMaskCacheSize;
 const maskResultCache = new Map<string, GeoJsonFeatureCollection>();
-const featureCacheIds = new WeakMap<PolygonFeature, number>();
-const featurePolygonCache = new WeakMap<PolygonFeature, Position[][][]>();
+const featureCacheIds = new WeakMap<MaskFeature, number>();
+const featurePolygonCache = new WeakMap<MaskFeature, Position[][][]>();
 let nextFeatureCacheId = 1;
 
 // Fast-path cache for the common case of a single required constraint and no
 // excluded areas (e.g. hiding-zones only). Uses object identity for O(1)
 // lookup without the string-key overhead of maskResultCache.
 const playAreaMinusSingleRequiredCache = new WeakMap<
-    PolygonFeatureCollection,
-    WeakMap<PolygonFeatureCollection, GeoJsonFeatureCollection>
+    MaskFeatureCollection,
+    WeakMap<MaskFeatureCollection, GeoJsonFeatureCollection>
 >();
 
 export function clearMaskResultCache() {
@@ -126,8 +126,8 @@ export function clearMaskResultCache() {
 }
 
 function getCachedPlayAreaMinusSingleRequired(
-    playArea: PolygonFeatureCollection,
-    required: PolygonFeatureCollection,
+    playArea: MaskFeatureCollection,
+    required: MaskFeatureCollection,
 ): GeoJsonFeatureCollection | undefined {
     const inner = playAreaMinusSingleRequiredCache.get(playArea);
     if (!inner) return undefined;
@@ -135,8 +135,8 @@ function getCachedPlayAreaMinusSingleRequired(
 }
 
 function setCachedPlayAreaMinusSingleRequired(
-    playArea: PolygonFeatureCollection,
-    required: PolygonFeatureCollection,
+    playArea: MaskFeatureCollection,
+    required: MaskFeatureCollection,
     result: GeoJsonFeatureCollection,
 ): void {
     let inner = playAreaMinusSingleRequiredCache.get(playArea);
@@ -153,9 +153,9 @@ function setCachedPlayAreaMinusSingleRequired(
  * identity is both cheaper and safer than sampling coordinates.
  */
 function maskCacheKey(
-    playArea: PolygonFeatureCollection,
-    requiredConstraints: PolygonFeatureCollection[],
-    excludedAreas: PolygonFeatureCollection[],
+    playArea: MaskFeatureCollection,
+    requiredConstraints: MaskFeatureCollection[],
+    excludedAreas: MaskFeatureCollection[],
 ): string {
     return [
         `playArea:${collectionCacheKey(playArea)}`,
@@ -164,7 +164,7 @@ function maskCacheKey(
     ].join("|");
 }
 
-function collectionCacheKey(collection: PolygonFeatureCollection): string {
+function collectionCacheKey(collection: MaskFeatureCollection): string {
     return collection.features
         .map((feature) => {
             let id = featureCacheIds.get(feature);
@@ -179,9 +179,9 @@ function collectionCacheKey(collection: PolygonFeatureCollection): string {
 }
 
 export function buildCombinedEligibilityMask(
-    playArea: PolygonFeatureCollection,
-    requiredConstraints: PolygonFeatureCollection[],
-    excludedAreas: PolygonFeatureCollection[] = [],
+    playArea: MaskFeatureCollection,
+    requiredConstraints: MaskFeatureCollection[],
+    excludedAreas: MaskFeatureCollection[] = [],
 ): GeoJsonFeatureCollection {
     const cacheKey = maskCacheKey(playArea, requiredConstraints, excludedAreas);
     const cached = maskResultCache.get(cacheKey);
@@ -230,9 +230,11 @@ export function buildCombinedEligibilityMask(
             backend.intersection.bind(backend),
         );
         eligibleArea = intersected ? featureToCoords(intersected) : [];
-        console.log(
-            `[maskBuilder] intersection(${requiredGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
-        );
+        if (__DEV__) {
+            console.log(
+                `[maskBuilder] intersection(${requiredGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
+            );
+        }
     }
 
     if (!hasGeomArea(eligibleArea)) {
@@ -250,9 +252,11 @@ export function buildCombinedEligibilityMask(
             excludedCoords = united ? featureToCoords(united) : [];
         }
         if (excludedGeoms.length > 1) {
-            console.log(
-                `[maskBuilder] union(${excludedGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[maskBuilder] union(${excludedGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
+                );
+            }
         }
 
         if (hasGeomArea(excludedCoords)) {
@@ -262,9 +266,11 @@ export function buildCombinedEligibilityMask(
                 coordsToFeature(excludedCoords),
             );
             eligibleArea = diffResult ? featureToCoords(diffResult) : [];
-            console.log(
-                `[maskBuilder] difference(eligibleArea, excludedArea) in ${(performance.now() - t1).toFixed(2)}ms`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[maskBuilder] difference(eligibleArea, excludedArea) in ${(performance.now() - t1).toFixed(2)}ms`,
+                );
+            }
         }
     }
 
@@ -280,9 +286,11 @@ export function buildCombinedEligibilityMask(
     const maskedArea: PolyCoords = diffResult
         ? featureToCoords(diffResult)
         : [];
-    console.log(
-        `[maskBuilder] difference(playArea, eligibleArea) in ${(performance.now() - t2).toFixed(2)}ms`,
-    );
+    if (__DEV__) {
+        console.log(
+            `[maskBuilder] difference(playArea, eligibleArea) in ${(performance.now() - t2).toFixed(2)}ms`,
+        );
+    }
 
     const result = buildMultiPolygonFeatureCollection(maskedArea);
 
@@ -305,7 +313,7 @@ export function buildCombinedEligibilityMask(
     return result;
 }
 
-function getGeoms(collections: PolygonFeatureCollection[]): PolyCoords[] {
+function getGeoms(collections: MaskFeatureCollection[]): PolyCoords[] {
     const geoms: PolyCoords[] = [];
     for (const collection of collections) {
         const polygons = getPolygons(collection);
@@ -384,15 +392,15 @@ function reduceOverlay(
 }
 
 export function asSeparateMaskConstraints(
-    collection: PolygonFeatureCollection,
-): PolygonFeatureCollection[] {
+    collection: MaskFeatureCollection,
+): MaskFeatureCollection[] {
     return collection.features.map((feature) => ({
         features: [feature],
         type: "FeatureCollection",
     }));
 }
 
-function getExteriorRings(collection: PolygonFeatureCollection): Position[][] {
+function getExteriorRings(collection: MaskFeatureCollection): Position[][] {
     return collection.features.flatMap((feature) => {
         const { coordinates, type } = feature.geometry;
 
@@ -411,7 +419,7 @@ function getExteriorRings(collection: PolygonFeatureCollection): Position[][] {
     });
 }
 
-function getPolygons(collection: PolygonFeatureCollection): Position[][][] {
+function getPolygons(collection: MaskFeatureCollection): Position[][][] {
     return collection.features.flatMap((feature) => {
         const cached = featurePolygonCache.get(feature);
         if (cached) return cached;

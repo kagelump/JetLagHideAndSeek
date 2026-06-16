@@ -57,7 +57,7 @@ export function useQuestionElimination(
             Polygon | MultiPolygon
         >;
 
-        const zoneArea = zoneBaselineArea(boundary as any, zoneFeatures as any);
+        const zoneArea = zoneBaselineArea(boundary, zoneFeatures);
         if (zoneArea <= 0) return null;
 
         const effectiveQuestions = liveOverride
@@ -81,7 +81,7 @@ export function useQuestionElimination(
             ? buildRenderState(effectiveQuestions)
             : committedRenderState;
         const totalPct = zoneEliminationPercent(
-            eligibleArea(boundary as any, zoneFeatures as any, fullRenderState),
+            eligibleArea(boundary, zoneFeatures, fullRenderState),
             zoneArea,
         );
 
@@ -90,13 +90,13 @@ export function useQuestionElimination(
 
         // Strict ordering: this question's marginal over every earlier question.
         const eligibleBefore = eligibleArea(
-            boundary as any,
-            zoneFeatures as any,
+            boundary,
+            zoneFeatures,
             buildRenderState(effectiveQuestions.slice(0, index)),
         );
         const eligibleAfter = eligibleArea(
-            boundary as any,
-            zoneFeatures as any,
+            boundary,
+            zoneFeatures,
             buildRenderState(effectiveQuestions.slice(0, index + 1)),
         );
 

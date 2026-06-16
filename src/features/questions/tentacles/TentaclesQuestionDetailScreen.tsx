@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
     },
     resetButtonText: {
-        color: "#b42318",
+        color: colors.danger,
         fontSize: 14,
         fontWeight: "800",
     },

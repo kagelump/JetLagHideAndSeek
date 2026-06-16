@@ -52,10 +52,21 @@ export function polygonAreaM2(rings: number[][][]): number {
 
 /**
  * Absolute spherical area of a Polygon or MultiPolygon, in m².
+ *
+ * Accepts any structurally compatible geometry with `coordinates: unknown` so
+ * callers can pass local `PolygonGeometry` types without unsafe casts.
  */
-export function geomAreaM2(geom: Polygon | MultiPolygon): number {
-    if (geom.type === "Polygon") return polygonAreaM2(geom.coordinates);
-    return geom.coordinates.reduce((sum, poly) => sum + polygonAreaM2(poly), 0);
+export function geomAreaM2(geom: {
+    type: "Polygon" | "MultiPolygon";
+    coordinates: unknown;
+}): number {
+    if (geom.type === "Polygon") {
+        return polygonAreaM2(geom.coordinates as number[][][]);
+    }
+    return (geom.coordinates as number[][][][]).reduce(
+        (sum, poly) => sum + polygonAreaM2(poly as number[][][]),
+        0,
+    );
 }
 
 // ─── Bbox ────────────────────────────────────────────────────────────────

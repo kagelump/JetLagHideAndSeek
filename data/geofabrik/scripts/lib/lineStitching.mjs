@@ -9,25 +9,16 @@
  * @module lineStitching
  */
 
-import { computeBbox } from "./geometryCleanup.mjs";
+import { computeBbox, haversineKm } from "../../../lib/geo/index.mjs";
 
 // ─── Geometry primitives ────────────────────────────────────────────────────
 
 /**
  * Great-circle distance in meters between two [lon, lat] points.
+ * Delegates to the shared haversineKm (returns km) and converts to meters.
  */
 export function haversineMeters(a, b) {
-    const R = 6371000;
-    const toRad = (deg) => (deg * Math.PI) / 180;
-    const dLat = toRad(b[1] - a[1]);
-    const dLon = toRad(b[0] - a[0]);
-    const lat1 = toRad(a[1]);
-    const lat2 = toRad(b[1]);
-    const sinDLat = Math.sin(dLat / 2);
-    const sinDLon = Math.sin(dLon / 2);
-    const h =
-        sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
-    return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    return haversineKm(a, b) * 1000;
 }
 
 /**

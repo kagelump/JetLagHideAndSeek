@@ -138,16 +138,20 @@ describe("AppStateV1 schema", () => {
         ).toBeNull();
     });
 
-    it("rejects an invalid play-area shape", () => {
-        expect(
-            migratePersistedAppState({
-                ...makeAppState(),
-                playArea: {
-                    ...makeAppState().playArea,
-                    boundary: undefined,
-                },
-            }),
-        ).toBeNull();
+    it("recovers from an invalid play-area shape by defaulting to unset play area", () => {
+        const result = migratePersistedAppState({
+            ...makeAppState(),
+            playArea: {
+                ...makeAppState().playArea,
+                boundary: undefined,
+            },
+        });
+        expect(result).not.toBeNull();
+        expect(result?.playArea).toMatchObject({
+            osmId: 0,
+            label: "",
+            bbox: [0, 0, 0, 0],
+        });
     });
 
     it("accepts radar questions", () => {
@@ -258,13 +262,13 @@ describe("AppStateV1 schema", () => {
         expect(migratePersistedAppState(state)).toEqual(state);
     });
 
-    it("rejects invalid question shapes", () => {
-        expect(
-            migratePersistedAppState({
-                ...makeAppState(),
-                questions: [{ ...makeRadarQuestion(), distanceMeters: -1 }],
-            }),
-        ).toBeNull();
+    it("filters out invalid questions instead of rejecting the whole state", () => {
+        const result = migratePersistedAppState({
+            ...makeAppState(),
+            questions: [{ ...makeRadarQuestion(), distanceMeters: -1 }],
+        });
+        expect(result).not.toBeNull();
+        expect(result?.questions).toEqual([]);
     });
 
     it("migrates existing v1 app state without question slices to defaults", () => {
@@ -273,17 +277,21 @@ describe("AppStateV1 schema", () => {
         ).toEqual(makeAppState());
     });
 
-    it("rejects an invalid hiding-zone shape", () => {
-        expect(
-            migratePersistedAppState({
-                ...makeAppState(),
-                hidingZones: {
-                    radiusMeters: -1,
-                    radiusUnit: "m",
-                    selectedPresetIds: [],
-                },
-            }),
-        ).toBeNull();
+    it("recovers from invalid hiding zones by defaulting to standard values", () => {
+        const result = migratePersistedAppState({
+            ...makeAppState(),
+            hidingZones: {
+                radiusMeters: -1,
+                radiusUnit: "m",
+                selectedPresetIds: [],
+            },
+        });
+        expect(result).not.toBeNull();
+        expect(result?.hidingZones).toEqual({
+            radiusMeters: 500,
+            radiusUnit: "m",
+            selectedPresetIds: [],
+        });
     });
 });
 
@@ -389,18 +397,28 @@ describe("app-state persistence", () => {
         await expect(loadPersistedAppState()).resolves.toBeNull();
     });
 
-    it("returns null and cleans up when some (but not all) slice keys are populated", async () => {
-        // Set only the metadata key — the other keys are absent → partial null.
+    it("recovers with defaults when some slice keys are missing (no wipe)", async () => {
+        // Set only the metadata key — the other keys are absent.
         await AsyncStorage.setItem(
             "app-state:metadata:v1",
             JSON.stringify(makeAppState().metadata),
         );
 
-        await expect(loadPersistedAppState()).resolves.toBeNull();
+        const result = await loadPersistedAppState();
+        expect(result).not.toBeNull();
+        expect(result?.metadata).toEqual(makeAppState().metadata);
+        // Other slices should have sensible defaults (not null/undefined).
+        expect(result?.hidingZones).toEqual({
+            radiusMeters: 500,
+            radiusUnit: "m",
+            selectedPresetIds: [],
+        });
+        expect(result?.playArea.osmId).toBe(0);
+        expect(result?.questions).toEqual([]);
 
-        // All split keys should have been cleaned up.
+        // The existing metadata key should NOT have been wiped.
         const metadata = await AsyncStorage.getItem("app-state:metadata:v1");
-        expect(metadata).toBeNull();
+        expect(metadata).not.toBeNull();
     });
 
     it("restores with unset play area when play area reference is invalid", async () => {
@@ -428,7 +446,7 @@ describe("app-state persistence", () => {
         expect(result?.playArea.label).toBe("");
     });
 
-    it("returns null and cleans up when a slice contains invalid JSON", async () => {
+    it("recovers with defaults when a slice contains invalid JSON", async () => {
         await AsyncStorage.multiSet([
             ["app-state:metadata:v1", JSON.stringify(makeAppState().metadata)],
             [
@@ -446,12 +464,22 @@ describe("app-state persistence", () => {
             ],
         ]);
 
-        await expect(loadPersistedAppState()).resolves.toBeNull();
+        const result = await loadPersistedAppState();
+        expect(result).not.toBeNull();
+        // The bad slice gets a default; other slices are intact.
+        expect(result?.hidingZones).toEqual({
+            radiusMeters: 500,
+            radiusUnit: "m",
+            selectedPresetIds: [],
+        });
+        expect(result?.metadata).toEqual(makeAppState().metadata);
 
-        // All split keys should have been cleaned up.
-        const hidingZones = await AsyncStorage.getItem(
-            "app-state:hiding-zones:v1",
+        // Other slice keys should NOT have been wiped.
+        const metadata = await AsyncStorage.getItem("app-state:metadata:v1");
+        expect(metadata).not.toBeNull();
+        const questionSettings = await AsyncStorage.getItem(
+            "app-state:question-settings:v1",
         );
-        expect(hidingZones).toBeNull();
+        expect(questionSettings).not.toBeNull();
     });
 });

@@ -14,5 +14,13 @@ export const colors = {
     panel: "#fffefa",
     tealTintBg: "#e6f2ef",
     tint: "#1f6f78",
+    warningBg: "#d97706",
     white: "#ffffff",
+
+    // Semantic / status tokens
+    error: "#b42318", // red-700 (primary error)
+    errorDark: "#d32f2f", // red-600 (for emphasis)
+    success: "#2e7d32", // green-800
+    warning: "#d97706", // amber-600
+    danger: "#b42318", // alias — same as error, for destructive actions
 };

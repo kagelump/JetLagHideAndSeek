@@ -1,3 +1,4 @@
+import { CAMERA } from "@/config/appConfig";
 import type { Bbox, Position } from "./geojsonTypes";
 
 export type MapLibreBounds = {
@@ -72,10 +73,10 @@ export function getTopViewportFitPadding({
     topInset: number;
 }): CameraPadding {
     return {
-        paddingBottom: Math.round(height * 0.48),
-        paddingLeft: 40,
-        paddingRight: 40,
-        paddingTop: Math.round(topInset + 120),
+        paddingBottom: Math.round(height * CAMERA.topPaddingFactor),
+        paddingLeft: CAMERA.sidePadding,
+        paddingRight: CAMERA.sidePadding,
+        paddingTop: Math.round(topInset + CAMERA.topPaddingMin),
     };
 }
 

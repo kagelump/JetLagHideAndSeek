@@ -537,9 +537,11 @@ export function getPresetPlayAreaStats(
         (sum, p) => sum + p.stations.length,
         0,
     );
-    console.log(
-        `[hidingZone] getPresetPlayAreaStats: ${totalInArea}/${totalStations} stations in play area bbox across ${presets.length} presets`,
-    );
+    if (__DEV__) {
+        console.log(
+            `[hidingZone] getPresetPlayAreaStats: ${totalInArea}/${totalStations} stations in play area bbox across ${presets.length} presets`,
+        );
+    }
     return stats;
 }
 

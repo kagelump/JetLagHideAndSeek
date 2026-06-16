@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
         fontWeight: "800",
     },
     warningText: {
-        color: "#b42318",
+        color: colors.error,
         fontSize: 13,
         fontWeight: "700",
         lineHeight: 18,

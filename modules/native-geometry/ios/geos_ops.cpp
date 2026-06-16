@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+#include <vector>
 
 namespace {
 
@@ -100,6 +101,74 @@ GeosWkbBuffer write_wkb(GEOSContextHandle_t ctx, const GEOSGeometry *geom) {
     return GeosWkbBuffer{out, wkb_size};
 }
 
+/**
+ * If geom is a GeometryCollection, extract only its Polygon / MultiPolygon
+ * members and dissolve them into a single polygonal result via
+ * GEOSUnaryUnion. Non-collection polygonal types pass through as a clone.
+ * Returns a new geometry (caller owns) or nullptr if no polygonal area
+ * remains.
+ */
+GEOSGeometry *to_polygonal(GEOSContextHandle_t ctx, const GEOSGeometry *geom) {
+    if (!geom) return nullptr;
+
+    int type_id = GEOSGeomTypeId_r(ctx, geom);
+
+    // Already polygonal — pass through (caller expects a new reference).
+    if (type_id == GEOS_POLYGON || type_id == GEOS_MULTIPOLYGON) {
+        return GEOSGeom_clone_r(ctx, geom);
+    }
+
+    // Not a collection — e.g. Point, LineString. No area contribution.
+    if (type_id != GEOS_GEOMETRYCOLLECTION) {
+        return nullptr;
+    }
+
+    int n = GEOSGetNumGeometries_r(ctx, geom);
+    if (n <= 0) return nullptr;
+
+    // Collect polygonal sub-geometries.
+    std::vector<GEOSGeometry *> polygonal;
+    polygonal.reserve(n);
+
+    for (int i = 0; i < n; i++) {
+        const GEOSGeometry *sub = GEOSGetGeometryN_r(ctx, geom, i);
+        if (!sub) continue;
+        int st = GEOSGeomTypeId_r(ctx, sub);
+        if (st == GEOS_POLYGON || st == GEOS_MULTIPOLYGON) {
+            GEOSGeometry *clone = GEOSGeom_clone_r(ctx, sub);
+            if (clone) polygonal.push_back(clone);
+        }
+    }
+
+    if (polygonal.empty()) return nullptr;
+
+    GEOSGeometry *result = nullptr;
+    if (polygonal.size() == 1) {
+        result = polygonal[0];
+    } else {
+        // Create a collection of only polygonal members and dissolve.
+        GEOSGeometry *collection = GEOSGeom_createCollection_r(
+            ctx, GEOS_GEOMETRYCOLLECTION, polygonal.data(),
+            static_cast<unsigned int>(polygonal.size()));
+        if (collection) {
+            result = GEOSUnaryUnion_r(ctx, collection);
+            GEOSGeom_destroy_r(ctx, collection);
+            // GEOSGeom_createCollection_r takes ownership of the individual
+            // geometry pointers — they are destroyed with the collection.
+        } else {
+            // Collection creation failed — free cloned sub-geometries.
+            for (GEOSGeometry *g : polygonal) {
+                if (g) GEOSGeom_destroy_r(ctx, g);
+            }
+        }
+    }
+
+    // polygonal's entries are owned by / destroyed with the collection
+    // (when count>1) or transferred to result (when count==1). The vector
+    // destructor frees the pointer-array storage, not the geometries.
+    return result;
+}
+
 // Function-pointer shapes for the GEOS overlay ops.
 using BinaryOp = GEOSGeometry *(*)(GEOSContextHandle_t, const GEOSGeometry *,
                                    const GEOSGeometry *);
@@ -124,8 +193,14 @@ GeosWkbBuffer run_binary(const unsigned char *wkb_a, size_t len_a,
     GEOSGeom_destroy_r(ctx, b);
     if (!result) return kEmptyBuffer;
 
-    GeosWkbBuffer out = write_wkb(ctx, result);
+    // Strip non-polygonal sub-geometries from GeometryCollections so the
+    // JS WKB decoder never sees unsupported types (Point, LineString, ...).
+    GEOSGeometry *polygonal = to_polygonal(ctx, result);
     GEOSGeom_destroy_r(ctx, result);
+    if (!polygonal) return kEmptyBuffer;
+
+    GeosWkbBuffer out = write_wkb(ctx, polygonal);
+    GEOSGeom_destroy_r(ctx, polygonal);
     return out;
 }
 
@@ -139,8 +214,13 @@ GeosWkbBuffer run_unary(const unsigned char *wkb, size_t len, UnaryOp op) {
     GEOSGeom_destroy_r(ctx, geom);
     if (!result) return kEmptyBuffer;
 
-    GeosWkbBuffer out = write_wkb(ctx, result);
+    // Strip non-polygonal sub-geometries from GeometryCollections.
+    GEOSGeometry *polygonal = to_polygonal(ctx, result);
     GEOSGeom_destroy_r(ctx, result);
+    if (!polygonal) return kEmptyBuffer;
+
+    GeosWkbBuffer out = write_wkb(ctx, polygonal);
+    GEOSGeom_destroy_r(ctx, polygonal);
     return out;
 }
 
@@ -182,8 +262,13 @@ GeosWkbBuffer geos_ops_buffer(const unsigned char *wkb, size_t len,
     GEOSGeom_destroy_r(ctx, geom);
     if (!buffered) return kEmptyBuffer;
 
-    GeosWkbBuffer out = write_wkb(ctx, buffered);
+    // Strip non-polygonal sub-geometries from GeometryCollections.
+    GEOSGeometry *polygonal = to_polygonal(ctx, buffered);
     GEOSGeom_destroy_r(ctx, buffered);
+    if (!polygonal) return kEmptyBuffer;
+
+    GeosWkbBuffer out = write_wkb(ctx, polygonal);
+    GEOSGeom_destroy_r(ctx, polygonal);
     return out;
 }
 

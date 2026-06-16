@@ -157,6 +157,30 @@ let _defaultLabelLanguage: "native" | "english" = "native";
  * `getCategoryConfig()` when explicit overrides are not passed. Call this
  * from the app initialisation path whenever the admin division pack or label
  * language changes.
+ *
+ * ## Why this is a module-level mutable singleton
+ *
+ * `getCategoryConfig` and `getCategoryTitle` are called from non-React code
+ * paths (e.g. `matchingConfig.summary`, Overpass query generation) that
+ * cannot access React context. The module-level variables let those code
+ * paths resolve the current admin division pack and label language without
+ * threading context through every call site.
+ *
+ * ## Constraints
+ *
+ * - Call from store initialization/update paths (questionStore callbacks
+ *   and AppStateProviders sync effect) whenever the admin division pack or
+ *   label language changes. Do not call from event handlers, render logic,
+ *   or any code outside the state-management layer.
+ * - The function is called synchronously during provider setup so values are
+ *   available on the first render.
+ *
+ * ## Call sites (canonical source)
+ *
+ * 1. questionStore.tsx — `setLabelLanguage` callback
+ * 2. questionStore.tsx — `setAdminDivisionPack` state setter
+ * 3. questionStore.tsx — `importQuestionSettings`
+ * 4. AppStateProviders.tsx — sync effect on adminDivisionPack/labelLanguage
  */
 export function setDefaultAdminConfig(
     pack: AdminDivisionNamePack,

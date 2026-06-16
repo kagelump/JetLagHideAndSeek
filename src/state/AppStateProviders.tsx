@@ -196,6 +196,7 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
     // Keep module-level defaults in matchingCategories.ts in sync so
     // code paths without React context access (e.g. matchingConfig.summary)
     // use the current admin division pack and label language.
+    // See setDefaultAdminConfig JSDoc for call-site discipline.
     useEffect(() => {
         setDefaultAdminConfig(
             questionState.adminDivisionPack,

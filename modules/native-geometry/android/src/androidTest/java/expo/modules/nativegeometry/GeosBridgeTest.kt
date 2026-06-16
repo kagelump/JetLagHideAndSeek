@@ -135,6 +135,7 @@ class GeosBridgeTest {
 
     @Test
     fun abiVersionMatches() {
+        // Keep in sync with modules/native-geometry/abi-version.json
         assertEquals(2, GeosBridge.NATIVE_ABI_VERSION)
     }
 
