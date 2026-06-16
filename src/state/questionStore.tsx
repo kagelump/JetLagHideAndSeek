@@ -40,6 +40,7 @@ import {
     isPoiAnswerModel,
 } from "@/features/questions/questionRegistry";
 import { questionSchema } from "@/sharing/wire/questionSchemas";
+import { LabelLanguageProvider } from "@/state/labelLanguage";
 import { assertNever } from "@/shared/assertNever";
 import { offsetPosition, type Position } from "@/shared/geojson";
 import {
@@ -81,7 +82,6 @@ export function useQuestionState(): QuestionStateValue {
 // scalar value or stable question ordering.
 // ---------------------------------------------------------------------------
 
-const LabelLanguageContext = createContext<"native" | "english">("native");
 const GameModeContext = createContext<GameMode>("seeker");
 const AdminDivisionPackContext = createContext<AdminDivisionNamePack>(
     DEFAULT_ADMIN_DIVISION_PACK,
@@ -96,9 +96,11 @@ const QuestionsByIdContext = createContext<Record<
     QuestionState
 > | null>(null);
 
-export function useLabelLanguage(): "native" | "english" {
-    return useContext(LabelLanguageContext);
-}
+// Re-exported from the shared module so existing consumers (SettingsScreen,
+// MatchingQuestionScreen, etc.) don't need to update their import paths.
+// hidingZoneStore now imports directly from @/state/labelLanguage to break
+// the cross-store module dependency.
+export { useLabelLanguage } from "@/state/labelLanguage";
 
 export function useGameMode(): GameMode {
     return useContext(GameModeContext);
@@ -387,6 +389,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const setLabelLanguage = useCallback(
         (language: "native" | "english") => {
             setLabelLanguageState(language);
+            // Keep module-level admin config in sync — see setDefaultAdminConfig JSDoc.
             setDefaultAdminConfig(adminDivisionPack, language);
         },
         [adminDivisionPack],
@@ -411,6 +414,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                               ) => AdminDivisionNamePack
                           )(prev)
                         : packOrUpdater;
+                // Keep module-level admin config in sync — see setDefaultAdminConfig JSDoc.
                 setDefaultAdminConfig(next, labelLanguage);
                 return next;
             });
@@ -441,6 +445,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             // Sync module-level defaults synchronously so non-React code
             // paths (matchingConfig.summary, questionSharePrompt) see the
             // correct admin division labels from the first render.
+            // See setDefaultAdminConfig JSDoc in matchingCategories.ts.
             setDefaultAdminConfig(pack, settings.labelLanguage ?? "native");
         },
         [],
@@ -521,9 +526,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                 <QuestionDerivedContext.Provider value={derivedValue}>
                     <QuestionIdsContext.Provider value={questions.allIds}>
                         <QuestionsByIdContext.Provider value={questions.byId}>
-                            <LabelLanguageContext.Provider
-                                value={labelLanguage}
-                            >
+                            <LabelLanguageProvider value={labelLanguage}>
                                 <GameModeContext.Provider value={gameMode}>
                                     <AdminDivisionPackContext.Provider
                                         value={adminDivisionPack}
@@ -539,7 +542,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                                         </AdminDivisionPresetNameContext.Provider>
                                     </AdminDivisionPackContext.Provider>
                                 </GameModeContext.Provider>
-                            </LabelLanguageContext.Provider>
+                            </LabelLanguageProvider>
                         </QuestionsByIdContext.Provider>
                     </QuestionIdsContext.Provider>
                 </QuestionDerivedContext.Provider>

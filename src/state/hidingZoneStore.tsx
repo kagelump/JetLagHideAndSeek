@@ -14,7 +14,7 @@ import {
     loadHidingZonePresets,
     onPackSourcesChanged,
 } from "@/features/hidingZone/hidingZoneData";
-import { useLabelLanguage } from "@/state/questionStore";
+import { useLabelLanguage } from "@/state/labelLanguage";
 import {
     buildHidingZoneFeatureCollection,
     buildRouteFeatureCollection,

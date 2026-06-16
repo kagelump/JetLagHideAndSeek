@@ -184,6 +184,17 @@ export function bufferWKB(
 /**
  * Unary union a little-endian WKB geometry, returning WKB or `null` on
  * failure.
+ *
+ * **Known divergence from native (geos_ops.cpp):** the native side applies
+ * a `to_polygonal()` filter that strips non-polygonal sub-geometries from
+ * GeometryCollection results before WKB serialization (audit item 11). This
+ * wasm helper does **not** replicate that step — it serializes the raw GEOS
+ * result. The two paths agree on pure-polygonal outputs (the common case);
+ * they only diverge on mixed-type GeometryCollections, which the host parity
+ * gate currently skips (see the `skip` annotations in the golden fixtures).
+ * Closing this gap would require binding `GEOSGeomTypeId`, `GEOSGetNumGeometries`,
+ * `GEOSGetGeometryN`, and `GEOSGeom_createCollection` in the wasm `GeosInstance`
+ * interface. Tracked as a follow-up.
  */
 export function unaryUnionWKB(wkb: Uint8Array): Uint8Array | null {
     ensureGeos();
