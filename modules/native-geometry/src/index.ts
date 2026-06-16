@@ -1,18 +1,22 @@
 import { requireNativeModule } from "expo-modules-core";
 
+import abiVersionJson from "../abi-version.json";
+
 const Native = requireNativeModule("NativeGeometry");
 
 /**
- * Expected native ABI version. Bump whenever the WKB function surface changes
- * (e.g., new overlay ops). `getGeometryBackend()` warns when the native binary
- * reports a lower version — the GEOS backend stays selected for whatever ops
- * exist, but the mismatch tells the developer to rebuild the dev client.
+ * Expected native ABI version. Single source of truth is
+ * `abi-version.json` at the package root. Bump that file whenever the
+ * WKB function surface changes (e.g., new overlay ops).
+ * `getGeometryBackend()` warns when the native binary reports a lower
+ * version — the GEOS backend stays selected for whatever ops exist, but
+ * the mismatch tells the developer to rebuild the dev client.
  *
  * History:
  *   1 — G2 initial release (bufferWKB, geosVersion)
  *   2 — G5 overlay ops (differenceWKB, unionWKB, intersectionWKB, unaryUnionWKB)
  */
-export const EXPECTED_NATIVE_ABI = 2;
+export const EXPECTED_NATIVE_ABI: number = abiVersionJson.nativeAbiVersion;
 
 /**
  * True when the native module is linked and exposes bufferWKB (the core
@@ -63,7 +67,7 @@ export function bufferWKB(
 
 function _wrapWkbResult(out: unknown): Uint8Array | null {
     if (out === null || out === undefined) return null;
-    return out instanceof Uint8Array ? out : new Uint8Array(out);
+    return out instanceof Uint8Array ? out : new Uint8Array(out as ArrayBuffer);
 }
 
 /**

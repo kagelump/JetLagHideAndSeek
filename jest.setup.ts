@@ -347,7 +347,9 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
 // outside transformIgnorePatterns.
 jest.mock("native-geometry", () => ({
     __esModule: true,
+    EXPECTED_NATIVE_ABI: 0,
     isAvailable: () => false,
+    nativeAbiVersion: () => 0,
     geosVersion: () => "mock",
     bufferWKB: () => null,
     differenceWKB: () => null,

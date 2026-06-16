@@ -215,6 +215,10 @@ export function getGeometryBackend(): GeometryBackend {
 }
 
 // ─── ABI handshake (G5 follow-up) ──────────────────────────────────────────
+// Single source of truth for the expected ABI version is
+// modules/native-geometry/abi-version.json. Bump that file and keep the
+// Swift (NativeGeometryModule.swift) and Kotlin (GeosBridge.kt) constants
+// in sync.
 
 let _abiWarned = false;
 

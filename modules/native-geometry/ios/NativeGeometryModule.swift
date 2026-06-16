@@ -11,7 +11,7 @@ public class NativeGeometryModule: Module {
         // Bump whenever the WKB function surface changes (e.g. new overlay ops).
         // JS side has EXPECTED_NATIVE_ABI; mismatch → loud rebuild warning.
         Function("nativeAbiVersion") { () -> Int in
-            return 2 // G5 overlay ops
+            return 2 // Keep in sync with modules/native-geometry/abi-version.json — G5 overlay ops
         }
 
         Function("bufferWKB") {

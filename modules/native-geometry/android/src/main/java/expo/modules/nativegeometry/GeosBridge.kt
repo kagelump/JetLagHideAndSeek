@@ -25,7 +25,7 @@ object GeosBridge {
         System.loadLibrary("native-geometry-jni")
     }
 
-    /** ABI handshake constant; mirrors `nativeAbiVersion` exposed by the module. */
+    /** ABI handshake constant; mirrors `nativeAbiVersion` exposed by the module. Keep in sync with modules/native-geometry/abi-version.json. */
     const val NATIVE_ABI_VERSION: Int = 2
 
     fun version(): String = nativeGeosVersion()
