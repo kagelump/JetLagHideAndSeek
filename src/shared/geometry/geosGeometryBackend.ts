@@ -40,6 +40,23 @@ import {
 
 // ─── Overlay helpers (G5) ─────────────────────────────────────────────────
 
+type NativeGeometryModule = {
+    bufferWKB: (
+        wkb: Uint8Array,
+        distance: number,
+        qs: number,
+    ) => Uint8Array | null;
+    differenceWKB: (a: Uint8Array, b: Uint8Array) => Uint8Array | null;
+    unionWKB: (a: Uint8Array, b: Uint8Array) => Uint8Array | null;
+    intersectionWKB: (a: Uint8Array, b: Uint8Array) => Uint8Array | null;
+    unaryUnionWKB: (wkb: Uint8Array) => Uint8Array | null;
+};
+
+/** Dynamic require so Jest can mock the native module. */
+function getNativeGeometry(): NativeGeometryModule {
+    return require("native-geometry") as NativeGeometryModule;
+}
+
 type GeosOutcome =
     | { status: "native"; feature: Feature<Polygon | MultiPolygon> | null }
     | { status: "fallback" };
@@ -214,14 +231,7 @@ function bufferFeature(
     meters: number,
     quadrantSegments: number,
 ): Feature<Polygon | MultiPolygon> | null {
-    // Dynamically require so Jest can mock the native module.
-    const { bufferWKB } = require("native-geometry") as {
-        bufferWKB: (
-            wkb: Uint8Array,
-            distance: number,
-            qs: number,
-        ) => Uint8Array | null;
-    };
+    const { bufferWKB } = getNativeGeometry();
 
     const geom = feature.geometry;
     if (!geom) return null;
@@ -324,10 +334,12 @@ export const geosGeometryBackend: GeometryBackend = {
                     if (result) results.push(result);
                 }
                 const ms = performance.now() - t0;
-                console.log(
-                    `[geos] bufferMeters FC(${geom.features.length}) r=${meters} qs=${quadrantSegments} → ` +
-                        `${results.length} features (returning ${results[0]?.geometry.type ?? "null"}) in ${ms.toFixed(0)}ms`,
-                );
+                if (__DEV__) {
+                    console.log(
+                        `[geos] bufferMeters FC(${geom.features.length}) r=${meters} qs=${quadrantSegments} → ` +
+                            `${results.length} features (returning ${results[0]?.geometry.type ?? "null"}) in ${ms.toFixed(0)}ms`,
+                    );
+                }
                 return results[0] ?? null;
             }
 
@@ -338,10 +350,12 @@ export const geosGeometryBackend: GeometryBackend = {
                 quadrantSegments,
             );
             const ms = performance.now() - t0;
-            console.log(
-                `[geos] bufferMeters ${geom.geometry?.type ?? "?"} r=${meters} qs=${quadrantSegments} → ` +
-                    `${result?.geometry.type ?? "null"} in ${ms.toFixed(0)}ms`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[geos] bufferMeters ${geom.geometry?.type ?? "?"} r=${meters} qs=${quadrantSegments} → ` +
+                        `${result?.geometry.type ?? "null"} in ${ms.toFixed(0)}ms`,
+                );
+            }
             return result;
         } catch (err) {
             const ms = performance.now() - t0;
@@ -363,12 +377,7 @@ export const geosGeometryBackend: GeometryBackend = {
     difference(a, b) {
         const t0 = performance.now();
         try {
-            const { differenceWKB } = require("native-geometry") as {
-                differenceWKB: (
-                    a: Uint8Array,
-                    b: Uint8Array,
-                ) => Uint8Array | null;
-            };
+            const { differenceWKB } = getNativeGeometry();
             if (!nativeOpAvailable(differenceWKB)) {
                 warnOncePerOp("differenceWKB");
                 return jsGeometryBackend.difference(a, b);
@@ -379,17 +388,21 @@ export const geosGeometryBackend: GeometryBackend = {
             // inside b). Only the "fallback" status means native couldn't run.
             if (outcome.status === "native") {
                 const ms = performance.now() - t0;
-                console.log(
-                    `[geos] difference ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
-                );
+                if (__DEV__) {
+                    console.log(
+                        `[geos] difference ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                    );
+                }
                 return outcome.feature;
             }
             // Native unavailable — try JS fallback.
             const jsResult = jsGeometryBackend.difference(a, b);
             const ms = performance.now() - t0;
-            console.log(
-                `[geos] difference → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[geos] difference → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                );
+            }
             return jsResult;
         } catch (err) {
             const ms = performance.now() - t0;
@@ -404,9 +417,7 @@ export const geosGeometryBackend: GeometryBackend = {
     union(a, b) {
         const t0 = performance.now();
         try {
-            const { unionWKB } = require("native-geometry") as {
-                unionWKB: (a: Uint8Array, b: Uint8Array) => Uint8Array | null;
-            };
+            const { unionWKB } = getNativeGeometry();
             if (!nativeOpAvailable(unionWKB)) {
                 warnOncePerOp("unionWKB");
                 return jsGeometryBackend.union(a, b);
@@ -415,16 +426,20 @@ export const geosGeometryBackend: GeometryBackend = {
             const outcome = binaryGeosOp(a, b, unionWKB);
             if (outcome.status === "native") {
                 const ms = performance.now() - t0;
-                console.log(
-                    `[geos] union ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
-                );
+                if (__DEV__) {
+                    console.log(
+                        `[geos] union ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                    );
+                }
                 return outcome.feature;
             }
             const jsResult = jsGeometryBackend.union(a, b);
             const ms = performance.now() - t0;
-            console.log(
-                `[geos] union → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[geos] union → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                );
+            }
             return jsResult;
         } catch (err) {
             const ms = performance.now() - t0;
@@ -439,12 +454,7 @@ export const geosGeometryBackend: GeometryBackend = {
     intersection(a, b) {
         const t0 = performance.now();
         try {
-            const { intersectionWKB } = require("native-geometry") as {
-                intersectionWKB: (
-                    a: Uint8Array,
-                    b: Uint8Array,
-                ) => Uint8Array | null;
-            };
+            const { intersectionWKB } = getNativeGeometry();
             if (!nativeOpAvailable(intersectionWKB)) {
                 warnOncePerOp("intersectionWKB");
                 return jsGeometryBackend.intersection(a, b);
@@ -453,16 +463,20 @@ export const geosGeometryBackend: GeometryBackend = {
             const outcome = binaryGeosOp(a, b, intersectionWKB);
             if (outcome.status === "native") {
                 const ms = performance.now() - t0;
-                console.log(
-                    `[geos] intersection ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
-                );
+                if (__DEV__) {
+                    console.log(
+                        `[geos] intersection ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                    );
+                }
                 return outcome.feature;
             }
             const jsResult = jsGeometryBackend.intersection(a, b);
             const ms = performance.now() - t0;
-            console.log(
-                `[geos] intersection → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[geos] intersection → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                );
+            }
             return jsResult;
         } catch (err) {
             const ms = performance.now() - t0;
@@ -477,9 +491,7 @@ export const geosGeometryBackend: GeometryBackend = {
     unaryUnion(a) {
         const t0 = performance.now();
         try {
-            const { unaryUnionWKB } = require("native-geometry") as {
-                unaryUnionWKB: (wkb: Uint8Array) => Uint8Array | null;
-            };
+            const { unaryUnionWKB } = getNativeGeometry();
             if (!nativeOpAvailable(unaryUnionWKB)) {
                 warnOncePerOp("unaryUnionWKB");
                 return jsGeometryBackend.unaryUnion(a);
@@ -504,9 +516,11 @@ export const geosGeometryBackend: GeometryBackend = {
                 // Native returned null — try JS fallback.
                 const jsResult = jsGeometryBackend.unaryUnion(a);
                 const ms = performance.now() - t0;
-                console.log(
-                    `[geos] unaryUnion → native null, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
-                );
+                if (__DEV__) {
+                    console.log(
+                        `[geos] unaryUnion → native null, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                    );
+                }
                 return jsResult;
             }
 
@@ -531,9 +545,11 @@ export const geosGeometryBackend: GeometryBackend = {
                 geometry: decoded,
             };
             const ms = performance.now() - t0;
-            console.log(
-                `[geos] unaryUnion ${geom.type} → ${result.geometry.type} in ${ms.toFixed(0)}ms`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[geos] unaryUnion ${geom.type} → ${result.geometry.type} in ${ms.toFixed(0)}ms`,
+                );
+            }
             return result;
         } catch (err) {
             const ms = performance.now() - t0;

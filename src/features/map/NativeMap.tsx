@@ -238,18 +238,18 @@ export function NativeMap({
         // overlay differs only in substituting the live thermometer-drag hit
         // mask, passed here as an override so the assembly logic stays unforked.
         const { required, excluded } = buildEligibilityConstraints(
-            zoneFeatures as any,
+            zoneFeatures,
             questionMapRenderState,
             {
                 thermometer: {
-                    hitMaskFeatures: thermometerHitMaskFeatures as any,
+                    hitMaskFeatures: thermometerHitMaskFeatures,
                 },
             },
         );
         return buildCombinedEligibilityMask(
             playArea.boundary,
-            required as any,
-            excluded as any,
+            required,
+            excluded,
         );
     }, [
         playAreaIsSet,

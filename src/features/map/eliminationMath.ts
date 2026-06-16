@@ -2,7 +2,7 @@ import {
     asSeparateMaskConstraints,
     buildCombinedEligibilityMask,
 } from "@/features/map/maskBuilder";
-import type { GeoJsonFeatureCollection } from "@/features/map/geojsonTypes";
+import type { MaskFeatureCollection } from "@/features/map/maskBuilder";
 import type { QuestionMapRenderState } from "@/features/questions/radar/radarTypes";
 import { geomAreaM2 } from "@/shared/geometry/parityMetrics";
 
@@ -56,17 +56,17 @@ const MASK_RULES: Record<
 };
 
 type MaskFamily = {
-    hitMaskFeatures: GeoJsonFeatureCollection;
-    missMaskFeatures?: GeoJsonFeatureCollection;
+    hitMaskFeatures: MaskFeatureCollection;
+    missMaskFeatures?: MaskFeatureCollection;
 };
 
 function pushConstraint(
-    target: GeoJsonFeatureCollection[],
-    fc: GeoJsonFeatureCollection,
+    target: MaskFeatureCollection[],
+    fc: MaskFeatureCollection,
     mode: "separate" | "whole",
 ): void {
     if (mode === "separate") {
-        target.push(...(asSeparateMaskConstraints(fc as any) as any));
+        target.push(...asSeparateMaskConstraints(fc));
     } else {
         target.push(fc);
     }
@@ -90,19 +90,19 @@ export type EligibilityMaskOverrides = Partial<
  * shared polarity/decomposition policy in {@link MASK_RULES}.
  */
 export function buildEligibilityConstraints(
-    zoneFeatures: GeoJsonFeatureCollection,
+    zoneFeatures: MaskFeatureCollection,
     renderState: QuestionMapRenderState,
     overrides?: EligibilityMaskOverrides,
 ): {
-    required: GeoJsonFeatureCollection[];
-    excluded: GeoJsonFeatureCollection[];
+    required: MaskFeatureCollection[];
+    excluded: MaskFeatureCollection[];
 } {
-    const required: GeoJsonFeatureCollection[] = [zoneFeatures];
-    const excluded: GeoJsonFeatureCollection[] = [];
+    const required: MaskFeatureCollection[] = [zoneFeatures];
+    const excluded: MaskFeatureCollection[] = [];
 
     for (const key of Object.keys(MASK_RULES) as QuestionRenderKey[]) {
         const rule = MASK_RULES[key];
-        const family = renderState[key] as unknown as MaskFamily;
+        const family = renderState[key] as MaskFamily;
         const override = overrides?.[key];
         const hitMaskFeatures =
             override?.hitMaskFeatures ?? family.hitMaskFeatures;
@@ -117,13 +117,13 @@ export function buildEligibilityConstraints(
     return { required, excluded };
 }
 
-export function featureCollectionArea(fc: GeoJsonFeatureCollection): number {
+export function featureCollectionArea(fc: MaskFeatureCollection): number {
     let total = 0;
     for (const feature of fc.features) {
         if (!feature?.geometry) continue;
         const { type } = feature.geometry;
         if (type === "Polygon" || type === "MultiPolygon") {
-            total += geomAreaM2(feature.geometry as any);
+            total += geomAreaM2(feature.geometry);
         }
     }
     return total;
@@ -136,19 +136,15 @@ export function featureCollectionArea(fc: GeoJsonFeatureCollection): number {
  * since the zone is a required constraint.
  */
 export function eligibleArea(
-    boundary: GeoJsonFeatureCollection,
-    zoneFeatures: GeoJsonFeatureCollection,
+    boundary: MaskFeatureCollection,
+    zoneFeatures: MaskFeatureCollection,
     renderState: QuestionMapRenderState,
 ): number {
     const { required, excluded } = buildEligibilityConstraints(
         zoneFeatures,
         renderState,
     );
-    const mask = buildCombinedEligibilityMask(
-        boundary as any,
-        required as any,
-        excluded as any,
-    );
+    const mask = buildCombinedEligibilityMask(boundary, required, excluded);
     return Math.max(
         0,
         featureCollectionArea(boundary) - featureCollectionArea(mask),
@@ -165,14 +161,10 @@ export function eligibleArea(
  * numerator ({@link eligibleArea}) is always clipped to the boundary.
  */
 export function zoneBaselineArea(
-    boundary: GeoJsonFeatureCollection,
-    zoneFeatures: GeoJsonFeatureCollection,
+    boundary: MaskFeatureCollection,
+    zoneFeatures: MaskFeatureCollection,
 ): number {
-    const mask = buildCombinedEligibilityMask(
-        boundary as any,
-        [zoneFeatures] as any,
-        [],
-    );
+    const mask = buildCombinedEligibilityMask(boundary, [zoneFeatures], []);
     return Math.max(
         0,
         featureCollectionArea(boundary) - featureCollectionArea(mask),
