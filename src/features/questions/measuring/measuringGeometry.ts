@@ -240,18 +240,22 @@ export function buildMeasuringRenderState(
                 nearby.windowFeatures,
             );
             const tPolyToLineMs = performance.now() - tPolyToLine0;
-            console.log(
-                `[measuringGeometry] polygonFeaturesToLineFeatures: ` +
-                    `${nearby.windowFeatures.length} window → ${lineOnlyFeatures.length} line features ` +
-                    `in ${tPolyToLineMs.toFixed(0)}ms for ${q.category}`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[measuringGeometry] polygonFeaturesToLineFeatures: ` +
+                        `${nearby.windowFeatures.length} window → ${lineOnlyFeatures.length} line features ` +
+                        `in ${tPolyToLineMs.toFixed(0)}ms for ${q.category}`,
+                );
+            }
 
             const tDilate0 = performance.now();
             const dilated = getDilatedPlayArea(playAreaBoundary);
             const tDilateMs = performance.now() - tDilate0;
-            console.log(
-                `[measuringGeometry] [${getGeometryBackend().name}] getDilatedPlayArea in ${tDilateMs.toFixed(0)}ms`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[measuringGeometry] [${getGeometryBackend().name}] getDilatedPlayArea in ${tDilateMs.toFixed(0)}ms`,
+                );
+            }
 
             const tClip0 = performance.now();
             const cacheKey = playAreaBbox
@@ -271,11 +275,13 @@ export function buildMeasuringRenderState(
                           playAreaBbox,
                       );
             const tClipMs = performance.now() - tClip0;
-            console.log(
-                `[measuringGeometry] clipLineFeaturesToPlayArea: ` +
-                    `${lineOnlyFeatures.length} → ${clipped.length} features ` +
-                    `in ${tClipMs.toFixed(0)}ms for ${q.category}`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[measuringGeometry] clipLineFeaturesToPlayArea: ` +
+                        `${lineOnlyFeatures.length} → ${clipped.length} features ` +
+                        `in ${tClipMs.toFixed(0)}ms for ${q.category}`,
+                );
+            }
 
             for (const f of clipped) {
                 lineFeatures.push(f);
@@ -294,16 +300,20 @@ export function buildMeasuringRenderState(
         }
     }
     const tLineFeaturesMs = performance.now() - tLineFeatures0;
-    console.log(
-        `[measuringGeometry] lineFeatures derivation: ${lineFeatures.length} total ` +
-            `in ${tLineFeaturesMs.toFixed(0)}ms`,
-    );
+    if (__DEV__) {
+        console.log(
+            `[measuringGeometry] lineFeatures derivation: ${lineFeatures.length} total ` +
+                `in ${tLineFeaturesMs.toFixed(0)}ms`,
+        );
+    }
 
     const tTotalMs = performance.now() - tTotal0;
-    console.log(
-        `[measuringGeometry] buildMeasuringRenderState total: ${tTotalMs.toFixed(0)}ms ` +
-            `for ${measuring.length} question(s)`,
-    );
+    if (__DEV__) {
+        console.log(
+            `[measuringGeometry] buildMeasuringRenderState total: ${tTotalMs.toFixed(0)}ms ` +
+                `for ${measuring.length} question(s)`,
+        );
+    }
 
     return {
         hitMaskFeatures: { features: hitFeatures, type: "FeatureCollection" },
