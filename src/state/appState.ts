@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { unsetPlayArea } from "@/features/map/playArea";
 import {
     DEFAULT_ADMIN_DIVISION_PACK,
     clonePack,
@@ -58,12 +59,117 @@ export const appStateQuestionSettingsSchema = z.object({
     seekingStartedAt: z.number().nullable().default(null),
 });
 
+const metadataSchema = z.object({
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+});
+
+const DEFAULT_HIDING_ZONES: AppStateV1["hidingZones"] = {
+    radiusMeters: 500,
+    radiusUnit: "m",
+    selectedPresetIds: [],
+};
+
+/**
+ * Parse each question individually and filter out invalid ones instead of
+ * failing the whole array. Unknown/unparseable question types are skipped.
+ * Logs a warning in __DEV__ when dropping individual questions.
+ */
+export function safeParseQuestions(
+    questions: unknown,
+): AppStateV1["questions"] {
+    if (!Array.isArray(questions)) {
+        if (__DEV__)
+            console.warn("Questions is not an array, defaulting to empty");
+        return [];
+    }
+
+    const valid: AppStateV1["questions"] = [];
+    for (const q of questions) {
+        const result = questionSchema.safeParse(q);
+        if (result.success) {
+            valid.push(result.data);
+        } else if (__DEV__) {
+            const id =
+                typeof q === "object" && q !== null && "id" in q
+                    ? String(q.id)
+                    : "unknown";
+            console.warn(
+                `Dropping invalid question (id=${id}):`,
+                result.error.issues,
+            );
+        }
+    }
+    return valid;
+}
+
+/**
+ * Validate hiding zones independently, returning a sensible default on failure.
+ */
+export function safeParseHidingZones(
+    value: unknown,
+): AppStateV1["hidingZones"] {
+    const result = appStateHidingZonesSchema.safeParse(value);
+    if (result.success) return result.data;
+    if (__DEV__) {
+        console.warn(
+            "Invalid hiding zones, using default:",
+            result.error.issues,
+        );
+    }
+    return { ...DEFAULT_HIDING_ZONES };
+}
+
+/**
+ * Validate play area independently, returning an unset play area on failure.
+ */
+export function safeParsePlayArea(value: unknown): AppStateV1["playArea"] {
+    const result = appStatePlayAreaSchema.safeParse(value);
+    if (result.success) return result.data;
+    if (__DEV__) {
+        console.warn("Invalid play area, using default:", result.error.issues);
+    }
+    return { ...unsetPlayArea };
+}
+
+/**
+ * Validate question settings independently, returning defaults on failure.
+ */
+export function safeParseQuestionSettings(
+    value: unknown,
+): AppStateV1["questionSettings"] {
+    const result = appStateQuestionSettingsSchema.safeParse(value);
+    if (result.success) return result.data;
+    if (__DEV__) {
+        console.warn(
+            "Invalid question settings, using defaults:",
+            result.error.issues,
+        );
+    }
+    // All question-settings fields have defaults — parse({}) always succeeds.
+    return appStateQuestionSettingsSchema.parse({});
+}
+
+/** Validate metadata independently, returning fresh timestamps on failure. */
+function safeParseMetadata(value: unknown): {
+    createdAt: string;
+    updatedAt: string;
+} {
+    const result = metadataSchema.safeParse(value);
+    if (result.success) return result.data;
+    const now = new Date().toISOString();
+    if (__DEV__) {
+        console.warn(
+            "Invalid metadata, using current timestamp:",
+            result.error.issues,
+        );
+    }
+    return { createdAt: now, updatedAt: now };
+}
+
 export const appStateV1Schema = z.object({
     hidingZones: appStateHidingZonesSchema,
-    metadata: z.object({
-        createdAt: z.string().min(1),
-        updatedAt: z.string().min(1),
-    }),
+    metadata: metadataSchema,
     playArea: appStatePlayAreaSchema,
     questionSettings: appStateQuestionSettingsSchema,
     questions: appStateQuestionsSchema,
@@ -130,9 +236,33 @@ export function createAppStateV1({
     };
 }
 
+/**
+ * Migrate a persisted app-state value to `AppStateV1`, recovering partial state
+ * instead of failing entirely on a single corrupt slice.
+ *
+ * Each slice is validated independently against its own schema. If a slice
+ * fails validation, a sensible default (matching what `createAppStateV1` would
+ * produce) is used instead. Warnings are logged in `__DEV__` for dropped slices.
+ *
+ * Returns `null` only when the value is not a record or the version is not 1
+ * (unrecognized format — caller should remove the key).
+ */
 export function migratePersistedAppState(value: unknown): AppStateV1 | null {
-    const parsed = appStateV1Schema.safeParse(addMissingV1Slices(value));
-    return parsed.success ? parsed.data : null;
+    if (!isRecord(value)) return null;
+    if (value.version !== 1) return null;
+
+    const enhanced = addMissingV1Slices(value) as Record<string, unknown>;
+
+    // Validate each slice independently so a single corrupt field or question
+    // does not wipe all persisted state.
+    return {
+        hidingZones: safeParseHidingZones(enhanced.hidingZones),
+        metadata: safeParseMetadata(enhanced.metadata),
+        playArea: safeParsePlayArea(enhanced.playArea),
+        questionSettings: safeParseQuestionSettings(enhanced.questionSettings),
+        questions: safeParseQuestions(enhanced.questions),
+        version: 1,
+    };
 }
 
 function addMissingV1Slices(value: unknown): unknown {
