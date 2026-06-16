@@ -367,10 +367,13 @@ export function decodeWkb(bytes: Uint8Array): Polygon | MultiPolygon | null {
     // - Empty: legitimate output for degenerate operations — return null.
     // - Non-empty: GEOS unaryUnion may return a GeometryCollection when
     //   dissolving complex MultiPolygon inputs with topological edge cases.
-    //   Extract all Polygon/MultiPolygon members and flatten into a single
-    //   Polygon or MultiPolygon result. Non-polygon sub-geometries are
-    //   lower-dimensional artifacts (points, lines) that don't contribute
-    //   area — skip them.
+    //   Native ops (geos_ops.cpp) now filter non-polygonal sub-geometries
+    //   via to_polygonal before WKB serialization, so this branch should
+    //   rarely (if ever) see a non-Polygon/MultiPolygon sub-geometry from
+    //   native sources. Extract all Polygon/MultiPolygon members and flatten
+    //   into a single Polygon or MultiPolygon result. Non-polygon
+    //   sub-geometries are lower-dimensional artifacts (points, lines) that
+    //   don't contribute area — skip them.
     if (header.type === 7) {
         const numGeoms = readUint32(v);
         if (numGeoms === 0) return null; // GEOMETRYCOLLECTION EMPTY
