@@ -29,6 +29,13 @@ import { OFFLINE } from "@/config/appConfig";
 import type { Bbox } from "@/shared/geojson";
 import type { Artifact, ArtifactKind, CatalogPack } from "./packCatalog";
 import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
+import {
+    installedIndexSchema,
+    boundariesPayloadSchema,
+    boundariesIndexPayloadSchema,
+    transitPayloadSchema,
+    metaPayloadSchema,
+} from "./packSchemas";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -124,7 +131,18 @@ async function getInstalledIndex(): Promise<InstalledIndex> {
     const raw = await AsyncStorage.getItem(INSTALLED_INDEX_KEY);
     if (!raw) return {};
     try {
-        return JSON.parse(raw) as InstalledIndex;
+        const parsed = JSON.parse(raw);
+        const result = installedIndexSchema.safeParse(parsed);
+        if (!result.success) {
+            if (__DEV__) {
+                console.warn(
+                    "[regionPacks] Installed index validation failed:",
+                    result.error.issues,
+                );
+            }
+            return {};
+        }
+        return result.data as InstalledIndex;
     } catch {
         return {};
     }
@@ -159,18 +177,19 @@ function registerArtifact(
             break;
         }
         case "boundaries": {
+            // Validate payload before processing.
+            const parsed = boundariesPayloadSchema.safeParse(raw);
+            if (!parsed.success) {
+                throw new Error(
+                    `Pack ${packId}/boundaries: payload validation failed: ` +
+                        parsed.error.issues.map((i) => i.message).join("; "),
+                );
+            }
+            const data = parsed.data;
+
             // Split the combined artifact: write boundaries-index.json
             // (small, fast read for search) and boundaries-polygons.json
             // (large, delta-encoded, lazy-loaded), then delete the combined file.
-            const data = raw as {
-                schemaVersion: number;
-                regionId: string;
-                index: BoundaryIndexEntry[];
-                polygons: Record<string, number[]>;
-                levels: number[];
-            };
-
-            // Write boundaries-index.json.
             const indexPath = jsonFile(packId, kind, "index");
             indexPath.create({ overwrite: true });
             indexPath.write(
@@ -204,31 +223,33 @@ function registerArtifact(
                 packId,
                 indexPath.uri,
                 polygonsPath.uri,
-                data.index,
+                data.index as BoundaryIndexEntry[],
                 data.levels,
             );
             break;
         }
         case "transit": {
-            const data = raw as {
-                presets: {
-                    id: string;
-                    label: string;
-                    bbox: [number, number, number, number];
-                    kind?: string;
-                }[];
-            };
+            const parsed = transitPayloadSchema.safeParse(raw);
+            if (!parsed.success) {
+                throw new Error(
+                    `Pack ${packId}/transit: payload validation failed: ` +
+                        parsed.error.issues.map((i) => i.message).join("; "),
+                );
+            }
+            const data = parsed.data;
             const presetSummaries = data.presets.map((p) => ({
                 id: p.id,
                 label: p.label,
                 bbox: p.bbox,
                 kind: p.kind,
             }));
-            console.log(
-                `[regionPacks] registerArtifact transit ${packId}: ` +
-                    `${presetSummaries.length} preset summaries ` +
-                    `(first bbox: ${presetSummaries[0]?.bbox?.join(",") ?? "none"})`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[regionPacks] registerArtifact transit ${packId}: ` +
+                        `${presetSummaries.length} preset summaries ` +
+                        `(first bbox: ${presetSummaries[0]?.bbox?.join(",") ?? "none"})`,
+                );
+            }
             registerTransitSource(
                 packId,
                 jsonFile(packId, kind).uri,
@@ -237,11 +258,14 @@ function registerArtifact(
             break;
         }
         case "meta": {
-            const data = raw as {
-                label: string;
-                bbox: [number, number, number, number];
-                adminLevels: { matching: number[]; extract: number[] };
-            };
+            const parsed = metaPayloadSchema.safeParse(raw);
+            if (!parsed.success) {
+                throw new Error(
+                    `Pack ${packId}/meta: payload validation failed: ` +
+                        parsed.error.issues.map((i) => i.message).join("; "),
+                );
+            }
+            const data = parsed.data;
             if (data.adminLevels?.matching && data.bbox) {
                 registerPackAdminLevels({
                     packId,
@@ -273,7 +297,51 @@ function unregisterArtifacts(packId: string): void {
     unregisterPackAdminLevels(packId);
 }
 
-// ─── Install pack ─────────────────────────────────────────────────────────
+// ─── Payload validation ────────────────────────────────────────────────────
+
+/**
+ * Validate a parsed artifact payload against its kind's Zod schema.
+ * Throws on failure; optionally deletes `downloaded` first (for gzip path).
+ */
+function validateParsedPayload(
+    packId: string,
+    kind: ArtifactKind,
+    raw: unknown,
+    downloaded?: { delete: () => void },
+): void {
+    let result: {
+        success: boolean;
+        error: { issues: Array<{ message: string }> };
+    };
+    switch (kind) {
+        case "boundaries":
+            result = boundariesPayloadSchema.safeParse(raw) as typeof result;
+            break;
+        case "transit":
+            result = transitPayloadSchema.safeParse(raw) as typeof result;
+            break;
+        case "meta":
+            result = metaPayloadSchema.safeParse(raw) as typeof result;
+            break;
+        default:
+            return; // poi and measuring have their own validation
+    }
+    if (!result.success) {
+        if (downloaded) {
+            try {
+                downloaded.delete();
+            } catch {
+                /* best-effort */
+            }
+        }
+        throw new Error(
+            `Pack ${packId}/${kind} payload validation failed: ` +
+                result.error.issues.map((i) => i.message).join("; "),
+        );
+    }
+}
+
+// ─── Install pack ──────────────────────────────────────────────────────────
 
 function ensurePackDir(id: string): void {
     const dir = packDir(id);
@@ -400,9 +468,11 @@ async function installSingleArtifact(
             artifact.url.endsWith(".json.gz")
         ) {
             const plainUrl = artifact.url.replace(/\.json\.gz$/, ".json");
-            console.log(
-                `[regionPacks] ${packId}/${artifact.kind}: .gz 404, retrying plain ${plainUrl}`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `[regionPacks] ${packId}/${artifact.kind}: .gz 404, retrying plain ${plainUrl}`,
+                );
+            }
             const plainDest = jsonFile(
                 packId,
                 artifact.kind,
@@ -469,10 +539,15 @@ async function installSingleArtifact(
             );
         }
 
+        // 6. Validate payload structure (defense-in-depth).
+        validateParsedPayload(packId, artifact.kind, raw, downloaded);
+
         // The file is already at the plain JSON path — register and exit.
-        console.log(
-            `[regionPacks] ${packId}/${artifact.kind}: installed via plain JSON fallback`,
-        );
+        if (__DEV__) {
+            console.log(
+                `[regionPacks] ${packId}/${artifact.kind}: installed via plain JSON fallback`,
+            );
+        }
         registerArtifact(packId, artifact.kind, artifact.category, raw);
         return;
     }
@@ -567,10 +642,12 @@ async function installSingleArtifact(
     // TODO: remove the undefined-skip leniency once all pipeline builders
     // include schemaVersion (buildTransit.mjs now emits schemaVersion: 1).
     if (raw.schemaVersion === undefined) {
-        console.log(
-            `[regionPacks] ${packId}/${artifact.kind}: schemaVersion absent in payload, ` +
-                `defaulting to expected ${artifact.schemaVersion}`,
-        );
+        if (__DEV__) {
+            console.log(
+                `[regionPacks] ${packId}/${artifact.kind}: schemaVersion absent in payload, ` +
+                    `defaulting to expected ${artifact.schemaVersion}`,
+            );
+        }
     } else if (
         typeof raw.schemaVersion !== "number" ||
         raw.schemaVersion !== artifact.schemaVersion
@@ -580,6 +657,10 @@ async function installSingleArtifact(
                 `payload has ${raw.schemaVersion}, expected ${artifact.schemaVersion}`,
         );
     }
+
+    // 5a. Validate payload structure (defense-in-depth).
+    // Deletes the .gz on failure (consistent with other error paths).
+    validateParsedPayload(packId, artifact.kind, raw, downloaded);
 
     // 6. Write plain .json.
     const plain = jsonFile(packId, artifact.kind, artifact.category);
@@ -776,6 +857,13 @@ export async function loadInstalledPacks(): Promise<void> {
                         );
                         const jsonStr = await file.text();
                         const raw = JSON.parse(jsonStr);
+                        // Minimal check: verify it's an object.
+                        if (typeof raw !== "object" || raw === null) {
+                            console.warn(
+                                `[regionPacks] POI payload is not an object for pack "${packId}" — skipping`,
+                            );
+                            continue;
+                        }
                         registerRegion(packId, raw);
                         break;
                     }
@@ -806,6 +894,17 @@ export async function loadInstalledPacks(): Promise<void> {
                         if (!indexPath.exists) continue;
                         const indexJson = await indexPath.text();
                         const indexData = JSON.parse(indexJson);
+                        const parsed =
+                            boundariesIndexPayloadSchema.safeParse(indexData);
+                        if (!parsed.success) {
+                            console.warn(
+                                `[regionPacks] Boundaries index validation failed for pack "${packId}": ` +
+                                    parsed.error.issues
+                                        .map((i) => i.message)
+                                        .join("; "),
+                            );
+                            continue;
+                        }
                         const polygonsPath = jsonFile(
                             packId,
                             artifact.kind,
@@ -815,8 +914,8 @@ export async function loadInstalledPacks(): Promise<void> {
                             packId,
                             indexPath.uri,
                             polygonsPath.uri,
-                            indexData.index as BoundaryIndexEntry[],
-                            indexData.levels as number[],
+                            parsed.data.index as BoundaryIndexEntry[],
+                            parsed.data.levels,
                         );
                         break;
                     }
@@ -829,7 +928,17 @@ export async function loadInstalledPacks(): Promise<void> {
                         );
                         const jsonStr = await transitFile.text();
                         const data = JSON.parse(jsonStr);
-                        const presetSummaries = (data.presets ?? []).map(
+                        const parsed = transitPayloadSchema.safeParse(data);
+                        if (!parsed.success) {
+                            console.warn(
+                                `[regionPacks] Transit payload validation failed for pack "${packId}": ` +
+                                    parsed.error.issues
+                                        .map((i) => i.message)
+                                        .join("; "),
+                            );
+                            continue;
+                        }
+                        const presetSummaries = parsed.data.presets.map(
                             (p: {
                                 id: string;
                                 label: string;
@@ -857,12 +966,23 @@ export async function loadInstalledPacks(): Promise<void> {
                         );
                         const jsonStr = await metaFile.text();
                         const data = JSON.parse(jsonStr);
-                        if (data.adminLevels?.matching && data.bbox) {
+                        const parsed = metaPayloadSchema.safeParse(data);
+                        if (!parsed.success) {
+                            console.warn(
+                                `[regionPacks] Meta payload validation failed for pack "${packId}": ` +
+                                    parsed.error.issues
+                                        .map((i) => i.message)
+                                        .join("; "),
+                            );
+                            continue;
+                        }
+                        const md = parsed.data;
+                        if (md.adminLevels?.matching && md.bbox) {
                             registerPackAdminLevels({
                                 packId,
-                                label: data.label ?? packId,
-                                bbox: data.bbox,
-                                matchingLevels: data.adminLevels.matching.slice(
+                                label: md.label ?? packId,
+                                bbox: md.bbox,
+                                matchingLevels: md.adminLevels.matching.slice(
                                     0,
                                     4,
                                 ) as [number, number, number, number],
