@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     error: {
-        color: "#b42318",
+        color: colors.error,
         fontSize: 14,
         lineHeight: 20,
         marginTop: 12,

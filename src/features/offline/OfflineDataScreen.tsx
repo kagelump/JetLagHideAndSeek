@@ -304,7 +304,7 @@ export function OfflineDataScreen() {
                                                       />
                                                   ) : removing ? (
                                                       <ActivityIndicator
-                                                          color="#b42318"
+                                                          color={colors.danger}
                                                           size="small"
                                                       />
                                                   ) : undefined
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     errorText: {
-        color: "#b42318",
+        color: colors.error,
         fontSize: 14,
         lineHeight: 20,
     },

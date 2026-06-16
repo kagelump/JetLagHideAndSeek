@@ -34,9 +34,9 @@ import { usePlayArea } from "@/state/playAreaStore";
 import { useQuestionActions } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
-import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
+import { SEARCH } from "@/config/appConfig";
 
-const SEARCH_DEBOUNCE_MS = 350;
+import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 
 type PlayAreaScreenProps = {
     onNavigate: (route: SheetRouteName) => void;
@@ -46,7 +46,7 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
     const { applyPreset, applyRelationId, playArea, presets } = usePlayArea();
     const { snapToIndex } = useSheetSnap();
     const [query, setQuery] = useState("");
-    const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+    const debouncedQuery = useDebouncedValue(query, SEARCH.debounceMs);
     const {
         data: results = [],
         error: searchError,
@@ -72,14 +72,14 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
     useEffect(() => {
         const timer = setTimeout(() => {
             searchInputRef.current?.focus();
-        }, 400);
+        }, SEARCH.inputDelayMs);
         return () => clearTimeout(timer);
     }, []);
 
     const handleSearchFocus = useCallback(() => {
         setTimeout(() => {
             scrollRef.current?.scrollTo({ y: searchSectionY, animated: true });
-        }, 100);
+        }, SEARCH.scrollDelayMs);
     }, [searchSectionY]);
 
     const handleApplyRelationId = useCallback(async () => {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
         fontWeight: "800",
     },
     error: {
-        color: "#b42318",
+        color: colors.error,
         fontSize: 13,
         fontWeight: "700",
         marginTop: 8,

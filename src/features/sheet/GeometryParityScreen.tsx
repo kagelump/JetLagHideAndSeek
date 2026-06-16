@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
         paddingBottom: 60,
     },
     fail: {
-        color: "#d32f2f",
+        color: colors.errorDark,
     },
     failureHeading: {
         color: colors.ink,
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     pass: {
-        color: "#2e7d32",
+        color: colors.success,
     },
     passFail: {
         fontSize: 20,

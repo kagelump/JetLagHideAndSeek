@@ -93,6 +93,6 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
     titleDestructive: {
-        color: "#b42318",
+        color: colors.danger,
     },
 });

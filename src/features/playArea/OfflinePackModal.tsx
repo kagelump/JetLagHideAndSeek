@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     errorText: {
-        color: "#b42318",
+        color: colors.error,
         fontSize: 14,
         lineHeight: 20,
     },
