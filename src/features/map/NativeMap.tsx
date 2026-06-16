@@ -35,6 +35,7 @@ import {
     fitCameraToBbox,
     getTopViewportFitPadding,
 } from "./camera";
+import { setLastKnownMapCenter } from "./mapCenter";
 import type { MapPin } from "./getQuestionPins";
 import { HidingZoneLayers } from "./HidingZoneLayers";
 import { MapControls } from "./MapControls";
@@ -344,10 +345,16 @@ export function NativeMap({
     const handleRegionWillChange = useCallback(() => {
         setIsCameraMoving(true);
     }, []);
-    const handleRegionDidChange = useCallback(() => {
-        setIsCameraMoving(false);
-        void projectCallout();
-    }, [projectCallout]);
+    const handleRegionDidChange = useCallback(
+        (feature?: { geometry?: { coordinates?: [number, number] } }) => {
+            setIsCameraMoving(false);
+            void projectCallout();
+            if (feature?.geometry?.coordinates) {
+                setLastKnownMapCenter(feature.geometry.coordinates);
+            }
+        },
+        [projectCallout],
+    );
 
     // Auto-fit the camera when the play area changes (user selects a new area).
     const isFirstRender = useRef(true);

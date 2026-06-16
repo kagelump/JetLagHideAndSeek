@@ -21,20 +21,20 @@ below — only the first is worth fixing before merge.
 
 ## Per-item assessment
 
-| # | Item | Status | Notes |
-|---|------|--------|-------|
-| 5 | Per-slice resilient migration | ✅ Strong | `safeParse*` per slice; per-question filter; warnings replace silent `catch {}` |
-| 6 | Split `MainDrawer` + data-driven route graph | ✅ Strong | 1041→360 lines; `ROUTE_GRAPH` single-sources depth+back-target |
-| 7 | Zod at pack network boundary | ✅ Good | `packSchemas.ts` for index/payloads; catalog already validated. One soft spot (below) |
-| 8 | Exclude `parityHarness` from prod | ✅ Good | `lazy()`/`Suspense` + `if (!__DEV__) return null` |
-| 9 | Break up `lineMeasuringGeometry.ts` | ✅ Strong | 1486→276 facade; 3 focused modules; no runtime cycle |
-| 10 | Kill geometry casts | ✅ Strong | `MaskFeatureCollection`/`NativeGeometryModule` types erase the `as any`s |
-| 11 | Native polygonal WKB | ✅ Good | `to_polygonal` strips GC members natively; one parity gap (below) |
-| 12 | Gate hot-path logs | ✅ Good | `__DEV__`-gated across geometry/regionPacks/measuring |
-| 13 | Share data-pipeline extraction | 🟡 Partial | Only haversine/bbox shared; god files untouched |
-| 14 | Single-source ABI + degradation banner | ✅ Strong | `abi-version.json` + `AbiMismatchBanner` mounted in `MapAppScreen` |
-| 15 | Decouple stores / kill mutable global | 🟡 Mixed | `labelLanguage` extracted cleanly; admin-config global **kept** + a buggy guard |
-| 16 | UI tokens / magic numbers | ✅ Good | `colors` error/success/warning tokens; `appConfig` animation/camera/search sections |
+| #   | Item                                         | Status     | Notes                                                                                 |
+| --- | -------------------------------------------- | ---------- | ------------------------------------------------------------------------------------- |
+| 5   | Per-slice resilient migration                | ✅ Strong  | `safeParse*` per slice; per-question filter; warnings replace silent `catch {}`       |
+| 6   | Split `MainDrawer` + data-driven route graph | ✅ Strong  | 1041→360 lines; `ROUTE_GRAPH` single-sources depth+back-target                        |
+| 7   | Zod at pack network boundary                 | ✅ Good    | `packSchemas.ts` for index/payloads; catalog already validated. One soft spot (below) |
+| 8   | Exclude `parityHarness` from prod            | ✅ Good    | `lazy()`/`Suspense` + `if (!__DEV__) return null`                                     |
+| 9   | Break up `lineMeasuringGeometry.ts`          | ✅ Strong  | 1486→276 facade; 3 focused modules; no runtime cycle                                  |
+| 10  | Kill geometry casts                          | ✅ Strong  | `MaskFeatureCollection`/`NativeGeometryModule` types erase the `as any`s              |
+| 11  | Native polygonal WKB                         | ✅ Good    | `to_polygonal` strips GC members natively; one parity gap (below)                     |
+| 12  | Gate hot-path logs                           | ✅ Good    | `__DEV__`-gated across geometry/regionPacks/measuring                                 |
+| 13  | Share data-pipeline extraction               | 🟡 Partial | Only haversine/bbox shared; god files untouched                                       |
+| 14  | Single-source ABI + degradation banner       | ✅ Strong  | `abi-version.json` + `AbiMismatchBanner` mounted in `MapAppScreen`                    |
+| 15  | Decouple stores / kill mutable global        | 🟡 Mixed   | `labelLanguage` extracted cleanly; admin-config global **kept** + a buggy guard       |
+| 16  | UI tokens / magic numbers                    | ✅ Good    | `colors` error/success/warning tokens; `appConfig` animation/camera/search sections   |
 
 ---
 
@@ -46,11 +46,13 @@ below — only the first is worth fixing before merge.
 to replace it) and instead adds a `_initialized` guard:
 
 ```js
-if (__DEV__ && _initialized) { console.warn("...called after first initialization..."); }
+if (__DEV__ && _initialized) {
+    console.warn("...called after first initialization...");
+}
 _initialized = true;
 ```
 
-But the function is *designed* to be called on every admin-pack / label-language
+But the function is _designed_ to be called on every admin-pack / label-language
 change — its own JSDoc says "Call this … whenever the admin division pack or
 label language changes," and `questionStore.setLabelLanguage`
 (`questionStore.tsx:393`), `setAdminDivisionPack` (`:418`), and the
@@ -60,6 +62,7 @@ runtime settings change after the first emits this warning.** The guard fires on
 exactly the path it claims is illegal, so it trains developers to ignore it.
 
 Pick one:
+
 - Drop the guard (it's guarding against a non-problem), or
 - Re-scope it to detect a real misuse — e.g. only warn on calls from outside the
   state layer, which the current flag can't distinguish.
@@ -115,7 +118,7 @@ call).
 - **Item 10** redeclares the native surface as a local `NativeGeometryModule`
   type in `geosGeometryBackend.ts` rather than importing it from
   `modules/native-geometry/src/index.ts` (the audit's suggested single source).
-  The `require()` is still needed for the Jest mock seam, but the *type* could be
+  The `require()` is still needed for the Jest mock seam, but the _type_ could be
   imported to avoid a second drift point. Small.
 - **Item 6** route-graph change shifts `question-detail` depth 4→2 (now parent
   `questions`). Back-targets are byte-for-byte preserved; only `getNavDirection`
@@ -162,7 +165,7 @@ and F3 sharpened with a concrete failure mode.
 
 ### Verification evidence (refactors are faithful)
 
-- **Item 5 is the strongest change in the branch.** Confirmed the *old* code wiped
+- **Item 5 is the strongest change in the branch.** Confirmed the _old_ code wiped
   **all** persisted state on (a) any missing slice key
   (`entries.some(null) → clearSplitPersistedAppState`), (b) any slice failing
   `JSON.parse` (the whole `rawState` build was in one `try`), and (c) any single
@@ -189,13 +192,15 @@ and F3 sharpened with a concrete failure mode.
 ### F5 — `AbiMismatchBanner` ordering + dead guard (item 14) — **minor**
 
 ```js
-const nativeAbi = typeof nativeAbiVersion === "function" ? nativeAbiVersion() : 0;
+const nativeAbi =
+    typeof nativeAbiVersion === "function" ? nativeAbiVersion() : 0;
 if (!__DEV__) return null;
 if (nativeAbi >= EXPECTED_NATIVE_ABI) return null;
 ```
 
 Two small things:
-1. `nativeAbiVersion()` (a native bridge call) runs on **every** render *before*
+
+1. `nativeAbiVersion()` (a native bridge call) runs on **every** render _before_
    the `if (!__DEV__) return null` guard — so production builds pay a wasted
    bridge call each `MapAppScreen` render and then return null. Move the
    `__DEV__` check to the first line.

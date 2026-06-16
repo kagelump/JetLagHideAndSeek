@@ -6,9 +6,12 @@ import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { MeasuringCategoryModal } from "@/features/questions/measuring/MeasuringCategoryModal";
 import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
+import { getLastKnownMapCenter } from "@/features/map/mapCenter";
+import { offsetPosition } from "@/shared/geojson";
 import { usePlayArea } from "@/state/playAreaStore";
 import {
     updateQuestionCenter,
+    updateThermometerPin,
     useQuestionActions,
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
@@ -34,9 +37,10 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
         onNavigate("question-detail");
 
         requestUserCoordinate().then((result) => {
-            if (result.coordinate) {
+            const center = result.coordinate ?? getLastKnownMapCenter();
+            if (center) {
                 updateQuestion(question.id, (current) =>
-                    updateQuestionCenter(current, result.coordinate!),
+                    updateQuestionCenter(current, center),
                 );
             }
         });
@@ -49,10 +53,23 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
         onNavigate("question-detail");
 
         requestUserCoordinate().then((result) => {
-            if (result.coordinate) {
-                updateQuestion(question.id, (current) =>
-                    updateQuestionCenter(current, result.coordinate!),
-                );
+            const center = result.coordinate ?? getLastKnownMapCenter();
+            if (center) {
+                updateQuestion(question.id, (current) => {
+                    if (current.type !== "thermometer") {
+                        return updateQuestionCenter(current, center);
+                    }
+                    const updated = updateThermometerPin(
+                        current,
+                        "start",
+                        center,
+                    );
+                    return updateThermometerPin(
+                        updated,
+                        "end",
+                        offsetPosition(center, 300, 90),
+                    );
+                });
             }
         });
     }, [createQuestion, onNavigate, playArea.center, updateQuestion]);
@@ -62,8 +79,9 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
         setShowMeasuringModal(true);
 
         requestUserCoordinate().then((result) => {
-            if (result.coordinate) {
-                setPendingMeasuringCenter(result.coordinate);
+            const center = result.coordinate ?? getLastKnownMapCenter();
+            if (center) {
+                setPendingMeasuringCenter(center);
             }
         });
     }, [playArea.center]);
@@ -89,9 +107,10 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
         onNavigate("question-detail");
 
         requestUserCoordinate().then((result) => {
-            if (result.coordinate) {
+            const center = result.coordinate ?? getLastKnownMapCenter();
+            if (center) {
                 updateQuestion(question.id, (current) =>
-                    updateQuestionCenter(current, result.coordinate!),
+                    updateQuestionCenter(current, center),
                 );
             }
         });
