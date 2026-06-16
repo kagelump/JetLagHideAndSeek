@@ -167,6 +167,9 @@ function SeekTimeModal({
         [onChange],
     );
 
+    const pickerMode =
+        Platform.OS === "ios" ? ("datetime" as const) : ("time" as const);
+
     return (
         <SlideUpModal onClose={onCancel} scrimColor="rgba(0,0,0,0.4)" visible>
             <Pressable style={styles.modalContainer}>
@@ -198,10 +201,24 @@ function SeekTimeModal({
                     <DateTimePicker
                         display={Platform.OS === "ios" ? "spinner" : "default"}
                         is24Hour
-                        mode="time"
+                        mode={pickerMode}
                         onChange={handleChange}
                         value={draft}
                     />
+                </View>
+                <View style={styles.nowRow}>
+                    <Pressable
+                        accessibilityLabel="Set to current date and time"
+                        accessibilityRole="button"
+                        onPress={() => onChange(new Date())}
+                        style={({ pressed }) => [
+                            styles.nowButton,
+                            pressed ? styles.actionPressed : null,
+                        ]}
+                        testID="seek-time-modal-now"
+                    >
+                        <Text style={styles.nowButtonText}>Now</Text>
+                    </Pressable>
                 </View>
             </Pressable>
         </SlideUpModal>
@@ -346,6 +363,22 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingHorizontal: 20,
         paddingVertical: 12,
+    },
+    nowRow: {
+        alignItems: "center",
+        paddingBottom: 16,
+        paddingHorizontal: 20,
+    },
+    nowButton: {
+        backgroundColor: colors.button,
+        borderRadius: 8,
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+    },
+    nowButtonText: {
+        color: colors.white,
+        fontSize: 15,
+        fontWeight: "700",
     },
 });
 
