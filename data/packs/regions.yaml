@@ -472,6 +472,23 @@ regions:
           maxClusterMeters: 150
           routeColors: {}
           wayGeometry: false
+    - id: north-america-us-oregon
+      label: Oregon
+      regionPath: [North America, US, Oregon]
+      pbfUrl: https://download.geofabrik.de/north-america/us/oregon-latest.osm.pbf
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: true
+          routeModes: [train, subway, light_rail, monorail, tram]
     - id: north-america-canada-ontario
       label: Ontario
       regionPath: [North America, Canada, Ontario]
