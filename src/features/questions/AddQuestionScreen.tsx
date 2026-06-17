@@ -1,11 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { requestUserCoordinate } from "@/shared/location";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
-import { MeasuringCategoryModal } from "@/features/questions/measuring/MeasuringCategoryModal";
-import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
 import { getLastKnownMapCenter } from "@/features/map/mapCenter";
 import { offsetPosition } from "@/shared/geojson";
 import { usePlayArea } from "@/state/playAreaStore";
@@ -23,10 +21,6 @@ type AddQuestionScreenProps = {
 export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
     const { playArea } = usePlayArea();
     const { createQuestion, updateQuestion } = useQuestionActions();
-    const [showMeasuringModal, setShowMeasuringModal] = useState(false);
-    const [pendingMeasuringCenter, setPendingMeasuringCenter] = useState<
-        [number, number] | null
-    >(null);
 
     // Navigate immediately with the play-area center as fallback, then
     // update the question's center in the background if location arrives.
@@ -73,31 +67,6 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
             }
         });
     }, [createQuestion, onNavigate, playArea.center, updateQuestion]);
-
-    const openMeasuringModal = useCallback(() => {
-        setPendingMeasuringCenter(playArea.center);
-        setShowMeasuringModal(true);
-
-        requestUserCoordinate().then((result) => {
-            const center = result.coordinate ?? getLastKnownMapCenter();
-            if (center) {
-                setPendingMeasuringCenter(center);
-            }
-        });
-    }, [playArea.center]);
-
-    const handleMeasuringCategoryPick = useCallback(
-        (category: MeasuringCategory) => {
-            createQuestion("measuring", {
-                center: pendingMeasuringCenter ?? playArea.center,
-                category,
-            });
-            setShowMeasuringModal(false);
-            setPendingMeasuringCenter(null);
-            onNavigate("question-detail");
-        },
-        [createQuestion, onNavigate, pendingMeasuringCenter, playArea.center],
-    );
 
     const addTentaclesQuestion = useCallback(() => {
         const question = createQuestion("tentacles", {
@@ -178,7 +147,7 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
             <Pressable
                 accessibilityLabel="Add measuring question"
                 accessibilityRole="button"
-                onPress={openMeasuringModal}
+                onPress={() => onNavigate("measuring")}
                 style={({ pressed }) => [
                     styles.optionRow,
                     pressed ? styles.actionPressed : null,
@@ -212,16 +181,6 @@ export function AddQuestionScreen({ onNavigate }: AddQuestionScreenProps) {
                 </View>
                 <Text style={styles.chevron}>›</Text>
             </Pressable>
-
-            <MeasuringCategoryModal
-                visible={showMeasuringModal}
-                selectedCategory={"rail-station"}
-                onSelect={handleMeasuringCategoryPick}
-                onClose={() => {
-                    setShowMeasuringModal(false);
-                    setPendingMeasuringCenter(null);
-                }}
-            />
         </SheetScrollView>
     );
 }

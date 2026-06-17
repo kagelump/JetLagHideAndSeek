@@ -5,6 +5,7 @@ const ROUTE_GRAPH = [
     { name: "questions", parent: "main" },
     { name: "add-question", parent: "questions" },
     { name: "matching", parent: "add-question" },
+    { name: "measuring", parent: "add-question" },
     { name: "question-detail", parent: "questions" },
     { name: "settings", parent: "main" },
     { name: "play-area", parent: "settings" },
@@ -45,10 +46,22 @@ function buildMaps(): void {
 
 buildMaps();
 
+// Detail/leaf routes are always entered "forward" and left "back",
+// regardless of parent depth. The depth model can't express sibling→leaf
+// forward navigation (e.g. add-question → question-detail, both depth 2).
+const LEAF_ROUTES = new Set<SheetRouteName>([
+    "question-detail",
+    "station-detail",
+]);
+
 export function getNavDirection(
     from: SheetRouteName,
     to: SheetRouteName,
 ): "forward" | "back" {
+    if (LEAF_ROUTES.has(to) && !LEAF_ROUTES.has(from)) return "forward";
+    if (LEAF_ROUTES.has(from) && !LEAF_ROUTES.has(to)) return "back";
+    // Same-depth non-leaf routes (e.g. matching -> measuring) resolve to "back"
+    // because the fallback comparison uses strict greater-than, not >=.
     return (routeDepthMap.get(to) ?? 0) > (routeDepthMap.get(from) ?? 0)
         ? "forward"
         : "back";

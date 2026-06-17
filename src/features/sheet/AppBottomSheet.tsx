@@ -110,6 +110,7 @@ export const AppBottomSheet = forwardRef<
 
 function getRouteSnapIndex(route: SheetRouteName): number {
     return route === "matching" ||
+        route === "measuring" ||
         route === "admin-divisions" ||
         route === "play-area"
         ? SHEET_SNAP_INDEX.large

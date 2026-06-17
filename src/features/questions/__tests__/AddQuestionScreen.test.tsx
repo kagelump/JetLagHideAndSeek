@@ -131,7 +131,7 @@ describe("AddQuestionScreen", () => {
         expect(onNavigate).toHaveBeenCalledWith("question-detail");
     });
 
-    it("opens measuring modal when GPS is denied with map center fallback", async () => {
+    it("navigates to measuring route when pressing measuring row", async () => {
         mockRequestUserCoordinate.mockResolvedValue({
             coordinate: null,
             status: "denied" as const,
@@ -144,8 +144,7 @@ describe("AddQuestionScreen", () => {
             fireEvent.press(getByTestId("add-measuring-question-row"));
         });
 
-        // Measuring opens a category modal first — no immediate navigation.
-        expect(onNavigate).not.toHaveBeenCalled();
+        expect(onNavigate).toHaveBeenCalledWith("measuring");
     });
 
     // -- Both GPS and map center unavailable: update skipped ---------------

@@ -21,6 +21,7 @@ import { PlayAreaScreen } from "@/features/playArea/PlayAreaScreen";
 import { StationDetailScreen } from "@/features/sheet/StationDetailScreen";
 import { AddQuestionScreen } from "@/features/questions/AddQuestionScreen";
 import { MatchingQuestionScreen } from "@/features/questions/MatchingQuestionScreen";
+import { MeasuringCategoryScreen } from "@/features/questions/measuring/MeasuringCategoryScreen";
 import { QuestionsScreen } from "@/features/questions/QuestionsScreen";
 import { AdminDivisionScreen } from "@/features/sheet/AdminDivisionScreen";
 import { OfflineDataScreen } from "@/features/offline/OfflineDataScreen";
@@ -321,6 +322,12 @@ function renderRouteContent(
             return (
                 <ChildSheetShell onBack={() => onNavigate("add-question")}>
                     <MatchingQuestionScreen onNavigate={onNavigate} />
+                </ChildSheetShell>
+            );
+        case "measuring":
+            return (
+                <ChildSheetShell onBack={() => onNavigate("add-question")}>
+                    <MeasuringCategoryScreen onNavigate={onNavigate} />
                 </ChildSheetShell>
             );
         case "question-detail":

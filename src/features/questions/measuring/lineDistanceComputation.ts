@@ -292,7 +292,9 @@ export function computeLineDistance(
     const bundles = getLineBundleSources(category);
     const tLoadMs = performance.now() - tLoad0;
     if (bundles.length === 0) {
-        distanceCache.set(key, null);
+        // Don't cache a null caused by a missing bundle — the bundle may load
+        // asynchronously later, and caching null here would freeze the UI in
+        // "Computing..." until the center/category changes.
         return null;
     }
     const totalFeatures = bundles.reduce((s, b) => s + b.features.length, 0);
@@ -386,7 +388,8 @@ export function computeLineDistance(
         .filter((coords): coords is Position[] => coords !== null);
 
     if (cleanLines.length === 0) {
-        distanceCache.set(key, null);
+        // Don't cache null: the bundle may be updated or the cache cleared,
+        // and this result is cheap to recompute.
         return null;
     }
     const tCleanMs = performance.now() - tClean0;

@@ -60,9 +60,7 @@ export function useEnsureMeasuringBundles(
             const cached = getLineBundle(category);
             if (cached !== null) continue;
 
-            // If the category is bundled-only (no pack sources) and not yet
-            // cached, the bundled require() will fire on first getLineBundle()
-            // call from the sync path — no async load needed.
+            // No pack sources for this category — nothing to async-load.
             if (!hasPackSources(category)) continue;
 
             // Pack-only or hybrid: fire async load.

@@ -22,7 +22,9 @@ import {
 } from "@/features/questions/matching/bundledPois";
 import {
     __clearLineBundlesForTest,
+    __clearPackSourcesForTest,
     __setLineBundleForTest,
+    registerMeasuringSource,
     type LineBundle,
 } from "@/features/questions/measuring/lineBundleLoader";
 import type { MeasuringQuestion } from "@/features/questions/measuring/measuringTypes";
@@ -61,7 +63,12 @@ function makeLineBundle(coords: [number, number][]): LineBundle {
         category: "coastline",
         generatedAt: "2026-01-01T00:00:00.000Z",
         source: "test-fixture",
-        extractBbox: [137.9, 33.9, 141.9, 37.9],
+        extractBbox: [
+            Math.min(...xs),
+            Math.min(...ys),
+            Math.max(...xs),
+            Math.max(...ys),
+        ],
         features: [
             {
                 type: "Feature",
@@ -138,8 +145,11 @@ describe("MeasuringQuestionDetailScreen", () => {
         clearLineBufferCache();
         clearLineDistanceCache();
         __clearLineBundlesForTest();
+        __clearPackSourcesForTest();
         clearBundledRegionCache();
         registerTestRegion("test-point-region", makeTestRegion());
+        delete (globalThis as unknown as { __fsCache?: Record<string, string> })
+            .__fsCache;
     });
 
     // ── Point categories ──────────────────────────────────────────────────
@@ -267,7 +277,7 @@ describe("MeasuringQuestionDetailScreen", () => {
             });
         });
 
-        it("opens the category modal when change header is pressed", async () => {
+        it("reveals the inline category list when change header is pressed", async () => {
             const question = makeQuestion();
             const onUpdate = jest.fn();
 
@@ -283,20 +293,16 @@ describe("MeasuringQuestionDetailScreen", () => {
 
             fireEvent.press(rendered.getByTestId("measuring-category-change"));
 
-            // Modal should be visible — its content appears in the tree
             await waitFor(() => {
+                // Park should be a selectable row in the inline list.
                 expect(
-                    rendered.getByTestId("measuring-category-modal-close"),
-                ).toBeTruthy();
-                // Park should be a selectable option in the modal
-                expect(
-                    rendered.getByTestId("measuring-category-modal-park"),
+                    rendered.getByTestId("measuring-category-park"),
                 ).toBeTruthy();
             });
         });
 
-        it("shows collapsed box when answer is selected", async () => {
-            const question = makeQuestion({ answer: "positive" });
+        it("selects a new category from the inline list", async () => {
+            const question = makeQuestion();
             const onUpdate = jest.fn();
 
             const rendered = render(
@@ -305,35 +311,25 @@ describe("MeasuringQuestionDetailScreen", () => {
 
             await waitFor(() => {
                 expect(
-                    rendered.getByTestId("measuring-category-collapsed"),
-                ).toBeTruthy();
-                expect(rendered.getByText("Museum")).toBeTruthy();
-                expect(rendered.getByText("Change")).toBeTruthy();
-            });
-        });
-
-        it("opens modal from collapsed box when answered", async () => {
-            const question = makeQuestion({ answer: "positive" });
-            const onUpdate = jest.fn();
-
-            const rendered = render(
-                <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
-            );
-
-            await waitFor(() => {
-                expect(
-                    rendered.getByTestId("measuring-category-collapsed"),
+                    rendered.getByTestId("measuring-category-change"),
                 ).toBeTruthy();
             });
 
-            fireEvent.press(
-                rendered.getByTestId("measuring-category-collapsed"),
-            );
+            fireEvent.press(rendered.getByTestId("measuring-category-change"));
 
             await waitFor(() => {
                 expect(
-                    rendered.getByTestId("measuring-category-modal-museum"),
+                    rendered.getByTestId("measuring-category-park"),
                 ).toBeTruthy();
+            });
+
+            fireEvent.press(rendered.getByTestId("measuring-category-park"));
+
+            await waitFor(() => {
+                const lastCall = onUpdate.mock.calls.at(-1)!;
+                const updater = lastCall[1];
+                const result = updater(question) as MeasuringQuestion;
+                expect(result.category).toBe("park");
             });
         });
     });
@@ -351,7 +347,7 @@ describe("MeasuringQuestionDetailScreen", () => {
             );
         });
 
-        it("shows static category readout instead of picker", async () => {
+        it("shows the category change header (same control as point categories)", async () => {
             const question = makeQuestion({ category: "coastline" });
             const onUpdate = jest.fn();
 
@@ -360,12 +356,35 @@ describe("MeasuringQuestionDetailScreen", () => {
             );
 
             await waitFor(() => {
-                // "Coastline" appears as a static label, not a picker row
+                expect(
+                    rendered.getByTestId("measuring-category-change"),
+                ).toBeTruthy();
                 expect(rendered.getByText("Coastline")).toBeTruthy();
-                // Category picker testIDs should not exist for line categories
-                expect(() =>
-                    rendered.getByTestId("measuring-category-coastline"),
-                ).toThrow();
+                expect(rendered.getByText("Change")).toBeTruthy();
+            });
+        });
+
+        it("reveals the inline category list for line categories", async () => {
+            const question = makeQuestion({ category: "coastline" });
+            const onUpdate = jest.fn();
+
+            const rendered = render(
+                <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
+            );
+
+            await waitFor(() => {
+                expect(
+                    rendered.getByTestId("measuring-category-change"),
+                ).toBeTruthy();
+            });
+
+            fireEvent.press(rendered.getByTestId("measuring-category-change"));
+
+            await waitFor(() => {
+                // Museum should be a selectable row in the inline list.
+                expect(
+                    rendered.getByTestId("measuring-category-museum"),
+                ).toBeTruthy();
             });
         });
 
@@ -400,6 +419,48 @@ describe("MeasuringQuestionDetailScreen", () => {
                     closerButton.props.accessibilityState.disabled,
                 ).toBeFalsy();
             });
+        });
+
+        it("does not freeze when the line bundle loads asynchronously", async () => {
+            // Simulate a pack source whose bundle is not cached yet.
+            const packPath = "/mock-documents/packs/test-pack/coastline.json";
+            registerMeasuringSource("test-pack", "coastline", packPath);
+            (
+                globalThis as unknown as { __fsCache?: Record<string, string> }
+            ).__fsCache = {
+                [packPath]: JSON.stringify(
+                    makeLineBundle([
+                        [139.0, 35.675],
+                        [140.0, 35.675],
+                    ]),
+                ),
+            };
+
+            const question = makeQuestion({ category: "coastline" });
+            const onUpdate = jest.fn();
+
+            const rendered = render(
+                <TestScreen initialQuestion={question} onUpdate={onUpdate} />,
+            );
+
+            // Bundle has not loaded yet, so the distance is still computing.
+            await waitFor(() => {
+                expect(
+                    rendered.getByTestId("measuring-auto-distance"),
+                ).toHaveTextContent("Computing...");
+            });
+
+            // After the async bundle load completes, the distance resolves
+            // without requiring a center change.
+            await waitFor(() => {
+                const distance = rendered.getByTestId(
+                    "measuring-auto-distance",
+                );
+                expect(distance.props.children).not.toBe("Computing...");
+                expect(distance.props.children).toMatch(/^\d/);
+            });
+
+            expect(onUpdate).not.toHaveBeenCalled();
         });
     });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { QuestionAnswerSelector } from "@/features/questions/components/QuestionAnswerSelector";
@@ -16,8 +16,8 @@ import {
 } from "./measuringCategories";
 import { computeLineDistance } from "./lineMeasuringGeometry";
 import { computeNearestPoiDistance } from "./pointMeasuringGeometry";
-import { loadLineBundle } from "./lineBundleLoader";
-import { MeasuringCategoryModal } from "./MeasuringCategoryModal";
+import { MeasuringCategoryList } from "./MeasuringCategoryList";
+import { useEnsureMeasuringBundles } from "./useEnsureMeasuringBundles";
 import type { MeasuringCategory, MeasuringQuestion } from "./measuringTypes";
 
 type MeasuringQuestionDetailScreenProps = {
@@ -38,12 +38,14 @@ type MeasuringAutoResultProps = {
     question: MeasuringQuestion;
     updateQuestion: ReturnType<typeof useQuestionActions>["updateQuestion"];
     distanceResolver: DistanceResolver;
+    bundleRevision?: number;
 };
 
 function MeasuringAutoResult({
     question,
     updateQuestion,
     distanceResolver,
+    bundleRevision,
 }: MeasuringAutoResultProps) {
     const categoryTitle = getMeasuringCategoryTitle(question.category);
 
@@ -57,7 +59,7 @@ function MeasuringAutoResult({
             );
             return null;
         }
-    }, [question.center, question.category, distanceResolver]);
+    }, [question.center, question.category, distanceResolver, bundleRevision]);
 
     const displayDistance =
         result?.distanceMeters !== undefined && result.distanceMeters !== null
@@ -194,20 +196,17 @@ export function MeasuringQuestionDetailScreen({
     updateQuestion,
 }: MeasuringQuestionDetailScreenProps) {
     const categoryTitle = getMeasuringCategoryTitle(question.category);
-    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [isChanging, setIsChanging] = useState(false);
 
-    // Pre-load line bundles on mount and category changes so the bundle
-    // is usually warm before the map render state asks for it.
-    useEffect(() => {
-        if (isLineMeasuringCategory(question.category)) {
-            loadLineBundle(question.category).catch((err) => {
-                console.warn(
-                    `[MeasuringDetailScreen] loadLineBundle(${question.category}) failed:`,
-                    err,
-                );
-            });
-        }
-    }, [question.category]);
+    // Ensure line bundles are loaded for the current category and bump the
+    // revision when they arrive so the distance computation re-runs.
+    const bundleRevision = useEnsureMeasuringBundles(
+        useMemo(
+            () =>
+                isLineMeasuringCategory(question.category) ? [question] : [],
+            [question],
+        ),
+    );
 
     const handleCategoryChange = useCallback(
         (category: MeasuringCategory) => {
@@ -219,96 +218,54 @@ export function MeasuringQuestionDetailScreen({
                     updatedAt: new Date().toISOString(),
                 };
             });
-
-            // Fire async pre-load for the new category.
-            if (isLineMeasuringCategory(category)) {
-                loadLineBundle(category).catch((err) => {
-                    console.warn(
-                        `[MeasuringDetailScreen] loadLineBundle(${category}) failed:`,
-                        err,
-                    );
-                });
-            }
         },
         [question.id, updateQuestion],
     );
 
-    // Line/polygon categories: static category readout, line-distance resolver.
-    if (isLineMeasuringCategory(question.category)) {
-        return (
-            <>
-                {/* ── Category readout (static for lines) ──────────── */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Category</Text>
-                    <View style={styles.categoryPicker}>
-                        <View style={styles.staticCategoryResult}>
-                            <Text style={styles.categoryTitle}>
-                                {categoryTitle}
-                            </Text>
-                        </View>
-                    </View>
-                </View>
+    const handleSelectCategory = useCallback(
+        (category: MeasuringCategory) => {
+            handleCategoryChange(category);
+            setIsChanging(false);
+        },
+        [handleCategoryChange],
+    );
 
-                <MeasuringAutoResult
-                    question={question}
-                    updateQuestion={updateQuestion}
-                    distanceResolver={computeLineDistance}
-                />
-            </>
-        );
-    }
-
-    // Point categories: collapsed box (when answered) or inline picker
-    // (when unanswered), plus modal for changing category.
-    const isAnswered = question.answer !== "unanswered";
+    const distanceResolver = isLineMeasuringCategory(question.category)
+        ? computeLineDistance
+        : computeNearestPoiDistance;
 
     return (
         <>
             {/* ── Category section ────────────────────────────────── */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Category</Text>
-                {isAnswered ? (
-                    <Pressable
-                        accessibilityLabel={`${categoryTitle} — tap to change category`}
-                        accessibilityRole="button"
-                        onPress={() => setShowCategoryModal(true)}
-                        style={[styles.categoryPicker, styles.collapsedBox]}
-                        testID="measuring-category-collapsed"
-                    >
-                        <Text style={styles.categoryTitle}>
-                            {categoryTitle}
-                        </Text>
-                        <Text style={styles.changeHint}>Change</Text>
-                    </Pressable>
-                ) : (
-                    <View style={styles.categoryPicker}>
-                        <Pressable
-                            accessibilityLabel="Open category picker"
-                            accessibilityRole="button"
-                            onPress={() => setShowCategoryModal(true)}
-                            style={styles.changeHeader}
-                            testID="measuring-category-change"
-                        >
-                            <Text style={styles.changeHeaderText}>
-                                {categoryTitle}
-                            </Text>
-                            <Text style={styles.changeHint}>Change</Text>
-                        </Pressable>
+                <Pressable
+                    accessibilityLabel={`${categoryTitle} — tap to change category`}
+                    accessibilityRole="button"
+                    onPress={() => setIsChanging((v) => !v)}
+                    style={[styles.categoryPicker, styles.changeHeader]}
+                    testID="measuring-category-change"
+                >
+                    <Text style={styles.changeHeaderText}>{categoryTitle}</Text>
+                    <Text style={styles.changeHint}>
+                        {isChanging ? "Done" : "Change"}
+                    </Text>
+                </Pressable>
+                {isChanging ? (
+                    <View style={styles.inlineList}>
+                        <MeasuringCategoryList
+                            selectedCategory={question.category}
+                            onSelect={handleSelectCategory}
+                        />
                     </View>
-                )}
+                ) : null}
             </View>
 
             <MeasuringAutoResult
                 question={question}
                 updateQuestion={updateQuestion}
-                distanceResolver={computeNearestPoiDistance}
-            />
-
-            <MeasuringCategoryModal
-                visible={showCategoryModal}
-                selectedCategory={question.category}
-                onSelect={handleCategoryChange}
-                onClose={() => setShowCategoryModal(false)}
+                distanceResolver={distanceResolver}
+                bundleRevision={bundleRevision}
             />
         </>
     );
@@ -322,11 +279,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginTop: 10,
         overflow: "hidden",
-    },
-    categoryTitle: {
-        color: colors.ink,
-        fontSize: 16,
-        fontWeight: "600",
     },
     changeHeader: {
         alignItems: "center",
@@ -346,19 +298,14 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "700",
     },
-    collapsedBox: {
-        alignItems: "center",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        minHeight: 48,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-    },
     distanceValue: {
         color: colors.tint,
         fontSize: 24,
         fontWeight: "800",
         marginTop: 4,
+    },
+    inlineList: {
+        marginTop: 10,
     },
     planningPhrase: {
         color: colors.ink,
@@ -381,11 +328,6 @@ const styles = StyleSheet.create({
         color: colors.ink,
         fontSize: 17,
         fontWeight: "800",
-    },
-    staticCategoryResult: {
-        minHeight: 44,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
     },
     unitButton: {
         alignItems: "center",

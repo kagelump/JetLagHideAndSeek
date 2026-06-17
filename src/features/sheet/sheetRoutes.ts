@@ -3,6 +3,7 @@ export type SheetRouteName =
     | "questions"
     | "add-question"
     | "matching"
+    | "measuring"
     | "question-detail"
     | "settings"
     | "play-area"
