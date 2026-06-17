@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-17T17:02:24.370Z",
+    "generatedAt": "2026-06-17T17:05:34.848Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2411,15 +2411,15 @@
             "regionPath": ["North America", "US", "Oregon"],
             "bbox": [-126.3879, 41.9634, -116.4545, 46.30349],
             "osmSnapshot": "2026-06-18",
-            "totalBytes": 1036014,
+            "totalBytes": 1218180,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-poi.json.gz",
                     "bytes": 146932,
-                    "md5": "0cf0968db2089209c9f761ee5432f85d",
-                    "sha256": "d26936ec3ce3eece80771537c8f94490447d65d35a881ff1d4405984feb11638",
+                    "md5": "ac32efcdf3ddb6d3ccbc3b2805688d22",
+                    "sha256": "0c6dec5445bdce453759bed0835d960593f9164404e25ed17244f2f5fcaf5283",
                     "schemaVersion": 1
                 },
                 {
@@ -2427,8 +2427,17 @@
                     "category": "coastline",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-measuring-coastline.json.gz",
                     "bytes": 106820,
-                    "md5": "b6db8bcdb2ad58391592860bb7e48c50",
-                    "sha256": "a8aa763303d03f68faba32ec01bd48afbc12e5ad3769ec49b4fe12f99a8b6f94",
+                    "md5": "3998e1b9645317daeba695cfe60ce165",
+                    "sha256": "88ec888e4d2f050bf95c72cf52548c376e326df18274f276bb9bfdb12437e042",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-measuring-admin-2nd-border.json.gz",
+                    "bytes": 182157,
+                    "md5": "428d8ef44b804c3962bb212cd868b2d0",
+                    "sha256": "ab752f89db8380b20728cd11bf5184a26c6c7c352be8d3124c360b5d7f092250",
                     "schemaVersion": 1
                 },
                 {
@@ -2436,17 +2445,17 @@
                     "category": "admin-boundaries",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-measuring-admin-boundaries.json.gz",
                     "bytes": 520878,
-                    "md5": "c45987c24567036fa21f42a5b8a9858c",
-                    "sha256": "1366e75a4993dd2bdd175874e2a65bf7629698388be2ec9b55cb4a6a7cfaa01d",
+                    "md5": "7f7f021ff964ce99910cab643347900e",
+                    "sha256": "90c0e44979f08f32fa499ca379120f4868227d69b802e9acff2fda011199f10c",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-boundaries.json.gz",
-                    "bytes": 230797,
-                    "md5": "4b6d37d1a7798e45cc8823e3bb4d9295",
-                    "sha256": "1c2f0e78b419d74b7172c6b6c36294ba6bf41cac0aef6eca190534bf1c760a25",
+                    "bytes": 230799,
+                    "md5": "02ef9c495b7525ea36a2b42cfe31aa06",
+                    "sha256": "c15e6aa48e029c76a73589a99d41bb4180a63f8fb0c0f01091b298e9dec49d58",
                     "schemaVersion": 1
                 },
                 {
@@ -2462,9 +2471,9 @@
                     "kind": "meta",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-meta.json.gz",
-                    "bytes": 474,
-                    "md5": "5c4d76d905335086d1000f78eb5cf400",
-                    "sha256": "d5c2de9ea64af02f71118a36d269cd736353d50708f3bf1954105f177d222256",
+                    "bytes": 481,
+                    "md5": "2dd4cbed092f7cc2bf8fc0c7f11e7a42",
+                    "sha256": "264e9fd8ac9700836a73aa19a129fd4750731799f29ab53269bc7c55519946d5",
                     "schemaVersion": 1
                 }
             ]
