@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-14T08:22:25.077Z",
+    "generatedAt": "2026-06-17T16:59:15.380Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2401,6 +2401,70 @@
                     "bytes": 504,
                     "md5": "054d88f462d3f2b612ee8c3e32a0f24a",
                     "sha256": "09f1242472309309acd18e4d12277e55702194a777e306a59d4be6511b8fd1bd",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-oregon",
+            "label": "Oregon",
+            "regionPath": ["North America", "US", "Oregon"],
+            "bbox": [-126.3879, 41.9634, -116.4545, 46.30349],
+            "osmSnapshot": "2026-06-18",
+            "totalBytes": 1014231,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-poi.json.gz",
+                    "bytes": 146932,
+                    "md5": "4e36c0870a5e05a4338394bd1dd679ad",
+                    "sha256": "1d5a20295be434626569dfde7eb051c49766a8517f2c98a8399b5379c487986d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-measuring-coastline.json.gz",
+                    "bytes": 106820,
+                    "md5": "d5c04acaa28e373747b02676bb0bbad5",
+                    "sha256": "69b2819dc7e7d25ba67a12aaa3dc641b716cb170b0a9fc8790e461a01a66ecd3",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-measuring-admin-boundaries.json.gz",
+                    "bytes": 520878,
+                    "md5": "22a5864d7bb6617b75fa7ca3ae2bb504",
+                    "sha256": "9b1f714cf2599dfeeac0c8fa3f20c08391c9c0cfc43f82da2f20ac60a537405a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-boundaries.json.gz",
+                    "bytes": 230799,
+                    "md5": "0eebac1e7ac66b7c1a2336c3cc9f235c",
+                    "sha256": "9542c0693dacac0a4dc8721485e404cf472d968f906380ff9d082f95a1b0c280",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-transit.json.gz",
+                    "bytes": 8328,
+                    "md5": "9e200cd57fa4eaf2e087eafaee4268cc",
+                    "sha256": "e8e0877c58a981f05e8289e16c2dd6e39d148b5d8cc7a8657d4044208d0cd4a8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-18/north-america-us-oregon-meta.json.gz",
+                    "bytes": 474,
+                    "md5": "5c4d76d905335086d1000f78eb5cf400",
+                    "sha256": "d5c2de9ea64af02f71118a36d269cd736353d50708f3bf1954105f177d222256",
                     "schemaVersion": 1
                 }
             ]
