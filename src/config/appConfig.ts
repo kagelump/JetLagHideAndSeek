@@ -199,6 +199,24 @@ export const APP_CONFIG = {
         resultLimit: 10,
     },
 
+    network: {
+        /**
+         * Headers sent on every Overpass API request.
+         *
+         * A descriptive User-Agent is required by the OSM/Overpass usage
+         * policy. It is also load-bearing: without it, overpass-api.de's WAF
+         * returns 406 Not Acceptable to React Native's default Android
+         * (OkHttp `okhttp/x.y`) User-Agent, while the iOS (CFNetwork/Darwin)
+         * default slips through — so boundary/POI fetches silently failed on
+         * Android only.
+         */
+        overpassHeaders: {
+            "User-Agent":
+                "HideAndSeekMapper/0.1.7 (+https://jetlag.hinoka.org)",
+            Accept: "application/json",
+        } as Record<string, string>,
+    },
+
     offline: {
         /**
          * URL to the v2 packs catalog (GitHub Pages).
@@ -229,6 +247,7 @@ export const TENTACLES = APP_CONFIG.tentacles;
 export const RADAR = APP_CONFIG.radar;
 export const VORONOI = APP_CONFIG.voronoi;
 export const GEOMETRY = APP_CONFIG.geometry;
+export const NETWORK = APP_CONFIG.network;
 export const OFFLINE = APP_CONFIG.offline;
 
 // ─── Derived-value helpers ───────────────────────────────────────────

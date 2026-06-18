@@ -15,6 +15,7 @@ import {
     buildPlayAreaFromBoundary,
     buildPlayAreaFromOverpass,
 } from "./playAreaBoundaryConversion";
+import { NETWORK } from "@/config/appConfig";
 import { BOUNDARY_CACHE_TTL_MS, queryClient } from "@/state/queryClient";
 import {
     findBoundaryRelation,
@@ -61,7 +62,10 @@ export async function fetchPlayAreaBoundary(
 ): Promise<PlayArea> {
     const query = `[out:json][timeout:60];relation(${relationId});out geom qt;`;
     const url = `${OVERPASS_API}?data=${encodeURIComponent(query)}`;
-    const response = await fetch(url, { signal });
+    const response = await fetch(url, {
+        signal,
+        headers: NETWORK.overpassHeaders,
+    });
 
     if (!response.ok) {
         throw new Error(`Overpass API error ${response.status}`);

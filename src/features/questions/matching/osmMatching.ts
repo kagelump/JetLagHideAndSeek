@@ -1,5 +1,5 @@
 import { type Position, haversineDistanceMeters } from "@/shared/geojson";
-import { MATCHING } from "@/config/appConfig";
+import { MATCHING, NETWORK } from "@/config/appConfig";
 import type { AdminDivisionNamePack } from "./adminDivisionConfig";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
 import { getCategoryConfig } from "./matchingCategories";
@@ -48,7 +48,7 @@ export async function fetchAndParseOverpassFeatures(
 
     const response = await fetch(
         `${OVERPASS_API}?data=${encodeURIComponent(query)}`,
-        { signal },
+        { signal, headers: NETWORK.overpassHeaders },
     );
 
     if (!response.ok) {
@@ -276,7 +276,7 @@ export async function fetchAndParseOverpassBboxFeatures(
 
     const response = await fetch(
         `${OVERPASS_API}?data=${encodeURIComponent(query)}`,
-        { signal },
+        { signal, headers: NETWORK.overpassHeaders },
     );
 
     if (!response.ok) {
