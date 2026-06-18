@@ -51,6 +51,7 @@ import {
 } from "../../../geofabrik/scripts/lib/lineStitching.mjs";
 import {
     polygonDissolve,
+    polygonDissolveParallel,
     geosUnaryUnionCoords,
     buildPolygonGrid,
     clipLineAtPolygon,
@@ -153,6 +154,7 @@ export async function buildMeasuringArtifact({
     pbfPath,
     distDir,
     bbox,
+    jobs = 1,
 }) {
     const measuringOverrides = region.measuringOverrides ?? {};
     const generatedAt = new Date().toISOString();
@@ -786,12 +788,25 @@ export async function buildMeasuringArtifact({
                     overrides.dissolve?.tileDeg ?? DISSOLVE_TILE_DEG;
                 const overlapDeg =
                     overrides.dissolve?.overlapDeg ?? DISSOLVE_TILE_OVERLAP_DEG;
-                const dissolved = polygonDissolve(
-                    polyFeatures,
-                    extractBbox,
-                    tolerance,
-                    { tileDeg, overlapDeg },
-                );
+                // Shard the (independent) dissolve tiles across child processes
+                // when --jobs > 1: faster, and each shard's heap is isolated.
+                const dissolved =
+                    jobs > 1
+                        ? await polygonDissolveParallel(
+                              polyFeatures,
+                              extractBbox,
+                              tolerance,
+                              { tileDeg, overlapDeg, jobs },
+                          )
+                        : polygonDissolve(
+                              polyFeatures,
+                              extractBbox,
+                              tolerance,
+                              {
+                                  tileDeg,
+                                  overlapDeg,
+                              },
+                          );
                 features.length = 0;
                 features.push(...dissolved);
 

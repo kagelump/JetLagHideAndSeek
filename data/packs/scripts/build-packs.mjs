@@ -17,6 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { cpus } from "node:os";
 import { get as httpsGet } from "node:https";
 import { get as httpGet } from "node:http";
 import { gzipSync, gunzipSync } from "node:zlib";
@@ -168,17 +169,25 @@ async function buildBoundariesArtifact({
 }
 
 /**
- * Parse CLI args into { region?, all }.
+ * Parse CLI args into { region?, all, jobs }.
+ * `--jobs <N|auto>` shards the polygon dissolve across child processes
+ * (default 1 = sequential, unchanged behavior).
  * @param {string[]} argv
- * @returns {{ region?: string, all: boolean }}
+ * @returns {{ region?: string, all: boolean, jobs: number }}
  */
 function parseArgs(argv) {
-    const opts = { region: undefined, all: false };
+    const opts = { region: undefined, all: false, jobs: 1 };
     for (let i = 0; i < argv.length; i++) {
         if (argv[i] === "--region" && i + 1 < argv.length) {
             opts.region = argv[++i];
         } else if (argv[i] === "--all") {
             opts.all = true;
+        } else if (argv[i] === "--jobs" && i + 1 < argv.length) {
+            const v = argv[++i];
+            opts.jobs =
+                v === "auto"
+                    ? cpus().length
+                    : Math.max(1, parseInt(v, 10) || 1);
         }
     }
     return opts;
@@ -505,6 +514,7 @@ async function buildRegion(
     cacheDir,
     cacheOnly,
     boundarySource,
+    jobs = 1,
 ) {
     console.log(`\n=== ${region.label} (${region.id}) ===`);
 
@@ -536,6 +546,7 @@ async function buildRegion(
             cacheDir,
             boundarySource,
             cacheOnly,
+            jobs,
         });
 
         if (result) {
@@ -663,7 +674,7 @@ async function main() {
 
     if (!opts.region && !opts.all) {
         console.error(
-            "Usage: pnpm data:pack -- --region <id> | --all [--cache-only]",
+            "Usage: pnpm data:pack -- --region <id> | --all [--cache-only] [--jobs <N|auto>]",
         );
         process.exitCode = 2;
         return;
@@ -696,7 +707,14 @@ async function main() {
         const boundarySource = region.boundarySource
             ? boundarySourceById.get(region.boundarySource)
             : null;
-        await buildRegion(region, distDir, cacheDir, cacheOnly, boundarySource);
+        await buildRegion(
+            region,
+            distDir,
+            cacheDir,
+            cacheOnly,
+            boundarySource,
+            opts.jobs,
+        );
     }
 
     console.log("\nDone.");

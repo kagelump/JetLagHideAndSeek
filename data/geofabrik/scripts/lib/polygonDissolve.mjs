@@ -8,6 +8,12 @@
  * @module polygonDissolve
  */
 
+import { spawn } from "node:child_process";
+import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
+import { tmpdir, totalmem } from "node:os";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { union, intersection } from "polyclip-ts";
 
 import {
@@ -392,6 +398,98 @@ export function unionAllCoords(coordsList) {
  * @param {number} opts.tileDeg - tile size in degrees
  * @param {number} opts.overlapDeg - overlap between adjacent tiles
  */
+/**
+ * Build the coarse tile grid (with overlap) used to partition the dissolve.
+ * A tile is the atomic unit of work — it is never split across shards, so
+ * tile membership (and therefore the dissolved result) is independent of how
+ * many processes run the dissolve.
+ *
+ * @param {number[]} extractBbox - [west, south, east, north]
+ * @param {number} tileDeg - tile size in degrees
+ * @param {number} overlapDeg - overlap between adjacent tiles
+ * @returns {number[][]} array of [w, s, e, n] tile bboxes
+ */
+export function buildTileGrid(extractBbox, tileDeg = 0.25, overlapDeg = 0.01) {
+    const tiles = [];
+    for (let tx = extractBbox[0]; tx < extractBbox[2]; tx += tileDeg) {
+        for (let ty = extractBbox[1]; ty < extractBbox[3]; ty += tileDeg) {
+            tiles.push([
+                tx - overlapDeg,
+                ty - overlapDeg,
+                tx + tileDeg + overlapDeg,
+                ty + tileDeg + overlapDeg,
+            ]);
+        }
+    }
+    return tiles;
+}
+
+/**
+ * Dissolve every polygon assigned to one tile: union → clip to tile bounds →
+ * simplify → emit. Pure and independent of every other tile — this is the
+ * unit of parallelism, shared verbatim by the sequential and parallel paths
+ * so the two can never drift.
+ *
+ * polyclip-ts union/intersection expect raw coordinate arrays, not GeoJSON
+ * geometry objects; we work with `.coordinates` throughout and re-wrap.
+ * `geosUnaryUnionCoords` is fail-safe — a polygon that makes the union throw
+ * isolates itself into its own merge group instead of dropping out.
+ *
+ * @param {number[]} tileBbox - [w, s, e, n] (already includes overlap)
+ * @param {Array<{geometry:{coordinates:any}}>} tilePolys - polys in this tile
+ * @param {number} simplifyTolerance - degrees
+ * @returns {{features: object[], unionMs: number, groupCount: number}}
+ */
+export function dissolveTile(tileBbox, tilePolys, simplifyTolerance) {
+    const tUnion = Date.now();
+    const groups = geosUnaryUnionCoords(
+        tilePolys.map((f) => f.geometry.coordinates),
+    );
+    const unionMs = Date.now() - tUnion;
+
+    const tileGeom = [
+        [
+            [tileBbox[0], tileBbox[1]],
+            [tileBbox[2], tileBbox[1]],
+            [tileBbox[2], tileBbox[3]],
+            [tileBbox[0], tileBbox[3]],
+            [tileBbox[0], tileBbox[1]],
+        ],
+    ];
+
+    const features = [];
+    for (const merged of groups) {
+        if (!merged) continue;
+
+        let clipped;
+        try {
+            clipped = intersection(merged, tileGeom);
+        } catch {
+            // Fall back to the merged result if intersection fails.
+            clipped = merged;
+        }
+        if (!clipped) continue;
+
+        const feat = {
+            type: "Feature",
+            geometry: { type: "MultiPolygon", coordinates: clipped },
+            properties: {},
+        };
+        const simplified = simplifyPolygonFeature(feat, simplifyTolerance);
+        // Skip features that fully degenerate (all rings collapsed to < 4).
+        if (!simplified) continue;
+
+        features.push({
+            type: "Feature",
+            bbox: computePolygonBbox(simplified.geometry),
+            geometry: simplified.geometry,
+            properties: {},
+        });
+    }
+
+    return { features, unionMs, groupCount: groups.length };
+}
+
 export function polygonDissolve(
     inputFeatures,
     extractBbox,
@@ -399,20 +497,7 @@ export function polygonDissolve(
     { tileDeg = 0.25, overlapDeg = 0.01 } = {},
 ) {
     const t0 = Date.now();
-
-    // Build tile grid.
-    const tiles = [];
-    for (let tx = extractBbox[0]; tx < extractBbox[2]; tx += tileDeg) {
-        for (let ty = extractBbox[1]; ty < extractBbox[3]; ty += tileDeg) {
-            const tileBbox = [
-                tx - overlapDeg,
-                ty - overlapDeg,
-                tx + tileDeg + overlapDeg,
-                ty + tileDeg + overlapDeg,
-            ];
-            tiles.push(tileBbox);
-        }
-    }
+    const tiles = buildTileGrid(extractBbox, tileDeg, overlapDeg);
 
     console.log(
         `  [dissolve] ${inputFeatures.length.toLocaleString()} input polygons, ` +
@@ -425,7 +510,6 @@ export function polygonDissolve(
 
     for (let tileIdx = 0; tileIdx < tiles.length; tileIdx++) {
         const tileBbox = tiles[tileIdx];
-        // Find polygons whose bbox intersects this tile.
         const tilePolys = inputFeatures.filter((f) =>
             bboxesIntersect(f.bbox, tileBbox),
         );
@@ -434,90 +518,30 @@ export function polygonDissolve(
             continue;
         }
 
-        // Union all polygons in this tile in a single variadic pass.
-        // polyclip-ts union/intersection expect raw coordinate arrays, NOT
-        // GeoJSON geometry objects ({type, coordinates}); work with
-        // .coordinates throughout and re-wrap the result. `unionAllCoords`
-        // is fail-safe: a polygon that makes polyclip-ts throw isolates
-        // itself into its own merge group instead of dropping out, so every
-        // input polygon still contributes.
-        const tUnion = Date.now();
-        const groups = geosUnaryUnionCoords(
-            tilePolys.map((f) => f.geometry.coordinates),
+        const { features, unionMs, groupCount } = dissolveTile(
+            tileBbox,
+            tilePolys,
+            simplifyTolerance,
         );
-        const thisUnionMs = Date.now() - tUnion;
-        unionTimeMs += thisUnionMs;
+        unionTimeMs += unionMs;
 
-        if (tileIdx % 25 === 0 || thisUnionMs > 1000) {
+        if (tileIdx % 25 === 0 || unionMs > 1000) {
             console.log(
                 `  [dissolve] tile ${tileIdx + 1}/${tiles.length} ` +
                     `[${tileBbox[0].toFixed(2)},${tileBbox[1].toFixed(2)}] ` +
                     `${tilePolys.length.toLocaleString()} polys → ` +
-                    `${groups.length} group(s) (${thisUnionMs}ms)`,
+                    `${groupCount} group(s) (${unionMs}ms)`,
             );
         }
-
-        if (groups.length > 1) {
+        if (groupCount > 1) {
             console.log(
                 `  [dissolve] tile [${tileBbox[0].toFixed(2)},${tileBbox[1].toFixed(2)}] ` +
-                    `${tilePolys.length} polys → ${groups.length} merge groups ` +
+                    `${tilePolys.length} polys → ${groupCount} merge groups ` +
                     `(some unions failed — kept as separate features)`,
             );
         }
 
-        // Intersect each merge group with the tile bounds to get clean
-        // edges, simplify, and emit.
-        const tileGeom = {
-            type: "Polygon",
-            coordinates: [
-                [
-                    [tileBbox[0], tileBbox[1]],
-                    [tileBbox[2], tileBbox[1]],
-                    [tileBbox[2], tileBbox[3]],
-                    [tileBbox[0], tileBbox[3]],
-                    [tileBbox[0], tileBbox[1]],
-                ],
-            ],
-        };
-
-        for (const merged of groups) {
-            if (!merged) continue;
-
-            let clipped;
-            try {
-                clipped = intersection(merged, tileGeom.coordinates);
-            } catch {
-                // Fall back to the merged result if intersection fails.
-                clipped = merged;
-            }
-
-            if (!clipped) continue;
-
-            // Wrap polyclip-ts raw coordinate result back into a GeoJSON
-            // geometry object for simplify/bbox helpers.
-            const feat = {
-                type: "Feature",
-                geometry: { type: "MultiPolygon", coordinates: clipped },
-                properties: {},
-            };
-
-            // Simplify.
-            const simplified = simplifyPolygonFeature(feat, simplifyTolerance);
-
-            // Skip features that fully degenerate (all rings collapsed to < 4
-            // coords).
-            if (!simplified) continue;
-
-            // Compute bbox of the simplified geometry.
-            const bbox = computePolygonBbox(simplified.geometry);
-
-            results.push({
-                type: "Feature",
-                bbox,
-                geometry: simplified.geometry,
-                properties: {},
-            });
-        }
+        for (const f of features) results.push(f);
     }
 
     console.log(
@@ -528,4 +552,151 @@ export function polygonDissolve(
     );
 
     return results;
+}
+
+const WORKER_PATH = join(
+    dirname(fileURLToPath(import.meta.url)),
+    "dissolveWorker.mjs",
+);
+
+/**
+ * Parallel `polygonDissolve`: shard the (independent) tiles across child
+ * processes, then concatenate. Same tiles, same per-tile op (`dissolveTile`),
+ * so the result is identical to the sequential path up to feature order.
+ *
+ * Each shard is its own OS process with its own V8 + GEOS-wasm heap, capped so
+ * the shards together stay under ~70% of total RAM. This is both the speedup
+ * (one busy core per shard) and the memory hardening (a runaway tile can only
+ * OOM its own shard, never the parent; heaps are reclaimed on shard exit).
+ *
+ * @param {Array<{bbox:number[],geometry:object}>} inputFeatures
+ * @param {number[]} extractBbox - [west, south, east, north]
+ * @param {number} simplifyTolerance - degrees
+ * @param {object} opts
+ * @param {number} opts.tileDeg
+ * @param {number} opts.overlapDeg
+ * @param {number} opts.jobs - requested shard count (capped by RAM + tiles)
+ * @returns {Promise<object[]>} dissolved tile features
+ */
+export async function polygonDissolveParallel(
+    inputFeatures,
+    extractBbox,
+    simplifyTolerance,
+    { tileDeg = 0.25, overlapDeg = 0.01, jobs = 1 } = {},
+) {
+    const t0 = Date.now();
+    const tiles = buildTileGrid(extractBbox, tileDeg, overlapDeg);
+
+    // Never oversubscribe RAM: keep the sum of shard heaps under ~70% of total
+    // memory, and guarantee each shard enough heap for the densest single tile.
+    const MIN_CHILD_MB = 2048;
+    const budgetMB = Math.floor((totalmem() / 1024 / 1024) * 0.7);
+    const maxByMem = Math.max(1, Math.floor(budgetMB / MIN_CHILD_MB));
+    const effJobs = Math.max(1, Math.min(jobs, tiles.length, maxByMem));
+    const perChildMB = Math.max(MIN_CHILD_MB, Math.floor(budgetMB / effJobs));
+
+    console.log(
+        `  [dissolve] ${inputFeatures.length.toLocaleString()} input polygons, ` +
+            `${tiles.length} tiles — parallel across ${effJobs} shard(s), ` +
+            `~${perChildMB}MB heap each`,
+    );
+    if (effJobs < jobs) {
+        console.log(
+            `  [dissolve] (capped from --jobs ${jobs} to ${effJobs} to stay ` +
+                `under the ${budgetMB}MB RAM budget)`,
+        );
+    }
+
+    // Round-robin tile→shard assignment spreads spatially-clustered density
+    // across shards. Collect each shard's deduped feature subset so a child
+    // only loads ~1/shards of the input (the memory win).
+    const shardTiles = Array.from({ length: effJobs }, () => []);
+    const shardFeatureIdx = Array.from({ length: effJobs }, () => new Set());
+    for (let i = 0; i < tiles.length; i++) {
+        const s = i % effJobs;
+        shardTiles[s].push(tiles[i]);
+        const set = shardFeatureIdx[s];
+        for (let fi = 0; fi < inputFeatures.length; fi++) {
+            if (bboxesIntersect(inputFeatures[fi].bbox, tiles[i])) set.add(fi);
+        }
+    }
+
+    const dir = await mkdtemp(join(tmpdir(), "dissolve-shards-"));
+    try {
+        const specs = [];
+        for (let s = 0; s < effJobs; s++) {
+            const inputPath = join(dir, `input-${s}.json`);
+            const outputPath = join(dir, `output-${s}.json`);
+            const specPath = join(dir, `spec-${s}.json`);
+
+            const subset = [];
+            for (const fi of shardFeatureIdx[s]) {
+                const f = inputFeatures[fi];
+                subset.push({ bbox: f.bbox, geometry: f.geometry });
+            }
+            await writeFile(inputPath, JSON.stringify(subset));
+            await writeFile(
+                specPath,
+                JSON.stringify({
+                    shardId: s,
+                    totalShards: effJobs,
+                    inputPath,
+                    outputPath,
+                    tiles: shardTiles[s],
+                    simplifyTolerance,
+                }),
+            );
+            specs.push({ specPath, outputPath });
+        }
+
+        await Promise.all(
+            specs.map(({ specPath }) => runShard(specPath, perChildMB)),
+        );
+
+        const results = [];
+        for (const { outputPath } of specs) {
+            const feats = JSON.parse(await readFile(outputPath, "utf8"));
+            for (const f of feats) results.push(f);
+        }
+
+        console.log(
+            `  [dissolve] ${results.length} tile features from ${effJobs} ` +
+                `shard(s), total: ${((Date.now() - t0) / 1000).toFixed(1)}s`,
+        );
+        return results;
+    } finally {
+        await rm(dir, { recursive: true, force: true });
+    }
+}
+
+/** Run one dissolve shard as a child process; resolve on clean exit. */
+function runShard(specPath, perChildMB) {
+    return new Promise((resolve, reject) => {
+        const child = spawn(
+            process.execPath,
+            [
+                "--import",
+                "tsx",
+                `--max-old-space-size=${perChildMB}`,
+                WORKER_PATH,
+                specPath,
+            ],
+            // Drop the parent's (large) NODE_OPTIONS heap so the per-shard cap
+            // above is authoritative; inherit stdio so shard logs stream live.
+            {
+                stdio: ["ignore", "inherit", "inherit"],
+                env: { ...process.env, NODE_OPTIONS: "" },
+            },
+        );
+        child.on("error", reject);
+        child.on("exit", (code, signal) => {
+            if (code === 0) resolve();
+            else
+                reject(
+                    new Error(
+                        `dissolve shard failed (code=${code} signal=${signal}) — ${specPath}`,
+                    ),
+                );
+        });
+    });
 }

@@ -10,6 +10,10 @@ Releases (see [design doc](../../docs/tasks/offline/design.md)).
 # Build one region
 pnpm data:pack -- --region europe-netherlands
 
+# Build one region, sharding the polygon dissolve across CPU cores
+# (each shard is its own process with an isolated, RAM-capped heap)
+pnpm data:pack -- --region europe-netherlands --jobs auto
+
 # Build all enabled regions
 pnpm data:pack -- --all
 
@@ -31,6 +35,132 @@ pnpm data:pack:publish -- --region europe-netherlands [--tag packs-2026-06-12]
 # Run pipeline tests
 pnpm test:data:packs
 ```
+
+## Building in the cloud (fastest path)
+
+Water-dense regions (e.g. `europe-netherlands`) need a lot of RAM — the
+dissolve OOMs on a 16 GB machine. Builds are CPU- and memory-bound, not
+network-bound, so the win from cloud is renting a bigger box for an hour, not
+faster downloads.
+
+**Sizing.** RAM is the binding constraint, not cores: a single region's dissolve
+is sequential, so more cores only help when you build _multiple_ regions in
+parallel. Rule of thumb:
+
+- **32–64 GB RAM** (16 GB OOMs on the dense regions).
+- **50–100 GB disk** — PBF cache plus the large parent PBFs that
+  `boundarySources` pull (e.g. `north-america` for US-state boundaries).
+- For "build everything fast": run several regions as parallel processes on one
+  big box, or fan out across a matrix of smaller boxes — don't expect one
+  region to go faster on more cores.
+
+Cost is trivial on any provider — single-digit to ~$15 of compute for the whole
+catalog. Optimize for setup time, not dollars.
+
+### Recommended — one command (`data:pack:cloud`)
+
+`data/packs/scripts/cloud-build.sh` does the whole thing from your laptop:
+provision (or use a box you bring), bootstrap the toolchain, clone master +
+overlay your **uncommitted** local changes (so a `regions.yaml` edit you haven't
+pushed still builds), build with the heap auto-sized to the box's RAM, publish,
+and destroy the box.
+
+```bash
+# Bring your own box (any provider / local VM) — zero cloud-specific code:
+GH_TOKEN=<fine-grained-PAT> \
+  pnpm data:pack:cloud -- --region europe-netherlands --host root@1.2.3.4
+
+# Auto-provision + auto-destroy a Linode (needs linode-cli configured + jq):
+GH_TOKEN=<fine-grained-PAT> \
+  pnpm data:pack:cloud -- --region europe-netherlands --provider linode
+
+# Build everything on a bigger box:
+GH_TOKEN=<fine-grained-PAT> \
+  pnpm data:pack:cloud -- --all --provider linode --type g6-dedicated-32
+
+# Build only, leave the box up to inspect (no token needed):
+pnpm data:pack:cloud -- --region asia-taiwan --host root@1.2.3.4 --no-publish --keep
+```
+
+Flags: `--region <id>` / `--all`, `--host user@ip` or `--provider linode`,
+`--ssh-key <path>` (default `~/.ssh/id_ed25519`), `--type` / `--linode-region`,
+`--jobs <N|auto>` (dissolve shards; default `auto`), `--tag`, `--no-publish`,
+`--keep`. Run with `--help` for the full list.
+
+**Parallelism.** `--jobs` shards the (independent) polygon-dissolve tiles
+across child processes — the dissolve is the long pole on water-dense regions.
+Each shard is its own process with its own GEOS-wasm + V8 heap, capped so the
+shards together stay under ~70% of RAM (so a runaway tile can only OOM its own
+shard, and the count is auto-reduced if RAM is tight). vCPU only helps the
+dissolve via `--jobs`; the other phases stay single-threaded, so RAM, not
+cores, is usually the limiter. `--jobs 1` restores the sequential path.
+
+**Auth.** `GH_TOKEN` is forwarded to the box over the encrypted SSH channel as
+`LC_GH_TOKEN` (SendEnv) — it never appears in argv, shell history, or on the
+box's disk. A **fine-grained PAT scoped to this repo with `Contents: read &
+write`** covers both the Release upload and the catalog push. The box's sshd
+must `AcceptEnv LC_*` (the Ubuntu default). After a publish, run `git pull`
+locally to pick up the committed `catalog.json`.
+
+The build is cloud-agnostic — only provisioning is provider-specific, isolated
+behind `--provider` adapters. `--host` works with any SSH-reachable Linux box;
+adding Hetzner/EC2/etc. is a ~20-line adapter pair (create→IP, destroy).
+
+If you'd rather drive it by hand, the manual paths below do the same steps.
+
+### Option A — GitHub Codespaces (least setup)
+
+The repo and Node/pnpm toolchain are already provisioned; you only add `osmium`.
+Open a Codespace on a **16-core / 64 GB** machine type, then:
+
+```bash
+sudo apt-get update && sudo apt-get install -y osmium-tool
+pnpm install --frozen-lockfile
+
+# Heap = 75% of RAM so the OS/osmium/GEOS keep headroom (avoids OOM-kill).
+NODE_OPTIONS=--max-old-space-size=$(( $(free -m | awk '/^Mem:/{print $2}') * 3 / 4 )) \
+  pnpm data:pack -- --region europe-netherlands
+
+pnpm data:pack:lint -- --region europe-netherlands
+pnpm data:pack:publish -- --region europe-netherlands
+```
+
+Delete the Codespace when done.
+
+### Option B — fresh Ubuntu cloud box (Hetzner / EC2 spot / Fargate / Fly)
+
+One-shot bootstrap for a clean Ubuntu 22.04/24.04 box. Set `GH_TOKEN` to a
+token with `repo` + release-write scope (publish uploads a Release and pushes
+the catalog to `master`), pick a region, and paste:
+
+```bash
+export REGION=europe-netherlands
+export GH_TOKEN=ghp_xxx   # repo + release write
+
+set -euo pipefail
+sudo apt-get update
+sudo apt-get install -y osmium-tool git curl ca-certificates
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo corepack enable
+
+git clone "https://x-access-token:${GH_TOKEN}@github.com/kagelump/JetLagHideAndSeek.git"
+cd JetLagHideAndSeek
+pnpm install --frozen-lockfile
+
+NODE_OPTIONS=--max-old-space-size=$(( $(free -m | awk '/^Mem:/{print $2}') * 3 / 4 )) \
+  pnpm data:pack -- --region "$REGION"
+pnpm data:pack:lint -- --region "$REGION"
+pnpm data:pack:publish -- --region "$REGION"
+```
+
+To build many regions in parallel on one large box, launch the build step per
+region as background jobs (each `pnpm data:pack -- --region <id>`), wait for all,
+then publish. Tune the per-process heap down so the sum stays under total RAM.
+
+> Note: PBF downloads use `node:https` with `family: 4` (IPv4-only) to dodge a
+> Node 22 / undici Happy-Eyeballs hang seen on some Linux hosts — keep that if
+> you adapt the download path.
 
 ## Catalog
 
