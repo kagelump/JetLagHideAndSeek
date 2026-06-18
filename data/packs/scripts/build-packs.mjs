@@ -11,12 +11,14 @@
  * @module build-packs
  */
 
-/* global console, process, fetch */
+/* global console, process */
 
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { get as httpsGet } from "node:https";
+import { get as httpGet } from "node:http";
 import { gzipSync, gunzipSync } from "node:zlib";
 
 import { loadConfig } from "./lib/config.mjs";
@@ -191,6 +193,89 @@ async function buildTransitArtifactFn({ region, pbfPath, distDir, cacheDir }) {
 }
 
 /**
+ * Download a file via http/https to `destPath`, following redirects.
+ *
+ * Uses the `node:http`/`node:https` modules with `family: 4` (IPv4-only)
+ * rather than the global `fetch` (undici). On some Linux / Node 22.x
+ * combinations undici's Happy Eyeballs connection manager times out even
+ * when raw TCP/TLS and `https.get` work — see the `internalConnectMultiple`
+ * ETIMEDOUT bug. This helper keeps the same AbortSignal-based timeout
+ * contract so the retry loop in `ensurePbfFile` works unchanged.
+ *
+ * @param {string} url - source URL
+ * @param {string} destPath - where to write the file
+ * @param {AbortSignal} signal - abort signal for timeout/cancellation
+ * @param {object} headers - request headers
+ * @param {number} [maxRedirects=10] - redirect limit
+ * @returns {Promise<Buffer>} downloaded file contents
+ */
+function downloadFile(url, destPath, signal, headers, maxRedirects = 10) {
+    return new Promise((resolve, reject) => {
+        const parsed = new URL(url);
+        const getFn = parsed.protocol === "https:" ? httpsGet : httpGet;
+
+        // Passing `signal` in options lets Node's HTTP module destroy the
+        // request on abort and emit an AbortError on the error path.
+        const req = getFn(
+            parsed,
+            { headers, family: 4, signal },
+            async (res) => {
+                // Follow redirects
+                if (
+                    res.statusCode >= 300 &&
+                    res.statusCode < 400 &&
+                    res.headers.location &&
+                    maxRedirects > 0
+                ) {
+                    const redirectUrl = new URL(
+                        res.headers.location,
+                        url,
+                    ).toString();
+                    res.resume();
+                    try {
+                        const buf = await downloadFile(
+                            redirectUrl,
+                            destPath,
+                            signal,
+                            headers,
+                            maxRedirects - 1,
+                        );
+                        resolve(buf);
+                    } catch (err) {
+                        reject(err);
+                    }
+                    return;
+                }
+
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    const err = new Error(`HTTP ${res.statusCode}`);
+                    err.statusCode = res.statusCode;
+                    res.resume();
+                    reject(err);
+                    return;
+                }
+
+                const chunks = [];
+                res.on("data", (chunk) => chunks.push(chunk));
+                res.on("end", async () => {
+                    try {
+                        const buf = Buffer.concat(chunks);
+                        await writeFile(destPath, buf);
+                        resolve(buf);
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+                res.on("error", (err) => reject(err));
+            },
+        );
+
+        req.on("error", (err) => reject(err));
+        req.end();
+    });
+}
+
+/**
  * Ensure the region's PBF is cached. Reuses the fetch/cache pattern from
  * the Geofabrik pipeline.
  *
@@ -246,42 +331,30 @@ async function ensurePbfFile(url, pbfPath, cacheOnly, label) {
                 () => controller.abort(),
                 perAttemptTimeoutMs,
             );
-            const response = await fetch(url, {
+            const buf = await downloadFile(
+                url,
+                pbfPath,
+                controller.signal,
                 headers,
-                signal: controller.signal,
-            });
+            );
             clearTimeout(timeoutId);
 
-            if (response.ok) {
-                const buf = Buffer.from(await response.arrayBuffer());
-                await writeFile(pbfPath, buf);
-                const mb = (buf.length / 1024 / 1024).toFixed(1);
-                console.log(`  Wrote ${mb} MB to ${pbfPath}`);
-                return pbfPath;
-            }
-
-            lastError = new Error(
-                `PBF download failed for ${label}: HTTP ${response.status}`,
-            );
-            const isTransient =
-                response.status === 503 ||
-                response.status === 429 ||
-                response.status === 502;
-            if (!isTransient || attempt === maxAttempts) {
-                throw lastError;
-            }
-            const delayMs = 2 ** attempt * 1000;
-            console.log(
-                `  Download attempt ${attempt}/${maxAttempts} got HTTP ${response.status}; retrying in ${delayMs}ms...`,
-            );
-            await new Promise((resolve) => setTimeout(resolve, delayMs));
+            const mb = (buf.length / 1024 / 1024).toFixed(1);
+            console.log(`  Wrote ${mb} MB to ${pbfPath}`);
+            return pbfPath;
         } catch (err) {
             lastError = err;
             const isAbort = err.name === "AbortError";
+            const isHttpTransient =
+                err.statusCode &&
+                (err.statusCode === 503 ||
+                    err.statusCode === 429 ||
+                    err.statusCode === 502);
+            const isNetworkTransient =
+                err.message &&
+                /ETIMEDOUT|ECONNRESET|ENOTFOUND/.test(err.message);
             const isTransient =
-                isAbort ||
-                (err.message &&
-                    /ETIMEDOUT|ECONNRESET|ENOTFOUND/.test(err.message));
+                isAbort || isHttpTransient || isNetworkTransient;
             if (!isTransient || attempt === maxAttempts) {
                 throw err;
             }
