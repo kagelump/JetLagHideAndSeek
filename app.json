@@ -8,6 +8,12 @@
         "icon": "./assets/icon.png",
         "userInterfaceStyle": "light",
         "newArchEnabled": true,
+        "runtimeVersion": {
+            "policy": "fingerprint"
+        },
+        "updates": {
+            "url": "https://u.expo.dev/b799de35-fad5-42b8-8cd2-cd64e67ec828"
+        },
         "autolinking": {
             "nativeModulesDir": "modules"
         },

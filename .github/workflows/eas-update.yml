@@ -1,0 +1,64 @@
+name: EAS Update (OTA)
+
+on:
+    workflow_dispatch:
+        inputs:
+            branch:
+                description: "EAS Update branch to publish to"
+                type: choice
+                default: production
+                options:
+                    - production
+                    - preview
+            message:
+                description: "Update message"
+                type: string
+                required: true
+
+permissions:
+    contents: read
+
+env:
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+    group: eas-update-${{ github.event.inputs.branch }}
+    cancel-in-progress: false
+
+jobs:
+    update:
+        name: Publish OTA update
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check for EXPO_TOKEN
+              run: |
+                  if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+                      echo "You must provide an EXPO_TOKEN secret linked to this project's Expo account in this repo's Actions secrets."
+                      exit 1
+                  fi
+
+            - uses: actions/checkout@v5
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24.x
+
+            - name: Install pnpm
+              run: npm install -g pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Check
+              run: pnpm check
+
+            - name: Test
+              run: pnpm test
+
+            - name: Install EAS CLI
+              run: npm install -g eas-cli
+
+            - name: Publish update
+              env:
+                  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+              run: eas update --branch "${{ github.event.inputs.branch }}" --message "${{ github.event.inputs.message }}" --non-interactive
