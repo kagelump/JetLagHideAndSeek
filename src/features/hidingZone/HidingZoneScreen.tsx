@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Modal,
     Pressable,
@@ -9,6 +9,17 @@ import {
 } from "react-native";
 
 import { UnitSegmentedControl } from "@/components/UnitSegmentedControl";
+import {
+    getCoverageStatus,
+    type InstalledPackInfo,
+} from "@/features/offline/coverage";
+import { usePackCatalog } from "@/features/offline/packCatalog";
+import {
+    useInstallPack,
+    useInstalledPacks,
+    type InstallProgress,
+} from "@/features/offline/regionPacks";
+import { OfflinePackModal } from "@/features/playArea/OfflinePackModal";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import {
     useHidingZoneActions,
@@ -52,6 +63,90 @@ export function HidingZoneScreen() {
     const [browseSearch, setBrowseSearch] = useState("");
     const [showRadiusModal, setShowRadiusModal] = useState(false);
     const [drillDown, setDrillDown] = useState<DrillDownState | null>(null);
+
+    // ── Offline pack coverage check ──────────────────────────────────────
+    const catalog = usePackCatalog();
+    const installed = useInstalledPacks();
+    const installMutation = useInstallPack();
+
+    const installedPackInfos: InstalledPackInfo[] = useMemo(
+        () =>
+            (installed.data ?? []).map((p) => ({
+                id: p.id,
+                osmSnapshot: p.osmSnapshot,
+                bbox: p.bbox,
+                artifactKinds: p.artifacts
+                    .filter((a) => a.status === "installed")
+                    .map((a) => a.kind),
+                missingKinds: p.artifacts
+                    .filter((a) => a.status === "failed")
+                    .map((a) => a.kind),
+            })),
+        [installed.data],
+    );
+
+    const coverageStatus = useMemo(() => {
+        if (!playArea) return null;
+        return getCoverageStatus(
+            playArea.bbox,
+            catalog.data?.packs,
+            installedPackInfos,
+        );
+    }, [playArea, catalog.data?.packs, installedPackInfos]);
+
+    const showNoPackError =
+        coverageStatus?.state === "available" ||
+        coverageStatus?.state === "partial";
+
+    const [showOfflineModal, setShowOfflineModal] = useState(false);
+    const [installProgress, setInstallProgress] =
+        useState<InstallProgress | null>(null);
+
+    const handleInstallOfflinePack = useCallback(() => {
+        if (
+            !coverageStatus ||
+            (coverageStatus.state !== "available" &&
+                coverageStatus.state !== "partial")
+        )
+            return;
+
+        const pack = catalog.data?.packs.find(
+            (p) => p.id === coverageStatus.packId,
+        );
+        if (!pack) return;
+
+        installMutation.mutate({
+            pack,
+            onProgress: (p) => setInstallProgress(p),
+        });
+    }, [coverageStatus, catalog.data, installMutation]);
+
+    const handleDismissOfflineModal = useCallback(() => {
+        setShowOfflineModal(false);
+        setInstallProgress(null);
+    }, []);
+
+    useEffect(() => {
+        if (!installMutation.isPending && !installMutation.isError) {
+            setInstallProgress(null);
+        }
+        if (installMutation.isSuccess && showOfflineModal) {
+            setShowOfflineModal(false);
+            setInstallProgress(null);
+        }
+    }, [
+        installMutation.isPending,
+        installMutation.isError,
+        installMutation.isSuccess,
+        showOfflineModal,
+    ]);
+
+    const installError =
+        installMutation.isError && installMutation.error instanceof Error
+            ? installMutation.error.message
+            : installMutation.isError
+              ? "Download failed."
+              : null;
 
     // Per-preset station counts within the play area.
     const playAreaStats = useMemo(
@@ -116,6 +211,30 @@ export function HidingZoneScreen() {
                         <Text style={styles.menuButtonText}>•••</Text>
                     </Pressable>
                 </View>
+
+                {/* No pack installed banner */}
+                {showNoPackError ? (
+                    <View
+                        style={styles.noPackBanner}
+                        testID="hiding-zone-no-pack-error"
+                    >
+                        <Text style={styles.noPackText}>
+                            No game pack downloaded.{" "}
+                        </Text>
+                        <Pressable
+                            accessibilityLabel="Retry download"
+                            accessibilityRole="button"
+                            onPress={() => setShowOfflineModal(true)}
+                            style={({ pressed }) => [
+                                styles.noPackRetryButton,
+                                pressed ? styles.actionPressed : null,
+                            ]}
+                            testID="hiding-zone-retry-download"
+                        >
+                            <Text style={styles.noPackRetryText}>Retry</Text>
+                        </Pressable>
+                    </View>
+                ) : null}
 
                 {/* Scoped view or browse-all */}
                 {noPlayArea ? (
@@ -362,6 +481,16 @@ export function HidingZoneScreen() {
                     onBack={() => setDrillDown(null)}
                 />
             ) : null}
+
+            <OfflinePackModal
+                coverage={coverageStatus}
+                installError={installError}
+                isInstalling={installMutation.isPending}
+                onDismiss={handleDismissOfflineModal}
+                onInstall={handleInstallOfflinePack}
+                progress={installProgress}
+                visible={showOfflineModal}
+            />
         </>
     );
 }
@@ -613,6 +742,34 @@ function OperatorDrillDown({
 const styles = StyleSheet.create({
     actionPressed: {
         opacity: 0.72,
+    },
+    noPackBanner: {
+        alignItems: "center",
+        backgroundColor: colors.error + "18",
+        borderColor: colors.error + "40",
+        borderRadius: 8,
+        borderWidth: 1,
+        flexDirection: "row",
+        gap: 6,
+        marginBottom: 4,
+        marginTop: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    noPackText: {
+        color: colors.error,
+        fontSize: 13,
+        fontWeight: "700",
+    },
+    noPackRetryButton: {
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+    },
+    noPackRetryText: {
+        color: colors.error,
+        fontSize: 13,
+        fontWeight: "800",
+        textDecorationLine: "underline",
     },
     addAllRow: {
         alignItems: "center",
