@@ -9,6 +9,15 @@ import { persistQueryClient } from "@tanstack/react-query-persist-client";
 // Boundary data is refreshed by explicit user action, not a clock.
 export const BOUNDARY_CACHE_TTL_MS = Infinity;
 
+/**
+ * Bump this string whenever the dehydration policy or serialised query shape
+ * changes in a way that would make a previously-persisted cache invalid.
+ * Mismatched busters cause `persistQueryClientRestore` to discard the entire
+ * cache so stale data (e.g. pending queries from the older, buggier dehydrator)
+ * is not rehydrated.
+ */
+const PERSISTER_BUSTER = "v1";
+
 const IS_TEST =
     typeof process !== "undefined" &&
     (process.env.NODE_ENV === "test" ||
@@ -43,8 +52,15 @@ export function setupPersister(): Promise<void> {
         queryClient,
         persister: asyncStoragePersister,
         maxAge: BOUNDARY_CACHE_TTL_MS,
+        buster: PERSISTER_BUSTER,
         dehydrateOptions: {
             shouldDehydrateQuery: (query) => {
+                // Only persist queries that finished successfully — pending
+                // queries whose network request fails after dehydration
+                // produce the "dehydrated as pending ended up rejecting"
+                // error and are re-fetched on every launch, wasting a
+                // network call and spamming the console.
+                if (query.state.status !== "success") return false;
                 const key = query.queryKey;
                 return (
                     key[0] === "play-area-boundary" || key[0] === "osm-matching"
