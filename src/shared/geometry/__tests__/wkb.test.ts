@@ -627,34 +627,108 @@ describe("WKB GeometryCollection decode (T1.4b)", () => {
         expect(result.type).toBe("Polygon");
     });
 
-    test("GeometryCollection with non-polygon sub-geometry → throws", () => {
-        // Build a WKB Point (type 1) with coords (1.0, 2.0).
+    /** Build a WKB Point (type 1). */
+    function makePointWKB(x: number, y: number): Uint8Array {
         const buf = new ArrayBuffer(1 + 4 + 2 * 8);
         const v = new DataView(buf);
         v.setUint8(0, 0x01);
         v.setUint32(1, 1, true); // Point
-        v.setFloat64(5, 1, true);
-        v.setFloat64(13, 2, true);
-        const pointWkb = new Uint8Array(buf);
+        v.setFloat64(5, x, true);
+        v.setFloat64(13, y, true);
+        return new Uint8Array(buf);
+    }
 
-        const wkb = makeGCWKB([pointWkb]);
-        expect(() => decodeWkb(wkb)).toThrow(WkbError);
+    /** Build a WKB LineString (type 2) with `n` points. */
+    function makeLineWKB(coords: [number, number][]): Uint8Array {
+        const buf = new ArrayBuffer(1 + 4 + 4 + coords.length * 16);
+        const v = new DataView(buf);
+        let off = 0;
+        v.setUint8(off, 0x01);
+        off += 1;
+        v.setUint32(off, 2, true);
+        off += 4; // LineString
+        v.setUint32(off, coords.length, true);
+        off += 4;
+        for (const [x, y] of coords) {
+            v.setFloat64(off, x, true);
+            v.setFloat64(off + 8, y, true);
+            off += 16;
+        }
+        return new Uint8Array(buf);
+    }
+
+    test("GeometryCollection with only a Point → null (no area)", () => {
+        // GEOS can emit dimensionally-lower artifacts; with no polygons the
+        // collection contributes no area, so decode returns null.
+        const wkb = makeGCWKB([makePointWKB(1, 2)]);
+        expect(decodeWkb(wkb)).toBeNull();
     });
 
-    test("GeometryCollection with polygon + point → throws (no partial success)", () => {
+    test("GeometryCollection with polygon + point → keeps polygon, skips point", () => {
         const poly = makePolyWKB(0, 0, 5, 5);
-        // Point WKB
-        const ptBuf = new ArrayBuffer(1 + 4 + 2 * 8);
-        const ptView = new DataView(ptBuf);
-        ptView.setUint8(0, 0x01);
-        ptView.setUint32(1, 1, true);
-        ptView.setFloat64(5, 3, true);
-        ptView.setFloat64(13, 3, true);
+        const wkb = makeGCWKB([poly, makePointWKB(3, 3)]);
+        // The stray Point is skipped; the Polygon survives. (Previously this
+        // threw to force the JS polyclip-ts fallback — now we stay on the
+        // GEOS fast path.)
+        const result = decodeWkb(wkb)!;
+        expect(result.type).toBe("Polygon");
+        expect((result as Polygon).coordinates[0][2]).toEqual([5, 5]);
+    });
 
-        const wkb = makeGCWKB([poly, new Uint8Array(ptBuf)]);
-        // Even though the first member is a valid Polygon, the second is a
-        // Point and we can't safely skip it — throws to trigger JS fallback.
-        expect(() => decodeWkb(wkb)).toThrow(WkbError);
+    test("GeometryCollection with polygon + linestring → keeps polygon, skips line", () => {
+        const poly = makePolyWKB(0, 0, 5, 5);
+        const line = makeLineWKB([
+            [10, 10],
+            [11, 11],
+            [12, 13],
+        ]);
+        const wkb = makeGCWKB([line, poly]);
+        const result = decodeWkb(wkb)!;
+        expect(result.type).toBe("Polygon");
+        expect((result as Polygon).coordinates[0].length).toBe(5);
+    });
+
+    test("GeometryCollection with two polygons interleaved with lines → MultiPolygon", () => {
+        const wkb = makeGCWKB([
+            makeLineWKB([
+                [0, 0],
+                [1, 1],
+            ]),
+            makePolyWKB(0, 0, 5, 5),
+            makePointWKB(7, 7),
+            makePolyWKB(10, 10, 15, 15),
+        ]);
+        const result = decodeWkb(wkb)!;
+        expect(result.type).toBe("MultiPolygon");
+        expect((result as MultiPolygon).coordinates.length).toBe(2);
+    });
+
+    test("GeometryCollection with a truncated linestring body → throws", () => {
+        // numPoints claims 4 but only 1 point of data follows.
+        const poly = makePolyWKB(0, 0, 5, 5);
+        const head = 1 + 4 + 4; // GC byteOrder + type + numGeoms
+        const lineHeader = 1 + 4 + 4; // byteOrder + type=2 + numPoints
+        const bufSize = head + poly.length + lineHeader + 16; // only 1 point
+        const buf = new ArrayBuffer(bufSize);
+        const v = new DataView(buf);
+        let off = 0;
+        v.setUint8(off, 0x01);
+        off += 1;
+        v.setUint32(off, 7, true);
+        off += 4; // GeometryCollection
+        v.setUint32(off, 2, true);
+        off += 4; // 2 members
+        new Uint8Array(buf).set(poly, off);
+        off += poly.length;
+        v.setUint8(off, 0x01);
+        off += 1;
+        v.setUint32(off, 2, true);
+        off += 4; // LineString
+        v.setUint32(off, 4, true);
+        off += 4; // claim 4 points, supply 1
+        v.setFloat64(off, 0, true);
+        v.setFloat64(off + 8, 0, true);
+        expect(() => decodeWkb(new Uint8Array(buf))).toThrow(WkbError);
     });
 
     test("GeometryCollection truncated mid-member → throws", () => {

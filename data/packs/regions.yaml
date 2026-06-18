@@ -20,6 +20,14 @@ regions:
           matching: [4, 8, 9, 10] # admin-1st..4th (level 7 has zero relations in NL)
           extract: [4, 7, 8, 9, 10] # superset
       artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          # NL is the most water-dense region in the catalog; smaller dissolve
+          # tiles keep per-tile polygon counts low so polyclip-ts fallbacks
+          # don't blow the heap. Pair with the WKB line/point skip that keeps
+          # most tiles on the GEOS fast path.
+          body-of-water:
+              dissolve:
+                  tileDeg: 0.125
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150

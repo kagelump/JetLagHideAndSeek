@@ -32,6 +32,7 @@ const WKB_POLYGON = 3;
 const WKB_MULTIPOINT = 4;
 const WKB_MULTILINESTRING = 5;
 const WKB_MULTIPOLYGON = 6;
+const WKB_GEOMETRYCOLLECTION = 7;
 
 // ---- Error type ------------------------------------------------------------
 
@@ -302,6 +303,66 @@ function decodePolygonCoords(v: WkbView): Coords[][] | null {
     return rings;
 }
 
+function skipBytes(v: WkbView, n: number): void {
+    if (n < 0 || remaining(v) < n) {
+        throw new WkbError("truncated: skipping geometry body");
+    }
+    v.offset += n;
+}
+
+/**
+ * Advance past a geometry body whose header (byteOrder + type) was already
+ * consumed, without materializing coordinates.
+ *
+ * Used to skip lower-dimensional artifacts — points and lines that GEOS
+ * `unaryUnion` can emit *alongside* the polygons inside a GeometryCollection
+ * (e.g. zero-area slivers from near-degenerate water polygons). We keep the
+ * polygons and discard these; bailing the whole result to the JS polyclip-ts
+ * fallback for one stray LineString is both slow and memory-heavy on
+ * water-dense regions.
+ */
+function skipGeometryBody(v: WkbView, type: number): void {
+    switch (type) {
+        case WKB_POINT:
+            skipBytes(v, 16); // 2 × float64
+            return;
+        case WKB_LINESTRING: {
+            const numPoints = readUint32(v);
+            skipBytes(v, numPoints * 16);
+            return;
+        }
+        case WKB_POLYGON: {
+            const numRings = readUint32(v);
+            for (let i = 0; i < numRings; i++) {
+                const numPoints = readUint32(v);
+                skipBytes(v, numPoints * 16);
+            }
+            return;
+        }
+        case WKB_MULTIPOINT:
+        case WKB_MULTILINESTRING:
+        case WKB_MULTIPOLYGON:
+        case WKB_GEOMETRYCOLLECTION: {
+            // Each member carries its own byte-order + type header (ISO WKB).
+            const numGeoms = readUint32(v);
+            for (let i = 0; i < numGeoms; i++) {
+                const sub = readWkbHeader(v);
+                if (!sub) {
+                    throw new WkbError(
+                        "truncated: expected member header while skipping",
+                    );
+                }
+                skipGeometryBody(v, sub.type);
+            }
+            return;
+        }
+        default:
+            throw new WkbError(
+                `cannot skip unsupported sub-geometry type ${type}`,
+            );
+    }
+}
+
 /**
  * Decode little-endian WKB bytes to a GeoJSON Polygon or MultiPolygon.
  *
@@ -367,14 +428,14 @@ export function decodeWkb(bytes: Uint8Array): Polygon | MultiPolygon | null {
     // - Empty: legitimate output for degenerate operations — return null.
     // - Non-empty: GEOS unaryUnion may return a GeometryCollection when
     //   dissolving complex MultiPolygon inputs with topological edge cases.
-    //   Native ops (geos_ops.cpp) now filter non-polygonal sub-geometries
-    //   via to_polygonal before WKB serialization, so this branch should
-    //   rarely (if ever) see a non-Polygon/MultiPolygon sub-geometry from
-    //   native sources. Extract all Polygon/MultiPolygon members and flatten
-    //   into a single Polygon or MultiPolygon result. Non-polygon
-    //   sub-geometries are lower-dimensional artifacts (points, lines) that
-    //   don't contribute area — skip them.
-    if (header.type === 7) {
+    //   Native ops (geos_ops.cpp) filter non-polygonal sub-geometries via
+    //   to_polygonal before WKB serialization, but the geos-wasm pipeline
+    //   path does not, so on water-dense regions this branch regularly sees
+    //   stray Point/LineString members. Extract all Polygon/MultiPolygon
+    //   members and flatten into a single Polygon or MultiPolygon result;
+    //   non-polygon sub-geometries are lower-dimensional artifacts (points,
+    //   lines) that don't contribute area — skip their bytes and keep going.
+    if (header.type === WKB_GEOMETRYCOLLECTION) {
         const numGeoms = readUint32(v);
         if (numGeoms === 0) return null; // GEOMETRYCOLLECTION EMPTY
 
@@ -403,13 +464,12 @@ export function decodeWkb(bytes: Uint8Array): Polygon | MultiPolygon | null {
                     if (coords) allPolygons.push(coords);
                 }
             } else {
-                // Non-polygon sub-geometry (Point=1, LineString=2, etc.).
-                // These are dimensionally-lower artifacts; we can't safely
-                // skip their bytes without a full WKB parser for every type.
-                // Throw so the caller's try/catch falls back to JS polyclip-ts.
-                throw new WkbError(
-                    `unsupported sub-geometry type ${subHeader.type} in GeometryCollection (expected Polygon or MultiPolygon)`,
-                );
+                // Non-polygon sub-geometry (Point=1, LineString=2, etc.):
+                // a dimensionally-lower artifact with no area. Advance past
+                // its bytes and keep collecting polygons rather than failing
+                // the whole decode (which would force the caller onto the
+                // slow JS polyclip-ts fallback).
+                skipGeometryBody(v, subHeader.type);
             }
         }
 

@@ -779,14 +779,18 @@ export async function buildMeasuringArtifact({
             // ── Polygon dissolve post-processing ────────────────────────────
             if (isPolygonDissolve) {
                 const tolerance = SIMPLIFY_TOLERANCES[catDef.key] ?? 0.0005;
+                // Per-region dissolve tuning: water-dense regions (e.g. the
+                // Netherlands) can shrink the tile to cut peak polyclip-ts
+                // memory/time on tiles that fall back from GEOS.
+                const tileDeg =
+                    overrides.dissolve?.tileDeg ?? DISSOLVE_TILE_DEG;
+                const overlapDeg =
+                    overrides.dissolve?.overlapDeg ?? DISSOLVE_TILE_OVERLAP_DEG;
                 const dissolved = polygonDissolve(
                     polyFeatures,
                     extractBbox,
                     tolerance,
-                    {
-                        tileDeg: DISSOLVE_TILE_DEG,
-                        overlapDeg: DISSOLVE_TILE_OVERLAP_DEG,
-                    },
+                    { tileDeg, overlapDeg },
                 );
                 features.length = 0;
                 features.push(...dissolved);
