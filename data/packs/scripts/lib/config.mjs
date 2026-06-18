@@ -50,6 +50,51 @@ export function validateConfig(cfg, configPath = "regions.yaml") {
         return errors;
     }
 
+    // boundarySources (optional, top-level): parent PBFs that supply coarse
+    // admin levels to regions that can't assemble them from their own extract.
+    const boundarySourceIds = new Set();
+    if (cfg.boundarySources !== undefined) {
+        if (!Array.isArray(cfg.boundarySources)) {
+            errors.push(`${configPath}: "boundarySources" must be an array`);
+        } else {
+            for (let bi = 0; bi < cfg.boundarySources.length; bi++) {
+                const bs = cfg.boundarySources[bi];
+                const prefix = `${configPath}: boundarySources[${bi}]`;
+                if (
+                    !bs.id ||
+                    typeof bs.id !== "string" ||
+                    !VALID_ID_RE.test(bs.id)
+                ) {
+                    errors.push(`${prefix}: "id" must match ${VALID_ID_RE}`);
+                } else if (boundarySourceIds.has(bs.id)) {
+                    errors.push(`${prefix}: duplicate id "${bs.id}"`);
+                } else {
+                    boundarySourceIds.add(bs.id);
+                }
+                if (
+                    !bs.pbfUrl ||
+                    typeof bs.pbfUrl !== "string" ||
+                    bs.pbfUrl.trim() === ""
+                ) {
+                    errors.push(
+                        `${prefix}: "pbfUrl" must be a non-empty string`,
+                    );
+                }
+                if (
+                    !Array.isArray(bs.levels) ||
+                    bs.levels.length === 0 ||
+                    bs.levels.some(
+                        (l) => !Number.isInteger(l) || l < 1 || l > 12,
+                    )
+                ) {
+                    errors.push(
+                        `${prefix}: "levels" must be a non-empty array of admin-level integers`,
+                    );
+                }
+            }
+        }
+    }
+
     const regionIds = new Set();
     for (let ri = 0; ri < cfg.regions.length; ri++) {
         const region = cfg.regions[ri];
@@ -105,6 +150,22 @@ export function validateConfig(cfg, configPath = "regions.yaml") {
             region.pbfUrl.trim() === ""
         ) {
             errors.push(`${prefix}: "pbfUrl" must be a non-empty string`);
+        }
+
+        // boundarySource (optional): must reference a declared boundary source.
+        if (region.boundarySource !== undefined) {
+            if (
+                typeof region.boundarySource !== "string" ||
+                region.boundarySource.trim() === ""
+            ) {
+                errors.push(
+                    `${prefix}: "boundarySource" must be a non-empty string`,
+                );
+            } else if (!boundarySourceIds.has(region.boundarySource)) {
+                errors.push(
+                    `${prefix}: "boundarySource" "${region.boundarySource}" is not a declared boundarySources id`,
+                );
+            }
         }
 
         // adminLevels

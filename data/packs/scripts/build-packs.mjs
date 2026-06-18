@@ -17,7 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { gzipSync } from "node:zlib";
+import { gzipSync, gunzipSync } from "node:zlib";
 
 import { loadConfig } from "./lib/config.mjs";
 import { computeHashes } from "./lib/hashing.mjs";
@@ -127,9 +127,42 @@ async function buildPoiArtifact({ region, pbfPath, distDir }) {
  *
  * @returns {Promise<{gzPath: string, uncompressed: Buffer}|null>}
  */
-async function buildBoundariesArtifact({ region, pbfPath, distDir }) {
+async function buildBoundariesArtifact({
+    region,
+    pbfPath,
+    distDir,
+    cacheDir,
+    boundarySource,
+    cacheOnly,
+}) {
     const { buildBoundaries } = await import("./lib/buildBoundaries.mjs");
-    return buildBoundaries({ region, pbfPath, distDir });
+
+    let parentFeatures = null;
+    let parentLevels = null;
+    let regionBbox = null;
+    if (boundarySource) {
+        parentFeatures = await getParentAdminFeatures(
+            boundarySource,
+            cacheDir,
+            cacheOnly,
+        );
+        parentLevels = boundarySource.levels;
+        regionBbox = region.bbox ?? (await pbfBbox(pbfPath));
+        if (!regionBbox) {
+            console.warn(
+                `  [boundaries] No region bbox for ${region.id}; parent levels (${parentLevels.join(",")}) will be skipped`,
+            );
+        }
+    }
+
+    return buildBoundaries({
+        region,
+        pbfPath,
+        distDir,
+        parentFeatures,
+        parentLevels,
+        regionBbox,
+    });
 }
 
 /**
@@ -168,10 +201,20 @@ async function buildTransitArtifactFn({ region, pbfPath, distDir, cacheDir }) {
  */
 async function ensurePbf(region, cacheDir, cacheOnly) {
     await mkdir(cacheDir, { recursive: true });
+    const pbfPath = resolve(cacheDir, `${region.id}-latest.osm.pbf`);
+    return ensurePbfFile(region.pbfUrl, pbfPath, cacheOnly, region.id);
+}
 
-    const pbfName = `${region.id}-latest.osm.pbf`;
-    const pbfPath = resolve(cacheDir, pbfName);
-
+/**
+ * Download a PBF from `url` to `pbfPath` (reusing the cached copy when present).
+ *
+ * @param {string} url - source URL
+ * @param {string} pbfPath - destination path
+ * @param {boolean} cacheOnly - never download
+ * @param {string} label - identifier for log/error messages
+ * @returns {Promise<string>} path to the cached PBF
+ */
+async function ensurePbfFile(url, pbfPath, cacheOnly, label) {
     if (existsSync(pbfPath)) {
         console.log(`  Using cached PBF: ${pbfPath}`);
         return pbfPath;
@@ -179,12 +222,12 @@ async function ensurePbf(region, cacheDir, cacheOnly) {
 
     if (cacheOnly) {
         throw new Error(
-            `PBF not cached for ${region.id} and --cache-only is set. ` +
+            `PBF not cached for ${label} and --cache-only is set. ` +
                 `Run without --cache-only to download.`,
         );
     }
 
-    console.log(`  Downloading PBF: ${region.pbfUrl}`);
+    console.log(`  Downloading PBF: ${url}`);
 
     // Retry on transient failures (Geofabrik occasionally returns 503/429
     // when hot-linked or overloaded). Use a descriptive UA and a per-attempt
@@ -203,7 +246,7 @@ async function ensurePbf(region, cacheDir, cacheOnly) {
                 () => controller.abort(),
                 perAttemptTimeoutMs,
             );
-            const response = await fetch(region.pbfUrl, {
+            const response = await fetch(url, {
                 headers,
                 signal: controller.signal,
             });
@@ -218,7 +261,7 @@ async function ensurePbf(region, cacheDir, cacheOnly) {
             }
 
             lastError = new Error(
-                `PBF download failed for ${region.id}: HTTP ${response.status}`,
+                `PBF download failed for ${label}: HTTP ${response.status}`,
             );
             const isTransient =
                 response.status === 503 ||
@@ -253,6 +296,115 @@ async function ensurePbf(region, cacheDir, cacheOnly) {
     throw lastError;
 }
 
+/** In-process memo so a single --all run assembles each parent admin set once. */
+const parentAdminMemo = new Map();
+
+/**
+ * Assemble (and cache) a boundary source's admin features from its parent PBF.
+ *
+ * The expensive osmium pass over the (large) parent PBF runs once per source:
+ * memoized in-process for --all and persisted to cache/parents/ across runs.
+ *
+ * @param {object} boundarySource - { id, pbfUrl, levels }
+ * @param {string} cacheDir - PBF cache directory
+ * @param {boolean} cacheOnly - never download
+ * @returns {Promise<object[]>} assembled GeoJSON admin features
+ */
+function getParentAdminFeatures(boundarySource, cacheDir, cacheOnly) {
+    if (parentAdminMemo.has(boundarySource.id)) {
+        return parentAdminMemo.get(boundarySource.id);
+    }
+    const promise = (async () => {
+        const parentsDir = resolve(cacheDir, "parents");
+        await mkdir(parentsDir, { recursive: true });
+        const levels = boundarySource.levels;
+        const cacheFile = resolve(
+            parentsDir,
+            `${boundarySource.id}-admin-L${levels.join("-")}.json.gz`,
+        );
+
+        if (existsSync(cacheFile)) {
+            try {
+                const obj = JSON.parse(
+                    gunzipSync(await readFile(cacheFile)).toString("utf8"),
+                );
+                if (Array.isArray(obj?.features)) {
+                    console.log(
+                        `  [boundaries] Using cached parent admin set: ${cacheFile} (${obj.features.length} features)`,
+                    );
+                    return obj.features;
+                }
+            } catch {
+                // Corrupt/stale cache — fall through to rebuild.
+            }
+        }
+
+        const pbfPath = resolve(
+            parentsDir,
+            `${boundarySource.id}-latest.osm.pbf`,
+        );
+        await ensurePbfFile(
+            boundarySource.pbfUrl,
+            pbfPath,
+            cacheOnly,
+            boundarySource.id,
+        );
+
+        const { assembleAdminBoundaries } = await import(
+            "../../../data/geofabrik/scripts/lib/osmiumPipeline.mjs"
+        );
+        console.log(
+            `  [boundaries] Assembling parent admin set "${boundarySource.id}" (levels ${levels.join(",")})...`,
+        );
+        const { features } = await assembleAdminBoundaries({ pbfPath, levels });
+        const payload = JSON.stringify({
+            boundarySource: boundarySource.id,
+            levels,
+            generatedAt: new Date().toISOString(),
+            features,
+        });
+        await writeFile(cacheFile, gzipSync(payload, { level: 9 }));
+        console.log(
+            `  [boundaries] Cached parent admin set: ${cacheFile} (${features.length} features)`,
+        );
+        return features;
+    })();
+    parentAdminMemo.set(boundarySource.id, promise);
+    return promise;
+}
+
+/**
+ * Read a PBF's bounding box via osmium fileinfo. Returns null on failure.
+ *
+ * @param {string} pbfPath
+ * @returns {Promise<number[]|null>} [west, south, east, north]
+ */
+async function pbfBbox(pbfPath) {
+    try {
+        const { execFileSync } = await import("node:child_process");
+        const text = execFileSync("osmium", [
+            "fileinfo",
+            pbfPath,
+            "--no-progress",
+        ]).toString("utf8");
+        const m = text.match(
+            /Bounding box(?:es)?:\s*\(([\d.-]+),\s*([\d.-]+),\s*([\d.-]+),\s*([\d.-]+)\)/,
+        );
+        if (m) {
+            const b = [
+                parseFloat(m[1]),
+                parseFloat(m[2]),
+                parseFloat(m[3]),
+                parseFloat(m[4]),
+            ];
+            if (b.every(Number.isFinite)) return b;
+        }
+    } catch {
+        // osmium unavailable — caller falls back.
+    }
+    return null;
+}
+
 /**
  * Derive the OSM snapshot date from the PBF's Last-Modified header or
  * fall back to the file's mtime.
@@ -274,7 +426,13 @@ async function osmSnapshot(pbfPath) {
  * @param {string} cacheDir - PBF cache directory
  * @param {boolean} cacheOnly - never download
  */
-async function buildRegion(region, distDir, cacheDir, cacheOnly) {
+async function buildRegion(
+    region,
+    distDir,
+    cacheDir,
+    cacheOnly,
+    boundarySource,
+) {
     console.log(`\n=== ${region.label} (${region.id}) ===`);
 
     const pbfPath = await ensurePbf(region, cacheDir, cacheOnly);
@@ -298,7 +456,14 @@ async function buildRegion(region, distDir, cacheDir, cacheOnly) {
         }
 
         console.log(`  [${kind}] building...`);
-        const result = await builder({ region, pbfPath, distDir, cacheDir });
+        const result = await builder({
+            region,
+            pbfPath,
+            distDir,
+            cacheDir,
+            boundarySource,
+            cacheOnly,
+        });
 
         if (result) {
             // Measuring: multi-artifact return (Map of "measuring-<cat>" → {gzPath, uncompressed}).
@@ -449,9 +614,16 @@ async function main() {
         return;
     }
 
+    const boundarySourceById = new Map(
+        (config.boundarySources ?? []).map((b) => [b.id, b]),
+    );
+
     for (const region of regions) {
         const distDir = resolve(distBase, region.id);
-        await buildRegion(region, distDir, cacheDir, cacheOnly);
+        const boundarySource = region.boundarySource
+            ? boundarySourceById.get(region.boundarySource)
+            : null;
+        await buildRegion(region, distDir, cacheDir, cacheOnly, boundarySource);
     }
 
     console.log("\nDone.");

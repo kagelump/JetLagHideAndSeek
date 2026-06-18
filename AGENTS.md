@@ -316,6 +316,19 @@ focused feature/store and let the map render derived data.
   `docs/tasks/offline/13-transit-routes-in-packs.md`). Preset ids stay plain in
   the artifact; the app prefixes them `${packId}:${presetId}` at registration,
   so pack preset ids must never contain `:`.
+- **Boundary sources** (`boundarySources` in `regions.yaml`): a Geofabrik region
+  that is itself an `admin_level=4` unit (every US state) drops its own level-4
+  boundary when extracted in isolation — the relation's member ways cross the
+  clip edge, so `osmium getid` can't close the rings. Such a region sets
+  `boundarySource: <id>` to source the listed coarse levels (currently `[4]`)
+  from a larger parent PBF (e.g. `north-america`) where every way is present.
+  The parent admin set is assembled **once** (cached in `cache/parents/`,
+  memoized per run), then each region selects the parent features whose bbox
+  **intersects** the region (whole polygons, not clipped — a state pack gains its
+  own state plus bbox-overlapping neighbors). Parent levels are removed from the
+  region's own osmium extract; finer levels (6+) still build from the region PBF.
+  Pure slice/partition logic lives in `boundarySources.mjs` (unit-tested without
+  osmium); international borders ride the L4 edges, so L2 is intentionally omitted.
 - Pack design + task breakdown live in `docs/offline-data-packs.md` and
   `docs/tasks/offline/`. Keep pack attribution (NOTICE) current; artifacts and
   the catalog carry an attribution block.

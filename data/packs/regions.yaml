@@ -1,6 +1,16 @@
 # Offline data pack region definitions.
 # One entry per Geofabrik region.  id must match /^[a-z0-9][a-z0-9-]*$/.
 
+# Parent PBFs that supply coarse admin levels to regions which can't assemble
+# them from their own (clipped) extract — e.g. every US state is itself an
+# admin_level=4 unit, so its own state boundary fails to close. A region opts in
+# via `boundarySource: <id>`; the listed levels are sourced from the parent
+# (bbox-intersected, whole polygons) and removed from the region's own extract.
+boundarySources:
+    - id: north-america
+      pbfUrl: https://download.geofabrik.de/north-america-latest.osm.pbf
+      levels: [4] # admin-1st (state/province); international borders ride the L4 edges
+
 regions:
     - id: europe-netherlands
       label: Netherlands
@@ -460,6 +470,7 @@ regions:
       label: New York
       regionPath: [North America, US, New York]
       pbfUrl: https://download.geofabrik.de/north-america/us/new-york-latest.osm.pbf
+      boundarySource: north-america
       adminLevels:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
@@ -476,6 +487,7 @@ regions:
       label: Oregon
       regionPath: [North America, US, Oregon]
       pbfUrl: https://download.geofabrik.de/north-america/us/oregon-latest.osm.pbf
+      boundarySource: north-america
       adminLevels:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
@@ -637,6 +649,7 @@ regions:
       label: Northern California
       regionPath: [North America, US, California, Northern California]
       pbfUrl: https://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf
+      boundarySource: north-america
       adminLevels:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
@@ -657,8 +670,812 @@ regions:
       label: Southern California
       regionPath: [North America, US, California, Southern California]
       pbfUrl: https://download.geofabrik.de/north-america/us/california/socal-latest.osm.pbf
+      boundarySource: north-america
       adminLevels:
           matching: [4, 7, 8, 9]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+
+    # ─── United States (all states) ───────────────────────────────────────────
+    # Each state is its own admin_level=4 unit, so its state boundary is sourced
+    # from the north-america parent via boundarySource (see top of file).
+    - id: north-america-us-alabama
+      label: Alabama
+      regionPath: [North America, US, Alabama]
+      pbfUrl: https://download.geofabrik.de/north-america/us/alabama-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-alaska
+      label: Alaska
+      regionPath: [North America, US, Alaska]
+      pbfUrl: https://download.geofabrik.de/north-america/us/alaska-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-arizona
+      label: Arizona
+      regionPath: [North America, US, Arizona]
+      pbfUrl: https://download.geofabrik.de/north-america/us/arizona-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-arkansas
+      label: Arkansas
+      regionPath: [North America, US, Arkansas]
+      pbfUrl: https://download.geofabrik.de/north-america/us/arkansas-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-colorado
+      label: Colorado
+      regionPath: [North America, US, Colorado]
+      pbfUrl: https://download.geofabrik.de/north-america/us/colorado-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-connecticut
+      label: Connecticut
+      regionPath: [North America, US, Connecticut]
+      pbfUrl: https://download.geofabrik.de/north-america/us/connecticut-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-delaware
+      label: Delaware
+      regionPath: [North America, US, Delaware]
+      pbfUrl: https://download.geofabrik.de/north-america/us/delaware-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-florida
+      label: Florida
+      regionPath: [North America, US, Florida]
+      pbfUrl: https://download.geofabrik.de/north-america/us/florida-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-georgia
+      label: Georgia
+      regionPath: [North America, US, Georgia]
+      pbfUrl: https://download.geofabrik.de/north-america/us/georgia-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-hawaii
+      label: Hawaii
+      regionPath: [North America, US, Hawaii]
+      pbfUrl: https://download.geofabrik.de/north-america/us/hawaii-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-idaho
+      label: Idaho
+      regionPath: [North America, US, Idaho]
+      pbfUrl: https://download.geofabrik.de/north-america/us/idaho-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-illinois
+      label: Illinois
+      regionPath: [North America, US, Illinois]
+      pbfUrl: https://download.geofabrik.de/north-america/us/illinois-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-indiana
+      label: Indiana
+      regionPath: [North America, US, Indiana]
+      pbfUrl: https://download.geofabrik.de/north-america/us/indiana-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-iowa
+      label: Iowa
+      regionPath: [North America, US, Iowa]
+      pbfUrl: https://download.geofabrik.de/north-america/us/iowa-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-kansas
+      label: Kansas
+      regionPath: [North America, US, Kansas]
+      pbfUrl: https://download.geofabrik.de/north-america/us/kansas-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-kentucky
+      label: Kentucky
+      regionPath: [North America, US, Kentucky]
+      pbfUrl: https://download.geofabrik.de/north-america/us/kentucky-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-louisiana
+      label: Louisiana
+      regionPath: [North America, US, Louisiana]
+      pbfUrl: https://download.geofabrik.de/north-america/us/louisiana-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-maine
+      label: Maine
+      regionPath: [North America, US, Maine]
+      pbfUrl: https://download.geofabrik.de/north-america/us/maine-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-maryland
+      label: Maryland
+      regionPath: [North America, US, Maryland]
+      pbfUrl: https://download.geofabrik.de/north-america/us/maryland-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-massachusetts
+      label: Massachusetts
+      regionPath: [North America, US, Massachusetts]
+      pbfUrl: https://download.geofabrik.de/north-america/us/massachusetts-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-michigan
+      label: Michigan
+      regionPath: [North America, US, Michigan]
+      pbfUrl: https://download.geofabrik.de/north-america/us/michigan-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-minnesota
+      label: Minnesota
+      regionPath: [North America, US, Minnesota]
+      pbfUrl: https://download.geofabrik.de/north-america/us/minnesota-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-mississippi
+      label: Mississippi
+      regionPath: [North America, US, Mississippi]
+      pbfUrl: https://download.geofabrik.de/north-america/us/mississippi-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-missouri
+      label: Missouri
+      regionPath: [North America, US, Missouri]
+      pbfUrl: https://download.geofabrik.de/north-america/us/missouri-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-montana
+      label: Montana
+      regionPath: [North America, US, Montana]
+      pbfUrl: https://download.geofabrik.de/north-america/us/montana-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-nebraska
+      label: Nebraska
+      regionPath: [North America, US, Nebraska]
+      pbfUrl: https://download.geofabrik.de/north-america/us/nebraska-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-nevada
+      label: Nevada
+      regionPath: [North America, US, Nevada]
+      pbfUrl: https://download.geofabrik.de/north-america/us/nevada-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-new-hampshire
+      label: New Hampshire
+      regionPath: [North America, US, New Hampshire]
+      pbfUrl: https://download.geofabrik.de/north-america/us/new-hampshire-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-new-jersey
+      label: New Jersey
+      regionPath: [North America, US, New Jersey]
+      pbfUrl: https://download.geofabrik.de/north-america/us/new-jersey-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-new-mexico
+      label: New Mexico
+      regionPath: [North America, US, New Mexico]
+      pbfUrl: https://download.geofabrik.de/north-america/us/new-mexico-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-north-carolina
+      label: North Carolina
+      regionPath: [North America, US, North Carolina]
+      pbfUrl: https://download.geofabrik.de/north-america/us/north-carolina-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-north-dakota
+      label: North Dakota
+      regionPath: [North America, US, North Dakota]
+      pbfUrl: https://download.geofabrik.de/north-america/us/north-dakota-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-ohio
+      label: Ohio
+      regionPath: [North America, US, Ohio]
+      pbfUrl: https://download.geofabrik.de/north-america/us/ohio-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-oklahoma
+      label: Oklahoma
+      regionPath: [North America, US, Oklahoma]
+      pbfUrl: https://download.geofabrik.de/north-america/us/oklahoma-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-pennsylvania
+      label: Pennsylvania
+      regionPath: [North America, US, Pennsylvania]
+      pbfUrl: https://download.geofabrik.de/north-america/us/pennsylvania-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-rhode-island
+      label: Rhode Island
+      regionPath: [North America, US, Rhode Island]
+      pbfUrl: https://download.geofabrik.de/north-america/us/rhode-island-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-south-carolina
+      label: South Carolina
+      regionPath: [North America, US, South Carolina]
+      pbfUrl: https://download.geofabrik.de/north-america/us/south-carolina-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-south-dakota
+      label: South Dakota
+      regionPath: [North America, US, South Dakota]
+      pbfUrl: https://download.geofabrik.de/north-america/us/south-dakota-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-tennessee
+      label: Tennessee
+      regionPath: [North America, US, Tennessee]
+      pbfUrl: https://download.geofabrik.de/north-america/us/tennessee-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-texas
+      label: Texas
+      regionPath: [North America, US, Texas]
+      pbfUrl: https://download.geofabrik.de/north-america/us/texas-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-utah
+      label: Utah
+      regionPath: [North America, US, Utah]
+      pbfUrl: https://download.geofabrik.de/north-america/us/utah-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-vermont
+      label: Vermont
+      regionPath: [North America, US, Vermont]
+      pbfUrl: https://download.geofabrik.de/north-america/us/vermont-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-virginia
+      label: Virginia
+      regionPath: [North America, US, Virginia]
+      pbfUrl: https://download.geofabrik.de/north-america/us/virginia-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-washington
+      label: Washington
+      regionPath: [North America, US, Washington]
+      pbfUrl: https://download.geofabrik.de/north-america/us/washington-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-west-virginia
+      label: West Virginia
+      regionPath: [North America, US, West Virginia]
+      pbfUrl: https://download.geofabrik.de/north-america/us/west-virginia-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-wisconsin
+      label: Wisconsin
+      regionPath: [North America, US, Wisconsin]
+      pbfUrl: https://download.geofabrik.de/north-america/us/wisconsin-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
+          extract: [4, 6, 7, 8, 9, 10]
+      artifacts: [poi, measuring, boundaries, transit]
+      measuringOverrides:
+          body-of-water:
+              enabled: false
+      transitOverrides:
+          nameSuffixes: []
+          maxClusterMeters: 150
+          routeColors: {}
+          wayGeometry: false
+    - id: north-america-us-wyoming
+      label: Wyoming
+      regionPath: [North America, US, Wyoming]
+      pbfUrl: https://download.geofabrik.de/north-america/us/wyoming-latest.osm.pbf
+      boundarySource: north-america
+      adminLevels:
+          matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
       measuringOverrides:

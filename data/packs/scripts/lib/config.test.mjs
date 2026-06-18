@@ -226,4 +226,47 @@ describe("validateConfig", () => {
             );
         });
     });
+
+    describe("boundarySources", () => {
+        it("accepts a valid boundarySource and reference", () => {
+            const cfg = baseConfig({ boundarySource: "north-america" });
+            cfg.boundarySources = [
+                {
+                    id: "north-america",
+                    pbfUrl: "https://download.geofabrik.de/north-america-latest.osm.pbf",
+                    levels: [4],
+                },
+            ];
+            assert.deepEqual(validateConfig(cfg), []);
+        });
+
+        it("rejects a region referencing an undeclared boundarySource", () => {
+            const cfg = baseConfig({ boundarySource: "does-not-exist" });
+            const errors = validateConfig(cfg);
+            assert.ok(
+                errors.some((e) =>
+                    e.includes("not a declared boundarySources"),
+                ),
+            );
+        });
+
+        it("rejects malformed boundarySources entries", () => {
+            const cfg = baseConfig();
+            cfg.boundarySources = [{ id: "Bad Id", pbfUrl: "", levels: [] }];
+            const errors = validateConfig(cfg);
+            assert.ok(errors.some((e) => e.includes('"id" must match')));
+            assert.ok(errors.some((e) => e.includes('"pbfUrl"')));
+            assert.ok(errors.some((e) => e.includes('"levels"')));
+        });
+
+        it("rejects duplicate boundarySource ids", () => {
+            const cfg = baseConfig();
+            cfg.boundarySources = [
+                { id: "na", pbfUrl: "https://x/y.pbf", levels: [4] },
+                { id: "na", pbfUrl: "https://x/z.pbf", levels: [4] },
+            ];
+            const errors = validateConfig(cfg);
+            assert.ok(errors.some((e) => e.includes("duplicate id")));
+        });
+    });
 });

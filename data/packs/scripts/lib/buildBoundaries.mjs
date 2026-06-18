@@ -13,6 +13,11 @@ import { writeFile } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+    partitionExtractLevels,
+    filterParentFeaturesByBbox,
+} from "./boundarySources.mjs";
+
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 /**
@@ -98,9 +103,21 @@ function geometryAreaKm2(geometry) {
  * @param {string} opts.pbfPath - path to cached PBF
  * @param {string} opts.distDir - output directory (dist/<region-id>/)
  * @param {string} [opts.tmpDir] - temp directory for osmium intermediates
+ * @param {object[]} [opts.parentFeatures] - assembled admin features from the
+ *   region's boundary source (parent PBF), if configured
+ * @param {number[]} [opts.parentLevels] - admin levels the parent supplies
+ * @param {number[]} [opts.regionBbox] - region bbox [w,s,e,n] for parent slicing
  * @returns {Promise<{gzPath: string, uncompressed: Buffer}>}
  */
-export async function buildBoundaries({ region, pbfPath, distDir, tmpDir }) {
+export async function buildBoundaries({
+    region,
+    pbfPath,
+    distDir,
+    tmpDir,
+    parentFeatures,
+    parentLevels,
+    regionBbox,
+}) {
     const { assembleAdminBoundaries } = await import(
         "../../../geofabrik/scripts/lib/osmiumPipeline.mjs"
     );
@@ -119,18 +136,44 @@ export async function buildBoundaries({ region, pbfPath, distDir, tmpDir }) {
     const levels = region.adminLevels?.extract ?? [4, 7, 9, 10];
     const simplifyTolerance = getSimplifyToleranceDegrees();
 
+    // Levels supplied by a parent boundary source are removed from the region's
+    // own osmium extract (they assemble broken from a clipped state extract) and
+    // pulled from the parent admin set instead.
+    const effectiveParentLevels =
+        parentFeatures && parentLevels?.length ? parentLevels : [];
+    const { regionLevels, parentLevels: usedParentLevels } =
+        partitionExtractLevels(levels, effectiveParentLevels);
+
     console.log(
-        `  [boundaries] Assembling admin boundaries (levels ${levels.join(",")})...`,
+        `  [boundaries] Assembling admin boundaries (region levels ${regionLevels.join(",") || "none"})...`,
     );
 
-    const { features, summary } = await assembleAdminBoundaries({
-        pbfPath,
-        levels,
-        tmpDir,
-    });
+    const { features: regionFeatures, summary } =
+        regionLevels.length > 0
+            ? await assembleAdminBoundaries({
+                  pbfPath,
+                  levels: regionLevels,
+                  tmpDir,
+              })
+            : { features: [], summary: { assembled: 0 } };
+
+    // Slice parent admin features by region bbox (whole polygons, not clipped).
+    let parentSelected = [];
+    if (usedParentLevels.length && regionBbox) {
+        parentSelected = filterParentFeaturesByBbox(
+            parentFeatures,
+            regionBbox,
+            usedParentLevels,
+        );
+        console.log(
+            `  [boundaries] Parent admin: ${parentSelected.length} features (levels ${usedParentLevels.join(",")}) intersect region bbox`,
+        );
+    }
+
+    const features = [...regionFeatures, ...parentSelected];
 
     console.log(
-        `  [boundaries] Assembled ${summary.assembled} features (${summary.droppedNoName} dropped no-name, ${summary.droppedBroken} dropped broken)`,
+        `  [boundaries] Assembled ${features.length} features (${summary.assembled} region, ${parentSelected.length} parent)`,
     );
 
     // Filter and simplify.
