@@ -845,7 +845,7 @@ export async function buildMeasuringArtifact({
                               dissolveOpts,
                           );
                 features.length = 0;
-                features.push(...dissolved);
+                for (const f of dissolved) features.push(f);
 
                 // Cross-tile polygon assembly.
                 //

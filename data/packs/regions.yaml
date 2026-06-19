@@ -73,10 +73,6 @@ regions:
               臺中捷運: ["臺中捷運公司", "臺中捷運股份有限公司"]
           # curatedRoutes: {} # T17 — bus/cable-car line modes
     # ─── Top global regions batch 1 ───────────────────────────────────────────────
-    # Body-of-water is disabled for this batch because the NL build showed the
-    # polygon dissolve can hit a GEOS TopologyException and hard-lock on the
-    # polyclip-ts fallback. POI, boundaries, coastline, high-speed-rail and
-    # transit are still produced.
     - id: europe-greater-london
       label: Greater London
       regionPath: [Europe, United Kingdom, England, Greater London]
@@ -85,9 +81,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -101,9 +94,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -117,9 +107,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -133,9 +120,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -149,9 +133,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -166,8 +147,6 @@ regions:
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
       measuringOverrides:
-          body-of-water:
-              enabled: false
           # Korea's national rail network has too many parallel/branch fragments
           # for the current continuity validator; disable until the stitcher is
           # made more tolerant.
@@ -186,14 +165,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          # Re-enabled to validate the band-partition dissolve (clip-to-band
-          # rect + concatenate, replacing the OOM-prone cross-tile union). The
-          # Meguro river mouth SE of Nakameguro is the known self-intersection
-          # hotspot. Revert to `enabled: false` if we decide not to ship water
-          # for Kanto.
-          body-of-water:
-              enabled: true
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
@@ -306,9 +277,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
@@ -325,9 +293,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
@@ -344,9 +309,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
@@ -363,9 +325,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
@@ -382,9 +341,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
@@ -401,9 +357,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
@@ -420,9 +373,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: ["駅"]
           maxClusterMeters: 150
@@ -439,9 +389,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: ["站"]
           maxClusterMeters: 150
@@ -455,9 +402,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -471,9 +415,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -488,9 +429,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -505,9 +443,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -522,9 +457,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -538,9 +470,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -554,9 +483,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -570,9 +496,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -586,9 +509,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -602,9 +522,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -618,9 +535,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -634,9 +548,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -650,9 +561,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -667,9 +575,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -688,9 +593,6 @@ regions:
           matching: [4, 7, 8, 9]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -709,9 +611,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -726,9 +625,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -743,9 +639,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -760,9 +653,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -777,9 +667,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -794,9 +681,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -811,9 +695,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -828,9 +709,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -845,9 +723,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -862,9 +737,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -879,9 +751,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -896,9 +765,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -913,9 +779,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -930,9 +793,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -947,9 +807,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -964,9 +821,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -981,9 +835,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -998,9 +849,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1015,9 +863,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1032,9 +877,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1049,9 +891,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1066,9 +905,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1083,9 +919,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1100,9 +933,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1117,9 +947,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1134,9 +961,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1151,9 +975,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1168,9 +989,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1185,9 +1003,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1202,9 +1017,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1219,9 +1031,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1236,9 +1045,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1253,9 +1059,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1270,9 +1073,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1287,9 +1087,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1304,9 +1101,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1321,9 +1115,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1338,9 +1129,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1355,9 +1143,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1372,9 +1157,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1389,9 +1171,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1406,9 +1185,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1423,9 +1199,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1440,9 +1213,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1457,9 +1227,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1474,9 +1241,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
@@ -1491,9 +1255,6 @@ regions:
           matching: [4, 6, 8, 10]
           extract: [4, 6, 7, 8, 9, 10]
       artifacts: [poi, measuring, boundaries, transit]
-      measuringOverrides:
-          body-of-water:
-              enabled: false
       transitOverrides:
           nameSuffixes: []
           maxClusterMeters: 150
