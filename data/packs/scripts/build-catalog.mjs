@@ -188,7 +188,12 @@ function buildArtifacts(hashes, regionId, tag, repo) {
             bytes: hashEntry.bytes,
             md5: hashEntry.md5,
             sha256: hashEntry.sha256,
-            schemaVersion: 1,
+            // Real per-artifact schemaVersion from the built blob (hashes.json).
+            // Polygon-dissolve measuring bundles (body-of-water) are v2; line
+            // bundles are v1. Hardcoding 1 desyncs the catalog from the blob and
+            // makes the on-device install reject v2 artifacts. Fall back to 1
+            // only for legacy hashes.json without the field.
+            schemaVersion: hashEntry.schemaVersion ?? 1,
         });
     }
 

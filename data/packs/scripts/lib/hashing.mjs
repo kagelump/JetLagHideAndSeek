@@ -15,7 +15,7 @@ import { createHash } from "node:crypto";
  *
  * @param {Uint8Array|Buffer} gzBytes - gzipped payload
  * @param {Uint8Array|Buffer|string} uncompressed - uncompressed payload
- * @returns {{ bytes: number, md5: string, sha256: string }}
+ * @returns {{ bytes: number, md5: string, sha256: string, schemaVersion: number|undefined }}
  */
 export function computeHashes(gzBytes, uncompressed) {
     const uncompBuf =
@@ -27,7 +27,25 @@ export function computeHashes(gzBytes, uncompressed) {
         bytes: gzBytes.length,
         md5: createHash("md5").update(gzBytes).digest("hex"),
         sha256: createHash("sha256").update(uncompBuf).digest("hex"),
+        schemaVersion: extractSchemaVersion(uncompBuf),
     };
+}
+
+/**
+ * Extract the top-level `schemaVersion` from an artifact payload without fully
+ * parsing it (payloads can be many MB). Every builder emits `schemaVersion` as
+ * the first top-level key, so a scan of the JSON head finds it cheaply. The
+ * catalog needs this per-artifact (e.g. polygon-dissolve measuring bundles are
+ * v2 while line bundles are v1) — hardcoding it desyncs the catalog from the
+ * blob and makes the on-device install reject the artifact.
+ *
+ * @param {Buffer} uncompBuf
+ * @returns {number|undefined} the schemaVersion, or undefined when absent
+ */
+function extractSchemaVersion(uncompBuf) {
+    const head = uncompBuf.subarray(0, 4096).toString("utf8");
+    const m = head.match(/"schemaVersion"\s*:\s*(\d+)/);
+    return m ? Number(m[1]) : undefined;
 }
 
 /**

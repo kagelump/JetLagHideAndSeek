@@ -50,6 +50,22 @@ describe("computeHashes", () => {
         assert.equal(fromStr.sha256, fromBuf.sha256);
         assert.equal(fromStr.md5, fromBuf.md5);
     });
+
+    it("extracts the top-level schemaVersion (drives the catalog)", () => {
+        const uncompressed = JSON.stringify({
+            schemaVersion: 2,
+            category: "body-of-water",
+            features: [],
+        });
+        const result = computeHashes(gzipSync(uncompressed), uncompressed);
+        assert.equal(result.schemaVersion, 2);
+    });
+
+    it("reports schemaVersion undefined when absent", () => {
+        const uncompressed = JSON.stringify({ hello: "world" });
+        const result = computeHashes(gzipSync(uncompressed), uncompressed);
+        assert.equal(result.schemaVersion, undefined);
+    });
 });
 
 describe("verifyHashes", () => {

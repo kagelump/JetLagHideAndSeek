@@ -108,6 +108,36 @@ describe("buildCatalog", () => {
         assert.equal(catalog.packs[0].artifacts[0].schemaVersion, 1);
     });
 
+    it("propagates the per-artifact schemaVersion from hashes.json", async () => {
+        // Regression: the catalog hardcoded schemaVersion 1 for every artifact,
+        // so v2 blobs (polygon-dissolve measuring, e.g. body-of-water) were
+        // rejected on-device with "payload has 2, expected 1". The real version
+        // must flow blob → hashes.json → catalog.
+        await createFakeDist("schema-region", {
+            extraHashes: {
+                "measuring-body-of-water": {
+                    bytes: 500,
+                    md5: "c".repeat(32),
+                    sha256: "d".repeat(64),
+                    schemaVersion: 2,
+                },
+            },
+        });
+
+        const catalog = await buildCatalog({
+            regionIds: ["schema-region"],
+            tag: TAG,
+            repo: REPO,
+            distDir,
+        });
+
+        const artifacts = catalog.packs[0].artifacts;
+        const water = artifacts.find((a) => a.category === "body-of-water");
+        const poi = artifacts.find((a) => a.kind === "poi");
+        assert.equal(water.schemaVersion, 2, "v2 blob must keep v2 in catalog");
+        assert.equal(poi.schemaVersion, 1, "legacy entry defaults to 1");
+    });
+
     it("builds a catalog with multiple regions", async () => {
         await createFakeDist("region-alpha", { label: "Alpha" });
         await createFakeDist("region-beta", { label: "Beta" });

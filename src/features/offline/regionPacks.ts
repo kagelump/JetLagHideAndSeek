@@ -1022,7 +1022,40 @@ export function useInstallPack() {
             pack: CatalogPack;
             onProgress?: (p: InstallProgress) => void;
         }) => installPackInternal(pack, onProgress),
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
+            // Optimistically update installed packs cache so UI (e.g.
+            // hiding-zone "No game pack downloaded" banner) reacts
+            // immediately — before the async invalidate+refetch completes.
+            const pack = variables.pack;
+            const artifacts: InstalledArtifact[] = (data ?? []).map((a) => ({
+                kind: a.kind,
+                category: a.category,
+                bytes: a.bytes,
+                status: a.status,
+            }));
+
+            queryClient.setQueryData<InstalledPack[]>(
+                ["installed-packs-v2"],
+                (old) => {
+                    const existing = old ?? [];
+                    const idx = existing.findIndex((p) => p.id === pack.id);
+                    const installed: InstalledPack = {
+                        id: pack.id,
+                        osmSnapshot: pack.osmSnapshot,
+                        installedAt: new Date().toISOString(),
+                        bbox: pack.bbox,
+                        artifacts,
+                    };
+                    if (idx >= 0) {
+                        const updated = [...existing];
+                        updated[idx] = installed;
+                        return updated;
+                    }
+                    return [...existing, installed];
+                },
+            );
+
+            // Still invalidate so the on-disk truth is re-read eventually.
             queryClient.invalidateQueries({ queryKey: ["offline-catalog"] });
             queryClient.invalidateQueries({ queryKey: ["installed-packs-v2"] });
         },
@@ -1040,7 +1073,39 @@ export function useRetryPack() {
             pack: CatalogPack;
             onProgress?: (p: InstallProgress) => void;
         }) => retryPackInternal(pack, onProgress),
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
+            // Optimistically update installed packs cache so UI reacts
+            // immediately — before the async invalidate+refetch completes.
+            const pack = variables.pack;
+            const artifacts: InstalledArtifact[] = (data ?? []).map((a) => ({
+                kind: a.kind,
+                category: a.category,
+                bytes: a.bytes,
+                status: a.status,
+            }));
+
+            queryClient.setQueryData<InstalledPack[]>(
+                ["installed-packs-v2"],
+                (old) => {
+                    const existing = old ?? [];
+                    const idx = existing.findIndex((p) => p.id === pack.id);
+                    const installed: InstalledPack = {
+                        id: pack.id,
+                        osmSnapshot: pack.osmSnapshot,
+                        installedAt: new Date().toISOString(),
+                        bbox: pack.bbox,
+                        artifacts,
+                    };
+                    if (idx >= 0) {
+                        const updated = [...existing];
+                        updated[idx] = installed;
+                        return updated;
+                    }
+                    return [...existing, installed];
+                },
+            );
+
+            // Still invalidate so the on-disk truth is re-read eventually.
             queryClient.invalidateQueries({ queryKey: ["offline-catalog"] });
             queryClient.invalidateQueries({ queryKey: ["installed-packs-v2"] });
         },
