@@ -14,7 +14,7 @@
 
 /* global console, process */
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, rename } from "node:fs/promises";
 
 import { bboxesIntersect, computePolygonBbox } from "./geometryCleanup.mjs";
 import {
@@ -38,6 +38,9 @@ async function main() {
         tiles,
         clipRect,
         simplifyTolerance,
+        forceSkipUnion,
+        maxUnionPolygons,
+        maxUnionCoords,
     } = JSON.parse(await readFile(specPath, "utf8"));
     const features = JSON.parse(await readFile(inputPath, "utf8"));
 
@@ -45,6 +48,7 @@ async function main() {
     const t0 = Date.now();
 
     // ── Dissolve each tile in this band ──────────────────────────────────────
+    const dissolveOpts = { forceSkipUnion, maxUnionPolygons, maxUnionCoords };
     const tileFeatures = [];
     let tileUnionMs = 0;
     let nTiles = 0;
@@ -55,7 +59,12 @@ async function main() {
         );
         if (tilePolys.length === 0) continue;
 
-        const r = dissolveTile(tileBbox, tilePolys, simplifyTolerance);
+        const r = dissolveTile(
+            tileBbox,
+            tilePolys,
+            simplifyTolerance,
+            dissolveOpts,
+        );
         tileUnionMs += r.unionMs;
         nTiles++;
         for (const f of r.features) tileFeatures.push(f);
@@ -82,6 +91,7 @@ async function main() {
         const tMerge = Date.now();
         const groups = geosUnaryUnionCoords(
             tileFeatures.map((f) => f.geometry.coordinates),
+            dissolveOpts,
         );
         mergeMs = Date.now() - tMerge;
         for (const g of groups) {
@@ -98,7 +108,11 @@ async function main() {
         }
     }
 
-    await writeFile(outputPath, JSON.stringify(results));
+    // Atomic output: write to a temp file then rename so a killed shard
+    // (SIGKILL mid-write) never leaves a half-written file the parent reads.
+    const tmpPath = outputPath + ".tmp";
+    await writeFile(tmpPath, JSON.stringify(results));
+    await rename(tmpPath, outputPath);
     console.log(
         `  ${tag} ${nTiles} tiles → ${results.length} blob(s); ` +
             `tile-union ${(tileUnionMs / 1000).toFixed(1)}s, ` +

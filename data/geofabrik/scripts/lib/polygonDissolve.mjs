@@ -70,18 +70,124 @@ function flattenPolygonCoords(coordsList) {
 }
 
 /**
+ * Count total polygons and coordinates across a coordsList for size-cap checks.
+ * @param {Array} coordsList
+ * @returns {{totalPolys: number, totalCoords: number}}
+ */
+function countCoordsStats(coordsList) {
+    let totalPolys = 0;
+    let totalCoords = 0;
+    for (const coords of coordsList) {
+        if (!coords || coords.length === 0) continue;
+        if (
+            Array.isArray(coords[0][0][0]) &&
+            typeof coords[0][0][0][0] === "number"
+        ) {
+            // MultiPolygon coordinates: an array of polygons.
+            for (const poly of coords) {
+                if (!poly || poly.length === 0) continue;
+                totalPolys++;
+                for (const ring of poly) totalCoords += ring.length;
+            }
+        } else if (typeof coords[0][0][0] === "number") {
+            // Polygon coordinates: an array of rings.
+            totalPolys++;
+            for (const ring of coords) totalCoords += ring.length;
+        }
+    }
+    return { totalPolys, totalCoords };
+}
+
+/**
+ * Pass-through fallback: returns each input polygon as its own coordinate
+ * group with **no** union at all. This is safe because the rest of the
+ * pipeline already tolerates overlapping members (the runtime unions
+ * per-feature buffers itself; the waterway-clip grid uses point-in-any-polygon).
+ *
+ * Cost: a failed tile emits more (overlapping) polygons → locally larger
+ * artifact and more runtime buffer pieces. Bounded by the tile's raw polygon
+ * count, and only on tiles where GEOS actually fails.
+ *
+ * @param {Array} coordsList
+ * @returns {number[][][][]} list of MultiPolygon coordinate groups (one per input polygon)
+ */
+function skipUnion(coordsList) {
+    const groups = [];
+    for (const coords of coordsList) {
+        if (!coords || coords.length === 0) continue;
+        if (
+            Array.isArray(coords[0][0][0]) &&
+            typeof coords[0][0][0][0] === "number"
+        ) {
+            // MultiPolygon: each member polygon becomes its own group.
+            for (const poly of coords) {
+                if (poly && poly.length > 0) groups.push([poly]);
+            }
+        } else if (typeof coords[0][0][0] === "number") {
+            // Polygon: single group.
+            groups.push([coords]);
+        }
+    }
+    return groups.length > 0 ? groups : [[]];
+}
+
+/**
  * Unary-union a list of GeoJSON Polygon/MultiPolygon coordinate arrays using
  * GEOS (when available) and returns a list of merged coordinate groups.
  *
- * Falls back to `unionAllCoords` (polyclip-ts) if GEOS is not available or
- * the GEOS operation fails.
+ * On GEOS failure the fallback is **skip-union** (pass-through), NOT
+ * polyclip-ts — polyclip-ts's variadic union is synchronous, CPU-bound, and
+ * can run for minutes on dense tiles (2,000 trivial squares = 123 s).
+ * Skip-union cannot hang because it does no geometric work.
+ *
+ * `unionAllCoords` (polyclip-ts) is only used when GEOS is not loaded at all
+ * (plain Node without tsx, i.e. tests), and even then it is guarded by the
+ * same size caps.
  *
  * @param {number[][][][]|number[][][][][]} coordsList
+ * @param {object} [opts]
+ * @param {boolean} [opts.forceSkipUnion] - skip all union engines (Layer 2 retry)
+ * @param {number} [opts.maxUnionPolygons] - skip union pre-emptively above this
+ * @param {number} [opts.maxUnionCoords] - …or this many total coords
  * @returns {number[][][][]} list of MultiPolygon coordinate groups
  */
-export function geosUnaryUnionCoords(coordsList) {
+export function geosUnaryUnionCoords(coordsList, opts = {}) {
+    const { forceSkipUnion = false, maxUnionPolygons, maxUnionCoords } = opts;
+
     if (coordsList.length <= 1) return coordsList.slice();
+
+    // Layer 2 retry path — forced pass-through, no geometric work at all.
+    if (forceSkipUnion) {
+        console.warn(
+            `[geosUnaryUnionCoords] forceSkipUnion — passing through ` +
+                `${coordsList.length} input(s) un-unioned`,
+        );
+        return skipUnion(coordsList);
+    }
+
+    // Size cap: skip union pre-emptively on absurdly large inputs regardless
+    // of engine. This bounds worst-case op size.
+    if (maxUnionPolygons || maxUnionCoords) {
+        const stats = countCoordsStats(coordsList);
+        if (maxUnionPolygons && stats.totalPolys > maxUnionPolygons) {
+            console.warn(
+                `[geosUnaryUnionCoords] ${stats.totalPolys} polygons > cap ` +
+                    `${maxUnionPolygons}; skip-union (pass-through)`,
+            );
+            return skipUnion(coordsList);
+        }
+        if (maxUnionCoords && stats.totalCoords > maxUnionCoords) {
+            console.warn(
+                `[geosUnaryUnionCoords] ${stats.totalCoords} coords > cap ` +
+                    `${maxUnionCoords}; skip-union (pass-through)`,
+            );
+            return skipUnion(coordsList);
+        }
+    }
+
     if (!geosReady || !geosModule || !wkbModule) {
+        // No GEOS — polyclip-ts is the only option (test / plain-Node runs).
+        // The size cap above already guards against pathological inputs.
         return unionAllCoords(coordsList);
     }
 
@@ -99,22 +205,35 @@ export function geosUnaryUnionCoords(coordsList) {
         // overlaps (e.g. a riverbank polygon over a water polygon) into HOLES,
         // baking spurious islands into the dissolved water. GEOSUnaryUnion
         // dissolves overlaps correctly on its own. Fall back to the validated
-        // path for genuinely malformed input, then to polyclip-ts.
+        // path for genuinely malformed input, then to skip-union.
         // See docs/water-bundle-notes-handoff2.md.
         const outWkb =
             geosModule.unaryUnionWKB(wkb, { validate: false }) ??
             geosModule.unaryUnionWKB(wkb);
-        if (!outWkb) return unionAllCoords(coordsList);
+        if (!outWkb) {
+            console.warn(
+                `[geosUnaryUnionCoords] GEOS union returned null; skip-union ` +
+                    `(${coordsList.length} inputs)`,
+            );
+            return skipUnion(coordsList);
+        }
 
         const out = wkbModule.decodeWkb(outWkb);
-        if (!out) return unionAllCoords(coordsList);
+        if (!out) {
+            console.warn(
+                `[geosUnaryUnionCoords] GEOS decode returned null; skip-union ` +
+                    `(${coordsList.length} inputs)`,
+            );
+            return skipUnion(coordsList);
+        }
 
         return [out.type === "Polygon" ? [out.coordinates] : out.coordinates];
     } catch (err) {
         console.warn(
-            `[geosUnaryUnionCoords] GEOS union failed (${err.message}); falling back to polyclip-ts`,
+            `[geosUnaryUnionCoords] GEOS union failed (${err.message}); ` +
+                `skip-union — no polyclip-ts fallback (${coordsList.length} inputs)`,
         );
-        return unionAllCoords(coordsList);
+        return skipUnion(coordsList);
     }
 }
 
@@ -392,9 +511,12 @@ export function unionAllCoords(coordsList) {
 /**
  * Clip a Polygon/MultiPolygon coordinate array to an axis-aligned rectangle.
  * Returns MultiPolygon coordinates (array of polygons); `[]` when the input
- * lies fully outside the rect or the clip degenerates. Fail-safe: on a
- * polyclip-ts throw, returns the input as MultiPolygon coords unchanged so one
- * bad ring can't drop a whole blob (callers may re-validate downstream).
+ * lies fully outside the rect or the clip degenerates.
+ *
+ * Clips each member polygon **independently** so no single polyclip-ts
+ * intersection ever sees an overlapping pile — each clip is one polygon ∩ box
+ * (fast, bounded). Fail-safe: on a polyclip-ts throw, keeps that polygon
+ * unchanged so one bad ring can't drop a whole blob.
  *
  * This is the same rectangle-clip `dissolveTile` already applies per tile —
  * factored out so the parallel path can clip each pre-merged band blob to its
@@ -416,14 +538,34 @@ export function clipCoordsToRect(coords, rect) {
             [w, s],
         ],
     ];
-    try {
-        const clipped = intersection(coords, rectGeom);
-        return clipped && clipped.length > 0 ? clipped : [];
-    } catch {
-        // MultiPolygon coords have a point ([x,y]) at coords[0][0][0]; Polygon
-        // coords have a number there — wrap the latter into a MultiPolygon.
-        return Array.isArray(coords?.[0]?.[0]?.[0]) ? coords : [coords];
+
+    // Flatten to individual polygons so each clip is bounded.
+    const polygons = [];
+    if (
+        Array.isArray(coords?.[0]?.[0]?.[0]) &&
+        typeof coords[0][0][0][0] === "number"
+    ) {
+        // MultiPolygon coords: array of polygons.
+        for (const poly of coords) polygons.push(poly);
+    } else if (typeof coords?.[0]?.[0]?.[0] === "number") {
+        // Polygon coords: single polygon.
+        polygons.push(coords);
     }
+
+    const results = [];
+    for (const poly of polygons) {
+        if (!poly || poly.length === 0) continue;
+        try {
+            const clipped = intersection(poly, rectGeom);
+            if (clipped && clipped.length > 0) {
+                for (const c of clipped) results.push(c);
+            }
+        } catch {
+            // Keep the polygon unchanged on clip failure.
+            results.push(poly);
+        }
+    }
+    return results;
 }
 
 /**
@@ -596,15 +738,28 @@ export function buildTileGrid(extractBbox, tileDeg = 0.25, overlapDeg = 0.01) {
  * `geosUnaryUnionCoords` is fail-safe — a polygon that makes the union throw
  * isolates itself into its own merge group instead of dropping out.
  *
+ * The tile-box clip iterates each polygon independently so no single polyclip
+ * intersection ever sees an overlapping pile (bounded per-polygon clip).
+ *
  * @param {number[]} tileBbox - [w, s, e, n] (already includes overlap)
  * @param {Array<{geometry:{coordinates:any}}>} tilePolys - polys in this tile
  * @param {number} simplifyTolerance - degrees
+ * @param {object} [opts]
+ * @param {boolean} [opts.forceSkipUnion] - skip all union engines
+ * @param {number} [opts.maxUnionPolygons] - skip union pre-emptively above this
+ * @param {number} [opts.maxUnionCoords] - …or this many total coords
  * @returns {{features: object[], unionMs: number, groupCount: number}}
  */
-export function dissolveTile(tileBbox, tilePolys, simplifyTolerance) {
+export function dissolveTile(
+    tileBbox,
+    tilePolys,
+    simplifyTolerance,
+    opts = {},
+) {
     const tUnion = Date.now();
     const groups = geosUnaryUnionCoords(
         tilePolys.map((f) => f.geometry.coordinates),
+        opts,
     );
     const unionMs = Date.now() - tUnion;
 
@@ -622,18 +777,27 @@ export function dissolveTile(tileBbox, tilePolys, simplifyTolerance) {
     for (const merged of groups) {
         if (!merged) continue;
 
-        let clipped;
-        try {
-            clipped = intersection(merged, tileGeom);
-        } catch {
-            // Fall back to the merged result if intersection fails.
-            clipped = merged;
+        // Flatten to individual polygons and clip each independently so no
+        // single polyclip intersection ever sees an overlapping pile.
+        const polys = flattenPolygonCoords([merged]);
+        const clippedPolys = [];
+        for (const poly of polys) {
+            if (!poly || poly.length === 0) continue;
+            try {
+                const c = intersection(poly, tileGeom);
+                if (c && c.length > 0) {
+                    for (const pc of c) clippedPolys.push(pc);
+                }
+            } catch {
+                // Keep the polygon if intersection fails.
+                clippedPolys.push(poly);
+            }
         }
-        if (!clipped) continue;
+        if (clippedPolys.length === 0) continue;
 
         const feat = {
             type: "Feature",
-            geometry: { type: "MultiPolygon", coordinates: clipped },
+            geometry: { type: "MultiPolygon", coordinates: clippedPolys },
             properties: {},
         };
         const simplified = simplifyPolygonFeature(feat, simplifyTolerance);
@@ -655,7 +819,13 @@ export function polygonDissolve(
     inputFeatures,
     extractBbox,
     simplifyTolerance,
-    { tileDeg = 0.25, overlapDeg = 0.01 } = {},
+    {
+        tileDeg = 0.25,
+        overlapDeg = 0.01,
+        maxUnionPolygons,
+        maxUnionCoords,
+        forceSkipUnion,
+    } = {},
 ) {
     const t0 = Date.now();
     const tiles = buildTileGrid(extractBbox, tileDeg, overlapDeg);
@@ -665,6 +835,7 @@ export function polygonDissolve(
             `${tiles.length} tiles (${tileDeg}° each)`,
     );
 
+    const dissolveOpts = { maxUnionPolygons, maxUnionCoords, forceSkipUnion };
     const results = [];
     let emptyTiles = 0;
     let unionTimeMs = 0;
@@ -683,6 +854,7 @@ export function polygonDissolve(
             tileBbox,
             tilePolys,
             simplifyTolerance,
+            dissolveOpts,
         );
         unionTimeMs += unionMs;
 
@@ -761,7 +933,14 @@ export async function polygonDissolveParallel(
     inputFeatures,
     extractBbox,
     simplifyTolerance,
-    { tileDeg = 0.25, overlapDeg = 0.01, jobs = 1 } = {},
+    {
+        tileDeg = 0.25,
+        overlapDeg = 0.01,
+        jobs = 1,
+        maxUnionPolygons,
+        maxUnionCoords,
+        shardTimeoutMs,
+    } = {},
 ) {
     const t0 = Date.now();
     const tiles = buildTileGrid(extractBbox, tileDeg, overlapDeg);
@@ -814,6 +993,12 @@ export async function polygonDissolveParallel(
                 `under the ${budgetMB}MB RAM budget / ${nCols} columns)`,
         );
     }
+    if (shardTimeoutMs) {
+        console.log(
+            `  [dissolve] shard timeout: ${(shardTimeoutMs / 1000).toFixed(0)}s ` +
+                `per shard`,
+        );
+    }
 
     const dir = await mkdtemp(join(tmpdir(), "dissolve-shards-"));
     try {
@@ -851,6 +1036,8 @@ export async function polygonDissolveParallel(
                     tiles: band,
                     clipRect,
                     simplifyTolerance,
+                    maxUnionPolygons,
+                    maxUnionCoords,
                 }),
             );
             specs.push({ specPath, outputPath });
@@ -858,9 +1045,65 @@ export async function polygonDissolveParallel(
 
         // Parent-measured wall-clock per shard (spawn→exit), so we can report
         // band balance without the shards reporting back.
-        const durationsMs = await Promise.all(
-            specs.map(({ specPath }) => runShard(specPath, perChildMB)),
+        const shardResults = await Promise.all(
+            specs.map(({ specPath }) =>
+                runShard(specPath, perChildMB, shardTimeoutMs),
+            ),
         );
+
+        // Layer 2: retry timed-out shards once with forceSkipUnion.
+        let timedOutCount = 0;
+        for (let i = 0; i < shardResults.length; i++) {
+            if (!shardResults[i].timedOut) continue;
+            timedOutCount++;
+
+            const { specPath, outputPath } = specs[i];
+            const band = bands[i];
+            console.warn(
+                `  [dissolve] shard ${i + 1}/${bands.length} timed out after ` +
+                    `${(shardResults[i].ms / 1000).toFixed(1)}s — retrying ` +
+                    `with forceSkipUnion (polyclip-free, cannot hang)`,
+            );
+
+            // Clean up potentially partial output from the killed shard.
+            try {
+                await rm(outputPath, { force: true });
+            } catch {
+                // File may not exist — best-effort cleanup.
+            }
+            try {
+                await rm(outputPath + ".tmp", { force: true });
+            } catch {
+                // File may not exist — best-effort cleanup.
+            }
+
+            // Rewrite spec with forceSkipUnion.
+            const spec = JSON.parse(await readFile(specPath, "utf8"));
+            spec.forceSkipUnion = true;
+            await writeFile(specPath, JSON.stringify(spec));
+
+            // Retry once.
+            const retry = await runShard(specPath, perChildMB, shardTimeoutMs);
+            if (retry.timedOut) {
+                throw new Error(
+                    `dissolve shard ${i + 1}/${bands.length} timed out even ` +
+                        `with forceSkipUnion (bbox ${band[0]?.[0]?.toFixed(2)},${band[0]?.[1]?.toFixed(2)}) — ` +
+                        `this is a real bug, not a hang`,
+                );
+            }
+            shardResults[i] = retry;
+            console.log(
+                `  [dissolve] shard ${i + 1}/${bands.length} retry succeeded ` +
+                    `in ${(retry.ms / 1000).toFixed(1)}s`,
+            );
+        }
+        if (timedOutCount > 0) {
+            console.log(
+                `  [dissolve] ${timedOutCount} shard(s) timed out and were retried`,
+            );
+        }
+
+        const durationsMs = shardResults.map((r) => r.ms);
 
         const ranked = durationsMs
             .map((ms, i) => ({ shard: i, ms }))
@@ -899,8 +1142,23 @@ export async function polygonDissolveParallel(
     }
 }
 
-/** Run one dissolve shard as a child process; resolve with its wall-clock ms. */
-function runShard(specPath, perChildMB) {
+/**
+ * Run one dissolve shard as a child process.
+ *
+ * @param {string} specPath - path to the JSON spec file
+ * @param {number} perChildMB - V8 heap cap for the child
+ * @param {number} [shardTimeoutMs] - wall-clock budget; child is SIGKILL'd on
+ *   expiry. Resolves with `{timedOut: true}` instead of rejecting so the
+ *   caller can retry with `forceSkipUnion`.
+ * @param {string} [workerPath] - path to worker script (default WORKER_PATH)
+ * @returns {Promise<{ms: number, timedOut: boolean}>}
+ */
+export function runShard(
+    specPath,
+    perChildMB,
+    shardTimeoutMs,
+    workerPath = WORKER_PATH,
+) {
     return new Promise((resolve, reject) => {
         const startedAt = Date.now();
         const child = spawn(
@@ -909,7 +1167,7 @@ function runShard(specPath, perChildMB) {
                 "--import",
                 "tsx",
                 `--max-old-space-size=${perChildMB}`,
-                WORKER_PATH,
+                workerPath,
                 specPath,
             ],
             // Drop the parent's (large) NODE_OPTIONS heap so the per-shard cap
@@ -919,15 +1177,36 @@ function runShard(specPath, perChildMB) {
                 env: { ...process.env, NODE_OPTIONS: "" },
             },
         );
-        child.on("error", reject);
+
+        let timeoutId;
+        if (shardTimeoutMs && shardTimeoutMs > 0) {
+            timeoutId = setTimeout(() => {
+                child.kill("SIGKILL");
+            }, shardTimeoutMs);
+        }
+
+        child.on("error", (err) => {
+            if (timeoutId) clearTimeout(timeoutId);
+            reject(err);
+        });
+
         child.on("exit", (code, signal) => {
-            if (code === 0) resolve(Date.now() - startedAt);
-            else
+            if (timeoutId) clearTimeout(timeoutId);
+            const elapsed = Date.now() - startedAt;
+
+            if (code === 0) {
+                resolve({ ms: elapsed, timedOut: false });
+            } else if (signal === "SIGKILL") {
+                // The shard was killed by our timeout — don't reject; let the
+                // caller retry with forceSkipUnion.
+                resolve({ ms: elapsed, timedOut: true });
+            } else {
                 reject(
                     new Error(
                         `dissolve shard failed (code=${code} signal=${signal}) — ${specPath}`,
                     ),
                 );
+            }
         });
     });
 }

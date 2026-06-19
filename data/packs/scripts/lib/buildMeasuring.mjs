@@ -110,6 +110,12 @@ const WATER_EMIT_CELL_DEG = _m.dissolve?.emitCellDeg ?? 0.1;
  * by waterway centerlines. Default 100 m² removes only collapsed slivers.
  */
 const MIN_WATER_POLYGON_AREA_M2 = _m.dissolve?.minWaterPolygonAreaM2 ?? 100;
+/** Skip union (pass-through) when input exceeds this many polygons. */
+const DISSOLVE_MAX_UNION_POLYGONS = _m.dissolve?.maxUnionPolygons;
+/** Skip union (pass-through) when input exceeds this many total coords. */
+const DISSOLVE_MAX_UNION_COORDS = _m.dissolve?.maxUnionCoords;
+/** Wall-clock budget per parallel shard (ms); SIGKILL + forceSkipUnion retry. */
+const DISSOLVE_SHARD_TIMEOUT_MS = _m.dissolve?.shardTimeoutMs;
 const NODE_PRECISION = _m.stitching?.nodePrecision ?? 7;
 const STITCH_MAX_TURN_COS = _m.stitching?.maxTurnCos ?? -0.5;
 const PARALLEL_MAX_LATERAL_M = _m.parallelDedup?.maxLateralM ?? 30;
@@ -808,22 +814,35 @@ export async function buildMeasuringArtifact({
                     overrides.dissolve?.overlapDeg ?? DISSOLVE_TILE_OVERLAP_DEG;
                 // Shard the (independent) dissolve tiles across child processes
                 // when --jobs > 1: faster, and each shard's heap is isolated.
+                const dissolveOpts = {
+                    tileDeg,
+                    overlapDeg,
+                    maxUnionPolygons:
+                        overrides.dissolve?.maxUnionPolygons ??
+                        DISSOLVE_MAX_UNION_POLYGONS,
+                    maxUnionCoords:
+                        overrides.dissolve?.maxUnionCoords ??
+                        DISSOLVE_MAX_UNION_COORDS,
+                };
                 const dissolved =
                     jobs > 1
                         ? await polygonDissolveParallel(
                               polyFeatures,
                               extractBbox,
                               tolerance,
-                              { tileDeg, overlapDeg, jobs },
+                              {
+                                  ...dissolveOpts,
+                                  jobs,
+                                  shardTimeoutMs:
+                                      overrides.dissolve?.shardTimeoutMs ??
+                                      DISSOLVE_SHARD_TIMEOUT_MS,
+                              },
                           )
                         : polygonDissolve(
                               polyFeatures,
                               extractBbox,
                               tolerance,
-                              {
-                                  tileDeg,
-                                  overlapDeg,
-                              },
+                              dissolveOpts,
                           );
                 features.length = 0;
                 features.push(...dissolved);
@@ -862,6 +881,10 @@ export async function buildMeasuringArtifact({
                     const tMerge = Date.now();
                     const mergedCoords = geosUnaryUnionCoords(
                         features.map((f) => f.geometry.coordinates),
+                        {
+                            maxUnionPolygons: dissolveOpts.maxUnionPolygons,
+                            maxUnionCoords: dissolveOpts.maxUnionCoords,
+                        },
                     );
                     if (mergedCoords.length > 0) {
                         mergedPolyCoords = mergedCoords[0];

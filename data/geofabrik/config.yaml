@@ -111,6 +111,16 @@ measuring:
         # Overlap between adjacent tiles in degrees.  Prevents seams at tile
         # boundaries: features straddling a boundary are present in both tiles.
         overlapDeg: 0.01
+        # Skip union (pass-through) when a single op exceeds this many input
+        # polygons. Pre-emptively bounds worst-case op size regardless of engine
+        # so a dense tile can never hang the build.
+        maxUnionPolygons: 4000
+        # …or this many total coordinates across all input rings.
+        maxUnionCoords: 400000
+        # Wall-clock budget per parallel shard in milliseconds. A shard that
+        # exceeds this is SIGKILL'd and retried once with forceSkipUnion
+        # (polyclip-free, cannot hang). Default 15 min.
+        shardTimeoutMs: 900000
 
     # Exact shared-node stitching parameters.
     stitching:
