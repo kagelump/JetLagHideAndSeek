@@ -123,6 +123,85 @@ export function filterFeaturesByBboxMargin(
     return features.filter((f) => bboxIntersects(featureBbox(f), expandedBbox));
 }
 
+/** Bbox of a polygon's outer ring. */
+function outerRingBbox(ring: number[][]): Bbox {
+    let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+    for (const [x, y] of ring) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+    }
+    return [minX, minY, maxX, maxY];
+}
+
+/**
+ * Drops polygon **member** rings whose bbox doesn't intersect the play-area
+ * bbox expanded by `marginMeters`. Line features pass through unchanged.
+ *
+ * Why this exists beyond `filterFeaturesByBboxMargin`: a dissolved water bundle
+ * ships a handful of continent-scale `MultiPolygon`s, so each one's *feature*
+ * bbox intersects every play-area window — feature-level filtering keeps the
+ * entire ~100k-coord geometry, which the buffer then chokes on (and the global
+ * simplify budget over-simplifies, notching narrow inlets). Filtering at member
+ * granularity restores the windowing the giant feature defeats: only water
+ * bodies near the play area survive, keeping each buffer op small. Members are
+ * whole water bodies, so no artificial cut edges are introduced (unlike a
+ * geometric box clip). The margin must be ≥ the buffer radius so water just
+ * outside the play area that buffers *into* it is retained.
+ */
+export function filterPolygonMembersByBbox(
+    features: LineOrPolygonFeature[],
+    bbox: Bbox,
+    marginMeters: number,
+): LineOrPolygonFeature[] {
+    if (features.length === 0) return [];
+    const midLat = (bbox[1] + bbox[3]) / 2;
+    const marginLon = metersToDegLon(marginMeters, midLat);
+    const marginLat = metersToDegLat(marginMeters);
+    const expanded: Bbox = [
+        bbox[0] - marginLon,
+        bbox[1] - marginLat,
+        bbox[2] + marginLon,
+        bbox[3] + marginLat,
+    ];
+
+    const result: LineOrPolygonFeature[] = [];
+    for (const f of features) {
+        const g = f.geometry;
+        if (g.type === "Polygon") {
+            if (bboxIntersects(outerRingBbox(g.coordinates[0]), expanded)) {
+                result.push(f);
+            }
+            continue;
+        }
+        if (g.type === "MultiPolygon") {
+            const kept = g.coordinates.filter((poly) =>
+                bboxIntersects(outerRingBbox(poly[0]), expanded),
+            );
+            if (kept.length === g.coordinates.length) {
+                result.push(f);
+            } else if (kept.length > 0) {
+                // Re-emit a trimmed feature; clear the cached bbox so consumers
+                // recompute it from the surviving members.
+                result.push({
+                    ...f,
+                    bbox: undefined,
+                    geometry: { type: "MultiPolygon", coordinates: kept },
+                });
+            }
+            // kept.length === 0 → whole feature is outside the window; drop it.
+            continue;
+        }
+        // Line / MultiLine features pass through unchanged.
+        result.push(f);
+    }
+    return result;
+}
+
 // ─── computeLineCategory cache ─────────────────────────────────────────
 
 /** Increment to invalidate all cached line-category results. */
@@ -265,6 +344,8 @@ export {
     computeLineBuffer,
     computeLineBufferCached,
     clearLineBufferCache,
+    simplifyPolygonBufferFeatures,
+    dissolveBuffersByBinaryUnion,
 } from "./lineBufferComputation";
 export {
     getDilatedPlayArea,

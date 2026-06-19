@@ -416,6 +416,120 @@ export function clipCoordsToRect(coords, rect) {
     }
 }
 
+/**
+ * Approximate area (m²) of a polygon (outer ring minus holes) in lon/lat via
+ * an equirectangular projection at the ring's mean latitude. Good enough for a
+ * small drop-threshold; we are not measuring water, just rejecting slivers.
+ *
+ * @param {number[][][]} poly - Polygon coordinates (outer ring first, then holes)
+ * @returns {number} signed-summed absolute area in m²
+ */
+export function polygonAreaM2(poly) {
+    if (!poly || poly.length === 0 || poly[0].length < 4) return 0;
+    let latSum = 0,
+        latN = 0;
+    for (const [, y] of poly[0]) {
+        latSum += y;
+        latN++;
+    }
+    const mLat = 111320;
+    const mLon = 111320 * Math.cos(((latSum / latN) * Math.PI) / 180);
+    const ringArea = (ring) => {
+        let a = 0;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            a += ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+        }
+        return Math.abs(a / 2) * mLon * mLat;
+    };
+    let area = ringArea(poly[0]);
+    for (let h = 1; h < poly.length; h++) area -= ringArea(poly[h]);
+    return Math.max(0, area);
+}
+
+/**
+ * Drops member polygons whose area is below `minAreaM2` (degenerate slivers).
+ * Returns a new array of the surviving polygons.
+ *
+ * @param {number[][][][]} polygons - MultiPolygon coordinates (array of polygons)
+ * @param {number} minAreaM2
+ * @returns {{kept: number[][][][], dropped: number}}
+ */
+export function filterTinyPolygons(polygons, minAreaM2) {
+    if (!polygons || minAreaM2 <= 0) {
+        return { kept: polygons ?? [], dropped: 0 };
+    }
+    const kept = [];
+    let dropped = 0;
+    for (const poly of polygons) {
+        if (polygonAreaM2(poly) >= minAreaM2) kept.push(poly);
+        else dropped++;
+    }
+    return { kept, dropped };
+}
+
+/**
+ * Buckets dissolved water member polygons into a coarse grid, emitting one
+ * `MultiPolygon` Feature per non-empty cell.
+ *
+ * Why: the runtime selects buffer-input features by **feature bbox** (one bbox
+ * test per feature). A dissolve that emits one continent-scale `MultiPolygon`
+ * gives that feature a bbox spanning the whole region, so it is *always*
+ * selected and the runtime buffers ~100k coords at once — which over-simplifies
+ * and self-intersects into the body-of-water masking notch. Emitting many small
+ * features instead restores effective windowing: only water near the play area
+ * is selected and buffered. The runtime already unions the per-feature buffers,
+ * so emitting overlapping/touching pieces is expected (see
+ * `lineBufferComputation.computeLineBuffer`).
+ *
+ * Members are assigned **whole** by their bbox center — never cut — so no
+ * artificial straight edges are introduced (unlike a geometric box clip). A
+ * member larger than a cell simply yields a feature with a slightly larger
+ * bbox; that is still vastly better than one region-spanning feature.
+ *
+ * @param {number[][][][]} polygons - MultiPolygon coordinates (array of polygons)
+ * @param {number} cellDeg - grid cell size in degrees
+ * @returns {Array<{type:'Feature',bbox:number[],geometry:object,properties:object}>}
+ */
+export function bucketPolygonsToGridFeatures(polygons, cellDeg = 0.1) {
+    if (!polygons || polygons.length === 0) return [];
+    const buckets = new Map();
+    for (const poly of polygons) {
+        if (!poly || poly.length === 0) continue;
+        // bbox center of the outer ring → grid cell key.
+        let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity;
+        for (const [x, y] of poly[0]) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+        }
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        const key = `${Math.floor(cx / cellDeg)},${Math.floor(cy / cellDeg)}`;
+        let cell = buckets.get(key);
+        if (!cell) {
+            cell = [];
+            buckets.set(key, cell);
+        }
+        cell.push(poly);
+    }
+
+    const features = [];
+    for (const cellPolys of buckets.values()) {
+        const geometry = { type: "MultiPolygon", coordinates: cellPolys };
+        features.push({
+            type: "Feature",
+            bbox: computePolygonBbox(geometry),
+            geometry,
+            properties: {},
+        });
+    }
+    return features;
+}
+
 // ─── Polygon dissolve (for polygon-dissolve mode) ──────────────────────────
 
 /**

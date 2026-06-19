@@ -19,9 +19,12 @@ import {
     computeLineCategory,
     computeLineDistance,
     computeLineBuffer,
+    simplifyPolygonBufferFeatures,
     applyBufferBudget,
     featureToRings,
     filterFeaturesByBboxMargin,
+    filterPolygonMembersByBbox,
+    type LineOrPolygonFeature,
     polygonFeaturesToLineFeatures,
     getClippedLineFeaturesCached,
     getDilatedPlayArea,
@@ -1156,6 +1159,117 @@ describe("filterFeaturesByBboxMargin", () => {
     });
 });
 
+// ─── filterPolygonMembersByBbox ──────────────────────────────────────────
+
+describe("filterPolygonMembersByBbox", () => {
+    // ~1 km square in central Tokyo.
+    const BBOX: [number, number, number, number] = [
+        139.69, 35.68, 139.71, 35.7,
+    ];
+
+    /** Axis-aligned square ring centered at [cx, cy] with side `s` degrees. */
+    function square(cx: number, cy: number, s = 0.001): [number, number][] {
+        const h = s / 2;
+        return [
+            [cx - h, cy - h],
+            [cx + h, cy - h],
+            [cx + h, cy + h],
+            [cx - h, cy + h],
+            [cx - h, cy - h],
+        ];
+    }
+
+    it("drops MultiPolygon members outside the window, keeps near ones", () => {
+        // One member inside the bbox, one 10 km away.
+        const f: Feature<MultiPolygon> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "MultiPolygon",
+                coordinates: [
+                    [square(139.7, 35.69)], // inside
+                    [square(139.7, 35.58)], // ~12 km south, far outside
+                ],
+            },
+        };
+        const result = filterPolygonMembersByBbox([f], BBOX, 500);
+        expect(result).toHaveLength(1);
+        const g = result[0].geometry as MultiPolygon;
+        expect(g.type).toBe("MultiPolygon");
+        expect(g.coordinates).toHaveLength(1);
+        // The surviving member is the in-window one.
+        expect(g.coordinates[0][0][0][1]).toBeCloseTo(35.69, 2);
+    });
+
+    it("returns the original feature unchanged when all members are in window", () => {
+        const f: Feature<MultiPolygon> = {
+            type: "Feature",
+            bbox: [139.698, 35.688, 139.702, 35.692],
+            properties: {},
+            geometry: {
+                type: "MultiPolygon",
+                coordinates: [
+                    [square(139.7, 35.69)],
+                    [square(139.6995, 35.69)],
+                ],
+            },
+        };
+        const result = filterPolygonMembersByBbox([f], BBOX, 500);
+        expect(result).toHaveLength(1);
+        // Same reference — no trimming, so the cached bbox is preserved.
+        expect(result[0]).toBe(f);
+    });
+
+    it("drops a MultiPolygon entirely when no member is in window", () => {
+        const f: Feature<MultiPolygon> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "MultiPolygon",
+                coordinates: [[square(139.7, 35.5)], [square(139.5, 35.5)]],
+            },
+        };
+        expect(filterPolygonMembersByBbox([f], BBOX, 500)).toHaveLength(0);
+    });
+
+    it("clears the cached bbox on a trimmed feature so it is recomputed", () => {
+        const f: Feature<MultiPolygon> = {
+            type: "Feature",
+            // Stale wide bbox spanning both members.
+            bbox: [139.5, 35.5, 139.71, 35.7],
+            properties: {},
+            geometry: {
+                type: "MultiPolygon",
+                coordinates: [[square(139.7, 35.69)], [square(139.5, 35.5)]],
+            },
+        };
+        const result = filterPolygonMembersByBbox([f], BBOX, 500);
+        expect(result).toHaveLength(1);
+        expect(result[0].bbox).toBeUndefined();
+    });
+
+    it("passes line features through unchanged", () => {
+        const line: LineOrPolygonFeature = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [139.7, 35.69],
+                    [139.705, 35.695],
+                ],
+            },
+        };
+        const result = filterPolygonMembersByBbox([line], BBOX, 500);
+        expect(result).toHaveLength(1);
+        expect(result[0]).toBe(line);
+    });
+
+    it("returns empty array for empty input", () => {
+        expect(filterPolygonMembersByBbox([], BBOX, 500)).toHaveLength(0);
+    });
+});
+
 // ─── computeLineBuffer input budget tests ───────────────────────────────
 
 describe("computeLineBuffer input budget", () => {
@@ -1789,6 +1903,145 @@ describe("polygon body-of-water", () => {
             const result = computeLineBuffer([mp], 1000);
             expect(result).not.toBeNull();
             expect(result!.geometry.type).toMatch(/Polygon/);
+        });
+    });
+
+    describe("simplifyPolygonBufferFeatures (per-member tolerance)", () => {
+        /**
+         * A small "narrow inlet" ring (~70 m wide, many closely-spaced
+         * vertices) plus a huge dense ring. Under one global aggressive
+         * tolerance the small ring's detail is destroyed (the notch cause);
+         * per-member the small ring stays gentle. The radius here yields a
+         * gentle tol of 10 m and an aggressive tol of 50 m.
+         */
+        function narrowInletRing(): [number, number][] {
+            // A small water body with a zigzag shoreline: top edge alternates
+            // by ~0.0004° (~36 m). Gentle 10 m simplify keeps the teeth (36 >
+            // 10); aggressive 50 m would erase them (36 < 50) — exactly the
+            // narrow-inlet detail whose loss notches the buffer.
+            const ring: [number, number][] = [];
+            const n = 30;
+            for (let i = 0; i <= n; i++) {
+                const x = 139.7 + i * 0.0002; // ~18 m steps
+                const y = 35.642 + (i % 2 === 0 ? 0 : 0.0004);
+                ring.push([x, y]);
+            }
+            ring.push([139.7 + n * 0.0002, 35.64]); // straight bottom edge
+            ring.push([139.7, 35.64]);
+            ring.push(ring[0]);
+            return ring;
+        }
+
+        function bigDenseRing(): [number, number][] {
+            // ~2.5k vertices around a large bay — exceeds the per-member coord
+            // limit (2000) so it is simplified aggressively.
+            const ring: [number, number][] = [];
+            const n = 2500;
+            for (let i = 0; i < n; i++) {
+                const t = (i / n) * 2 * Math.PI;
+                ring.push([
+                    139.8 + 0.05 * Math.cos(t),
+                    35.5 + 0.05 * Math.sin(t),
+                ]);
+            }
+            ring.push(ring[0]);
+            return ring;
+        }
+
+        it("keeps small narrow members gentle while simplifying huge ones aggressively", () => {
+            const small = narrowInletRing();
+            const big = bigDenseRing();
+            const feat: Feature<MultiPolygon> = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: [[small], [big]],
+                },
+            };
+
+            // radius 500 → gentle tol 10 m, aggressive tol 100 m.
+            const out = simplifyPolygonBufferFeatures([feat], 500);
+            expect(out).toHaveLength(1);
+            const g = out[0].geometry as MultiPolygon;
+            expect(g.coordinates).toHaveLength(2);
+
+            const smallOut = g.coordinates[0][0].length;
+            const bigOut = g.coordinates[1][0].length;
+
+            // The small narrow member retains most of its vertices (gentle).
+            expect(smallOut).toBeGreaterThan(small.length * 0.6);
+            // The big dense member is aggressively reduced.
+            expect(bigOut).toBeLessThan(big.length * 0.2);
+        });
+
+        it("does not over-simplify a narrow member just because a sibling is huge", () => {
+            // This is the regression: a single global tolerance picked from the
+            // TOTAL coord count would simplify the small inlet at the aggressive
+            // tolerance, destroying it and notching the buffer.
+            const small = narrowInletRing();
+            const big = bigDenseRing();
+            const combined: Feature<MultiPolygon> = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: [[small], [big]],
+                },
+            };
+            const isolated: Feature<Polygon> = {
+                type: "Feature",
+                properties: {},
+                geometry: { type: "Polygon", coordinates: [small] },
+            };
+
+            const combinedSmall = (
+                simplifyPolygonBufferFeatures([combined], 500)[0]
+                    .geometry as MultiPolygon
+            ).coordinates[0][0].length;
+            const isolatedSmall = (
+                simplifyPolygonBufferFeatures([isolated], 500)[0]
+                    .geometry as Polygon
+            ).coordinates[0].length;
+
+            // The small member is simplified identically whether or not the huge
+            // sibling is present — its tolerance depends only on its own size.
+            expect(combinedSmall).toBe(isolatedSmall);
+        });
+
+        it("drops a degenerate near-zero-area member but keeps a real pond", () => {
+            // A collapsed sliver (~all coords nearly collinear, area ≈ 0) plus a
+            // real ~10,000 m² pond. The sliver would buffer into a spurious
+            // circle; it must be dropped, the pond kept.
+            const sliver: [number, number][] = [
+                [139.7, 35.64],
+                [139.7008, 35.640001],
+                [139.7016, 35.64],
+                [139.7008, 35.640002],
+                [139.7, 35.64],
+            ];
+            const pond: [number, number][] = [
+                [139.8, 35.64],
+                [139.801, 35.64],
+                [139.801, 35.641],
+                [139.8, 35.641],
+                [139.8, 35.64],
+            ];
+            const feat: Feature<MultiPolygon> = {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: [[sliver], [pond]],
+                },
+            };
+            const out = simplifyPolygonBufferFeatures([feat], 116.5);
+            expect(out).toHaveLength(1);
+            const g = out[0].geometry as MultiPolygon;
+            // Only the pond survives.
+            expect(g.coordinates).toHaveLength(1);
+            // The survivor is the pond (centered ~139.8).
+            expect(g.coordinates[0][0][0][0]).toBeCloseTo(139.8, 2);
         });
     });
 

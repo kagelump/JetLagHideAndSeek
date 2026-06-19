@@ -440,7 +440,28 @@ export async function publish({
     );
     if (commitResult.exitCode === 0) {
         await resolvedExec(`git -C ${root} push origin master`);
-        console.log("  Pushed catalog to master (pages.yml will deploy).");
+        console.log("  Pushed catalog to master.");
+
+        // The catalog commit carries [skip ci] so the heavy app-checks
+        // workflow doesn't run on a data-only publish — but [skip ci] is a
+        // blanket skip that also suppresses the Pages deploy (pages.yml), so
+        // the catalog would never go live. Explicitly dispatch the Pages
+        // workflow (it has workflow_dispatch) to deploy it.
+        const dispatch = await resolvedExec(
+            `gh workflow run pages.yml --ref master`,
+        );
+        if (dispatch.exitCode === 0) {
+            console.log(
+                "  Triggered Pages deploy (gh workflow run pages.yml).",
+            );
+        } else {
+            console.warn(
+                "  WARNING: could not trigger the Pages deploy automatically " +
+                    `(${dispatch.stderr.trim() || "gh CLI unavailable / not authenticated"}).\n` +
+                    "  The catalog is committed; deploy it manually with:\n" +
+                    "    gh workflow run pages.yml --ref master",
+            );
+        }
     } else if (
         commitResult.stderr.includes("nothing to commit") ||
         commitResult.stdout.includes("nothing to commit")

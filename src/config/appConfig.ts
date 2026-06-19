@@ -57,6 +57,29 @@ export const APP_CONFIG = {
             polySimplifyFraction: 0.2,
             /** Polygon simplify floor in meters. */
             polySimplifyMinM: 50,
+            /**
+             * Per-member coord count above which a single polygon ring-group is
+             * simplified at the aggressive `polySimplifyTolerance` instead of
+             * the gentle `simplifyTolerance`. Dissolved water ships as a few
+             * continent-scale MultiPolygons; simplifying every member at one
+             * global tolerance (chosen from the *total* coord count) over-
+             * simplifies small narrow water bodies (e.g. a river mouth),
+             * sharpening inlets so the buffer self-intersects into a notch.
+             * Deciding per member keeps small/narrow features gentle (no notch)
+             * while still bounding huge coastlines. See
+             * docs/water-bundle-notes-handoff1.md.
+             */
+            polyMemberSimplifyCoordLimit: 2_000,
+            /**
+             * Runtime guard: drop a polygon buffer-input member whose area (m²)
+             * falls below this after simplification. The dissolve can collapse a
+             * thin water strip into a near-zero-area sliver; buffering it (with
+             * GEOS MakeValid) recovers a spurious circular blob in the mask. The
+             * pack pipeline filters these at build time, but this defends against
+             * any already-shipped bundle without a rebuild. 100 m² (~10 m square)
+             * only catches collapsed slivers — real ponds are far larger.
+             */
+            degenerateWaterPolygonAreaM2: 100,
 
             // ── Clip ───────────────────────────────────────────
             /**
@@ -229,6 +252,13 @@ export const APP_CONFIG = {
         installedIndexKey: "installed-packs-v2",
         /** Maximum inflate bytes for any single artifact (100 MB). */
         inflateMaxBytes: 100 * 1024 * 1024,
+        /**
+         * GitHub "new issue" endpoint for reporting an unrecoverable pack
+         * bundle error (integrity/validation failure that re-downloading can't
+         * fix). The Offline Data screen appends a prefilled title/body.
+         */
+        bugReportUrl:
+            "https://github.com/kagelump/JetLagHideAndSeek/issues/new",
     },
 } as const;
 

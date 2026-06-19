@@ -37,13 +37,13 @@ import {
 import {
     MEASURING_LINE,
     simplifyTolerance,
-    polySimplifyTolerance,
     minFeatureLength,
 } from "@/config/appConfig";
 
 import type { MeasuringCategory } from "./measuringTypes";
 import { LINE_MEASURING_CATEGORIES } from "./measuringCategories";
 import { selectWindowFeatures } from "./lineMeasuringGeometry";
+import { simplifyPolygonBufferFeatures } from "./lineBufferComputation";
 
 // ─── Async helpers ────────────────────────────────────────────────────────
 
@@ -224,28 +224,6 @@ function simplifyCoords(coords: Position[], toleranceM: number): Position[] {
     return result;
 }
 
-function simplifyPolygonCoords(
-    geom: Polygon | MultiPolygon,
-    toleranceM: number,
-): Polygon | MultiPolygon | null {
-    if (geom.type === "Polygon") {
-        const simplified = geom.coordinates
-            .map((ring) => simplifyCoords(ring as Position[], toleranceM))
-            .filter((ring) => ring.length >= 4);
-        if (simplified.length === 0) return null;
-        return { type: "Polygon", coordinates: simplified };
-    }
-    const simplified = geom.coordinates
-        .map((poly) =>
-            poly
-                .map((ring) => simplifyCoords(ring as Position[], toleranceM))
-                .filter((ring) => ring.length >= 4),
-        )
-        .filter((poly) => poly.length > 0);
-    if (simplified.length === 0) return null;
-    return { type: "MultiPolygon", coordinates: simplified };
-}
-
 // ─── Input preparation (replicates production pipeline up to buffer) ──────
 
 /**
@@ -291,40 +269,12 @@ function prepareBufferInput(
         }
     }
 
-    // Simplify polygons.
-    const simplifyTol = simplifyTolerance(radiusMeters);
-    const preparedPolys: Feature<Polygon | MultiPolygon>[] = [];
-
-    if (polyFeatures.length > 0) {
-        let totalPolyCoords = 0;
-        const walkCoords = (c: unknown) => {
-            if (Array.isArray(c) && typeof c[0] === "number") {
-                totalPolyCoords++;
-            } else if (Array.isArray(c)) {
-                for (const item of c) walkCoords(item);
-            }
-        };
-        for (const pf of polyFeatures) walkCoords(pf.geometry.coordinates);
-
-        let polyTol = simplifyTol;
-        if (totalPolyCoords > MAX_BUFFER_COORDS) {
-            polyTol = polySimplifyTolerance(radiusMeters);
-        }
-
-        for (const pf of polyFeatures) {
-            let geom = pf.geometry;
-            if (polyTol > 0) {
-                const simplified = simplifyPolygonCoords(geom, polyTol);
-                if (!simplified) continue;
-                geom = simplified;
-            }
-            preparedPolys.push({
-                type: "Feature",
-                properties: {},
-                geometry: geom,
-            });
-        }
-    }
+    // Simplify polygons with the same per-member tolerance as production
+    // (`computeLineBuffer`) so the harness reflects the real buffer input.
+    const preparedPolys = simplifyPolygonBufferFeatures(
+        polyFeatures,
+        radiusMeters,
+    );
 
     // Prepare lines.
     let lineMerged: Feature<MultiLineString> | null = null;

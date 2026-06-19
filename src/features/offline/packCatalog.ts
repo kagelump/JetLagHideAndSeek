@@ -55,8 +55,14 @@ export type Artifact = z.infer<typeof artifactSchema>;
 // ─── Fetch function ──────────────────────────────────────────────────────
 
 async function fetchCatalog(url: string): Promise<Catalog> {
-    console.log("[packCatalog] Fetching catalog from:", url);
-    const response = await fetch(url);
+    // Cache-bust with a timestamp so a manual refresh (or app revisit) always
+    // sees the latest published catalog rather than a CDN/HTTP-cached copy —
+    // GitHub Pages serves catalog.json with its own Cache-Control, so a plain
+    // refetch can otherwise return stale bytes after a republish. The query
+    // param is the portable guarantee; `cache: "no-store"` is belt-and-braces.
+    const bustUrl = `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    console.log("[packCatalog] Fetching catalog from:", bustUrl);
+    const response = await fetch(bustUrl, { cache: "no-store" });
     if (!response.ok) {
         console.error(
             `[packCatalog] Catalog fetch failed: HTTP ${response.status} from ${url}`,

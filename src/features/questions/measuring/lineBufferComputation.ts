@@ -1,7 +1,11 @@
 import { multiLineString } from "@turf/helpers";
 
 import { type Position } from "@/shared/geojson";
-import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
+import {
+    getGeometryBackend,
+    type GeometryBackend,
+} from "@/shared/geometry/geometryBackend";
+import { polygonAreaM2 } from "@/shared/geometry/parityMetrics";
 import {
     MEASURING_LINE,
     simplifyTolerance,
@@ -27,7 +31,7 @@ import {
 // ─── Buffer cache ──────────────────────────────────────────────────────────
 
 /** Increment to invalidate all cached buffer results when the algorithm changes. */
-const LINE_BUFFER_CACHE_VERSION = 5;
+const LINE_BUFFER_CACHE_VERSION = 8;
 
 // ─── Buffer input budget ───────────────────────────────────────────────────
 
@@ -36,7 +40,89 @@ const {
     maxBufferCoords: MAX_BUFFER_COORDS,
     bufferSteps: BUFFER_STEPS,
     bufferCacheMax: LINE_BUFFER_CACHE_MAX,
+    polyMemberSimplifyCoordLimit: POLY_MEMBER_SIMPLIFY_COORD_LIMIT,
+    degenerateWaterPolygonAreaM2: DEGENERATE_WATER_POLYGON_AREA_M2,
 } = MEASURING_LINE;
+
+/** Coord count of one member polygon (outer ring + holes). */
+function memberCoordCount(poly: Position[][]): number {
+    let n = 0;
+    for (const ring of poly) n += ring.length;
+    return n;
+}
+
+/**
+ * Simplifies polygon buffer-input features with a **per-member** tolerance.
+ *
+ * The previous logic picked one tolerance for every member from the *total*
+ * coord count: a dissolved water bundle ships a few continent-scale
+ * MultiPolygons, so the total always blew the budget and *every* member —
+ * including small, narrow water bodies like a river mouth — was simplified at
+ * the aggressive `polySimplifyTolerance` (~50 m). Per-ring Douglas–Peucker at
+ * 50 m sharpens narrow inlets, and a buffer wider than the inlet then self-
+ * intersects into a concave notch on the land side (the body-of-water masking
+ * artifact; see docs/water-bundle-notes-handoff1.md).
+ *
+ * Deciding tolerance per member keeps small/narrow members gentle (so inlets
+ * survive) while still simplifying genuinely huge coastlines aggressively to
+ * bound the buffer op. Combined with member-level bbox windowing upstream
+ * (`filterPolygonMembersByBbox`), the buffered geometry stays small.
+ */
+export function simplifyPolygonBufferFeatures(
+    polyFeatures: Feature<Polygon | MultiPolygon>[],
+    radiusMeters: number,
+): Feature<Polygon | MultiPolygon>[] {
+    if (polyFeatures.length === 0) return [];
+    const gentleTol = simplifyTolerance(radiusMeters);
+    const aggressiveTol = polySimplifyTolerance(radiusMeters);
+
+    const simplifyMember = (poly: Position[][]): Position[][] | null => {
+        const tol =
+            memberCoordCount(poly) > POLY_MEMBER_SIMPLIFY_COORD_LIMIT
+                ? aggressiveTol
+                : gentleTol;
+        const simplified = simplifyPolygonCoords(
+            { type: "Polygon", coordinates: poly },
+            tol,
+        );
+        if (!simplified) return null;
+        const coords = simplified.coordinates as Position[][];
+        // Drop degenerate slivers: a near-zero-area member buffers (via GEOS
+        // MakeValid) into a spurious circular blob in the mask. Defends against
+        // already-shipped bundles; the pack pipeline also filters these.
+        if (polygonAreaM2(coords) < DEGENERATE_WATER_POLYGON_AREA_M2) {
+            return null;
+        }
+        return coords;
+    };
+
+    const out: Feature<Polygon | MultiPolygon>[] = [];
+    for (const pf of polyFeatures) {
+        const g = pf.geometry;
+        if (g.type === "Polygon") {
+            const simplified = simplifyMember(g.coordinates as Position[][]);
+            if (!simplified) continue;
+            out.push({
+                type: "Feature",
+                properties: {},
+                geometry: { type: "Polygon", coordinates: simplified },
+            });
+            continue;
+        }
+        const members: Position[][][] = [];
+        for (const poly of g.coordinates as Position[][][]) {
+            const simplified = simplifyMember(poly);
+            if (simplified) members.push(simplified);
+        }
+        if (members.length === 0) continue;
+        out.push({
+            type: "Feature",
+            properties: {},
+            geometry: { type: "MultiPolygon", coordinates: members },
+        });
+    }
+    return out;
+}
 
 /**
  * LRU cache keyed on (version, category, center, radiusMeters). The
@@ -188,49 +274,21 @@ export function computeLineBuffer(
     const polygonBuffers: Feature<Polygon | MultiPolygon>[] = [];
 
     if (polyFeatures.length > 0) {
-        // Simplify polygons before buffering (same tolerance as line path).
-        const simplifyTol = simplifyTolerance(radiusMeters);
+        // Simplify each polygon member by its own size (small/narrow members
+        // stay gentle so inlets survive; only huge coastlines are simplified
+        // aggressively). A single global tolerance over a giant dissolved
+        // water MultiPolygon notched narrow river mouths — see
+        // simplifyPolygonBufferFeatures.
+        const prepared = simplifyPolygonBufferFeatures(
+            polyFeatures,
+            radiusMeters,
+        );
 
-        // Count total coords for budget check.
-        let totalPolyCoords = 0;
-        const walkCoords = (c: unknown) => {
-            if (Array.isArray(c) && typeof c[0] === "number") {
-                totalPolyCoords++;
-            } else if (Array.isArray(c)) {
-                for (const item of c) walkCoords(item);
-            }
-        };
-        for (const pf of polyFeatures) {
-            walkCoords(pf.geometry.coordinates);
-        }
-
-        // If polygon coords exceed budget, simplify more aggressively.
-        let polyTol = simplifyTol;
-        if (totalPolyCoords > MAX_BUFFER_COORDS) {
-            polyTol = polySimplifyTolerance(radiusMeters);
-            console.log(
-                `[lineBuffer] polygon budget: ${totalPolyCoords} coords → ` +
-                    `simplify at ${polyTol.toFixed(0)}m`,
-            );
-        }
-
-        for (const pf of polyFeatures) {
-            // Simplify polygon rings.
-            let geom = pf.geometry;
-            if (polyTol > 0) {
-                const simplified = simplifyPolygonCoords(geom, polyTol);
-                if (!simplified) continue;
-                geom = simplified;
-            }
-
+        for (const geomFeat of prepared) {
             // Buffer the dissolved polygon directly.
             try {
                 const buf = getGeometryBackend().bufferMeters(
-                    {
-                        type: "Feature",
-                        properties: {},
-                        geometry: geom,
-                    },
+                    geomFeat,
                     radiusMeters,
                     BUFFER_STEPS,
                 );
@@ -244,8 +302,9 @@ export function computeLineBuffer(
         }
 
         console.log(
-            `[lineBuffer] [${getGeometryBackend().name}] polygon path: ${polyFeatures.length} polys, ` +
-                `${totalPolyCoords} coords → ${polygonBuffers.length} buffers`,
+            `[lineBuffer] [${getGeometryBackend().name}] polygon path: ` +
+                `${polyFeatures.length} input polys → ${prepared.length} ` +
+                `prepared → ${polygonBuffers.length} buffers`,
         );
     }
 
@@ -392,7 +451,7 @@ export function computeLineBuffer(
         return polygonBuffers[0];
     }
 
-    // Combine all buffer results into one MultiPolygon.
+    // Combine all buffer results into one feature.
     const allBuffers: Feature<Polygon | MultiPolygon>[] =
         polygonBuffers.slice();
     if (lineBufferResult) allBuffers.push(lineBufferResult);
@@ -400,39 +459,85 @@ export function computeLineBuffer(
     // No combine needed for a single result.
     if (allBuffers.length === 1) return allBuffers[0];
 
-    // Merge every buffer piece into one MultiPolygon feature.
-    //
     // A multi-piece category like body-of-water yields ~40 heavily-overlapping
-    // buffer pieces (dissolved water polygons + river lines). The merge is a
-    // cheap concatenation and is geometrically a union, but its members
-    // overlap. The downstream play-area mask runs polyclip
-    // `difference(playArea, eligibleArea)` — and polyclip's sweepline cost
-    // explodes on the mutual intersections of dozens of overlapping ribbons,
-    // hard-locking the render. So we dissolve the merge into clean,
-    // non-overlapping geometry that polyclip differences in ~ms.
-    const merged = mergeBuffersToMultiPolygon(allBuffers);
-
-    // Dissolve the self-overlapping MultiPolygon into clean geometry via
-    // unaryUnion (G5). The 0-radius buffer trick (`bufferMeters(merged, 0)`)
-    // was a stand-in for GEOSUnaryUnion — `unaryUnion` is the correct
-    // semantic and doesn't need a misleading `bufferSteps` argument.
-    //
-    // Only the native GEOS backend can dissolve this pathological input
-    // cheaply; the pure-JS (polyclip-ts) oracle takes ~25 s on the real
-    // body-of-water window. GEOS is the production backend, so when GEOS is
-    // unavailable we return the un-dissolved merge — still correct, just
-    // heavier for the mask — rather than block the render thread here.
+    // buffer pieces (dissolved water polygons + river lines). We must dissolve
+    // them into clean, non-overlapping geometry: the downstream play-area mask
+    // runs `difference(playArea, eligibleArea)`, and an overlapping eligible
+    // geometry both blows up the polyclip sweepline (JS oracle) and trips the
+    // GEOS op core's MakeValid (see below).
     const backend = getGeometryBackend();
-    if (backend.name !== "geos") return merged;
 
-    try {
-        const dissolved = backend.unaryUnion(merged);
-        if (dissolved) return dissolved;
-    } catch (err) {
-        console.warn(`[lineBuffer] dissolve(merged buffers) failed:`, err);
+    // Non-GEOS (JS oracle): polyclip union of dozens of overlapping ribbons is
+    // ~25 s on the real body-of-water window. Keep the historical behavior and
+    // return the un-dissolved merge — still correct coverage, just heavier for
+    // the mask — rather than block the render thread here.
+    if (backend.name !== "geos") {
+        return mergeBuffersToMultiPolygon(allBuffers);
     }
 
-    return merged;
+    // GEOS: dissolve by folding **binary** GEOSUnion over the individually-valid
+    // buffer pieces.
+    //
+    // Do NOT concatenate the pieces into one MultiPolygon and `unaryUnion` that:
+    // overlapping members make the MultiPolygon invalid, so the op core's
+    // `parse → validate → MakeValid → op` pipeline runs `GEOSMakeValid` first,
+    // and its even-odd *linework* reconstruction turns doubly-covered overlaps
+    // (e.g. a water-area buffer overlapping the river-line buffer at a junction)
+    // into HOLES — punching the body-of-water "dark circle" notch into the mask.
+    // Binary union over inputs that are each individually valid never triggers
+    // MakeValid, so it stays a true OR. See docs/water-bundle-notes-handoff2.md.
+    try {
+        const dissolved = dissolveBuffersByBinaryUnion(allBuffers, backend);
+        if (dissolved) return dissolved;
+    } catch (err) {
+        console.warn(`[lineBuffer] binary-union dissolve failed:`, err);
+    }
+
+    // Fallback: un-dissolved merge. Correct coverage; heavier downstream, and
+    // (on GEOS) re-exposed to the MakeValid notch in the mask difference — but
+    // only reached if every binary union failed, which is not expected.
+    return mergeBuffersToMultiPolygon(allBuffers);
+}
+
+/**
+ * Dissolve a set of buffer pieces into one clean (valid, non-overlapping)
+ * feature by folding **binary** `GeometryBackend.union` over them in a balanced
+ * pairwise tree.
+ *
+ * Each input piece is an individually-valid GEOS buffer result, and binary
+ * `union` of two valid geometries yields a valid result — so the op core never
+ * runs `MakeValid`. This avoids the even-odd hole punched when an *overlapping*
+ * MultiPolygon is `unaryUnion`'d (the MakeValid pre-step reinterprets
+ * doubly-covered overlaps as holes). See docs/water-bundle-notes-handoff2.md.
+ *
+ * The balanced tree keeps intermediate accumulators small (≈ log₂N union
+ * depth) instead of repeatedly re-unioning one growing accumulator.
+ *
+ * Returns `null` if any union fails (caller falls back to the un-dissolved
+ * merge) or the input is empty.
+ *
+ * @internal Exported for tests.
+ */
+export function dissolveBuffersByBinaryUnion(
+    buffers: Feature<Polygon | MultiPolygon>[],
+    backend: GeometryBackend,
+): Feature<Polygon | MultiPolygon> | null {
+    if (buffers.length === 0) return null;
+    let layer = buffers;
+    while (layer.length > 1) {
+        const next: Feature<Polygon | MultiPolygon>[] = [];
+        for (let i = 0; i < layer.length; i += 2) {
+            if (i + 1 >= layer.length) {
+                next.push(layer[i]);
+                continue;
+            }
+            const u = backend.union(layer[i], layer[i + 1]);
+            if (!u) return null;
+            next.push(u);
+        }
+        layer = next;
+    }
+    return layer[0] ?? null;
 }
 
 // ─── Buffer merge ──────────────────────────────────────────────────────────

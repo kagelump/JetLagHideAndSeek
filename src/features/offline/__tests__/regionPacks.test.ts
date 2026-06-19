@@ -245,10 +245,13 @@ function setupGunzipPassThrough(payload: unknown): void {
 // ─── Imports under test ──────────────────────────────────────────────────
 
 import {
+    buildBugReportUrl,
+    findBundleError,
     loadInstalledPacks,
     useInstallPack,
     useRemovePack,
     useRetryPack,
+    type InstalledPack,
 } from "../regionPacks";
 import { renderHook, waitFor } from "@testing-library/react-native";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -488,6 +491,10 @@ describe("useInstallPack", () => {
         );
         expect(failed).toHaveLength(1);
         expect(failed[0].kind).toBe("measuring");
+        // Integrity failure (size mismatch) is unrecoverable → not retryable,
+        // and the reason is persisted for the bundle-error banner.
+        expect(failed[0].retryable).toBe(false);
+        expect(failed[0].error).toMatch(/Size mismatch/);
     });
 
     it("marks POI as failed on MD5 mismatch and deletes the .gz", async () => {
@@ -549,6 +556,56 @@ describe("useInstallPack", () => {
 });
 
 // ─── Remove mutation ─────────────────────────────────────────────────────
+
+describe("findBundleError / buildBugReportUrl", () => {
+    const basePack: InstalledPack = {
+        id: "asia-japan-kanto",
+        osmSnapshot: "2026-06-19",
+        installedAt: "2026-06-19T00:00:00.000Z",
+        artifacts: [
+            { kind: "poi", bytes: 1000, status: "installed" },
+            {
+                kind: "measuring",
+                category: "body-of-water",
+                bytes: 500,
+                status: "failed",
+                error: "schemaVersion mismatch: payload has 2, expected 1",
+                retryable: false,
+            },
+        ],
+    };
+
+    it("finds the unrecoverable artifact only", () => {
+        const found = findBundleError(basePack);
+        expect(found?.category).toBe("body-of-water");
+    });
+
+    it("ignores retryable (transient) failures", () => {
+        const transient: InstalledPack = {
+            ...basePack,
+            artifacts: [
+                {
+                    kind: "transit",
+                    bytes: 10,
+                    status: "failed",
+                    error: "network error",
+                    retryable: true,
+                },
+            ],
+        };
+        expect(findBundleError(transient)).toBeUndefined();
+    });
+
+    it("builds a prefilled GitHub issue URL with pack + artifact + error", () => {
+        const failed = findBundleError(basePack)!;
+        const url = buildBugReportUrl(basePack, failed);
+        expect(url).toContain("github.com");
+        expect(url).toContain("/issues/new?");
+        expect(decodeURIComponent(url)).toContain("asia-japan-kanto");
+        expect(decodeURIComponent(url)).toContain("measuring-body-of-water");
+        expect(decodeURIComponent(url)).toContain("schemaVersion mismatch");
+    });
+});
 
 describe("useRemovePack", () => {
     it("unregisters all kinds, deletes directory, and clears index", async () => {

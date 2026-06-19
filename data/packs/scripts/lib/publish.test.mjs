@@ -175,6 +175,12 @@ describe("publish script", () => {
             cmdStr.includes("push origin master"),
             "should push to master",
         );
+        // The catalog commit uses [skip ci], so the Pages deploy must be
+        // dispatched explicitly or the catalog never goes live.
+        assert.ok(
+            cmdStr.includes("gh workflow run pages.yml"),
+            "should dispatch the Pages deploy after pushing",
+        );
 
         process.exitCode = 0;
     });

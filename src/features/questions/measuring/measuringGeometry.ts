@@ -17,6 +17,7 @@ import {
     computeLineBufferCached,
     computeLineCategory,
     filterFeaturesByBboxMargin,
+    filterPolygonMembersByBbox,
     getClippedLineFeaturesCached,
     getDilatedPlayArea,
     makeClippedLineCacheKey,
@@ -119,8 +120,17 @@ export function buildMeasuringRenderState(
                 let buf: Feature<Polygon | MultiPolygon> | null;
                 try {
                     const bufferFeatures = playAreaBbox
-                        ? filterFeaturesByBboxMargin(
-                              lineCat.windowFeatures,
+                        ? // Drop whole features outside the buffer window, then
+                          // drop individual MultiPolygon members outside it. The
+                          // member pass is what scopes a dissolved water bundle's
+                          // continent-scale MultiPolygons down to the water bodies
+                          // near the play area (see filterPolygonMembersByBbox).
+                          filterPolygonMembersByBbox(
+                              filterFeaturesByBboxMargin(
+                                  lineCat.windowFeatures,
+                                  playAreaBbox,
+                                  lineCat.distanceMeters,
+                              ),
                               playAreaBbox,
                               lineCat.distanceMeters,
                           )

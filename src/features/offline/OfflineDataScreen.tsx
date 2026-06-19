@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Linking,
     Pressable,
     StyleSheet,
     Text,
@@ -14,6 +15,9 @@ import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import { colors } from "@/theme/colors";
 import { usePackCatalog, type CatalogPack } from "./packCatalog";
 import {
+    artifactLabel,
+    buildBugReportUrl,
+    findBundleError,
     formatBytes,
     useInstallPack,
     useInstalledPacks,
@@ -35,6 +39,20 @@ function formatDate(iso: string): string {
     }
 }
 
+/** Date + time — used to show when the loaded catalog was generated. */
+function formatDateTime(iso: string): string {
+    try {
+        return new Date(iso).toLocaleString(undefined, {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    } catch {
+        return iso;
+    }
+}
+
 // ─── Section header ──────────────────────────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
@@ -48,6 +66,7 @@ type PackState =
     | "downloading"
     | "installed"
     | "incomplete"
+    | "bundle-error"
     | "update-available";
 
 function getPackState(
@@ -55,6 +74,11 @@ function getPackState(
     installed: InstalledPack | undefined,
 ): PackState {
     if (!installed) return "not-installed";
+
+    // An unrecoverable artifact (bad blob/catalog) takes priority over a plain
+    // incomplete: Retry can never fix it, so the row must offer "report" not
+    // "retry".
+    if (findBundleError(installed)) return "bundle-error";
 
     const allInstalled = installed.artifacts.every(
         (a) => a.status === "installed",
@@ -86,6 +110,8 @@ function getStateDescription(
                 : "Installed";
         case "incomplete":
             return "Incomplete — tap to retry";
+        case "bundle-error":
+            return "Bundle error — tap to retry, or report below";
         case "update-available":
             return `Update available · installed ${installed?.osmSnapshot} → ${pack.osmSnapshot}`;
     }
@@ -203,6 +229,39 @@ export function OfflineDataScreen() {
 
     return (
         <SheetScrollView contentContainerStyle={styles.container}>
+            {/* ── Catalog refresh ── */}
+            <View style={styles.refreshRow}>
+                <View style={styles.refreshMeta}>
+                    <Text style={styles.refreshLabel}>Pack catalog</Text>
+                    <Text style={styles.refreshSub}>
+                        {catalog.data?.generatedAt
+                            ? `Updated ${formatDateTime(catalog.data.generatedAt)}`
+                            : catalog.isError
+                              ? "Could not load — tap Refresh"
+                              : "Loading…"}
+                    </Text>
+                </View>
+                <Pressable
+                    accessibilityLabel="Refresh pack catalog"
+                    accessibilityRole="button"
+                    disabled={catalog.isFetching}
+                    onPress={() => {
+                        void catalog.refetch();
+                    }}
+                    style={({ pressed }) => [
+                        styles.refreshButton,
+                        pressed ? styles.actionPressed : null,
+                    ]}
+                    testID="offline-refresh-catalog"
+                >
+                    {catalog.isFetching ? (
+                        <ActivityIndicator color={colors.tint} size="small" />
+                    ) : (
+                        <Text style={styles.refreshButtonText}>Refresh</Text>
+                    )}
+                </Pressable>
+            </View>
+
             {/* ── Storage summary ── */}
             {installed.data && installed.data.length > 0 ? (
                 <View style={styles.storageSummary}>
@@ -262,10 +321,13 @@ export function OfflineDataScreen() {
                                       );
                                       const removing = isRemoving(pack.id);
                                       const progress = installProgress[pack.id];
+                                      const bundleError =
+                                          findBundleError(installedEntry);
 
                                       const isSwipeable =
                                           state === "installed" ||
                                           state === "incomplete" ||
+                                          state === "bundle-error" ||
                                           state === "update-available";
 
                                       const row = (
@@ -286,6 +348,13 @@ export function OfflineDataScreen() {
                                                           handleInstall(pack);
                                                           break;
                                                       case "incomplete":
+                                                      case "bundle-error":
+                                                          // Still retryable: a
+                                                          // republished fix can
+                                                          // only be picked up by
+                                                          // re-downloading. If it
+                                                          // re-fails, the banner's
+                                                          // report button remains.
                                                           handleRetry(pack);
                                                           break;
                                                       case "installed":
@@ -312,51 +381,124 @@ export function OfflineDataScreen() {
                                           />
                                       );
 
-                                      if (isSwipeable) {
+                                      const content = isSwipeable ? (
+                                          <Swipeable
+                                              overshootRight={false}
+                                              renderRightActions={() => (
+                                                  <View
+                                                      style={
+                                                          styles.deleteActionWrapper
+                                                      }
+                                                  >
+                                                      <Pressable
+                                                          accessibilityLabel={`Delete ${pack.label}`}
+                                                          accessibilityRole="button"
+                                                          onPress={() =>
+                                                              handleSwipeRemove(
+                                                                  pack.id,
+                                                              )
+                                                          }
+                                                          style={({
+                                                              pressed,
+                                                          }) => [
+                                                              styles.deleteAction,
+                                                              pressed
+                                                                  ? styles.actionPressed
+                                                                  : null,
+                                                          ]}
+                                                      >
+                                                          <Text
+                                                              style={
+                                                                  styles.deleteActionText
+                                                              }
+                                                          >
+                                                              Delete
+                                                          </Text>
+                                                      </Pressable>
+                                                  </View>
+                                              )}
+                                          >
+                                              {row}
+                                          </Swipeable>
+                                      ) : (
+                                          row
+                                      );
+
+                                      if (
+                                          state === "bundle-error" &&
+                                          installedEntry &&
+                                          bundleError
+                                      ) {
                                           return (
-                                              <Swipeable
-                                                  key={pack.id}
-                                                  overshootRight={false}
-                                                  renderRightActions={() => (
-                                                      <View
+                                              <View key={pack.id}>
+                                                  {content}
+                                                  <View
+                                                      style={
+                                                          styles.bundleErrorBanner
+                                                      }
+                                                      testID={`offline-pack-bundle-error-${pack.id}`}
+                                                  >
+                                                      <Text
                                                           style={
-                                                              styles.deleteActionWrapper
+                                                              styles.bundleErrorTitle
                                                           }
                                                       >
-                                                          <Pressable
-                                                              accessibilityLabel={`Delete ${pack.label}`}
-                                                              accessibilityRole="button"
-                                                              onPress={() =>
-                                                                  handleSwipeRemove(
-                                                                      pack.id,
-                                                                  )
+                                                          Bundle error detected
+                                                      </Text>
+                                                      <Text
+                                                          style={
+                                                              styles.bundleErrorBody
+                                                          }
+                                                      >
+                                                          {`${artifactLabel(bundleError)} is corrupt or mismatched and re-downloading won't fix it. This is a data bug — please report it.`}
+                                                      </Text>
+                                                      {bundleError.error ? (
+                                                          <Text
+                                                              style={
+                                                                  styles.bundleErrorDetail
                                                               }
-                                                              style={({
-                                                                  pressed,
-                                                              }) => [
-                                                                  styles.deleteAction,
-                                                                  pressed
-                                                                      ? styles.actionPressed
-                                                                      : null,
-                                                              ]}
                                                           >
-                                                              <Text
-                                                                  style={
-                                                                      styles.deleteActionText
-                                                                  }
-                                                              >
-                                                                  Delete
-                                                              </Text>
-                                                          </Pressable>
-                                                      </View>
-                                                  )}
-                                              >
-                                                  {row}
-                                              </Swipeable>
+                                                              {
+                                                                  bundleError.error
+                                                              }
+                                                          </Text>
+                                                      ) : null}
+                                                      <Pressable
+                                                          accessibilityLabel={`Report bundle error for ${pack.label}`}
+                                                          accessibilityRole="button"
+                                                          onPress={() =>
+                                                              void Linking.openURL(
+                                                                  buildBugReportUrl(
+                                                                      installedEntry,
+                                                                      bundleError,
+                                                                  ),
+                                                              )
+                                                          }
+                                                          style={({
+                                                              pressed,
+                                                          }) => [
+                                                              styles.reportButton,
+                                                              pressed
+                                                                  ? styles.actionPressed
+                                                                  : null,
+                                                          ]}
+                                                      >
+                                                          <Text
+                                                              style={
+                                                                  styles.reportButtonText
+                                                              }
+                                                          >
+                                                              Report a bug
+                                                          </Text>
+                                                      </Pressable>
+                                                  </View>
+                                              </View>
                                           );
                                       }
 
-                                      return row;
+                                      return (
+                                          <View key={pack.id}>{content}</View>
+                                      );
                                   })}
                               </View>
                           ),
@@ -456,6 +598,39 @@ const styles = StyleSheet.create({
     actionPressed: {
         opacity: 0.72,
     },
+    refreshRow: {
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingVertical: 4,
+    },
+    refreshMeta: {
+        flexShrink: 1,
+        gap: 2,
+    },
+    refreshLabel: {
+        color: colors.ink,
+        fontSize: 15,
+        fontWeight: "600",
+    },
+    refreshSub: {
+        color: colors.muted,
+        fontSize: 12,
+    },
+    refreshButton: {
+        alignItems: "center",
+        backgroundColor: colors.card,
+        borderRadius: 8,
+        justifyContent: "center",
+        minWidth: 84,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+    refreshButtonText: {
+        color: colors.tint,
+        fontSize: 14,
+        fontWeight: "600",
+    },
     deleteAction: {
         alignItems: "center",
         backgroundColor: "#d92d20",
@@ -472,5 +647,42 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginLeft: 8,
         overflow: "hidden",
+    },
+    bundleErrorBanner: {
+        backgroundColor: "#fee4e2",
+        borderRadius: 8,
+        gap: 6,
+        marginTop: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    bundleErrorTitle: {
+        color: "#912018",
+        fontSize: 13,
+        fontWeight: "700",
+    },
+    bundleErrorBody: {
+        color: "#912018",
+        fontSize: 13,
+        lineHeight: 18,
+    },
+    bundleErrorDetail: {
+        color: "#b42318",
+        fontSize: 12,
+        fontStyle: "italic",
+        lineHeight: 16,
+    },
+    reportButton: {
+        alignItems: "center",
+        alignSelf: "flex-start",
+        backgroundColor: "#b42318",
+        borderRadius: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 7,
+    },
+    reportButtonText: {
+        color: colors.white,
+        fontSize: 13,
+        fontWeight: "700",
     },
 });

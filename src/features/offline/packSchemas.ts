@@ -33,6 +33,14 @@ export const installedArtifactSchema = z
         category: z.string().optional(),
         bytes: z.number().int().nonnegative(),
         status: z.enum(["installed", "failed"]),
+        /** Failure message (present when status === "failed"). */
+        error: z.string().optional(),
+        /**
+         * Whether re-downloading could fix the failure. `false` =
+         * integrity/validation failure (bad blob or catalog) — surfaced to the
+         * user as a bundle error to report. Absent on success / legacy entries.
+         */
+        retryable: z.boolean().optional(),
     })
     .passthrough();
 

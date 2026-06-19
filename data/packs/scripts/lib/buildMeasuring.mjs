@@ -54,6 +54,8 @@ import {
     polygonDissolveParallel,
     geosUnaryUnionCoords,
     buildPolygonGrid,
+    bucketPolygonsToGridFeatures,
+    filterTinyPolygons,
     clipLineAtPolygon,
 } from "../../../geofabrik/scripts/lib/polygonDissolve.mjs";
 
@@ -92,6 +94,22 @@ const MIN_FEATURE_LENGTH_M = Object.fromEntries(
 const WATERWAY_LINE_SIMPLIFY = _m.waterwayLineSimplify ?? 0.001;
 const DISSOLVE_TILE_DEG = _m.dissolve?.tileDeg ?? 0.25;
 const DISSOLVE_TILE_OVERLAP_DEG = _m.dissolve?.overlapDeg ?? 0.01;
+/**
+ * Grid cell size for re-tiling dissolved water into many small emitted features
+ * (instead of 1–2 region-spanning MultiPolygons). The runtime windows buffer
+ * input by feature bbox, so small features keep each buffer op local — avoiding
+ * the body-of-water masking notch. See bucketPolygonsToGridFeatures.
+ */
+const WATER_EMIT_CELL_DEG = _m.dissolve?.emitCellDeg ?? 0.1;
+/**
+ * Drop dissolved water-area members below this area (m²). Aimed at **degenerate
+ * slivers** — the dissolve + per-ring simplification can collapse a thin water
+ * strip into a near-zero-area polygon that, when buffered, MakeValid-recovers
+ * into a spurious circular blob in the mask. Real water (ponds, lakes, river
+ * channels) is far larger and survives; narrow rivers are independently covered
+ * by waterway centerlines. Default 100 m² removes only collapsed slivers.
+ */
+const MIN_WATER_POLYGON_AREA_M2 = _m.dissolve?.minWaterPolygonAreaM2 ?? 100;
 const NODE_PRECISION = _m.stitching?.nodePrecision ?? 7;
 const STITCH_MAX_TURN_COS = _m.stitching?.maxTurnCos ?? -0.5;
 const PARALLEL_MAX_LATERAL_M = _m.parallelDedup?.maxLateralM ?? 30;
@@ -868,6 +886,53 @@ export async function buildMeasuringArtifact({
                     );
                 } else if (features.length === 1) {
                     mergedPolyCoords = features[0].geometry.coordinates;
+                }
+
+                // Drop degenerate sliver members (collapsed by dissolve +
+                // simplification): their buffer MakeValid-recovers into a
+                // spurious circular blob in the mask. Real water survives; narrow
+                // rivers are covered by waterway centerlines. Applied before both
+                // the emitted features and the waterway-clip grid below.
+                if (mergedPolyCoords && MIN_WATER_POLYGON_AREA_M2 > 0) {
+                    const before = mergedPolyCoords.length;
+                    const { kept, dropped } = filterTinyPolygons(
+                        mergedPolyCoords,
+                        MIN_WATER_POLYGON_AREA_M2,
+                    );
+                    mergedPolyCoords = kept.length > 0 ? kept : null;
+                    if (dropped > 0) {
+                        console.log(
+                            `  [measuring/${catDef.key}] [dissolve] drop slivers: ` +
+                                `${before} → ${kept.length} members ` +
+                                `(${dropped} < ${MIN_WATER_POLYGON_AREA_M2}m²)`,
+                        );
+                    }
+                }
+
+                // Re-tile the dissolved water into many small features.
+                //
+                // The dissolve fuses water into 1–2 region-spanning
+                // MultiPolygons. The runtime selects buffer input by *feature
+                // bbox*, so such a feature is always selected and buffered whole
+                // (~100k coords) — which over-simplifies and self-intersects into
+                // the body-of-water masking notch. Bucketing the dissolved member
+                // polygons into a coarse grid (whole members, no cuts) restores
+                // effective windowing; the runtime unions the per-feature buffers,
+                // so touching/overlapping pieces are fine. The waterway-clip grid
+                // still uses the un-bucketed `mergedPolyCoords` below.
+                if (mergedPolyCoords && mergedPolyCoords.length > 0) {
+                    const bucketed = bucketPolygonsToGridFeatures(
+                        mergedPolyCoords,
+                        WATER_EMIT_CELL_DEG,
+                    );
+                    features.length = 0;
+                    features.push(...bucketed);
+                    console.log(
+                        `  [measuring/${catDef.key}] [dissolve] emit re-tile: ` +
+                            `${mergedPolyCoords.length} member polygon(s) → ` +
+                            `${bucketed.length} grid feature(s) ` +
+                            `(${WATER_EMIT_CELL_DEG}° cells)`,
+                    );
                 }
 
                 // Waterway centerline post-processing.

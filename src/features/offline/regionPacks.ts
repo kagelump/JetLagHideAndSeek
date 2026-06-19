@@ -44,6 +44,14 @@ export type InstalledArtifact = {
     category?: string;
     bytes: number;
     status: "installed" | "failed";
+    /** Failure message (present when status === "failed"). */
+    error?: string;
+    /**
+     * Whether re-downloading could fix the failure. `false` =
+     * integrity/validation failure (bad blob or catalog) that Retry can never
+     * resolve — surfaced as a bundle error to report. Undefined on success.
+     */
+    retryable?: boolean;
 };
 
 export type InstalledPack = {
@@ -88,6 +96,41 @@ function validatePackId(id: string): void {
 /** Detect HTTP 404 from expo-file-system download errors. */
 function isHttpNotFound(err: Error): boolean {
     return err.message.includes("status 404") || err.message.includes("404");
+}
+
+/**
+ * A pack artifact failure. `retryable === false` marks an integrity/validation
+ * failure (size/hash/schemaVersion/payload) where the released blob or catalog
+ * is bad — re-downloading the same blob always fails identically, so the UI
+ * surfaces it as a bundle error to report rather than offering Retry. Network
+ * and IO errors stay plain Errors and are treated as retryable.
+ */
+class PackArtifactError extends Error {
+    readonly retryable: boolean;
+    constructor(message: string, retryable: boolean) {
+        super(message);
+        this.name = "PackArtifactError";
+        this.retryable = retryable;
+    }
+}
+
+/**
+ * Delete the partial download (best-effort) and throw a non-retryable bundle
+ * error. Centralizes the repeated "delete .gz then throw" integrity-failure
+ * pattern so every such failure is classified consistently.
+ */
+function bundleErrorFail(
+    downloaded: { delete: () => void } | undefined,
+    message: string,
+): never {
+    if (downloaded) {
+        try {
+            downloaded.delete();
+        } catch {
+            /* best-effort */
+        }
+    }
+    throw new PackArtifactError(message, false);
 }
 
 // ─── File helpers ─────────────────────────────────────────────────────────
@@ -327,14 +370,8 @@ function validateParsedPayload(
             return; // poi and measuring have their own validation
     }
     if (!result.success) {
-        if (downloaded) {
-            try {
-                downloaded.delete();
-            } catch {
-                /* best-effort */
-            }
-        }
-        throw new Error(
+        bundleErrorFail(
+            downloaded,
             `Pack ${packId}/${kind} payload validation failed: ` +
                 result.error.issues.map((i) => i.message).join("; "),
         );
@@ -399,6 +436,9 @@ async function installPackInternal(
                 category: artifact.category,
                 bytes: artifact.bytes,
                 status: "failed",
+                error: err instanceof Error ? err.message : String(err),
+                retryable:
+                    err instanceof PackArtifactError ? err.retryable : true,
             });
         }
 
@@ -493,12 +533,8 @@ async function installSingleArtifact(
 
         // Verify SHA-256 of the JSON content.
         if (!artifact.sha256) {
-            try {
-                downloaded.delete();
-            } catch {
-                /* best-effort */
-            }
-            throw new Error(
+            bundleErrorFail(
+                downloaded,
                 `Integrity check failed for ${packId}/${artifact.kind}: manifest missing sha256`,
             );
         }
@@ -507,12 +543,8 @@ async function installSingleArtifact(
             jsonStr,
         );
         if (givenSha256.toLowerCase() !== artifact.sha256.toLowerCase()) {
-            try {
-                downloaded.delete();
-            } catch {
-                /* best-effort */
-            }
-            throw new Error(
+            bundleErrorFail(
+                downloaded,
                 `Integrity check failed for ${packId}/${artifact.kind}: SHA-256 mismatch ` +
                     `(expected ${artifact.sha256}, got ${givenSha256})`,
             );
@@ -528,12 +560,8 @@ async function installSingleArtifact(
             (typeof payloadSchemaVersion !== "number" ||
                 payloadSchemaVersion !== artifact.schemaVersion)
         ) {
-            try {
-                downloaded.delete();
-            } catch {
-                /* best-effort */
-            }
-            throw new Error(
+            bundleErrorFail(
+                downloaded,
                 `Pack ${packId}/${artifact.kind} schemaVersion mismatch: ` +
                     `payload has ${payloadSchemaVersion}, expected ${artifact.schemaVersion}`,
             );
@@ -555,34 +583,22 @@ async function installSingleArtifact(
     // 2. Verify byte length.
     const info = downloaded.info(MD5_INFO_OPTS);
     if (info.size !== artifact.bytes) {
-        try {
-            downloaded.delete();
-        } catch {
-            /* best-effort */
-        }
-        throw new Error(
+        bundleErrorFail(
+            downloaded,
             `Size mismatch for ${packId}/${artifact.kind}: expected ${artifact.bytes}, got ${info.size ?? "N/A"}`,
         );
     }
 
     // 3. Verify MD5 hash of the compressed file.
     if (!artifact.md5) {
-        try {
-            downloaded.delete();
-        } catch {
-            /* best-effort */
-        }
-        throw new Error(
+        bundleErrorFail(
+            downloaded,
             `Integrity check failed for ${packId}/${artifact.kind}: manifest missing md5`,
         );
     }
     if (!info.md5 || info.md5.toLowerCase() !== artifact.md5.toLowerCase()) {
-        try {
-            downloaded.delete();
-        } catch {
-            /* best-effort */
-        }
-        throw new Error(
+        bundleErrorFail(
+            downloaded,
             `Integrity check failed for ${packId}/${artifact.kind}: MD5 mismatch ` +
                 `(expected ${artifact.md5}, got ${info.md5 ?? "N/A"})`,
         );
@@ -596,12 +612,8 @@ async function installSingleArtifact(
     const inflateLimit = Math.min(INFLATE_MAX_BYTES, gzBytes.length * 20);
     const inflated = gunzipSync(gzBytes);
     if (inflated.length > inflateLimit) {
-        try {
-            downloaded.delete();
-        } catch {
-            /* best-effort */
-        }
-        throw new Error(
+        bundleErrorFail(
+            downloaded,
             `Decompressed size ${(inflated.length / 1024 / 1024).toFixed(1)} MB ` +
                 `exceeds limit of ${(inflateLimit / 1024 / 1024).toFixed(1)} MB ` +
                 `for ${packId}/${artifact.kind}`,
@@ -611,12 +623,8 @@ async function installSingleArtifact(
 
     // 4a. Verify SHA-256 of the uncompressed JSON.
     if (!artifact.sha256) {
-        try {
-            downloaded.delete();
-        } catch {
-            /* best-effort */
-        }
-        throw new Error(
+        bundleErrorFail(
+            downloaded,
             `Integrity check failed for ${packId}/${artifact.kind}: manifest missing sha256`,
         );
     }
@@ -625,12 +633,8 @@ async function installSingleArtifact(
         jsonStr,
     );
     if (givenSha256.toLowerCase() !== artifact.sha256.toLowerCase()) {
-        try {
-            downloaded.delete();
-        } catch {
-            /* best-effort */
-        }
-        throw new Error(
+        bundleErrorFail(
+            downloaded,
             `Integrity check failed for ${packId}/${artifact.kind}: SHA-256 mismatch ` +
                 `(expected ${artifact.sha256}, got ${givenSha256})`,
         );
@@ -652,7 +656,8 @@ async function installSingleArtifact(
         typeof raw.schemaVersion !== "number" ||
         raw.schemaVersion !== artifact.schemaVersion
     ) {
-        throw new Error(
+        bundleErrorFail(
+            downloaded,
             `Pack ${packId}/${artifact.kind} schemaVersion mismatch: ` +
                 `payload has ${raw.schemaVersion}, expected ${artifact.schemaVersion}`,
         );
@@ -756,6 +761,26 @@ async function retryPackInternal(
                 `[regionPacks] Retry failed for ${pack.id}/${artifact.kind}:`,
                 err,
             );
+            // Refresh the failed entry so the UI reflects the latest reason and
+            // whether it's an unrecoverable bundle error vs. a transient one.
+            const key = artifact.category
+                ? `${artifact.kind}-${artifact.category}`
+                : artifact.kind;
+            const idx = results.findIndex((a) => {
+                const ak = a.category ? `${a.kind}-${a.category}` : a.kind;
+                return ak === key;
+            });
+            const failedEntry: InstalledArtifact = {
+                kind: artifact.kind,
+                category: artifact.category,
+                bytes: artifact.bytes,
+                status: "failed",
+                error: err instanceof Error ? err.message : String(err),
+                retryable:
+                    err instanceof PackArtifactError ? err.retryable : true,
+            };
+            if (idx >= 0) results[idx] = failedEntry;
+            else results.push(failedEntry);
         }
 
         done++;
@@ -1138,4 +1163,49 @@ export function formatBytes(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Human-readable "kind-category" (or "kind") label for an artifact. */
+export function artifactLabel(artifact: InstalledArtifact): string {
+    return artifact.category
+        ? `${artifact.kind}-${artifact.category}`
+        : artifact.kind;
+}
+
+/**
+ * The first unrecoverable failed artifact in a pack (status "failed" with
+ * `retryable === false`) — an integrity/validation failure that Retry can never
+ * fix. The Offline Data screen uses this to show a "report a bug" banner
+ * instead of a futile Retry affordance.
+ */
+export function findBundleError(
+    pack: InstalledPack | undefined,
+): InstalledArtifact | undefined {
+    return pack?.artifacts.find(
+        (a) => a.status === "failed" && a.retryable === false,
+    );
+}
+
+/**
+ * A GitHub "new issue" URL prefilled with the pack/artifact/error so a user can
+ * report an unrecoverable bundle error in one tap.
+ */
+export function buildBugReportUrl(
+    pack: InstalledPack,
+    failed: InstalledArtifact,
+): string {
+    const name = artifactLabel(failed);
+    const title = `[pack bundle error] ${pack.id} / ${name}`;
+    const body = [
+        `Pack: ${pack.id}`,
+        `Snapshot: ${pack.osmSnapshot}`,
+        `Artifact: ${name}`,
+        `Error: ${failed.error ?? "unknown"}`,
+        "",
+        "(auto-filled from Offline Data — please add any extra context)",
+    ].join("\n");
+    return (
+        `${OFFLINE.bugReportUrl}?title=${encodeURIComponent(title)}` +
+        `&body=${encodeURIComponent(body)}`
+    );
 }

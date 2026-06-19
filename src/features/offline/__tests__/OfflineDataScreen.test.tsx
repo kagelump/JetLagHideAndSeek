@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import type { ReactElement } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -242,6 +242,67 @@ describe("OfflineDataScreen", () => {
         const screen = renderWithProviders(<OfflineDataScreen />);
 
         expect(await screen.findByText(/Incomplete/)).toBeTruthy();
+    });
+
+    it("shows a bundle-error banner with a report button for unrecoverable artifacts", async () => {
+        await AsyncStorage.setItem(
+            "installed-packs-v2",
+            JSON.stringify({
+                "asia-japan-kanto": {
+                    id: "asia-japan-kanto",
+                    osmSnapshot: "2026-06-05",
+                    installedAt: "2026-06-10T00:00:00Z",
+                    artifacts: [
+                        { kind: "poi", bytes: 500000, status: "installed" },
+                        {
+                            kind: "measuring",
+                            category: "body-of-water",
+                            bytes: 200000,
+                            status: "failed",
+                            error: "schemaVersion mismatch: payload has 2, expected 1",
+                            retryable: false,
+                        },
+                    ],
+                },
+            }),
+        );
+
+        (global as { fetch: typeof globalThis.fetch }).fetch = jest
+            .fn()
+            .mockResolvedValue({
+                ok: true,
+                json: () => Promise.resolve(CATALOG_FIXTURE),
+            });
+
+        const screen = renderWithProviders(<OfflineDataScreen />);
+
+        // Banner + failure detail + report action render. The row still offers
+        // retry (a republished fix can only land via re-download), so the
+        // bundle error is recoverable, not a dead end.
+        expect(await screen.findByText("Bundle error detected")).toBeTruthy();
+        expect(screen.getByText(/schemaVersion mismatch/)).toBeTruthy();
+        expect(screen.getByText("Report a bug")).toBeTruthy();
+        expect(screen.getByText(/tap to retry/)).toBeTruthy();
+    });
+
+    it("refetches the catalog (cache-busted) when Refresh is tapped", async () => {
+        const fetchMock = jest.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve(CATALOG_FIXTURE),
+        });
+        (global as { fetch: typeof globalThis.fetch }).fetch = fetchMock;
+
+        const screen = renderWithProviders(<OfflineDataScreen />);
+        await screen.findByText("Europe"); // initial load complete
+        const callsAfterLoad = fetchMock.mock.calls.length;
+
+        fireEvent.press(screen.getByTestId("offline-refresh-catalog"));
+
+        await waitFor(() => {
+            expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterLoad);
+        });
+        // Cache-busted so a republished catalog isn't served from HTTP cache.
+        expect(String(fetchMock.mock.calls[0][0])).toContain("catalog.json?t=");
     });
 
     it("shows total offline storage when packs are installed", async () => {
