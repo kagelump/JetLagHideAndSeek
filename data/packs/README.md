@@ -87,13 +87,18 @@ Flags: `--region <id>` / `--all`, `--host user@ip` or `--provider linode`,
 `--jobs <N|auto>` (dissolve shards; default `auto`), `--tag`, `--no-publish`,
 `--keep`. Run with `--help` for the full list.
 
-**Parallelism.** `--jobs` shards the (independent) polygon-dissolve tiles
-across child processes — the dissolve is the long pole on water-dense regions.
-Each shard is its own process with its own GEOS-wasm + V8 heap, capped so the
-shards together stay under ~70% of RAM (so a runaway tile can only OOM its own
-shard, and the count is auto-reduced if RAM is tight). vCPU only helps the
-dissolve via `--jobs`; the other phases stay single-threaded, so RAM, not
-cores, is usually the limiter. `--jobs 1` restores the sequential path.
+**Parallelism (two-level dissolve).** `--jobs` splits the polygon-dissolve
+tiles into contiguous bands — one child process per band — and each child both
+dissolves its tiles and **pre-merges** them into compact blobs, so the parent's
+final cross-tile merge unions only ~N blobs instead of every tile (that final
+merge is single-threaded and otherwise dominates water-dense regions). Each
+shard is its own process with its own GEOS-wasm + V8 heap, capped so the shards
+together stay under ~70% of RAM (a runaway tile can only OOM its own shard, and
+the shard count is auto-reduced if RAM is tight). Contiguous bands keep each
+shard's memory at ~1/N of the input and resolve seams locally; the trade-off is
+that wall-clock is bound by the densest band. vCPU only helps the dissolve via
+`--jobs`; the other phases stay single-threaded, so RAM, not cores, is usually
+the limiter. `--jobs 1` restores the sequential path.
 
 **Auth.** `GH_TOKEN` is forwarded to the box over the encrypted SSH channel as
 `LC_GH_TOKEN` (SendEnv) — it never appears in argv, shell history, or on the

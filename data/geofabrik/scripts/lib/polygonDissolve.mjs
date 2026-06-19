@@ -560,14 +560,24 @@ const WORKER_PATH = join(
 );
 
 /**
- * Parallel `polygonDissolve`: shard the (independent) tiles across child
- * processes, then concatenate. Same tiles, same per-tile op (`dissolveTile`),
- * so the result is identical to the sequential path up to feature order.
+ * Parallel, two-level `polygonDissolve`.
+ *
+ * Level 1 (parallel): split the (column-major) tile grid into `effJobs`
+ * **contiguous bands** — one shard per band. Each shard dissolves its tiles
+ * (`dissolveTile`) and then **pre-merges** them into a few compact regional
+ * blobs. Level 2 (the caller's cross-tile merge) then unions only those ~N
+ * blobs instead of every tile — collapsing the single-threaded fan-in that
+ * otherwise dominates water-dense regions.
+ *
+ * Contiguity is load-bearing twice: a shard loads only ~1/N of the input
+ * (memory), and a band's seams resolve locally so the final merge sees just
+ * band-boundary seams. Trade-off: contiguous bands can be more load-imbalanced
+ * than a scattered assignment — wall-clock is bound by the densest band.
  *
  * Each shard is its own OS process with its own V8 + GEOS-wasm heap, capped so
- * the shards together stay under ~70% of total RAM. This is both the speedup
- * (one busy core per shard) and the memory hardening (a runaway tile can only
- * OOM its own shard, never the parent; heaps are reclaimed on shard exit).
+ * the shards together stay under ~70% of total RAM (a runaway tile can only
+ * OOM its own shard; heaps are reclaimed on exit). The union of the returned
+ * blobs equals the sequential dissolve's union — only the partitioning differs.
  *
  * @param {Array<{bbox:number[],geometry:object}>} inputFeatures
  * @param {number[]} extractBbox - [west, south, east, north]
@@ -576,7 +586,7 @@ const WORKER_PATH = join(
  * @param {number} opts.tileDeg
  * @param {number} opts.overlapDeg
  * @param {number} opts.jobs - requested shard count (capped by RAM + tiles)
- * @returns {Promise<object[]>} dissolved tile features
+ * @returns {Promise<object[]>} pre-merged band blobs (coarser than tiles)
  */
 export async function polygonDissolveParallel(
     inputFeatures,
@@ -595,10 +605,17 @@ export async function polygonDissolveParallel(
     const effJobs = Math.max(1, Math.min(jobs, tiles.length, maxByMem));
     const perChildMB = Math.max(MIN_CHILD_MB, Math.floor(budgetMB / effJobs));
 
+    // One contiguous band of tiles per shard.
+    const bandSize = Math.ceil(tiles.length / effJobs);
+    const bands = [];
+    for (let i = 0; i < tiles.length; i += bandSize) {
+        bands.push(tiles.slice(i, i + bandSize));
+    }
+
     console.log(
         `  [dissolve] ${inputFeatures.length.toLocaleString()} input polygons, ` +
-            `${tiles.length} tiles — parallel across ${effJobs} shard(s), ` +
-            `~${perChildMB}MB heap each`,
+            `${tiles.length} tiles — ${bands.length} band(s) pre-merged in ` +
+            `parallel, ~${perChildMB}MB heap each`,
     );
     if (effJobs < jobs) {
         console.log(
@@ -607,50 +624,70 @@ export async function polygonDissolveParallel(
         );
     }
 
-    // Round-robin tile→shard assignment spreads spatially-clustered density
-    // across shards. Collect each shard's deduped feature subset so a child
-    // only loads ~1/shards of the input (the memory win).
-    const shardTiles = Array.from({ length: effJobs }, () => []);
-    const shardFeatureIdx = Array.from({ length: effJobs }, () => new Set());
-    for (let i = 0; i < tiles.length; i++) {
-        const s = i % effJobs;
-        shardTiles[s].push(tiles[i]);
-        const set = shardFeatureIdx[s];
-        for (let fi = 0; fi < inputFeatures.length; fi++) {
-            if (bboxesIntersect(inputFeatures[fi].bbox, tiles[i])) set.add(fi);
-        }
-    }
-
     const dir = await mkdtemp(join(tmpdir(), "dissolve-shards-"));
     try {
         const specs = [];
-        for (let s = 0; s < effJobs; s++) {
-            const inputPath = join(dir, `input-${s}.json`);
-            const outputPath = join(dir, `output-${s}.json`);
-            const specPath = join(dir, `spec-${s}.json`);
+        for (let s = 0; s < bands.length; s++) {
+            const band = bands[s];
 
+            // Deduped feature subset for this contiguous band (~1/N of input).
+            const idx = new Set();
+            for (const tile of band) {
+                for (let fi = 0; fi < inputFeatures.length; fi++) {
+                    if (bboxesIntersect(inputFeatures[fi].bbox, tile)) {
+                        idx.add(fi);
+                    }
+                }
+            }
             const subset = [];
-            for (const fi of shardFeatureIdx[s]) {
+            for (const fi of idx) {
                 const f = inputFeatures[fi];
                 subset.push({ bbox: f.bbox, geometry: f.geometry });
             }
+
+            const inputPath = join(dir, `input-${s}.json`);
+            const outputPath = join(dir, `output-${s}.json`);
+            const specPath = join(dir, `spec-${s}.json`);
             await writeFile(inputPath, JSON.stringify(subset));
             await writeFile(
                 specPath,
                 JSON.stringify({
                     shardId: s,
-                    totalShards: effJobs,
+                    totalShards: bands.length,
                     inputPath,
                     outputPath,
-                    tiles: shardTiles[s],
+                    tiles: band,
                     simplifyTolerance,
                 }),
             );
             specs.push({ specPath, outputPath });
         }
 
-        await Promise.all(
+        // Parent-measured wall-clock per shard (spawn→exit), so we can report
+        // band balance without the shards reporting back.
+        const durationsMs = await Promise.all(
             specs.map(({ specPath }) => runShard(specPath, perChildMB)),
+        );
+
+        const ranked = durationsMs
+            .map((ms, i) => ({ shard: i, ms }))
+            .sort((a, b) => b.ms - a.ms);
+        const maxMs = ranked[0].ms;
+        const minMs = ranked[ranked.length - 1].ms;
+        const meanMs =
+            durationsMs.reduce((sum, m) => sum + m, 0) / durationsMs.length;
+        const secs = (ms) => (ms / 1000).toFixed(1);
+        console.log(
+            `  [dissolve] band balance: ${durationsMs.length} shards, ` +
+                `slowest ${secs(maxMs)}s, spread ${secs(minMs)}–${secs(maxMs)}s, ` +
+                `max/mean ${(meanMs > 0 ? maxMs / meanMs : 1).toFixed(2)}×`,
+        );
+        const top = ranked
+            .slice(0, 6)
+            .map((r) => `shard ${r.shard + 1} (${secs(r.ms)}s)`)
+            .join(", ");
+        console.log(
+            `  [dissolve]   slowest first: ${top}${ranked.length > 6 ? ", …" : ""}`,
         );
 
         const results = [];
@@ -660,8 +697,8 @@ export async function polygonDissolveParallel(
         }
 
         console.log(
-            `  [dissolve] ${results.length} tile features from ${effJobs} ` +
-                `shard(s), total: ${((Date.now() - t0) / 1000).toFixed(1)}s`,
+            `  [dissolve] ${results.length} pre-merged band blob(s) from ` +
+                `${bands.length} shard(s), total: ${((Date.now() - t0) / 1000).toFixed(1)}s`,
         );
         return results;
     } finally {
@@ -669,9 +706,10 @@ export async function polygonDissolveParallel(
     }
 }
 
-/** Run one dissolve shard as a child process; resolve on clean exit. */
+/** Run one dissolve shard as a child process; resolve with its wall-clock ms. */
 function runShard(specPath, perChildMB) {
     return new Promise((resolve, reject) => {
+        const startedAt = Date.now();
         const child = spawn(
             process.execPath,
             [
@@ -690,7 +728,7 @@ function runShard(specPath, perChildMB) {
         );
         child.on("error", reject);
         child.on("exit", (code, signal) => {
-            if (code === 0) resolve();
+            if (code === 0) resolve(Date.now() - startedAt);
             else
                 reject(
                     new Error(
