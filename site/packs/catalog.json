@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-19T04:08:52.720Z",
+    "generatedAt": "2026-06-19T09:11:51.238Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -519,15 +519,15 @@
             "regionPath": ["Asia", "Japan", "Kanto"],
             "bbox": [134.045154, 18.625054, 155.605818, 37.15988],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 9708054,
+            "totalBytes": 9719816,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-19/asia-japan-kanto-poi.json.gz",
-                    "bytes": 675795,
-                    "md5": "20a8863f3f92010161f10bc62bc877d9",
-                    "sha256": "11d6afdbdf5a13c5cc79a64d92c6c4c985bd4c74020a116688646e5915e15046",
+                    "bytes": 675794,
+                    "md5": "1b12d81659bbf07fd04cf8f96890e762",
+                    "sha256": "cfa01571abb445bf37bf86bace89d77bc0856f75b9583bdba2f50445283446e5",
                     "schemaVersion": 1
                 },
                 {
@@ -535,8 +535,8 @@
                     "category": "coastline",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-19/asia-japan-kanto-measuring-coastline.json.gz",
                     "bytes": 250465,
-                    "md5": "e4156f026df35cd67bd90bf447e4a3fd",
-                    "sha256": "38d7e6320bcb8bfb5d2f56c6acfb41ae9a35c88e6d667d83f5d2de91a9b418a1",
+                    "md5": "3c3422dcda9e3be984fd31741bf99def",
+                    "sha256": "26c38001d52983f71e58ac6be721a0afe77c16b2e209b6aa4fc3f84dbc4059ca",
                     "schemaVersion": 1
                 },
                 {
@@ -544,26 +544,26 @@
                     "category": "high-speed-rail",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-19/asia-japan-kanto-measuring-high-speed-rail.json.gz",
                     "bytes": 5279,
-                    "md5": "e8b6e4652e977239657fe07d68b3b536",
-                    "sha256": "5706434ac80d968858769203e88d69e27fddd453043980e9fc1df266d53cb511",
+                    "md5": "f0872fdd675f2d591fadf3cfbbd47032",
+                    "sha256": "cb5d68744575f95fa0211a394d73464082bfb9a8e7a77b468f4761e352f61e11",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "body-of-water",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-19/asia-japan-kanto-measuring-body-of-water.json.gz",
-                    "bytes": 3270259,
-                    "md5": "f43ee6c22b08aabd6a63184cb79ae497",
-                    "sha256": "23a7a71eef62ad238133dcd77ef98de3a61fef09a06d767da45bd1467abc6f5f",
+                    "bytes": 3282025,
+                    "md5": "83a2aec393b6b5bdca2e46dff605ddf0",
+                    "sha256": "feda30d87e5eae386edb8bc0aef1eb09b236c79f1c6b7bef438ebf3dc3dec5fe",
                     "schemaVersion": 2
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-1st-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-19/asia-japan-kanto-measuring-admin-1st-border.json.gz",
-                    "bytes": 114459,
-                    "md5": "3d550142f47585abd68ab644366c2423",
-                    "sha256": "6562b579f9fbbe2b3b8ff5211a06c2e38b4e9eb99a2f022438570c4bfa0f74dd",
+                    "bytes": 114460,
+                    "md5": "b0323bf04ab5748bd8ea791480806bce",
+                    "sha256": "663b37fbc0289e078edc6cdca99fb2d28aa3e4d2d83ca4bed90eb73c23917b1c",
                     "schemaVersion": 1
                 },
                 {
@@ -571,8 +571,8 @@
                     "category": "admin-2nd-border",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-19/asia-japan-kanto-measuring-admin-2nd-border.json.gz",
                     "bytes": 927219,
-                    "md5": "0e2b39b2daa9630158fd56cc1bf87328",
-                    "sha256": "ac59ddf86a3a40b83bea7db5803162237d381bf25797ab78759c79389f14ff63",
+                    "md5": "f071ca1d3541c352cc19c1eb8e3750cd",
+                    "sha256": "fc2bb5220ae1a263ce70f6eea2e48c7919ddc5897864c4bfb47324b0f9b5ca3d",
                     "schemaVersion": 1
                 },
                 {
@@ -580,17 +580,17 @@
                     "category": "admin-boundaries",
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-19/asia-japan-kanto-measuring-admin-boundaries.json.gz",
                     "bytes": 2524106,
-                    "md5": "bb4b2117f9497404ad1f978323447102",
-                    "sha256": "53166e7243956406e1084ed9a2983dcac505f70e6584f565ed5f1b982032ca83",
+                    "md5": "c0f75815f843d9a09b59d12f13ef85d1",
+                    "sha256": "abdc420b95d33baa079d49480997f76a3542976bdf4fd65decc07e997c31f3d3",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-19/asia-japan-kanto-boundaries.json.gz",
-                    "bytes": 1552524,
-                    "md5": "c4e93e73198ddd1f2b2a47a45755f799",
-                    "sha256": "aff7e5196260e19f9e2cf560e7a1539c1afd92ef4070791bffd7bf9e5997c964",
+                    "bytes": 1552520,
+                    "md5": "80ea68b2176c4cc8e9634890c53bdee9",
+                    "sha256": "0bd7c079aed738a4bfd8edea7b0df129a14598571a995a3a89ba88b024571b6f",
                     "schemaVersion": 1
                 },
                 {
