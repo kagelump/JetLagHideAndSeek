@@ -50,7 +50,6 @@ pnpm lint
 pnpm format:check
 pnpm test -- NativeMap.test.tsx        # single suite
 pnpm data:poi        # regenerate bundled POIs -> assets/poi (commit the output)
-pnpm data:measuring  # regenerate measuring bundles -> assets/measuring (commit)
 pnpm data:pack -- --region <id>   # build pack artifacts -> data/packs/dist (NOT committed)
 pnpm data:pack:lint               # validate built pack artifacts
 pnpm data:pack:publish -- --region <id>  # upload blobs to a Release, recommit site/packs/catalog.json
@@ -149,9 +148,11 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
   bundle emission, generated NOTICE; cache + report git-ignored.
 - `data/odpt/`: Legacy ODPT pipeline (deprecated — replaced by `data/transit/`);
   kept for cached GTFS zips and reference output.
-- `data/geofabrik/`: OSM POI + measuring extraction pipeline (config, scripts,
-  attribution). The PBF cache and heavy intermediates are git-ignored; committed
-  runtime artifacts are `assets/poi/` and `assets/measuring/`.
+- `data/geofabrik/`: OSM POI extraction pipeline (config, scripts, attribution)
+  and shared measuring libs (category defs, dissolve, stitching, post-filters).
+  The PBF cache and heavy intermediates are git-ignored; committed runtime
+  artifacts are `assets/poi/`. Measuring artifacts are built by the packs
+  pipeline (`data/packs/`) instead.
 - `data/packs/`: Offline data-packs pipeline — `regions.yaml` (region config),
   `scripts/` (build, lint, catalog, publish + `lib/` artifact builders), `cache/`
   (per-region PBFs, git-ignored), `dist/` (built artifacts, **git-ignored** —
@@ -177,8 +178,9 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
   `matchingCategories.ts` derives its Overpass-QL from it. Never hand-edit
   `poi-selectors.json`. `pnpm check` runs the registry drift guard
   (`test:data:poi-selectors`).
-- `pnpm data:poi` and `pnpm data:measuring` regenerate pack-source data
-  (used by the packs pipeline, not bundled into the app binary).
+- `pnpm data:poi` regenerates pack-source POI data (used by the packs
+  pipeline, not bundled into the app binary). Measuring data is built
+  exclusively by `pnpm data:pack`.
 - The legacy `data/geofabrik/generated/` extracts (`*.osm.pbf`, `*.geojson*`) are
   git-ignored intermediates — never commit them.
 

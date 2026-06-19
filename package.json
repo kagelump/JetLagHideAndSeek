@@ -34,7 +34,6 @@
         "data:geofabrik:bundle": "node data/geofabrik/scripts/fetch-geofabrik.mjs --cache-only --bundle",
         "data:geofabrik:packs": "node data/geofabrik/scripts/fetch-geofabrik.mjs --cache-only --packs",
         "data:geofabrik:packs:fetch": "node data/geofabrik/scripts/fetch-geofabrik.mjs --packs",
-        "data:measuring": "node data/geofabrik/scripts/extract-measuring-bundles.mjs",
         "data:geos-golden": "node --import tsx modules/native-geometry/scripts/gen-golden-fixtures.mjs",
         "data:pack": "node --import tsx data/packs/scripts/build-packs.mjs",
         "data:pack:lint": "node data/packs/scripts/pack-lint.mjs",

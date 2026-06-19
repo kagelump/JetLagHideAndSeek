@@ -30,16 +30,12 @@ poiNodeKeys:
     - natural
     - barrier
 
-# Measuring line/polygon bundles (task-06).
-# Whole-Japan source clipped to a Kantō+margin window so prefecture/ward borders
-# and coastline are complete anywhere a seeker near the play area could query.
+# Measuring line/polygon bundles.
+# Category definitions, dissolve tuning, stitching, and post-processing
+# parameters are shared by both the legacy Geofabrik pipeline and the
+# packs pipeline (buildMeasuring.mjs). Region-specific PBF paths and bboxes
+# live in data/packs/regions.yaml.
 measuring:
-    sourcePbfUrl: "https://download.geofabrik.de/asia/japan-latest.osm.pbf"
-    # Kantō extent expanded by ~1° (~110 km) per side. [W, S, E, N].
-    extractBbox: [137.9, 33.9, 141.9, 37.9]
-    # Output directory relative to the repo root.
-    outputDir: ../../assets/measuring
-
     # ── Category definitions ──────────────────────────────────────────
     #
     # Each category produces one bundle JSON.  Fields:
@@ -182,37 +178,3 @@ measuring:
         # Loose ends within this distance of the extract bbox edge (degrees) are
         # excluded from hole detection — they're legitimate map-edge cutoffs.
         edgeMarginDeg: 0.02
-
-regions:
-    - id: japan-kanto
-      label: Kantō, Japan
-      bundle: true # shipped in the app binary
-      url: "https://download.geofabrik.de/asia/japan/kanto-latest.osm.pbf"
-      relations:
-          - id: 19631009
-            name: Tokyo 23 Wards
-            name_ja: "東京23区"
-          - id: 1543125
-            name: Tokyo Prefecture
-            name_ja: "東京都"
-    - id: japan-kansai
-      label: Kansai, Japan
-      url: "https://download.geofabrik.de/asia/japan/kansai-latest.osm.pbf"
-    - id: japan-chubu
-      label: Chūbu, Japan
-      url: "https://download.geofabrik.de/asia/japan/chubu-latest.osm.pbf"
-    - id: japan-tohoku
-      label: Tōhoku, Japan
-      url: "https://download.geofabrik.de/asia/japan/tohoku-latest.osm.pbf"
-    - id: japan-chugoku
-      label: Chūgoku, Japan
-      url: "https://download.geofabrik.de/asia/japan/chugoku-latest.osm.pbf"
-    - id: japan-kyushu
-      label: Kyūshū, Japan
-      url: "https://download.geofabrik.de/asia/japan/kyushu-latest.osm.pbf"
-    - id: japan-shikoku
-      label: Shikoku, Japan
-      url: "https://download.geofabrik.de/asia/japan/shikoku-latest.osm.pbf"
-    - id: japan-hokkaido
-      label: Hokkaidō, Japan
-      url: "https://download.geofabrik.de/asia/japan/hokkaido-latest.osm.pbf"
