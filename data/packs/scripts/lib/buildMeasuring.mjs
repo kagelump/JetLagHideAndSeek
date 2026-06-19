@@ -810,9 +810,37 @@ export async function buildMeasuringArtifact({
                 features.length = 0;
                 features.push(...dissolved);
 
-                // Cross-tile polygon merge.
+                // Cross-tile polygon assembly.
+                //
+                // The parallel path (jobs > 1) returns band blobs already
+                // clipped to disjoint band rectangles — they tile the extract
+                // edge-to-edge with no interior overlap, so we keep them as
+                // separate (valid) features and only concatenate their polygons
+                // to build the waterway-clipping grid. This skips the
+                // whole-region GEOS/polyclip-ts union, which is what OOMs on
+                // water-dense regions (e.g. the Netherlands).
+                //
+                // The sequential path (jobs === 1) still emits overlapping tile
+                // features, so it must union them to become valid.
                 let mergedPolyCoords = null;
-                if (features.length > 1) {
+                if (jobs > 1) {
+                    const allPolys = [];
+                    for (const f of features) {
+                        const g = f.geometry;
+                        if (g.type === "MultiPolygon") {
+                            for (const poly of g.coordinates)
+                                allPolys.push(poly);
+                        } else if (g.type === "Polygon") {
+                            allPolys.push(g.coordinates);
+                        }
+                    }
+                    mergedPolyCoords = allPolys.length > 0 ? allPolys : null;
+                    console.log(
+                        `  [measuring/${catDef.key}] [dissolve] band-partition: ` +
+                            `kept ${features.length} disjoint blob(s) ` +
+                            `(no cross-tile union)`,
+                    );
+                } else if (features.length > 1) {
                     const tMerge = Date.now();
                     const mergedCoords = geosUnaryUnionCoords(
                         features.map((f) => f.geometry.coordinates),

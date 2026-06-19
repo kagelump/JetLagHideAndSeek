@@ -1,13 +1,20 @@
 /**
  * polygonDissolveParallel two-level invariance test.
  *
- * The parallel dissolve splits tiles into contiguous bands, pre-merges each
- * band in its own process, and returns the band blobs (the parent then unions
- * those into one polygon). Because union is associative/commutative and tiles
- * are never split across bands, the *covered area after a final union* must be
- * identical regardless of shard count — only the partitioning differs. This
- * test spawns real worker processes (jobs=1 vs jobs=2) and asserts that, which
- * is the core correctness guarantee of the multiprocess path.
+ * The parallel dissolve splits tiles into whole-column bands, pre-merges each
+ * band in its own process, and clips each band's blob to its disjoint band
+ * rectangle before returning it (the parent then *concatenates* the blobs — no
+ * whole-region union). Two guarantees:
+ *
+ *   1. Covered area (after a re-union that dedups any seam touching) is
+ *      identical regardless of shard count — only the partitioning differs.
+ *   2. The returned blobs are disjoint: their summed area equals their union
+ *      area, i.e. the band-rectangle clip leaves no interior overlap for the
+ *      caller to repair. This is the property that lets the caller concatenate
+ *      instead of union.
+ *
+ * The test spawns real worker processes (jobs=1 vs jobs=2), including a feature
+ * that straddles the band seam so the clip path is exercised.
  */
 
 import { describe, it } from "node:test";
@@ -60,6 +67,13 @@ function unionArea(features) {
     return multiPolyArea(merged);
 }
 
+/** Sum of each blob's own area (double-counts any interior overlap). */
+function summedArea(features) {
+    let a = 0;
+    for (const f of features) a += multiPolyArea(f.geometry.coordinates);
+    return a;
+}
+
 describe("polygonDissolveParallel (two-level)", () => {
     // 1°×1° extract → 16 tiles at the default 0.25°, so jobs=2 splits the grid
     // into two contiguous bands.
@@ -72,6 +86,9 @@ describe("polygonDissolveParallel (two-level)", () => {
         square(139.02, 35.52, 0.05),
         square(139.77, 35.77, 0.05),
         square(139.3, 35.3, 0.02),
+        // Straddles the jobs=2 band seam at x=139.5 → must be split into two
+        // edge-touching pieces (one per band) with no overlap.
+        square(139.48, 35.42, 0.04),
     ];
 
     it("covers the same area for jobs=1 and jobs=2", async () => {
@@ -101,6 +118,15 @@ describe("polygonDissolveParallel (two-level)", () => {
         assert.ok(
             Math.abs(areaOne - areaTwo) <= areaOne * 1e-6,
             `shard count changed covered area: jobs=1 ${areaOne} vs jobs=2 ${areaTwo}`,
+        );
+
+        // The band-clipped blobs must be disjoint: summed area == union area
+        // (no double-counted overlap). The straddling square exercises a real
+        // seam cut, so this would fail if the clip left bands overlapping.
+        const summedTwo = summedArea(two);
+        assert.ok(
+            Math.abs(summedTwo - areaTwo) <= areaTwo * 1e-6,
+            `jobs=2 blobs overlap: summed ${summedTwo} vs union ${areaTwo}`,
         );
     });
 });

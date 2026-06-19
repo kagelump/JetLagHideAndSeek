@@ -17,7 +17,11 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 import { bboxesIntersect, computePolygonBbox } from "./geometryCleanup.mjs";
-import { dissolveTile, geosUnaryUnionCoords } from "./polygonDissolve.mjs";
+import {
+    clipCoordsToRect,
+    dissolveTile,
+    geosUnaryUnionCoords,
+} from "./polygonDissolve.mjs";
 
 async function main() {
     const specPath = process.argv[2];
@@ -32,6 +36,7 @@ async function main() {
         inputPath,
         outputPath,
         tiles,
+        clipRect,
         simplifyTolerance,
     } = JSON.parse(await readFile(specPath, "utf8"));
     const features = JSON.parse(await readFile(inputPath, "utf8"));
@@ -64,7 +69,13 @@ async function main() {
         }
     }
 
-    // ── Pre-merge this contiguous band into compact blobs ────────────────────
+    // ── Pre-merge this contiguous band into compact blobs, then clip each to
+    //    the band's disjoint nominal rectangle ────────────────────────────────
+    //
+    // The clip trims the per-tile overlap off the band's column-strip edges so
+    // adjacent bands' blobs partition the extract (touching, never overlapping).
+    // The parent then concatenates the returned blobs instead of running the
+    // whole-region union that OOMs water-dense regions.
     const results = [];
     let mergeMs = 0;
     if (tileFeatures.length > 0) {
@@ -75,7 +86,9 @@ async function main() {
         mergeMs = Date.now() - tMerge;
         for (const g of groups) {
             if (!g || g.length === 0) continue;
-            const geometry = { type: "MultiPolygon", coordinates: g };
+            const coords = clipRect ? clipCoordsToRect(g, clipRect) : g;
+            if (!coords || coords.length === 0) continue;
+            const geometry = { type: "MultiPolygon", coordinates: coords };
             results.push({
                 type: "Feature",
                 bbox: computePolygonBbox(geometry),

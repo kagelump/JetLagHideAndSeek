@@ -379,6 +379,43 @@ export function unionAllCoords(coordsList) {
     }
 }
 
+/**
+ * Clip a Polygon/MultiPolygon coordinate array to an axis-aligned rectangle.
+ * Returns MultiPolygon coordinates (array of polygons); `[]` when the input
+ * lies fully outside the rect or the clip degenerates. Fail-safe: on a
+ * polyclip-ts throw, returns the input as MultiPolygon coords unchanged so one
+ * bad ring can't drop a whole blob (callers may re-validate downstream).
+ *
+ * This is the same rectangle-clip `dissolveTile` already applies per tile —
+ * factored out so the parallel path can clip each pre-merged band blob to its
+ * disjoint band rectangle (the partition that lets the caller concatenate
+ * blobs instead of unioning them).
+ *
+ * @param {number[][][]|number[][][][]} coords - Polygon or MultiPolygon coords
+ * @param {number[]} rect - [w, s, e, n]
+ * @returns {number[][][][]} MultiPolygon coordinates
+ */
+export function clipCoordsToRect(coords, rect) {
+    const [w, s, e, n] = rect;
+    const rectGeom = [
+        [
+            [w, s],
+            [e, s],
+            [e, n],
+            [w, n],
+            [w, s],
+        ],
+    ];
+    try {
+        const clipped = intersection(coords, rectGeom);
+        return clipped && clipped.length > 0 ? clipped : [];
+    } catch {
+        // MultiPolygon coords have a point ([x,y]) at coords[0][0][0]; Polygon
+        // coords have a number there — wrap the latter into a MultiPolygon.
+        return Array.isArray(coords?.[0]?.[0]?.[0]) ? coords : [coords];
+    }
+}
+
 // ─── Polygon dissolve (for polygon-dissolve mode) ──────────────────────────
 
 /**
@@ -563,16 +600,24 @@ const WORKER_PATH = join(
  * Parallel, two-level `polygonDissolve`.
  *
  * Level 1 (parallel): split the (column-major) tile grid into `effJobs`
- * **contiguous bands** — one shard per band. Each shard dissolves its tiles
- * (`dissolveTile`) and then **pre-merges** them into a few compact regional
- * blobs. Level 2 (the caller's cross-tile merge) then unions only those ~N
- * blobs instead of every tile — collapsing the single-threaded fan-in that
- * otherwise dominates water-dense regions.
+ * **whole-column bands** — one shard per band. Each shard dissolves its tiles
+ * (`dissolveTile`), **pre-merges** them into a few compact blobs, then **clips
+ * each blob to its band's disjoint nominal rectangle** (the column strip
+ * *without* the per-tile overlap). Because the bands' rectangles partition the
+ * extract edge-to-edge, the returned blobs have no interior overlap — so the
+ * caller can simply **concatenate** them into one valid MultiPolygon instead of
+ * unioning them. That whole-region union is the single-threaded fan-in that
+ * OOMs on water-dense regions; the clip replaces it with N bounded box-clips.
  *
- * Contiguity is load-bearing twice: a shard loads only ~1/N of the input
- * (memory), and a band's seams resolve locally so the final merge sees just
- * band-boundary seams. Trade-off: contiguous bands can be more load-imbalanced
- * than a scattered assignment — wall-clock is bound by the densest band.
+ * A water body straddling a band seam becomes two edge-touching pieces, which
+ * is equivalent for measuring (distance-to-water is a min; inside-water is a
+ * per-feature test) but avoids the invalid overlapping geometry that the union
+ * existed to repair.
+ *
+ * Whole-column bands are load-bearing twice: a shard loads only ~1/N of the
+ * input (memory), and each band clips to a clean rectangle. Trade-off:
+ * contiguous bands can be more load-imbalanced than a scattered assignment —
+ * wall-clock is bound by the densest band.
  *
  * Each shard is its own OS process with its own V8 + GEOS-wasm heap, capped so
  * the shards together stay under ~70% of total RAM (a runaway tile can only
@@ -597,30 +642,52 @@ export async function polygonDissolveParallel(
     const t0 = Date.now();
     const tiles = buildTileGrid(extractBbox, tileDeg, overlapDeg);
 
+    // Grid dimensions — computed with the same loop bounds buildTileGrid uses,
+    // so column/row counts match its (column-major) tile order exactly with no
+    // floating-point drift. tile index === col * nRows + row.
+    let nCols = 0;
+    for (let tx = extractBbox[0]; tx < extractBbox[2]; tx += tileDeg) nCols++;
+    let nRows = 0;
+    for (let ty = extractBbox[1]; ty < extractBbox[3]; ty += tileDeg) nRows++;
+
     // Never oversubscribe RAM: keep the sum of shard heaps under ~70% of total
     // memory, and guarantee each shard enough heap for the densest single tile.
     const MIN_CHILD_MB = 2048;
     const budgetMB = Math.floor((totalmem() / 1024 / 1024) * 0.7);
     const maxByMem = Math.max(1, Math.floor(budgetMB / MIN_CHILD_MB));
-    const effJobs = Math.max(1, Math.min(jobs, tiles.length, maxByMem));
+    // Bands are whole-column strips (so each clips to a clean rectangle); at
+    // most nCols of them.
+    const effJobs = Math.max(1, Math.min(jobs, nCols, maxByMem));
     const perChildMB = Math.max(MIN_CHILD_MB, Math.floor(budgetMB / effJobs));
 
-    // One contiguous band of tiles per shard.
-    const bandSize = Math.ceil(tiles.length / effJobs);
+    // One contiguous strip of whole columns per shard, plus the band's disjoint
+    // nominal rectangle (column strip without the per-tile overlap), clamped to
+    // the extract. Adjacent bands share an x-edge exactly, so their clipped
+    // blobs partition the extract — no interior overlap, concatenable.
+    const colsPerBand = Math.max(1, Math.ceil(nCols / effJobs));
     const bands = [];
-    for (let i = 0; i < tiles.length; i += bandSize) {
-        bands.push(tiles.slice(i, i + bandSize));
+    for (let c0 = 0; c0 < nCols; c0 += colsPerBand) {
+        const c1 = Math.min(c0 + colsPerBand, nCols);
+        bands.push({
+            tiles: tiles.slice(c0 * nRows, c1 * nRows),
+            clipRect: [
+                Math.max(extractBbox[0], extractBbox[0] + c0 * tileDeg),
+                extractBbox[1],
+                Math.min(extractBbox[2], extractBbox[0] + c1 * tileDeg),
+                extractBbox[3],
+            ],
+        });
     }
 
     console.log(
         `  [dissolve] ${inputFeatures.length.toLocaleString()} input polygons, ` +
-            `${tiles.length} tiles — ${bands.length} band(s) pre-merged in ` +
-            `parallel, ~${perChildMB}MB heap each`,
+            `${tiles.length} tiles (${nCols}×${nRows}) — ${bands.length} ` +
+            `band(s) clipped + pre-merged in parallel, ~${perChildMB}MB heap each`,
     );
     if (effJobs < jobs) {
         console.log(
             `  [dissolve] (capped from --jobs ${jobs} to ${effJobs} to stay ` +
-                `under the ${budgetMB}MB RAM budget)`,
+                `under the ${budgetMB}MB RAM budget / ${nCols} columns)`,
         );
     }
 
@@ -628,7 +695,8 @@ export async function polygonDissolveParallel(
     try {
         const specs = [];
         for (let s = 0; s < bands.length; s++) {
-            const band = bands[s];
+            const band = bands[s].tiles;
+            const clipRect = bands[s].clipRect;
 
             // Deduped feature subset for this contiguous band (~1/N of input).
             const idx = new Set();
@@ -657,6 +725,7 @@ export async function polygonDissolveParallel(
                     inputPath,
                     outputPath,
                     tiles: band,
+                    clipRect,
                     simplifyTolerance,
                 }),
             );
