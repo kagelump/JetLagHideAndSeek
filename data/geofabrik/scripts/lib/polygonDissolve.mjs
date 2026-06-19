@@ -93,7 +93,17 @@ export function geosUnaryUnionCoords(coordsList) {
             type: "MultiPolygon",
             coordinates: polygons,
         });
-        const outWkb = geosModule.unaryUnionWKB(wkb);
+        // Skip the pre-union MakeValid. Concatenating overlapping water polygons
+        // makes the MultiPolygon "invalid", so the default validate path runs
+        // GEOSMakeValid first — and its even-odd linework turns doubly-covered
+        // overlaps (e.g. a riverbank polygon over a water polygon) into HOLES,
+        // baking spurious islands into the dissolved water. GEOSUnaryUnion
+        // dissolves overlaps correctly on its own. Fall back to the validated
+        // path for genuinely malformed input, then to polyclip-ts.
+        // See docs/water-bundle-notes-handoff2.md.
+        const outWkb =
+            geosModule.unaryUnionWKB(wkb, { validate: false }) ??
+            geosModule.unaryUnionWKB(wkb);
         if (!outWkb) return unionAllCoords(coordsList);
 
         const out = wkbModule.decodeWkb(outWkb);

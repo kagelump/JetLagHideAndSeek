@@ -195,11 +195,28 @@ export function bufferWKB(
  * Closing this gap would require binding `GEOSGeomTypeId`, `GEOSGetNumGeometries`,
  * `GEOSGetGeometryN`, and `GEOSGeom_createCollection` in the wasm `GeosInstance`
  * interface. Tracked as a follow-up.
+ *
+ * **`validate` option (default `true`):** the default keeps the
+ * `parse → MakeValid (if invalid) → op` policy that mirrors native
+ * `geos_ops.cpp` (do NOT change the default — the parity oracle depends on it).
+ * Pass `{ validate: false }` to skip `MakeValid` and union the parsed geometry
+ * directly. This matters when the input is an **overlapping-members**
+ * MultiPolygon (e.g. concatenated water polygons in the pack dissolve): such a
+ * geometry is "invalid", so the default path runs `GEOSMakeValid`, whose
+ * even-odd *linework* method turns doubly-covered overlaps into HOLES.
+ * `GEOSUnaryUnion` itself dissolves overlaps correctly and needs no pre-MakeValid,
+ * so `validate: false` is the right call for "union these overlapping pieces".
+ * Reserve it for inputs whose members are each individually valid (buffer
+ * results, OSM water areas); fall back to the default on a null result for
+ * genuinely malformed single rings. See docs/water-bundle-notes-handoff2.md.
  */
-export function unaryUnionWKB(wkb: Uint8Array): Uint8Array | null {
+export function unaryUnionWKB(
+    wkb: Uint8Array,
+    { validate = true }: { validate?: boolean } = {},
+): Uint8Array | null {
     ensureGeos();
 
-    const geom = parseAndValidate(wkb);
+    const geom = validate ? parseAndValidate(wkb) : wkbToGeom(wkb);
     if (!geom) return null;
 
     const unioned = geosInstance!.GEOSUnaryUnion(geom);
