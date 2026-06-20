@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:31:34.397Z",
+    "generatedAt": "2026-06-20T07:31:54.490Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1779,78 +1779,87 @@
             "regionPath": ["Europe", "France", "Ile-de-France"],
             "bbox": [1.445097, 48.11918, 3.560409, 49.24271],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 2394919,
+            "totalBytes": 3333201,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-ile-de-france-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-poi.json.gz",
                     "bytes": 158676,
-                    "md5": "ab24c1392202766f1854a63b8ec74520",
-                    "sha256": "6c3acf8bd90e6d723f32acab25a836e438880aae314aad2f03467f7a43aa860a",
+                    "md5": "df8e1b838374f9f435b34522c97ed3cf",
+                    "sha256": "50f34dca446ac93291d17a87aab6fe6351e3cbdbc089f2cd16b7af9c83f44cc2",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-ile-de-france-measuring-high-speed-rail.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-measuring-high-speed-rail.json.gz",
                     "bytes": 6151,
-                    "md5": "9587d13694642d2d76c142a9189859fb",
-                    "sha256": "0f90ece52013d80b685ba587ae27921c7f5f63221de5d224448d4fa9811e3fd9",
+                    "md5": "d86e24fbeda0733594a3ccd4f512f1e8",
+                    "sha256": "616510acd91a9195af29833de55feb7ecdb05d61dc7ad7c7cd38e06ce3312ed6",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-measuring-body-of-water.json.gz",
+                    "bytes": 920370,
+                    "md5": "e8295fe153fe6ca9ece10aaacdee5ca9",
+                    "sha256": "6225785962191d200550bc15a08bbe723bb6d5ff77f7bf016698dfe6d4403488",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-ile-de-france-measuring-admin-1st-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-measuring-admin-1st-border.json.gz",
                     "bytes": 43555,
-                    "md5": "e89ff7d6456237ca1c660dfe9edae36b",
-                    "sha256": "96d1f5187a1428eab09c934f02a1d5c7956cf273732e1d25c7d54b2bdadb8e3c",
+                    "md5": "a905c3befa9db6c3f790a1c94c09ce84",
+                    "sha256": "1233423ab6f34d7f74f4fde7dab9c938df87f1cca455e5ac0d51d6cdb19a46b8",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-ile-de-france-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-measuring-admin-2nd-border.json.gz",
                     "bytes": 165783,
-                    "md5": "7bac866726c9808611b72fead43a3690",
-                    "sha256": "80c19caad43c1a093e18dbc9847e026bdaea786b22f67cb27d695fed038a7ae6",
+                    "md5": "ab99f9dd87f906e71f10bfed227b66ad",
+                    "sha256": "9f39ff0335db7e51aa116f3a3af14d9e3b2b8929ce40cd408889525a2dc60f5d",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-ile-de-france-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-measuring-admin-boundaries.json.gz",
                     "bytes": 1323671,
-                    "md5": "1e79eb3295cc356e15fc66ac07075b21",
-                    "sha256": "ca01edee7a9a66dcd1a531c011f1982f79c2a070e654d33c48501734bda13491",
+                    "md5": "335d2bf556b39b03d6d92e8e18e20b17",
+                    "sha256": "fcec66b5dc9886299e74b9e4d93f34a566f84036ae0e3726df43c19cd79d56e6",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-ile-de-france-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-boundaries.json.gz",
                     "bytes": 646608,
-                    "md5": "5b84e6e1653edebf2603745932926b74",
-                    "sha256": "79b45d5b5a5f447a52328a876c291c7591b2ce11cd526dd11433f5cf7f1859f2",
+                    "md5": "fc1e79503376d7eee12c48a1bbc12532",
+                    "sha256": "f707b354ea6eb171a32cb4a8d3623e4a2f2ce322aff0477ce8186cda49f527e4",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-ile-de-france-transit.json.gz",
-                    "bytes": 49971,
-                    "md5": "43fb168a8bfcbdb5e5dd741c409747f5",
-                    "sha256": "bacfd18b449d43d6773e3c7a2634fec06d18b4abe5324f78f4174281c74c248f",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-transit.json.gz",
+                    "bytes": 67873,
+                    "md5": "cb3644708456745ae352ddc19c28f71a",
+                    "sha256": "aba894d7a061852ed223911bc8b000ece94b1ac46bcc1d397a72aef0b50f66d1",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-ile-de-france-meta.json.gz",
-                    "bytes": 504,
-                    "md5": "2f88cf6848606d11904830912b3bf956",
-                    "sha256": "d7d8b23ecb6cd98938068de17f7acf0c1b602ae0c76f8d1a3bb8071c5617e2e9",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-meta.json.gz",
+                    "bytes": 514,
+                    "md5": "c7c9562b8ac6e515d3d6cbbe80f13ec9",
+                    "sha256": "5d66f86416ce34d00741619df7c953ed18d3b092da4795126579c8d48f8869c9",
                     "schemaVersion": 1
                 }
             ]
