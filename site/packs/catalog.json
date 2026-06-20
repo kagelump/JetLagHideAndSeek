@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:32:37.119Z",
+    "generatedAt": "2026-06-20T07:33:45.114Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2043,87 +2043,96 @@
             "regionPath": ["Europe", "Netherlands"],
             "bbox": [2.936095, 50.74753, 7.230455, 54.01786],
             "osmSnapshot": "2026-06-12",
-            "totalBytes": 4312898,
+            "totalBytes": 23634514,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-poi.json.gz",
-                    "bytes": 207398,
-                    "md5": "869b73f00e4e2e51201f5cb22300ed67",
-                    "sha256": "b80072768de96dc9da5504243510efcea6f0e05d4cb422e7924c2e1236c1a369",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-poi.json.gz",
+                    "bytes": 207400,
+                    "md5": "4722c3c31b4fa7a473492739a5e6cbfb",
+                    "sha256": "b9a63c6281cd260778d079bafbbff676b4c500b3dc759d0b45d264c8130d98fc",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-measuring-coastline.json.gz",
-                    "bytes": 145277,
-                    "md5": "06598f260cd1179977ef5793ad3960d9",
-                    "sha256": "edfb914e9f5891410af166f831d4c13006d9c178dfceb7da4c8c969b01dda48e",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-coastline.json.gz",
+                    "bytes": 145281,
+                    "md5": "428360f500d7819a2dd8e4bef739426d",
+                    "sha256": "072d9cd6a38b053e0f6ac0ff958a6baf286c6cb4550720b9df79a5047ec45387",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-measuring-high-speed-rail.json.gz",
-                    "bytes": 2825,
-                    "md5": "a15b3291be68546ec477c37b0b12a592",
-                    "sha256": "abd541b5185aadd6eef1610152aeb3da8eceea54001c0b4597998a5d3e1a5237",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-high-speed-rail.json.gz",
+                    "bytes": 2824,
+                    "md5": "8d2717f0983e869a55bad784e0f675c9",
+                    "sha256": "d6d0faa281cc409964e39fb6c46598817f2275c3234bf78b639c8afd7f66a453",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-body-of-water.json.gz",
+                    "bytes": 19325903,
+                    "md5": "3046e29538034c55deaef1b10337eea7",
+                    "sha256": "aa8fd9f62a6fd1a421484ca113a9034b282567e50b30ddbf7d356d6a4f805a59",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-measuring-admin-1st-border.json.gz",
-                    "bytes": 109044,
-                    "md5": "5f3ff321fae2f618717f065b96554059",
-                    "sha256": "18dafe5e7220394dac3e8f9d4780e5c181f8d2527cbd9bc75710039b479ee4c2",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-admin-1st-border.json.gz",
+                    "bytes": 109045,
+                    "md5": "e37734bd341282651a370b58f8858012",
+                    "sha256": "3705262be1b7bfa5b7fd9022d2e55555a965cdcd6af9d58371bb619a3c610b1e",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-admin-2nd-border.json.gz",
                     "bytes": 524727,
-                    "md5": "6d12113d32d4aff3612fa69d3c43ce27",
-                    "sha256": "a8eda0a6e7317817a23c56ac71cf774462a52f7a6f8ca20e5216177ad2849a34",
+                    "md5": "8055c125ebbb7b7a7e6e02bdad76e0d3",
+                    "sha256": "3009805fea62898a565412ca91dc4f91dc74597886121af13e7e16ff6c614e90",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-measuring-admin-boundaries.json.gz",
-                    "bytes": 1983545,
-                    "md5": "bd0b9135b61c04b658139400b46d8c74",
-                    "sha256": "5e54700443bcbdfcecb01c081cfde280f167bf8a16b153797aef69dcc0e71182",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-admin-boundaries.json.gz",
+                    "bytes": 1983544,
+                    "md5": "6759980ce15a7bec3dc3c7e50e77e262",
+                    "sha256": "0c9677a9675679cd10efbfbeaca5fb38e9daeb345b6b80ed624106dc5f1a847f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-boundaries.json.gz",
                     "bytes": 1044575,
-                    "md5": "6515177d4cab740ba21cc61a41e68df9",
-                    "sha256": "6609195615d85542c265d676d0eabee8b625590925b26b769f20e4ac105dbe53",
+                    "md5": "d7217f68664faa1767bc2de6207f03fc",
+                    "sha256": "ad4da84f209c5c34bb6b04d5622086709752666a49bb11627f9190f44b615f26",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-transit.json.gz",
-                    "bytes": 295013,
-                    "md5": "01c4e07fbb90331e2c31d96ff85f56b6",
-                    "sha256": "a73e83b77cb8d2817db7d0d907be7e611e2327443e5e73569d1a69dac919be27",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-transit.json.gz",
+                    "bytes": 290712,
+                    "md5": "ebeacea03753abc252a9f0d8da173e12",
+                    "sha256": "92c804570995c5f2e8f79b5f668689ab3ecab59d923f07e5df7e55ab0d0892f4",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-netherlands-meta.json.gz",
-                    "bytes": 494,
-                    "md5": "5326cb827c9d876109103d709d9ac969",
-                    "sha256": "987c5b96a36dc5942ed545ba06232c95216e2e1b9f6654c980c9fc0dd3b446f7",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-meta.json.gz",
+                    "bytes": 503,
+                    "md5": "36def501dbaec959640aa78fde69e237",
+                    "sha256": "cbd2f03401868261a1ded66286c6b0bf984eb9807020d008efceebb5315fc0bb",
                     "schemaVersion": 1
                 }
             ]
@@ -2379,6 +2388,97 @@
                     "bytes": 498,
                     "md5": "3f83f8a484b85c9b1523fbb008fa5e17",
                     "sha256": "4994195e791cb612de50f13615ca0ab704ecdc15cbdf9e2b8c7ae18cc84f5536",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-alabama",
+            "label": "Alabama",
+            "regionPath": ["North America", "US", "Alabama"],
+            "bbox": [-88.483889, 29.954937, -84.883364, 35.00872],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 9973557,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-poi.json.gz",
+                    "bytes": 73717,
+                    "md5": "24c7ec901d35924148e943a37af688fc",
+                    "sha256": "c897e7224f1bd79862158e423a6186f43161888965695fc506b72d59f1cc6672",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-measuring-coastline.json.gz",
+                    "bytes": 71161,
+                    "md5": "ad4275123c043855e5244789edf90a3a",
+                    "sha256": "bb1c65b3006c8d042a8064621eb3bda078c2021d4f228f9b6d184a4741e0bd31",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-measuring-body-of-water.json.gz",
+                    "bytes": 7780874,
+                    "md5": "51e5ae2f8e110219c1036e68c968e7ee",
+                    "sha256": "ef2e405f7cd1300d75a2184340b6b25cd777209c5f0b4c764e71a580977c319d",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-measuring-admin-1st-border.json.gz",
+                    "bytes": 21617,
+                    "md5": "1a0b676071f119de5462f30084317650",
+                    "sha256": "8083435cb30845e659f0faee821d037eeb14698007567083932e0b27dca14f3d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-measuring-admin-2nd-border.json.gz",
+                    "bytes": 254961,
+                    "md5": "a016dfed0f1a6598660acf7dd2155d02",
+                    "sha256": "d753acbcba7160ace17a8d04662451b4a92b17c940475edbb50bdedc8a1cf5cd",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-measuring-admin-boundaries.json.gz",
+                    "bytes": 1182261,
+                    "md5": "469bf657dd1b92b6cbebe21bdb3d03c9",
+                    "sha256": "d3378459473def8970d4fb7070d7c450569e4f485a0de83d84a00df2cfb0b5d5",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-boundaries.json.gz",
+                    "bytes": 587602,
+                    "md5": "85d5d64ab09d1833ee6f93336a1d26fd",
+                    "sha256": "5540b6b0f31dd91a484dfd6d2cdf7b494a11b7f78cc6dc04120ee27a8202d5c4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-transit.json.gz",
+                    "bytes": 863,
+                    "md5": "cd25e93307bd2e4885dd2b8d19fba36a",
+                    "sha256": "ec7f3d7bdab1cb5dbe82e8c7873b3e43769eeb8ab9d8a964026a15075b557025",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-meta.json.gz",
+                    "bytes": 501,
+                    "md5": "e59a34bbb8caa631bdb24829f023553e",
+                    "sha256": "2f46ab9355833492ca26153c6c8d13bc7154cd1d7550e8a7cd7fd50ef47da195",
                     "schemaVersion": 1
                 }
             ]
