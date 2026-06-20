@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:38:58.470Z",
+    "generatedAt": "2026-06-20T14:39:21.833Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5277,6 +5277,88 @@
                     "bytes": 501,
                     "md5": "5f1fcc69a69ad682572dca29a4d2f6eb",
                     "sha256": "d03db76b0f62fa890a64faaf5a37076cbfed1d69be5c5d25541436b6d8a6c19b",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-tennessee",
+            "label": "Tennessee",
+            "regionPath": ["North America", "US", "Tennessee"],
+            "bbox": [-90.31329, 34.98269, -81.64416, 36.68075],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 7948001,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-poi.json.gz",
+                    "bytes": 104519,
+                    "md5": "c52c6c20b3a235268457da352e06e233",
+                    "sha256": "04912ec0af04bcf5c54f661f933b48214e79668b714a24f91937039debf8df1b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-measuring-body-of-water.json.gz",
+                    "bytes": 6132387,
+                    "md5": "0b3159e3e070c488df23cc36450ce9c6",
+                    "sha256": "22564a9c688ccb229b78f50c7c0a85394b29c29b9e330e8c29771fca12d49403",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-measuring-admin-1st-border.json.gz",
+                    "bytes": 27525,
+                    "md5": "4ad40bccefc48c7603353fb80d0a4eeb",
+                    "sha256": "49c28cd91b7833db65dc3c488444fbca4872031d6ac0000c2a9b29b7804aa6b7",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-measuring-admin-2nd-border.json.gz",
+                    "bytes": 295449,
+                    "md5": "23fb7b8dec3375f3f5e4e7911e7f81a6",
+                    "sha256": "8e1ca31ecde2be98f7dd4a8502ed4f2382ca2a7db509f2f9c3f8213445530fca",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-measuring-admin-boundaries.json.gz",
+                    "bytes": 881389,
+                    "md5": "97a732fec44aaf64572e8d6a5b2ce40a",
+                    "sha256": "076244d1abbc5c29a4e10d809f0bc6874e9a6b11f7385e57dad51f620ed9c268",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-boundaries.json.gz",
+                    "bytes": 504267,
+                    "md5": "0c551024966f6aab380d8ab9c4094332",
+                    "sha256": "2ebce85ea79ca29493c7172db036babccded96c856fa5e54c1be8fedfdcc1dfd",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-transit.json.gz",
+                    "bytes": 1975,
+                    "md5": "fe6fb66c09deb5d9146a88d49bae0f93",
+                    "sha256": "0711cebb429fb4761aa11ead335700dae173812c9fba2626802ca25d84d11c88",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-meta.json.gz",
+                    "bytes": 490,
+                    "md5": "370bc0368431388cf9a8a1eba6c6504f",
+                    "sha256": "462d5291f076b874b4dd43df9617231763eb6f52910c4771b0731a50c332d037",
                     "schemaVersion": 1
                 }
             ]
