@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:37:01.596Z",
+    "generatedAt": "2026-06-20T14:37:26.092Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4776,6 +4776,88 @@
                     "bytes": 482,
                     "md5": "6b3b4b7ac11ce90d072700f43eb9765d",
                     "sha256": "2b63963e3cefc9179228a29a184e1b1f2d700b2eb91cd98446b959fd48fde7f5",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-ohio",
+            "label": "Ohio",
+            "regionPath": ["North America", "US", "Ohio"],
+            "bbox": [-84.8219, 38.09861, -79.89951, 43.48236],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 8947213,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-poi.json.gz",
+                    "bytes": 170975,
+                    "md5": "1ee43c0815ebce0bb85a048bf81f82dc",
+                    "sha256": "186be8485711fbdcef13a6eb226fcb17b3e1eb22be8a34f76606eabf09491bba",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-measuring-body-of-water.json.gz",
+                    "bytes": 6806205,
+                    "md5": "759438e2d206a74a4055a4c17e3eda69",
+                    "sha256": "767cad3688f8dff45a1c8747ca589bc78c01a13ed0e7fb160505b0d7c324fb5a",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-measuring-admin-1st-border.json.gz",
+                    "bytes": 23814,
+                    "md5": "aea08e4c6746f3d5dc8a6ea712179f16",
+                    "sha256": "b823662dfabaf08dcf35b2f3688940dded2336452a292d6092971941705ff2ff",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-measuring-admin-2nd-border.json.gz",
+                    "bytes": 61901,
+                    "md5": "0addbf7d2dddafaec5b15359a3e8bf3a",
+                    "sha256": "2ed831ed4afe6bea21b7dc2f45da110df06e95d84f5b40cec292b2fd4b2a8ad3",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-measuring-admin-boundaries.json.gz",
+                    "bytes": 1149380,
+                    "md5": "ec7ef8b4c158b15812af9fdbcd4c5212",
+                    "sha256": "c42a31b7a06416b9c34373c0a9cf773a20c279bfb7ac88fb1c23c853a01584ac",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-boundaries.json.gz",
+                    "bytes": 729371,
+                    "md5": "8516d0e5460ba27b310f980411f3a505",
+                    "sha256": "43782711152b76d2aa3b5bbd2df20dd58ce960ca4c077fd463218efb378f5a23",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-transit.json.gz",
+                    "bytes": 5079,
+                    "md5": "4dfacec87e673bc0678516b32ee959c6",
+                    "sha256": "8a5c11af94b9617ae88bc5d15ba7b1ede485d172addf9f7e505063370ea12440",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-meta.json.gz",
+                    "bytes": 488,
+                    "md5": "39fd32299d01556b65f13e2345777dbd",
+                    "sha256": "0037afd64dc16c4e7b62143937c37a68f255b457bbaada1415c42e640c10aeb5",
                     "schemaVersion": 1
                 }
             ]
