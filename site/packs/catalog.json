@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:24:25.842Z",
+    "generatedAt": "2026-06-20T07:24:53.342Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -373,87 +373,96 @@
             "regionPath": ["Asia", "Japan", "Hokkaido"],
             "bbox": [137.934616, 41.15098, 146.247631, 46.040273],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 4239722,
+            "totalBytes": 11305528,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-poi.json.gz",
-                    "bytes": 173345,
-                    "md5": "6dbe041855a09d09490387ec4d7f30e0",
-                    "sha256": "fa5e2daaaf2b9b44dffb72e20ac411f2cc7d1c283018b7079ff3858ce32fed9e",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-poi.json.gz",
+                    "bytes": 173342,
+                    "md5": "9329fb840345a19206e3f02f711c056e",
+                    "sha256": "24cc77d7367fa02b4c914c508bafb15df1a1d38cfcb82291baf85e3c3dc4a911",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-measuring-coastline.json.gz",
-                    "bytes": 290713,
-                    "md5": "3adceb87a9db7e5eb653d4df79e3ad84",
-                    "sha256": "533f9769c7057e9f1687a74924190a2495394d25989441671ec435e030eb76c3",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-coastline.json.gz",
+                    "bytes": 290712,
+                    "md5": "f834af10525f50d561ea8cc9643832ae",
+                    "sha256": "ef345c0a429b45f4d14c08d0992f70c21cc33f97762f95887726a6ee34d38a32",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-measuring-high-speed-rail.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-high-speed-rail.json.gz",
                     "bytes": 1179,
-                    "md5": "9a421ef474d0787ce5cb9423c6965edf",
-                    "sha256": "f544330863b1c9503163454e92cdcf67c0fd0b059467dce07b0b1ff3e6d0aac1",
+                    "md5": "6d17fec96bdd20f47ddd734643095717",
+                    "sha256": "e531a42cb00ab5f8f1c10b0812f501ad4425423bb175ec5da3879eef6d6419ba",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-body-of-water.json.gz",
+                    "bytes": 7061653,
+                    "md5": "5120b55d1b58e08adaa757aba93594e9",
+                    "sha256": "a534ea4cb26cdcdfda0881b2321f0863eec625fe269d8338e6c76b28c935ddae",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-measuring-admin-1st-border.json.gz",
-                    "bytes": 9730,
-                    "md5": "4c360036549dbfc2ce12062a6ff81a0e",
-                    "sha256": "5710c39d0ada243926173d542de766ad34831f9989868966343f8604ee3f2ce1",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-admin-1st-border.json.gz",
+                    "bytes": 9729,
+                    "md5": "2f8e007166829dd3284fbca1bdf22fee",
+                    "sha256": "36f595336e120f7d58c013a71f2514401995574d3fbb38f543984176f6eb81d5",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-measuring-admin-2nd-border.json.gz",
-                    "bytes": 916064,
-                    "md5": "2a3fe86e733ba50c0fc1da41d87d49dc",
-                    "sha256": "97c3ccfe2579190b634fef610aa1eea1b7e3f35ccbd9c3d30e9b90916357c256",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-admin-2nd-border.json.gz",
+                    "bytes": 916066,
+                    "md5": "57f8cd782dc8937e17bcda10259bcd48",
+                    "sha256": "939a8c03b82753e5b5a2afac959277862f172b8455174aff2289c848cb161561",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-measuring-admin-boundaries.json.gz",
-                    "bytes": 1909982,
-                    "md5": "39abe83d6fe1fb62bbefee2a073af2e8",
-                    "sha256": "9f02471b144edc5ab8d64b792ef19382d2ad4f6a1fbf20bfd4ea0afe9a89b837",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-admin-boundaries.json.gz",
+                    "bytes": 1909981,
+                    "md5": "4480ec9567a1900fed0040c2bc0ab5b4",
+                    "sha256": "97776bc7c1926cefc9c8fbda7abff8133e9abfbf89599f1d203da712afbfac6a",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-boundaries.json.gz",
                     "bytes": 878576,
-                    "md5": "917316ca6723db6044e08c6955589de9",
-                    "sha256": "a63df858eed6662be56608f57713418f8d904b2e85a811d80221ad01e037718f",
+                    "md5": "8bcc5a7ce8adb6a97cb8912d555f3041",
+                    "sha256": "e32767124b463edf3763b9968e8c959e9c23ef41592299c6b8c6341aeb472855",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-transit.json.gz",
-                    "bytes": 59634,
-                    "md5": "e32ba0ea3453996bc22a6c9a1072280f",
-                    "sha256": "e7c19d1d157e5c193d4e2bf1bf5cb77904779dadeb1e11e3093139637595a15a",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-transit.json.gz",
+                    "bytes": 63782,
+                    "md5": "37c7a2d9491d0dd4bc0363efd24c4c51",
+                    "sha256": "21e319df2be3af9a401903794f720224be9b3a0ee38f6abb1dd918e497fbd469",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-japan-hokkaido-meta.json.gz",
-                    "bytes": 499,
-                    "md5": "5e9b8b6e0df087e4dd853a95d179d323",
-                    "sha256": "799790422451d24008f377d9f06d8184964ab228779a65073d585ceef7e2b607",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-meta.json.gz",
+                    "bytes": 508,
+                    "md5": "eb1d3bbdfbf1f9385d56948990bf9311",
+                    "sha256": "3e856dd31c3313e918e964578346d3a22a853d17a1dd99cad13b83e4072b17b3",
                     "schemaVersion": 1
                 }
             ]
