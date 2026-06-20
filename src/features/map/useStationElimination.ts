@@ -420,7 +420,10 @@ export function useStationElimination(): StationEliminationResult {
     const { selectedStations, zoneFeatures } = useHidingZoneDerived();
     const { radiusMeters } = useHidingZoneState();
     const { playArea } = usePlayArea();
-    const questionMapRenderState = useQuestionMapRenderState();
+    const {
+        renderState: questionMapRenderState,
+        isComputing: renderComputing,
+    } = useQuestionMapRenderState();
 
     const boundary = playArea.boundary as GeoJsonFeatureCollection | null;
     const bbox = playArea.bbox;
@@ -464,12 +467,19 @@ export function useStationElimination(): StationEliminationResult {
         // Cache hit → update state immediately (no loading flash).
         const hit = getCachedResult(stations, zf, boundary, radiusMeters, qrs);
         if (hit) {
+            console.log(
+                `[useStationElimination] cache HIT — remaining=${hit.remainingCount}/${hit.totalCount}`,
+            );
             setResult(hit);
             return;
         }
 
         // Cache miss → show loading state and defer the heavy work.
         const computeId = ++computeIdRef.current;
+        console.log(
+            `[useStationElimination] cache MISS — setting isComputing=true, ` +
+                `stations=${stations.length}, zoneFeats=${zf.features.length}`,
+        );
         setResult({
             remainingCount: null,
             totalCount: stations.length,
@@ -477,32 +487,62 @@ export function useStationElimination(): StationEliminationResult {
             isComputing: true,
         });
 
+        const t0 = performance.now();
+        let rafId: number | null = null;
         const handle = InteractionManager.runAfterInteractions(() => {
-            if (computeId !== computeIdRef.current) return; // stale
-            const r = computeStationElimination(
-                stations,
-                zf,
-                boundary,
-                radiusMeters,
-                bbox,
-                qrs,
-            );
-            if (computeId !== computeIdRef.current) return; // stale
-            putCachedResult(stations, zf, boundary, radiusMeters, qrs, r);
-            setResult(r);
+            if (computeId !== computeIdRef.current) {
+                console.log(
+                    `[useStationElimination] runAfterInteractions STALE computeId=${computeId}`,
+                );
+                return;
+            }
+            // Yield one frame so React can commit the loading state before
+            // the synchronous compute blocks the JS thread.
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
+                if (computeId !== computeIdRef.current) return;
+                console.log(
+                    `[useStationElimination] runAfterInteractions START compute ` +
+                        `(computeId=${computeId}, elapsed=${(performance.now() - t0).toFixed(0)}ms)`,
+                );
+                const r = computeStationElimination(
+                    stations,
+                    zf,
+                    boundary,
+                    radiusMeters,
+                    bbox,
+                    qrs,
+                );
+                const dt = (performance.now() - t0).toFixed(0);
+                console.log(
+                    `[useStationElimination] runAfterInteractions DONE compute ` +
+                        `(computeId=${computeId}, elapsed=${dt}ms, remaining=${r.remainingCount}/${r.totalCount})`,
+                );
+                if (computeId !== computeIdRef.current) return; // stale
+                putCachedResult(stations, zf, boundary, radiusMeters, qrs, r);
+                setResult(r);
+            });
         });
 
         return () => {
+            if (rafId !== null) cancelAnimationFrame(rafId);
             handle.cancel();
         };
     }, [stations, zf, boundary, radiusMeters, bbox, qrs]);
+
+    // Treat an upstream render-state recompute as "still computing" too — the
+    // elimination inputs (the question render state) aren't final yet.
+    const withUpstream = (
+        r: StationEliminationResult,
+    ): StationEliminationResult =>
+        renderComputing && !r.isComputing ? { ...r, isComputing: true } : r;
 
     // When a cached result was available on this render but state still
     // holds a stale loading/null value, update synchronously (avoids a
     // one-frame flash of loading indicator on cache hits).
     if (cached && result.isComputing) {
-        return cached;
+        return withUpstream(cached);
     }
 
-    return result;
+    return withUpstream(result);
 }

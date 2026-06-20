@@ -9,9 +9,12 @@ import {
 } from "@/features/map/eliminationMath";
 import {
     buildQuestionMapRenderState,
+    buildRenderStateKey,
+    getQuestionMapRenderStateCacheEntry,
     useQuestionMapRenderState,
 } from "@/features/questions/questionGeometry";
 import type { QuestionState } from "@/features/questions/questionTypes";
+import { useEnsureMeasuringBundles } from "@/features/questions/measuring/useEnsureMeasuringBundles";
 import {
     useHidingZoneDerived,
     useHidingZoneState,
@@ -47,7 +50,14 @@ export function useQuestionElimination(
     const { zoneFeatures, selectedStations } = useHidingZoneDerived();
     const { radiusMeters } = useHidingZoneState();
     const questions = useQuestions();
-    const committedRenderState = useQuestionMapRenderState();
+    const { renderState: committedRenderState } = useQuestionMapRenderState();
+
+    // Track measuring bundle load revision so cache keys include it.
+    const measuringQuestions = questions.filter(
+        (q): q is Extract<QuestionState, { type: "measuring" }> =>
+            q.type === "measuring",
+    );
+    const measuringRevision = useEnsureMeasuringBundles(measuringQuestions);
 
     return useMemo(() => {
         if (!playArea.boundary || zoneFeatures.features.length === 0)
@@ -66,19 +76,40 @@ export function useQuestionElimination(
               )
             : questions;
 
-        const buildRenderState = (subset: QuestionState[]) =>
-            buildQuestionMapRenderState(
+        const buildRenderStateKeyFor = (subset: QuestionState[]) =>
+            buildRenderStateKey(
                 subset,
                 selectedStations,
                 radiusMeters,
                 playArea.bbox,
-                boundary,
+                playArea.osmId,
+                measuringRevision,
             );
 
-        // Total: all questions. When not overriding, reuse the shared (memoized)
-        // committed render state so this matches the hero stat exactly.
+        const buildOrGetCached = (
+            subset: QuestionState[],
+        ): ReturnType<typeof buildQuestionMapRenderState> | null => {
+            const key = buildRenderStateKeyFor(subset);
+            const cached = getQuestionMapRenderStateCacheEntry(key);
+            if (cached) return cached;
+            // Cache miss — don't build synchronously. The shared deferred
+            // computation (useQuestionMapRenderState) will populate this
+            // cache entry; return null to signal "not yet available."
+            return null;
+        };
+
+        // Total: all questions. When not overriding, reuse the shared
+        // (memoized) committed render state so this matches the hero stat
+        // exactly. When overriding (thermometer drag), build synchronously
+        // — those categories don't trigger heavy line-distance compute.
         const fullRenderState = liveOverride
-            ? buildRenderState(effectiveQuestions)
+            ? buildQuestionMapRenderState(
+                  effectiveQuestions,
+                  selectedStations,
+                  radiusMeters,
+                  playArea.bbox,
+                  boundary,
+              )
             : committedRenderState;
         const totalPct = zoneEliminationPercent(
             eligibleArea(boundary, zoneFeatures, fullRenderState),
@@ -88,17 +119,53 @@ export function useQuestionElimination(
         const index = effectiveQuestions.findIndex((q) => q.id === questionId);
         if (index < 0) return { totalPct, byThisPct: 0 };
 
-        // Strict ordering: this question's marginal over every earlier question.
-        const eligibleBefore = eligibleArea(
-            boundary,
-            zoneFeatures,
-            buildRenderState(effectiveQuestions.slice(0, index)),
-        );
-        const eligibleAfter = eligibleArea(
-            boundary,
-            zoneFeatures,
-            buildRenderState(effectiveQuestions.slice(0, index + 1)),
-        );
+        // Strict ordering: this question's marginal over every earlier
+        // question. When not overriding, only compute when both subset render
+        // states are already cached by the deferred path; otherwise skip so we
+        // don't block the render thread on a synchronous computeLineDistance
+        // call. When overriding (thermometer drag), build synchronously since
+        // the live positions make the cache miss anyway and the geometry is
+        // cheap (no line-distance bundles).
+        let eligibleBefore: number;
+        let eligibleAfter: number;
+
+        if (liveOverride) {
+            const buildRenderState = (subset: QuestionState[]) =>
+                buildQuestionMapRenderState(
+                    subset,
+                    selectedStations,
+                    radiusMeters,
+                    playArea.bbox,
+                    boundary,
+                );
+            eligibleBefore = eligibleArea(
+                boundary,
+                zoneFeatures,
+                buildRenderState(effectiveQuestions.slice(0, index)),
+            );
+            eligibleAfter = eligibleArea(
+                boundary,
+                zoneFeatures,
+                buildRenderState(effectiveQuestions.slice(0, index + 1)),
+            );
+        } else {
+            const beforeState = buildOrGetCached(
+                effectiveQuestions.slice(0, index),
+            );
+            const afterState = buildOrGetCached(
+                effectiveQuestions.slice(0, index + 1),
+            );
+
+            if (!beforeState || !afterState) {
+                // Cache not yet populated — the deferred computation is still
+                // running. Return the total with a zero contribution; the next
+                // render will recompute when the cache is warm.
+                return { totalPct, byThisPct: 0 };
+            }
+
+            eligibleBefore = eligibleArea(boundary, zoneFeatures, beforeState);
+            eligibleAfter = eligibleArea(boundary, zoneFeatures, afterState);
+        }
 
         return {
             totalPct,
@@ -115,8 +182,10 @@ export function useQuestionElimination(
         committedRenderState,
         playArea.boundary,
         playArea.bbox,
+        playArea.osmId,
         zoneFeatures,
         selectedStations,
         radiusMeters,
+        measuringRevision,
     ]);
 }
