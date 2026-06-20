@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:36:38.989Z",
+    "generatedAt": "2026-06-20T14:37:01.596Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4703,6 +4703,79 @@
                     "bytes": 504,
                     "md5": "054d88f462d3f2b612ee8c3e32a0f24a",
                     "sha256": "09f1242472309309acd18e4d12277e55702194a777e306a59d4be6511b8fd1bd",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-north-dakota",
+            "label": "North Dakota",
+            "regionPath": ["North America", "US", "North Dakota"],
+            "bbox": [-105.0844, 45.93448, -96.55292, 49.70865],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 10214121,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-poi.json.gz",
+                    "bytes": 28008,
+                    "md5": "88ae0dc8885c78c3371a8b6f108b7bd2",
+                    "sha256": "87c684133c22294f707a93c8142fe7bd070c1677fad99aa799d715574d98e560",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-measuring-body-of-water.json.gz",
+                    "bytes": 9559971,
+                    "md5": "5cd892032e42a9008f99c9efba6ff2f5",
+                    "sha256": "3fce19ae9df3d751c1cc4e90042df2a941e2828f7d306a9c8ebcccf5b2a300ef",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-measuring-admin-2nd-border.json.gz",
+                    "bytes": 98398,
+                    "md5": "2b0c488d94f75bfe93b6e26085e73676",
+                    "sha256": "e076219f020ac0eec5ad8575981ad50238d76b7c8341f76e7b5a39a50c092cc7",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-measuring-admin-boundaries.json.gz",
+                    "bytes": 270471,
+                    "md5": "1a9dad3cd18d8536c2140d01d1e73b41",
+                    "sha256": "fb80832bc4d273cbde8a8462e6e5b04a90e56b2270576be1a36de44bc59df8ee",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-boundaries.json.gz",
+                    "bytes": 255992,
+                    "md5": "9667ef6e3c9f0364e7f4a0e1093dc090",
+                    "sha256": "2950ff9587da72fb8957c055b7e9621431c32bb4c85d5805a173dbc9e007b507",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-transit.json.gz",
+                    "bytes": 799,
+                    "md5": "7cfc05316af056aaf0bc7d392cb8f6f0",
+                    "sha256": "793aeaf0b47aecf66f9fda0d6ab58ddbbf64c338b122fe72ac418c0134750c6c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-meta.json.gz",
+                    "bytes": 482,
+                    "md5": "6b3b4b7ac11ce90d072700f43eb9765d",
+                    "sha256": "2b63963e3cefc9179228a29a184e1b1f2d700b2eb91cd98446b959fd48fde7f5",
                     "schemaVersion": 1
                 }
             ]
