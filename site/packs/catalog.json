@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:50:43.381Z",
+    "generatedAt": "2026-06-20T07:51:03.539Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3555,6 +3555,88 @@
                     "bytes": 482,
                     "md5": "a89ce2072578e8641212f5f8ae6e0fdc",
                     "sha256": "82a8a179f90b80b2cb812990f492360c07fb7ba13c1162023270fc622cce2aa6",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-kansas",
+            "label": "Kansas",
+            "regionPath": ["North America", "US", "Kansas"],
+            "bbox": [-107.3034, 33.40115, -94.58926, 40.00681],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 5593977,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-poi.json.gz",
+                    "bytes": 62258,
+                    "md5": "504b706f86f2c517cf4a77692f9b83d2",
+                    "sha256": "0840d7571916b6063d1857a001c48aa533ec74eccff844e6a922461f009fb8cd",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-measuring-body-of-water.json.gz",
+                    "bytes": 4930436,
+                    "md5": "eb2fb41daa48e35fa9929b7a26eb4cda",
+                    "sha256": "5cad3075b23c57462383a198a52428b62bd724d9b7d9c67abc4642b76a0d8cd8",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-measuring-admin-1st-border.json.gz",
+                    "bytes": 5828,
+                    "md5": "cc9a93d602e5c8e863e647d8192e5b3f",
+                    "sha256": "0903eb4cb0cac9daa1552b95d36892689bdb82b4adcbc9d1e02511c00c518466",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-measuring-admin-2nd-border.json.gz",
+                    "bytes": 39332,
+                    "md5": "25c6ba0e945ff56824ef58d9c956dc46",
+                    "sha256": "0439aede6d665cbcc3627e3b1afc3ede6f7f45e9f5e1ddcfffb445f0d93a88aa",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-measuring-admin-boundaries.json.gz",
+                    "bytes": 295099,
+                    "md5": "8cbe2661e603ee75d51da9b8b7eaf920",
+                    "sha256": "73bd9d2c79b35dbc6b85798fc40bbcd6e16ad0613ac8c54a74046e74394848db",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-boundaries.json.gz",
+                    "bytes": 259607,
+                    "md5": "85ba137e5cda972664826ad518307148",
+                    "sha256": "8b7d3c4d131e1dc0c33c3af217ae73a0ccca6cd2e67ae8efce55f4235928f537",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-transit.json.gz",
+                    "bytes": 933,
+                    "md5": "16240c96e0cf12c901632d1fb46d9094",
+                    "sha256": "8d9f5ce69c150b5f3b3d60d4180e2030ba0dab56444befb008b5edffcd0c617c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-meta.json.gz",
+                    "bytes": 484,
+                    "md5": "657a41ccb76c37eb23fd3e8521fb36f4",
+                    "sha256": "fd686f9871a072bd60281f91c853637cbfbab1b6a0feb06fe8b508523ed1e488",
                     "schemaVersion": 1
                 }
             ]
