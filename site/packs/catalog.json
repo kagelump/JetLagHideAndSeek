@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:47:11.178Z",
+    "generatedAt": "2026-06-20T07:47:33.099Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2570,6 +2570,88 @@
                     "bytes": 484,
                     "md5": "f4ff686dc0f1b3246572492c7802b8ae",
                     "sha256": "82fd55601a1f50a686ebf0e9cf0eff38e1c18662643ebaa7ca6b5c973f77d6c5",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-arkansas",
+            "label": "Arkansas",
+            "regionPath": ["North America", "US", "Arkansas"],
+            "bbox": [-94.62217, 33.0038, -89.63987, 36.55212],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 6351956,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-poi.json.gz",
+                    "bytes": 69318,
+                    "md5": "9d4630f0dd1739e5502eb682fdf65188",
+                    "sha256": "d28a498bcec34cb9db39c2c48e6539b412da5ffbcfc445c494bcfcf9506c2178",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-measuring-body-of-water.json.gz",
+                    "bytes": 5009445,
+                    "md5": "0d8eade470b0221f07bbab896f3ac029",
+                    "sha256": "3b07b54294172a3905f72802a1983913476ebacd0630927cdff97a6487310299",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-measuring-admin-1st-border.json.gz",
+                    "bytes": 23077,
+                    "md5": "fba6edfc5bd080fa4b7b83c59a213da2",
+                    "sha256": "24f70eb9b7edf20fcd47717a9a62114ab74ff1a357cc2b4d01f148b4b8f9121b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-measuring-admin-2nd-border.json.gz",
+                    "bytes": 260962,
+                    "md5": "453900af64ad9ac545c34f819b083f67",
+                    "sha256": "368b74cc5603cbb76793471a5d21e8e76d61ac1b326fef09a44fdab9fb3612a1",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-measuring-admin-boundaries.json.gz",
+                    "bytes": 599461,
+                    "md5": "bfd555ca95d642ae7aece9ad2c84a691",
+                    "sha256": "e337d59ad5b91e9462b522e7d53a7a6921f0bf9fcb6c4406fc6b926876159f23",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-boundaries.json.gz",
+                    "bytes": 387902,
+                    "md5": "a600dcc3d8164d1cf5d2ecd60ed249fc",
+                    "sha256": "0a6433b5ff28c23c32d5071dafbd2141d15d18d8eb9ccff9a091df296d718450",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-transit.json.gz",
+                    "bytes": 1307,
+                    "md5": "60e01090f0704864703f7679c5d8731f",
+                    "sha256": "fe9fa7f1d87d4b7253bb9a94b6ca9f18cbafc9d805c3b81bef64f239c00a9b08",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-meta.json.gz",
+                    "bytes": 484,
+                    "md5": "af5c1e89cc87edf1a8067a5462b51d69",
+                    "sha256": "c59b423207319802b0d54626db11afa24e21ece4d83095e7d4e60ec13309400a",
                     "schemaVersion": 1
                 }
             ]
