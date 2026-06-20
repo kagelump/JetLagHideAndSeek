@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:47:53.625Z",
+    "generatedAt": "2026-06-20T07:48:13.151Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2863,6 +2863,97 @@
                     "bytes": 498,
                     "md5": "29beddf59f3ed57db48a8634744e8945",
                     "sha256": "fb241953d69cae0f31e7ed8b5425489db1e0c3aca3b1a1de460ce3e8c47743c9",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-connecticut",
+            "label": "Connecticut",
+            "regionPath": ["North America", "US", "Connecticut"],
+            "bbox": [-73.72889, 40.96401, -71.7853, 42.05229],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 2839262,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-poi.json.gz",
+                    "bytes": 76177,
+                    "md5": "5c44b6e87b90c15ca0e47556ea4e934f",
+                    "sha256": "93f1c789a23b9e5552bbe58162c678ad320a9aa4d57fe5588da68ca7dca45194",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-measuring-coastline.json.gz",
+                    "bytes": 87753,
+                    "md5": "6b50565c0b8991c38a8db678cbe16960",
+                    "sha256": "0dcc9dae847a4b3a6cd373d51648bcee7e7433bad8f9fbb1a2f0f6b3b3030bc5",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-measuring-high-speed-rail.json.gz",
+                    "bytes": 707,
+                    "md5": "e0c89c95aa9fb34f56eec24154144518",
+                    "sha256": "f5f6da135aff2859ac2dd63838e7cb9b05417cec9b86ec6371c9f84a5de0c547",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-measuring-body-of-water.json.gz",
+                    "bytes": 2472159,
+                    "md5": "6cd360520b8ccc204c0c7fe32dcf1779",
+                    "sha256": "ff67ae9c3bc4d0bbf99fa8cfdd952a011e24e4504c3f0210e2a761f7d2580bef",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-measuring-admin-2nd-border.json.gz",
+                    "bytes": 4980,
+                    "md5": "b24f8c9917434dd9150a5bc3cebeddaf",
+                    "sha256": "6a850e1adf46eba3fbf3b27113ab26a901638538e20e08a9bd1ed53a3e825190",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-measuring-admin-boundaries.json.gz",
+                    "bytes": 115484,
+                    "md5": "d6b2277f8eb4bb4fd5772ca13822e81a",
+                    "sha256": "294c54f11a7976a339119427c7d89f035044c7eeac00d569262eef4321fd9220",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-boundaries.json.gz",
+                    "bytes": 78169,
+                    "md5": "3e88866ba3eb2af0274e9ecba49aa5b6",
+                    "sha256": "edb5cf2902d2d4f5da202cfaaf1604e85daad11d3605cff6eeca6d94c2788bd6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-transit.json.gz",
+                    "bytes": 3328,
+                    "md5": "f7767a42b591994986fc8d276cb74461",
+                    "sha256": "102ce8b6a1841897897f8d78586ee824554983bd2d53f8aaf18e7884e98135f6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-meta.json.gz",
+                    "bytes": 505,
+                    "md5": "00a4a4e2f85cfe6e8b3541d05285002a",
+                    "sha256": "690fc32c508518189ecbc6e63f9c554e1a4b1f3074a74a9e891b72ce1a24464b",
                     "schemaVersion": 1
                 }
             ]
