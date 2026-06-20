@@ -55,7 +55,6 @@ type SheetTransition = {
     direction: TransitionDirection;
     from: SheetRouteName;
     id: number;
-    isAnimating: boolean;
     to: SheetRouteName;
 };
 
@@ -71,6 +70,7 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
     const transitionIdRef = useRef(0);
     const startedTransitionIdRef = useRef<number | null>(null);
     const currentRoute = transition?.to ?? displayedRoute;
+    const primaryRoute = transition ? transition.from : currentRoute;
     const backTarget = getBackTarget(currentRoute);
     const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,7 +108,6 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
                 direction: dir,
                 from,
                 id,
-                isAnimating: false,
                 to,
             });
         },
@@ -136,14 +135,6 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
         startedTransitionIdRef.current = transitionId;
 
         const isBack = transitionDirection === "back";
-
-        leavingX.value = 0;
-        enteringX.value = getEnteringStartX(transitionDirection);
-        setTransition((current) =>
-            current?.id === transitionId
-                ? { ...current, isAnimating: true }
-                : current,
-        );
 
         leavingX.value = withTiming(isBack ? SHEET_WIDTH : -SHEET_WIDTH, {
             duration: ANIMATION.sheetTransitionMs,
@@ -200,32 +191,28 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
         <View style={styles.transitionContainer}>
             {transition ? (
                 <Animated.View
-                    key={`route-${transition.from}`}
+                    key={`route-${transition.to}`}
                     style={[
                         styles.animatedFill,
-                        getLeavingLayerStyle(transition.direction),
-                        transition.isAnimating ? leavingStyle : null,
+                        getEnteringLayerStyle(transition.direction),
+                        enteringStyle,
                     ]}
                 >
-                    {renderRouteContent(transition.from, handleNavigate)}
+                    {renderRouteContent(transition.to, handleNavigate)}
                 </Animated.View>
             ) : null}
 
             <Animated.View
-                key={`route-${currentRoute}`}
+                key={`route-${primaryRoute}`}
                 style={[
                     styles.animatedFill,
                     transition
-                        ? getEnteringLayerStyle(transition.direction)
+                        ? getLeavingLayerStyle(transition.direction)
                         : null,
-                    transition
-                        ? transition.isAnimating
-                            ? enteringStyle
-                            : getEnteringInitialStyle(transition.direction)
-                        : null,
+                    transition ? leavingStyle : null,
                 ]}
             >
-                {renderRouteContent(currentRoute, handleNavigate)}
+                {renderRouteContent(primaryRoute, handleNavigate)}
             </Animated.View>
 
             {backTarget ? (
@@ -242,12 +229,6 @@ export function MainDrawer({ route, onNavigate }: MainDrawerProps) {
 
 function getEnteringStartX(direction: TransitionDirection) {
     return direction === "back" ? -SHEET_WIDTH : SHEET_WIDTH;
-}
-
-function getEnteringInitialStyle(direction: TransitionDirection) {
-    return {
-        transform: [{ translateX: getEnteringStartX(direction) }],
-    };
 }
 
 function getLeavingLayerStyle(direction: TransitionDirection) {
