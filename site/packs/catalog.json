@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:51:22.081Z",
+    "generatedAt": "2026-06-20T07:51:44.729Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3710,6 +3710,88 @@
                     "bytes": 488,
                     "md5": "8fef20fa12933200c5ba14ead4264280",
                     "sha256": "1cc2ce24918420e3e3bb747b3ada94f0db380ff534558d6148777e5be6aa08c8",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-louisiana",
+            "label": "Louisiana",
+            "regionPath": ["North America", "US", "Louisiana"],
+            "bbox": [-94.04376, 28.14452, -88.66684, 33.0202499],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 15555458,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-poi.json.gz",
+                    "bytes": 48335,
+                    "md5": "222a864e93a204a30b5364cdce0ab232",
+                    "sha256": "b5b3cdf95fb340eb10c07e23c096ba643c3ae16fee123e5ffa87ddea177a2ce5",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-measuring-coastline.json.gz",
+                    "bytes": 1297985,
+                    "md5": "e8a98c2d9d328f9f267e6c6e180c71e7",
+                    "sha256": "d35b6b5078e43b1f3cff17ca2c2708ffc8b179d23d15cc03b9d4a0013f7ab0b0",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-measuring-body-of-water.json.gz",
+                    "bytes": 12991590,
+                    "md5": "8b4fe521b8c6390e74d793a2b1f6872b",
+                    "sha256": "bdd7e0a1d8b2564c59284476e0a99e58e12059adb7c63e0da709a151260213b2",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-measuring-admin-2nd-border.json.gz",
+                    "bytes": 306669,
+                    "md5": "15f30099315fcb739562867524951001",
+                    "sha256": "9665860340c97d57ed814f68eb4e7e089d0fc0e95ebc39b6702f4fb5672a9357",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-measuring-admin-boundaries.json.gz",
+                    "bytes": 558121,
+                    "md5": "9ec1061f510aa79ae1d9f1a4b91f07dc",
+                    "sha256": "a0e779d5d03dc169f27eb4780f4bdbaacff7544afb11449342ac5a177f10b0eb",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-boundaries.json.gz",
+                    "bytes": 347869,
+                    "md5": "4fe468b96a3b8892a3e4ba9cba3f7569",
+                    "sha256": "666bdec304602b7368cc1c526cb6858f70d2c9a7c491cfa59d16951242bcefc8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-transit.json.gz",
+                    "bytes": 4392,
+                    "md5": "fcde05b29f295ca4255e8b0a362c271e",
+                    "sha256": "c07b562af665d2b53803aa2ec3df9b22fe41ee1b0e26f61a1b481a4328aaf1dc",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-meta.json.gz",
+                    "bytes": 497,
+                    "md5": "2d0775bf5f40ad11d5689ade3fa554b9",
+                    "sha256": "f1803ea82facebefcf1e36edd7d558782fd840623276d784eefc31b1010e9731",
                     "schemaVersion": 1
                 }
             ]
