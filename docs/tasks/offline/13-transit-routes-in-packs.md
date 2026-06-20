@@ -18,9 +18,9 @@ them by their raw `operator` tag, and hardcodes `routes: []`
 color. It never extracts route relations at all.
 
 This was a **deliberate** T9 scope cut ("stations first; route lines best-effort
-until the osmRoutes geometry stitching is fixed" — see
-[09-transit-artifacts.md](09-transit-artifacts.md) and the epic decision table
-in [../../offline-data-packs.md](../../offline-data-packs.md)). T9's spec even
+until the osmRoutes geometry stitching is fixed" — the T9 transit-artifacts task,
+now shipped; see the design in
+[../../offline-data-packs.md](../../offline-data-packs.md)). T9's spec even
 said "keep whatever line geometry the OSM path produces today (best-effort)",
 but the shipped builder dropped routes entirely rather than best-effort.
 
@@ -175,7 +175,7 @@ Extend
 > **catalog** (`site/packs/catalog.json`, served via GitHub Pages) is the only
 > committed, served artifact — it points at absolute Release URLs and carries
 > each blob's content hash (epic decision: "Releases for blobs, Pages for the
-> catalog", [design.md](design.md) → "Catalog and hosting"). This is the
+> catalog", [../../offline-data-packs.md](../../offline-data-packs.md) → "Catalog and hosting"). This is the
 > opposite of the bundled Japan assets in `assets/transit/`, which _are_
 > committed because they're baked into the app binary. Do **not** `git add`
 > the regenerated `transit.json.gz`.

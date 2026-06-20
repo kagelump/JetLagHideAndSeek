@@ -166,9 +166,12 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pnpm exec expo run:ios --device "iPhone 16 P
   measuring lines, transit bundles, and offline packs) —
   `node tools/data-viewer/server.mjs` serves it; `build.mjs` emits the static
   variant. Use it to eyeball pipeline output before committing/publishing.
-- `docs/`: `implementation_notes.md` (durable native/map/E2E facts — update it
-  when you learn one) plus design/audit notes, `buglist1.md` (triaged bug /
-  audit list), and `question_impl/` task breakdowns.
+- `docs/`: `README.md` (index), `implementation_notes.md` (durable
+  native/map/E2E facts + "Design decisions of record" for shipped epics — update
+  it when you learn one), `open-work.md` (prioritized backlog of unfinished
+  work), `buglist1.md` (triaged bug / audit list), plus active design/audit
+  notes. Completed-epic task scaffolding is removed once consolidated — recover
+  from git history if needed.
 
 ## POI and Measuring Data
 

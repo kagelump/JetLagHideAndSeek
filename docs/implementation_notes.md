@@ -230,7 +230,7 @@ Store thinning ships one arch per device, so the per-device cost is one slice.
 against the `@turf/buffer` oracle in Jest — no device required. See the runbook
 below.
 
-**On-device (G3 — parity validation):** done (2026-06-09). See [g3-plan.md](./native-geometry/g3-plan.md) for the full plan. Summary:
+**On-device (G3 — parity validation):** done (2026-06-09). Summary:
 
 - On-device parity harness: PARITY PASS on iOS (iPhone 12 Pro, iOS 18.7.8) —
   46 curated cases across all 5 line categories, area ratio and bbox delta
@@ -730,3 +730,62 @@ Regression guards live in `NativeMap.test.tsx` ("nil-subview crash regression"):
 no `: null}` and no `&&`-conditional rendering of native children in any map
 layer file, and no dynamic `key` on `ML*` primitives. The `&&` check was added
 after the callout crash slipped past the `: null}`-only check.
+
+## Design decisions of record — shipped epics (consolidated 2026-06-20)
+
+Several large epics shipped and their step-by-step task docs were removed during
+a docs cleanup (recover from git history if you need the play-by-play). The
+binding rules they established now live in `AGENTS.md`; this section records only
+the non-obvious design decisions that still constrain current work.
+
+### Questions catalog (radar / matching / measuring / thermometer / tentacles)
+
+- Five question types ship; the type union, per-type config, and the
+  `questionRegistry` are the source of truth. See `AGENTS.md` → "Question Rules".
+- The decision that bit us twice and must not regress: **per-question Zod
+  schemas + normalizations are single-sourced in
+  `src/sharing/wire/questionSchemas.ts`** — persistence, full-key wire, minified
+  codec, and the store all derive from it. Triplicating them silently dropped
+  questions. Likewise **mask polarity** (required → intersect, excluded →
+  subtract) is single-sourced in `MASK_RULES` / `buildEligibilityConstraints`;
+  add new answer paths there with a render-state polarity test.
+- `radius` → `radar` was a terminology rename; legacy `type: "radius"` payloads
+  normalize via the shared schema transform. Keep the alias until the wire
+  version is intentionally bumped.
+
+### Transit station expansion + ODPT retirement
+
+- Detailed pipeline notes are above ("Transit Station Expansion"). Design of
+  record: **OSM-only station extraction**, locale-generic, per-operator presets,
+  lazy bundle loading by play-area bbox. GTFS is reference data, not shipped.
+- **Open residue:** the legacy `data/odpt/` tree is still on disk (kept for
+  cached GTFS zips). T10 "retire ODPT" was never finished — see open-work.md.
+
+### Remove bundled Japan → downloadable packs
+
+- The architecture pivot of record: **the only committed game asset is the Tokyo
+  boundary placeholder**; all POI / measuring / transit / admin data — including
+  Japan — comes from downloadable packs. Pack blobs are never committed (Releases
+    - `site/packs/catalog.json`). See `AGENTS.md` → "Offline Pack Rules".
+- Pre-launch the pack schema is free to break (no migration shims). Don't add
+  back-compat code for it until launch.
+
+### Native GEOS geometry backend + cross-engine parity
+
+- The GEOS op pipeline is single-sourced in
+  `modules/native-geometry/ios/geos_ops.{h,cpp}`, compiled into iOS (Swift),
+  Android (JNI), and a geos-wasm host oracle. One op edit touches all three —
+  run the Swift XCTest, the Android instrumented test, and the host parity gate.
+  Commands and the golden-fixture workflow are in `AGENTS.md` → "Testing
+  Expectations". The native test suite (golden fixtures, memory stress, MakeValid
+  recovery) shipped; the research/plan docs that produced it were removed.
+- Why it exists: pure-JS polyclip dissolve hard-locked on body-of-water
+  measuring (~25 s). A stale dev client silently degrades overlay ops to JS with
+  a per-op `console.warn` — rebuild after `native-geometry` changes.
+
+### Sharing (seeker → hider deep links)
+
+- Versioned wire format with a minified codec, deep links, and QR. The
+  `question-request` envelope and answer-eval shipped. Compact links omit large
+  payloads (custom relation boundaries don't round-trip through QR) — that
+  limitation is tracked in open-work.md, not yet solved.
