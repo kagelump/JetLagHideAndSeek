@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:40:13.553Z",
+    "generatedAt": "2026-06-20T14:40:41.003Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5532,6 +5532,97 @@
                     "bytes": 487,
                     "md5": "9e4de80925fe05be53cdf94c2ec437ca",
                     "sha256": "a710ba971a415318b8cdceb4ac82c2cdb93a7d2d426b8dfb97820c38be6fb263",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-virginia",
+            "label": "Virginia",
+            "regionPath": ["North America", "US", "Virginia"],
+            "bbox": [-83.67841, 36.53798, -74.29751, 39.46901],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 15315403,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-poi.json.gz",
+                    "bytes": 134814,
+                    "md5": "2dc8a70032eff315989629d08170d8a9",
+                    "sha256": "d11c2af6b74eaa8ac769f32d1fc1c13a75572cc60fa05eabd5d0127db959cbcb",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-measuring-coastline.json.gz",
+                    "bytes": 1280639,
+                    "md5": "e2c4729f5287d634c4822230e6076707",
+                    "sha256": "27adfda6ed1206c5acc173c54755287b45578a67060a89318a64e4b9f8595ef7",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-measuring-body-of-water.json.gz",
+                    "bytes": 12096823,
+                    "md5": "1cd715d58d232957fba908fb0dd3860c",
+                    "sha256": "a8cb6f355b4238ad22deb4a2628c1947f1c645bd0d0c4b9dcbd801c0136424cf",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-measuring-admin-1st-border.json.gz",
+                    "bytes": 48618,
+                    "md5": "4db1844357bd530615daeef9d0dd4796",
+                    "sha256": "afe47d61d53fa6649a82f2e0747ffe10fb03faee0eed1aa6490ef87bfed032e1",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-measuring-admin-2nd-border.json.gz",
+                    "bytes": 580030,
+                    "md5": "afc8c51cd063c9ec2d39aa2917baeda0",
+                    "sha256": "a9aae6a92dede47b2391b585e9bbf061881ce17fda341b7b0ef06c7e2881f543",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-measuring-admin-boundaries.json.gz",
+                    "bytes": 766712,
+                    "md5": "90c291728a5de831e5fda7640ee95b53",
+                    "sha256": "55e9dd28442c003b9501f505686f535f7addbd915dfd81066c7ba3d01b972126",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-boundaries.json.gz",
+                    "bytes": 401798,
+                    "md5": "241be5a0e81871506baf85dc8d1c5899",
+                    "sha256": "4bc28bdbab1e4b49914bc3078ee74023030597b2f5ac664c43a23e217f348db1",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-transit.json.gz",
+                    "bytes": 5460,
+                    "md5": "9817d5646b351bac59e6d05fd0c53db8",
+                    "sha256": "f392662b8346359027afc5d9619ebb4112a3abc3abd2feb661e4f19278c2a3b7",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-meta.json.gz",
+                    "bytes": 509,
+                    "md5": "873d4ef68167b3299a2da8826dc7436b",
+                    "sha256": "dfd3a0892d52427a09c6f05096a715f0cd93c6b18253c019bea65db6ecf44681",
                     "schemaVersion": 1
                 }
             ]
