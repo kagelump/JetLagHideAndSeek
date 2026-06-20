@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:34:47.852Z",
+    "generatedAt": "2026-06-20T14:35:10.353Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4238,6 +4238,79 @@
                     "bytes": 493,
                     "md5": "970efb12b879e8023c15a252259c9e98",
                     "sha256": "dcc68e33cfeb642aa6a3498511782d8ddc8d25a95bb4ade32701fbd9ad99e5c8",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-montana",
+            "label": "Montana",
+            "regionPath": ["North America", "US", "Montana"],
+            "bbox": [-116.0518, 44.35556, -102.685, 49.69326],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 11261349,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-poi.json.gz",
+                    "bytes": 99486,
+                    "md5": "5ba4f2d5f2c9b94f9c6d5eee7a7bb371",
+                    "sha256": "e4ec0681318e1df4f545eb249e1441a0c3c25b07e72e3318d948969f46a35c7b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-measuring-body-of-water.json.gz",
+                    "bytes": 9937614,
+                    "md5": "9db13f688993bfaf465117b1287043c5",
+                    "sha256": "ba8e9ea3bb5a8b600107b5a4c4965118e39734e8782675a74fa685c6cd166280",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-measuring-admin-2nd-border.json.gz",
+                    "bytes": 349626,
+                    "md5": "1239cdbd82eda75cf9a3e69f70614fa2",
+                    "sha256": "9f8daa2335da358d26aee3aea61fb61d91e8438045ef43eb2cb1cc64408fb26f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-measuring-admin-boundaries.json.gz",
+                    "bytes": 527162,
+                    "md5": "67a1a770ff0ba55d117011f31b8ab7b1",
+                    "sha256": "82ca8c14960a490e5542f5b7412b2c37bd53454cdc03291a9f0de64d8dc95904",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-boundaries.json.gz",
+                    "bytes": 345881,
+                    "md5": "ab55e1d00557580a01a7217437471719",
+                    "sha256": "d4c56abdda8b9367ed574de6337357668a4a632afd347e485f55cceb97f60b63",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-transit.json.gz",
+                    "bytes": 1103,
+                    "md5": "0dfbffe37ee77908028c438f1eb269a3",
+                    "sha256": "9657c96fcc4b9aa0407abaff3a53b692247a20698016e30fbb65910ed5b00182",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-meta.json.gz",
+                    "bytes": 477,
+                    "md5": "943084d1d786d6574273a5a5818e9ed7",
+                    "sha256": "949068c0185033017a84299ff181caf1591c211c6681969559837bfd1e076c0e",
                     "schemaVersion": 1
                 }
             ]
