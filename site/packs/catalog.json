@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:46:51.205Z",
+    "generatedAt": "2026-06-20T07:47:11.178Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2497,6 +2497,79 @@
                     "bytes": 501,
                     "md5": "e59a34bbb8caa631bdb24829f023553e",
                     "sha256": "2f46ab9355833492ca26153c6c8d13bc7154cd1d7550e8a7cd7fd50ef47da195",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-arizona",
+            "label": "Arizona",
+            "regionPath": ["North America", "US", "Arizona"],
+            "bbox": [-114.8325, 30.05891, -109.0437, 37.00596],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 15347425,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-poi.json.gz",
+                    "bytes": 144861,
+                    "md5": "da82073d9bc0fe9862ed8f501715aac4",
+                    "sha256": "88ac0e689754a6d781c6e0b955138ab6c8115a684460f9f9d10dd089abd50a0f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-measuring-body-of-water.json.gz",
+                    "bytes": 14508215,
+                    "md5": "0dd9479397b7406300d712fe4af86ba6",
+                    "sha256": "a508cb93a11d218964a564e79803ccf004690edb7b6f204f1d8fad678483b41a",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-measuring-admin-2nd-border.json.gz",
+                    "bytes": 122770,
+                    "md5": "7681950983ab6d1cb304a6c6cdb95cdf",
+                    "sha256": "82b3b812481f4e0b7a8590aa421e82d73e507ae29b53543ff0a512bc8dc0ab9f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-measuring-admin-boundaries.json.gz",
+                    "bytes": 301538,
+                    "md5": "e7885372f5ae77f934b86ac028d53dcd",
+                    "sha256": "412f7a2b798fb4dcdb3e8b47beed11fc2d3e7f8d5839ef329a9ed209367e39ac",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-boundaries.json.gz",
+                    "bytes": 263688,
+                    "md5": "48b4c6a46990a4c46516da7ada1d594f",
+                    "sha256": "f791105f9d9e17b764271fa518ffdb1fd9c556a1d1457df64efeaf188cc6591f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-transit.json.gz",
+                    "bytes": 5869,
+                    "md5": "6ac7ebc299f3ae9b67718d41a0f3f520",
+                    "sha256": "e60460ce3cef0deaf7353f9bff3d87bb7cd220b535ec341c4c40377d8f8a26ac",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-meta.json.gz",
+                    "bytes": 484,
+                    "md5": "f4ff686dc0f1b3246572492c7802b8ae",
+                    "sha256": "82fd55601a1f50a686ebf0e9cf0eff38e1c18662643ebaa7ca6b5c973f77d6c5",
                     "schemaVersion": 1
                 }
             ]
