@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:48:34.882Z",
+    "generatedAt": "2026-06-20T07:49:00.983Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3054,6 +3054,106 @@
                     "bytes": 509,
                     "md5": "db649d3c049a348ea9c0d7b4d3778708",
                     "sha256": "cc9970d74c0486562ffd9b9361a92612c943545db9c64e27d17d143236c7b4b0",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-florida",
+            "label": "Florida",
+            "regionPath": ["North America", "US", "Florida"],
+            "bbox": [-88.70372, 23.68312, -77.72359, 31.003067],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 18465638,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-poi.json.gz",
+                    "bytes": 217961,
+                    "md5": "3ae13d608b1178c4d95cddf8b4b8e204",
+                    "sha256": "bbe4387f2446790a191aef558ff8800ecb0bf7736c5e29556ec3dd001fddc376",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-coastline.json.gz",
+                    "bytes": 2332872,
+                    "md5": "cffddb60e6d9926da83f8c8299ddf9aa",
+                    "sha256": "00739aeba7983dc31d19338e430a903471d375c4ff162710216c282769af0979",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-high-speed-rail.json.gz",
+                    "bytes": 582,
+                    "md5": "c32dc7fb509df3960d257e0f9a411ae0",
+                    "sha256": "5625d8f8e55104d7c22efaeefd22a3b195f41c1987350d46f2d2b7160d3b1811",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-body-of-water.json.gz",
+                    "bytes": 13802226,
+                    "md5": "0ebbec123cad8fa2b5dfd7ce73903d16",
+                    "sha256": "57d09889eef249d9e3542d50a1db8c6c9d60f285c21d58061c9a678123499845",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-admin-1st-border.json.gz",
+                    "bytes": 46680,
+                    "md5": "3260bdb4a44d76c4446f8a95bd22d457",
+                    "sha256": "063ebb0d9f60371a7c9299478b8bf39943e27843a53bc28a189b871ae43e067b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-admin-2nd-border.json.gz",
+                    "bytes": 329027,
+                    "md5": "9afdf7cd9bdae91d7be278fdbb80ee34",
+                    "sha256": "c7bdccd69503463e03733790b9b688aa10cb3a01dee939b062169fe920d63960",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-admin-boundaries.json.gz",
+                    "bytes": 1189613,
+                    "md5": "5c5a70fc610d6ec23e2401218d407daf",
+                    "sha256": "6ecf44e6b7043242205d5ee2d4d3ce1a68eb85d8acf1dfe5bc8cf0baaa87a120",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-boundaries.json.gz",
+                    "bytes": 538761,
+                    "md5": "c3e36c4b8746f9624bcd76c41ba2396d",
+                    "sha256": "b7c6ffa6a44f68929a2108410da40eff447e8d979a169ceabaa2edba8d425efe",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-transit.json.gz",
+                    "bytes": 7406,
+                    "md5": "77d1866925dfdd0431516b05f85f06c1",
+                    "sha256": "d918bbf60ce671162bcd57ebde902ae0a9c9f057bf18403eb47aabdfafdcce4f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-meta.json.gz",
+                    "bytes": 510,
+                    "md5": "721996864403aba1a741728b65e4c40f",
+                    "sha256": "acaef7edab985befc0162af60efcf16b80b1e0164fdb8b863b1bad8d76b575b8",
                     "schemaVersion": 1
                 }
             ]
