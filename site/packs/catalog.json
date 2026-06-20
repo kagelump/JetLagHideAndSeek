@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:41:30.767Z",
+    "generatedAt": "2026-06-20T14:41:55.807Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5796,6 +5796,88 @@
                     "bytes": 493,
                     "md5": "93af8fc89bd37ab15c3e173ce400b456",
                     "sha256": "6650c7d97ebdb29b2bf71ee04be059a6dce02a7f5c0007532bf0ac82b9012d93",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-wisconsin",
+            "label": "Wisconsin",
+            "regionPath": ["North America", "US", "Wisconsin"],
+            "bbox": [-92.89089, 42.48899, -86.20021, 47.41451],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 16625163,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-poi.json.gz",
+                    "bytes": 152849,
+                    "md5": "4dd81c574ac7ebcd1cc773beba9f4e05",
+                    "sha256": "c2bc4922b5bda746ea25a341e8ac258969113f76daa3e15a783747b60d2b4662",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-measuring-body-of-water.json.gz",
+                    "bytes": 14415477,
+                    "md5": "ed17b94f1669c6e66091c9f55158c087",
+                    "sha256": "6f3e71dfacbfbcd710fff9e7f91f1c14bdda2a9f519d5898839065cfc18d0bb0",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-measuring-admin-1st-border.json.gz",
+                    "bytes": 32725,
+                    "md5": "67c6c57e3c43bcc3f222a0b4040e2628",
+                    "sha256": "6886066fa97fa14946d80fadb5e05308fe2ec48a669b5d322d36888d52d0db4d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-measuring-admin-2nd-border.json.gz",
+                    "bytes": 113922,
+                    "md5": "f22d5aca4b858e8f25f52400796e1e55",
+                    "sha256": "7ee2e6790812a48b8feabf41cb158856888243cc0b52f0c662f5275ab628b589",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-measuring-admin-boundaries.json.gz",
+                    "bytes": 1170064,
+                    "md5": "4329d4849149cc921ac88955e42894ad",
+                    "sha256": "781848c48555edb81eb37f050649bba9e3641174d6330aabe16f2330c0935b87",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-boundaries.json.gz",
+                    "bytes": 737358,
+                    "md5": "1450dae56ee7630687051a750776bdf0",
+                    "sha256": "f4f1545c5feb9d61cd5176918b61c4ad7deb9f76707835cf63b3d0363133406b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-transit.json.gz",
+                    "bytes": 2276,
+                    "md5": "e644819c258c072c5414d959a5fc7b0d",
+                    "sha256": "2725a28d6f2172b6a60e2c6a4fef01da4e24802b25830fe1758440e8c93c2c39",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-meta.json.gz",
+                    "bytes": 492,
+                    "md5": "61b1b19a7174c40acc0d9d07a0557557",
+                    "sha256": "edb5701c67f050a8c7e51598a3e0d6567b58db220b709e86eb1b8de111348ae0",
                     "schemaVersion": 1
                 }
             ]
