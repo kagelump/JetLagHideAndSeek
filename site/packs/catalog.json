@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:48:13.151Z",
+    "generatedAt": "2026-06-20T07:48:34.882Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2954,6 +2954,106 @@
                     "bytes": 505,
                     "md5": "00a4a4e2f85cfe6e8b3541d05285002a",
                     "sha256": "690fc32c508518189ecbc6e63f9c554e1a4b1f3074a74a9e891b72ce1a24464b",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-delaware",
+            "label": "Delaware",
+            "regionPath": ["North America", "US", "Delaware"],
+            "bbox": [-75.78974, 38.45043, -74.96121, 40.03221],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 720386,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-poi.json.gz",
+                    "bytes": 15038,
+                    "md5": "42de01748d47d5a4a0c65695fb4e6c40",
+                    "sha256": "3f585d457f35b16af1b0110deade5074a91aaabd3bc38c3ef9ff2c946bcb7e28",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-coastline.json.gz",
+                    "bytes": 64694,
+                    "md5": "8b5d134f0dec6ab9bcedc9ac51e11e98",
+                    "sha256": "aab37d0e89c572ea1506944cb14375529fbda18649eed84d8d287dd87f630582",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-high-speed-rail.json.gz",
+                    "bytes": 1029,
+                    "md5": "6b8453d25894bbfa81cbc845b5e998cb",
+                    "sha256": "baa95b0c45acf26b24089f18a061eb41a586679a5ce0b05d556bd8e336e549c9",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-body-of-water.json.gz",
+                    "bytes": 491733,
+                    "md5": "c264704f512f11139abcfa8705d518ca",
+                    "sha256": "ae670a9bf666114f86f24a1bb78e595541b9d1b92e28355c88b9054b9c982894",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-admin-1st-border.json.gz",
+                    "bytes": 3680,
+                    "md5": "077d618477bf1671c75dcbd44ed07eee",
+                    "sha256": "cab8c92c4eb6a364cf8cde514e388df0244f2ccf3d975cfbadfd5321e452606a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-admin-2nd-border.json.gz",
+                    "bytes": 8833,
+                    "md5": "670cc8201d4208a81b18997c4c6a0b66",
+                    "sha256": "a68a03dd81b5e28607e3ca71394319282745ceb0c2f5970705c5467ece35d3df",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-admin-boundaries.json.gz",
+                    "bytes": 61745,
+                    "md5": "92d2edd7cb767e2f9b54bc3c578d4956",
+                    "sha256": "d993786a795f61f240b42fad9e13c48d4ca1897180913e23c52efecd8f9bb864",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-boundaries.json.gz",
+                    "bytes": 72470,
+                    "md5": "b37de052634205e71d19939ad9706f38",
+                    "sha256": "acc22a7904b13ffdb795feca7d58d8d680f5edac4e40a3b98d60ab5a089b5983",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-transit.json.gz",
+                    "bytes": 655,
+                    "md5": "ea3a850cebb830448f7b62b8d61360ce",
+                    "sha256": "46c429369fc15ebfaee65d2f3c8e82806d3ccc7f12a018f60601fc90075c0699",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-meta.json.gz",
+                    "bytes": 509,
+                    "md5": "db649d3c049a348ea9c0d7b4d3778708",
+                    "sha256": "cc9970d74c0486562ffd9b9361a92612c943545db9c64e27d17d143236c7b4b0",
                     "schemaVersion": 1
                 }
             ]
