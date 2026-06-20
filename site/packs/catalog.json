@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:50:23.725Z",
+    "generatedAt": "2026-06-20T07:50:43.381Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3482,6 +3482,79 @@
                     "bytes": 491,
                     "md5": "be8db069c619aa4dcc798451db8ae1cd",
                     "sha256": "84dec38486755ca9e788a58d08004bc752c91ea80ad9eb6a9150541884c3cfd0",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-iowa",
+            "label": "Iowa",
+            "regionPath": ["North America", "US", "Iowa"],
+            "bbox": [-96.6426, 40.37266, -90.13581, 43.50182],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 10975672,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-poi.json.gz",
+                    "bytes": 101372,
+                    "md5": "e5b2138a5230adf07144f8d0ab789451",
+                    "sha256": "b77bc95dc080b2d9eda9979cd7351f2cf614ac9232f589ebc4cf68cdd8c3f007",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-measuring-body-of-water.json.gz",
+                    "bytes": 10006859,
+                    "md5": "e7f320fcb101a9aa4a5e1b3faab7b35e",
+                    "sha256": "315f30e70f045dde100529bf352356c91728a0f194543085c265d348e5355893",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-measuring-admin-2nd-border.json.gz",
+                    "bytes": 50877,
+                    "md5": "a7d2fd052d1dab6279dceb70040154b0",
+                    "sha256": "de19a58b3071794a04d7d1231947ef5e82562ddbb82b9e8a0bfb595758443550",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-measuring-admin-boundaries.json.gz",
+                    "bytes": 423014,
+                    "md5": "1d516544805c8c17f0c7c66cabce7d9b",
+                    "sha256": "b6340073c8d7be3c39bc9a1a82c6404c2c871371d12da03bf9cca6048685571a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-boundaries.json.gz",
+                    "bytes": 391334,
+                    "md5": "cfc3ed9201c9b0d9770b57fd15cb386f",
+                    "sha256": "a7a89a19b3756174f83ce92caa1117bf1941afab175a15049a1d8b201894cec0",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-transit.json.gz",
+                    "bytes": 1734,
+                    "md5": "24c1eeb766430a93e9772700754b6db3",
+                    "sha256": "92cc3cd6d1995b997c3fb8b63acfa8489274cf133352cd6d074f64002628b0b6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-meta.json.gz",
+                    "bytes": 482,
+                    "md5": "a89ce2072578e8641212f5f8ae6e0fdc",
+                    "sha256": "82a8a179f90b80b2cb812990f492360c07fb7ba13c1162023270fc622cce2aa6",
                     "schemaVersion": 1
                 }
             ]
