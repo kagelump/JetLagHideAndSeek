@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:27:50.023Z",
+    "generatedAt": "2026-06-20T07:28:24.283Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -964,87 +964,96 @@
             "regionPath": ["Asia", "Malaysia Singapore Brunei"],
             "bbox": [99.25611, 0.830813, 119.668278, 7.736849],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 4440190,
+            "totalBytes": 13144448,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-poi.json.gz",
                     "bytes": 198467,
-                    "md5": "1f026bbba85d4f74012085d3bd8ae75d",
-                    "sha256": "700d72f554529ea876ab90fe1da8ea1fc534490cc67c69633c94037975d62fa4",
+                    "md5": "0675045ef627aca9fc686dda0a2adc9e",
+                    "sha256": "87e4e83106b1db6b151140e6df9b7572704c262f1b04f4c55ad28d2294df6e07",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-measuring-coastline.json.gz",
-                    "bytes": 564065,
-                    "md5": "537ca6e533b337c4f48a5b4dd50af2c8",
-                    "sha256": "8647965c2b2195a1c6f7ad2bb9487fda153049db47844c7a39565295b5bdf452",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-coastline.json.gz",
+                    "bytes": 564064,
+                    "md5": "3b932b39efa0340abe2f3090b33ff91f",
+                    "sha256": "c0652f66b6fcefbbfdd16ba0d3393bb2c33f36e564c6ff7f4b566bdc5f6fd216",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-measuring-high-speed-rail.json.gz",
-                    "bytes": 503,
-                    "md5": "134ff8502369c8500eabeadb2e205c5d",
-                    "sha256": "6942c1c9460e711c2b66d12bf54d199491ceb0bfcc5de5522657138e47162a15",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-high-speed-rail.json.gz",
+                    "bytes": 504,
+                    "md5": "0f3e58da41ac87ab96f3311bf4faaa49",
+                    "sha256": "466fe5467d8b579c0b6b987a083dface4a4fdccf0ceab0e9b629a1eabdf05001",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-body-of-water.json.gz",
+                    "bytes": 8703178,
+                    "md5": "50445bc2f802936b0edf78ccca511ccd",
+                    "sha256": "4208f9dda295d40bbd36b8fd2e85f4b6bf41185c3d86be5d2914b4dce262c9a2",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-measuring-admin-1st-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-admin-1st-border.json.gz",
                     "bytes": 437919,
-                    "md5": "6fb5682707a736224549238322c1f182",
-                    "sha256": "2ab55d744a92d29dbab4cb194d3274bc356eb600234192ac636bc73a78accfe1",
+                    "md5": "3875fe5ba20b0e553b69d992f9b668cc",
+                    "sha256": "35aec74fb69f46529ba0f97bca170244132778c80f91767f9f96d99bb3aad4aa",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-admin-2nd-border.json.gz",
                     "bytes": 138853,
-                    "md5": "910c75006c894eb793a9534e1af4bd7b",
-                    "sha256": "851813fe1e3807619b5cb546384b61a7baedd683790d4f93c45b920a44ee9d2b",
+                    "md5": "b7239c139dec56ad4e84676014151ef8",
+                    "sha256": "66465dd95c691fce14a21801ac8d48047cff88ce3b0e354b2916c176453c9567",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-admin-boundaries.json.gz",
                     "bytes": 2282697,
-                    "md5": "43545c3e799a63ae60a00feaa0752ca1",
-                    "sha256": "6d4a17e6457dcf00f61a0fd9ace0c061a67c0888b7e0fa1a885424a394a310bf",
+                    "md5": "ebd29b53eb4363928d671cec00b8310e",
+                    "sha256": "8406e5b7dcb5f5f69178f028b918abe173d0241e0acd5ba36ef503b734ede54c",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-boundaries.json.gz",
                     "bytes": 808352,
-                    "md5": "c17c646cac8ed157ba8b724b95cce466",
-                    "sha256": "b23e0fe347a1110102cdab67652749bae0b98d341dd63cdadc141bd6db283a45",
+                    "md5": "c44e2ef3f4eabc92acd0dbd73f43e3e8",
+                    "sha256": "89f0d55e231060a66f1bd7ff097b64dafbd72254ff56819840d764d2104d15e5",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-transit.json.gz",
-                    "bytes": 8812,
-                    "md5": "b500463069f42af4b553bfd8ca7d176c",
-                    "sha256": "8973b2cec9d8f410a1bfe30d74945867aa75052a4f3238d6677f5c89aebdfc43",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-transit.json.gz",
+                    "bytes": 9881,
+                    "md5": "a6e3db1dd3cb62a545d1fe9bafa44c95",
+                    "sha256": "1dca427365b48f8c8d47d0d69ff70d84426b46bea4de97e9c08600b6640bb40f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-malaysia-singapore-brunei-meta.json.gz",
-                    "bytes": 522,
-                    "md5": "8133ab238142589271e05ab45479fc6b",
-                    "sha256": "5291daf3d2a2822e06b3735c8f149e28edd6ca98a9ebec4b2ba72940802f8058",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-meta.json.gz",
+                    "bytes": 533,
+                    "md5": "61d25c7f82a4915c55764c87d60958c3",
+                    "sha256": "1cc2abb2a80e53459224dad69009cdc4fa34011ab127fe755a5c147e10a94169",
                     "schemaVersion": 1
                 }
             ]
