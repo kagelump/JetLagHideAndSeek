@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:45:55.778Z",
+    "generatedAt": "2026-06-20T07:46:23.395Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2325,78 +2325,87 @@
             "regionPath": ["North America", "Mexico"],
             "bbox": [-132.495161, 9.079755, -81.60533, 32.72067],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 24130463,
+            "totalBytes": 55406850,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-mexico-poi.json.gz",
-                    "bytes": 654010,
-                    "md5": "2caf141f019451c73346be2cdcbc3f12",
-                    "sha256": "92db7bc1d1c192fd18fd0dc5ff0f371353195a03a4141a8eff39522069f02ddf",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-poi.json.gz",
+                    "bytes": 654009,
+                    "md5": "b5ccf0e8fa663b763bf9e6e17e54b02f",
+                    "sha256": "4771a88d31ecf2ee085aa43f77b78e971ccbd04c0aaa08f587f0139d986827b7",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-mexico-measuring-coastline.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-measuring-coastline.json.gz",
                     "bytes": 1840613,
-                    "md5": "d088dcdeb02c21365c81e499fc46177e",
-                    "sha256": "5a7fe90bc6bbb2f733e10067356e277844e40c958826c1da2b1789939df8da5a",
+                    "md5": "bede03183365fdd122f7ca1a18f7ab58",
+                    "sha256": "07e077ee68a13f7a087334d76049755092248151ce7d794821b9f7fe752dc2a9",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-measuring-body-of-water.json.gz",
+                    "bytes": 31276303,
+                    "md5": "1ef336c81302ce9183ea0058e0839804",
+                    "sha256": "675146c225d39fd7c7d75cef2c919c9899d5148c755448599e56f061793fc023",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-mexico-measuring-admin-1st-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-measuring-admin-1st-border.json.gz",
                     "bytes": 2111487,
-                    "md5": "f482316aacf5db93523880cc2ac41cf8",
-                    "sha256": "d88108a12dbd8624596731394b0e1b72a05ea738d6c1442c69b63480236c9d60",
+                    "md5": "55c55421a5b0c8ce295cb2d9e8e0746e",
+                    "sha256": "0fd50d5a4d5c0a560b9fe6192bb3adc54ea00f1d29079385147fb76265080faf",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-mexico-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-measuring-admin-2nd-border.json.gz",
                     "bytes": 193457,
-                    "md5": "634e73a9a591b8b50853d4a6f9d4238a",
-                    "sha256": "1f38970db02bc30c8b43b1d89d1d2c468a022214f5b50a79194b08d95cd85176",
+                    "md5": "2a9761cc7ab6eac7df55007e1273cd3a",
+                    "sha256": "1d397247976da93b8445b66ede2901a7b20df43ec8198bf2b9d2651b711bca1c",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-mexico-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-measuring-admin-boundaries.json.gz",
                     "bytes": 14089125,
-                    "md5": "40057760a6f73cda84302b7e8d25a0e9",
-                    "sha256": "f80d809a5c283408f12360690ef1611802660d498962ca0864620597ba4ca60a",
+                    "md5": "72dbca296c03671937f63dff379af1b4",
+                    "sha256": "98670b39f8e806012fb233206dd824fdc208aee4a9e3f0f9b37614a2594908b9",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-mexico-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-boundaries.json.gz",
                     "bytes": 5226479,
-                    "md5": "55c69c88a9328895bbe4022f6791d33b",
-                    "sha256": "4800201561df978d1decd4d96e3043ea089cc010a18e7aa120219e8686b41624",
+                    "md5": "d5dde8715689e8213b30544dc2461bba",
+                    "sha256": "05c35b6f25e735bd62980c60347605ee6dad1b3fece9f1dca78229db637ac9e4",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-mexico-transit.json.gz",
-                    "bytes": 14794,
-                    "md5": "1a57567363eb6d470b757e682722eab2",
-                    "sha256": "1e5cc8a454712258bcbd16fe2d7d8fefdb483788513398f60a25432f2218d38a",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-transit.json.gz",
+                    "bytes": 14871,
+                    "md5": "451f27b415e59c716e54d84de8e99e51",
+                    "sha256": "58d39a80f463602d95659d94b35cc097ab5bdab5bb17c242681631d68dadf560",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-mexico-meta.json.gz",
-                    "bytes": 498,
-                    "md5": "3f83f8a484b85c9b1523fbb008fa5e17",
-                    "sha256": "4994195e791cb612de50f13615ca0ab704ecdc15cbdf9e2b8c7ae18cc84f5536",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-meta.json.gz",
+                    "bytes": 506,
+                    "md5": "a2e530f01126653750ffd600aba76e12",
+                    "sha256": "9fdd00d6ae048065f30393bec05d889f40c8f48abd428261a7ca1bc7477134e4",
                     "schemaVersion": 1
                 }
             ]
