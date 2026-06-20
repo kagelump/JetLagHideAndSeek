@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:51:44.729Z",
+    "generatedAt": "2026-06-20T08:26:10.472Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2736,60 +2736,69 @@
             ],
             "bbox": [-121.440088, 32.344928, -113.860038, 35.81055],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 1013487,
+            "totalBytes": 7828338,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-california-socal-poi.json.gz",
-                    "bytes": 243243,
-                    "md5": "c1511e88815df564d11ac583560133a4",
-                    "sha256": "2a2699122b392c615eae54fcc4f29ed6124428b71e77bad538b8b5620ac50e4c",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-california-socal-poi.json.gz",
+                    "bytes": 243245,
+                    "md5": "968062f5a8a68213b01beba484ebf88b",
+                    "sha256": "acfb040a9ae0f41cc27625ce63309f71f30ed0b5cafef700fb8ca3800ce32e3f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-california-socal-measuring-coastline.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-california-socal-measuring-coastline.json.gz",
                     "bytes": 141529,
-                    "md5": "a8572b53de30bdb748019ecdb8546d0c",
-                    "sha256": "35d767f563aab7400af8668682ebc2e459733996e3009034999bca9db2d3c493",
+                    "md5": "483a8fbc627ce48da30933569ca4f5c7",
+                    "sha256": "17867eee0eae73d31ed5be7dd4c50bbfc8fe07b9e19325b766bcdfb29c552a5d",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-california-socal-measuring-body-of-water.json.gz",
+                    "bytes": 6712388,
+                    "md5": "b0fd0b956aca18b8662f54c2d5cf3c4a",
+                    "sha256": "cd5b82ec66f4f7414759edb94763c15c2dc1595d2c46401999cedfd33a77b00b",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-california-socal-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-california-socal-measuring-admin-boundaries.json.gz",
                     "bytes": 410934,
-                    "md5": "2cc62153ef7cf640a077581d464e10b1",
-                    "sha256": "e674e83099c9b15faf995cc12d2f683a54acc464ab4686fa2ad4ca50a5740e9a",
+                    "md5": "4de321233a32a8b496123ceafb2cb468",
+                    "sha256": "c3b7b668194ac2633d1ffc79e575a8f707e31f63eb5aa35f49ce91f54085fc72",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-california-socal-boundaries.json.gz",
-                    "bytes": 202229,
-                    "md5": "3ac144542fdb408834829b5a0fce3147",
-                    "sha256": "e5ca849ee8f1b44ead9f329d54a90cc117d720ac98fd169fcbefa6dd8c61797f",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-california-socal-boundaries.json.gz",
+                    "bytes": 303764,
+                    "md5": "d0f367636bd855620196538f56e50c8c",
+                    "sha256": "9fda170a096dbae04d4e2614133cd28b6f6467a787749dc3c77be008f1ca5e22",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-california-socal-transit.json.gz",
-                    "bytes": 15056,
-                    "md5": "ab253e1fbdb2946ab164dd0f69fdc5e6",
-                    "sha256": "9c3a89b641035da92d73dbb359fbce93a45fdf7543ba10ab7637a73699b54ab0",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-california-socal-transit.json.gz",
+                    "bytes": 15972,
+                    "md5": "484def04a69a2537bb7b945fce776024",
+                    "sha256": "a0c92fbabac5922ccd047d51db619ed44822b97dea0184caad6d15ed6282d991",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-california-socal-meta.json.gz",
-                    "bytes": 496,
-                    "md5": "01a189a46b3d1576c5bf15d2b0354d61",
-                    "sha256": "6cd526567a106af632e8207add95d99edb1a3db9cfadb4a76b3cf7d3d9d63fba",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-california-socal-meta.json.gz",
+                    "bytes": 506,
+                    "md5": "179ddbb2557f845d782c7e0a5706737f",
+                    "sha256": "0d0ab3f6f8c25230d9c874c3ee2ba4312978825dd7e98be5203d18ec9eddbec0",
                     "schemaVersion": 1
                 }
             ]
