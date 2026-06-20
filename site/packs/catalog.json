@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:29:41.415Z",
+    "generatedAt": "2026-06-20T07:30:08.932Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1346,87 +1346,96 @@
             "regionPath": ["Asia", "Thailand"],
             "bbox": [97.135615, 5.597877, 105.63921, 20.468752],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 17587015,
+            "totalBytes": 31329161,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-poi.json.gz",
-                    "bytes": 224187,
-                    "md5": "ac5c6741b2286033489a37721e3b78b9",
-                    "sha256": "c21f5b62136eded7e5be7a58c14f2b951477c3d808c9bd961a7c504614830298",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-poi.json.gz",
+                    "bytes": 224185,
+                    "md5": "7187106261819589d2b9c23f6c6a0727",
+                    "sha256": "ba34e0e514b4025e454cb821762cb329ec84c033dd8f3e5641e8fabc16eb37b8",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-measuring-coastline.json.gz",
-                    "bytes": 400601,
-                    "md5": "5085e6cf110f3a1639c0033aa209e56c",
-                    "sha256": "933a47bdc5595b99efe688c085e9ffa588f9b3deba40215dd0d5181b60ccfef7",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-coastline.json.gz",
+                    "bytes": 400600,
+                    "md5": "8b98da674568304e08d9f16f20e64dd7",
+                    "sha256": "c7980d5ca252cb48e7f157d418c5d30551763f128a0b1aed4434b668ba418612",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-measuring-high-speed-rail.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-high-speed-rail.json.gz",
                     "bytes": 633,
-                    "md5": "fea0c489561c73adf4e9bb45ad98be87",
-                    "sha256": "c6b1b7278c512aaa939df0a28e099e6c30fc5c1d8fbb5daf06ea7b6422b4c416",
+                    "md5": "1b26416d85c09ea5333f6fba51270086",
+                    "sha256": "c9b1add04f5eb245c4a8c8c80344e5099c4d4142f208ba6c9ab696938edeedeb",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-body-of-water.json.gz",
+                    "bytes": 13732979,
+                    "md5": "a931223c0c40a3ccd97281b8367f4c55",
+                    "sha256": "9ddad0f82586e07ee73b10217d172da7bd18cbaf838bb272da859351b871a816",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-measuring-admin-1st-border.json.gz",
-                    "bytes": 2255180,
-                    "md5": "97d08e51546e6e673d362608a8651039",
-                    "sha256": "8fe7f382eaae758b0ddecd93461eb253ed1010f1acd8a8eb6bab5ced713c9905",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-admin-1st-border.json.gz",
+                    "bytes": 2255179,
+                    "md5": "da50a0b79c0ea7b468e159c1ea7bb322",
+                    "sha256": "38ceac5c2a4b21dae3abdd71515df9aa255c2a2328c875457993f7551804a988",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-admin-2nd-border.json.gz",
                     "bytes": 456242,
-                    "md5": "a73b5983a4ea61995c8e3b520e4100ec",
-                    "sha256": "0c4c3dacda91709bc90df647c35f37940f2a438c1e6170b04d9adbd37e372f90",
+                    "md5": "34fdf0db0609f340e95d978c6c97d768",
+                    "sha256": "7d32cea665ff5eb085b97860d6979c8073b05610b4dfc78ed2d9e4835c6be73b",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-measuring-admin-boundaries.json.gz",
-                    "bytes": 10425591,
-                    "md5": "c845f7a0b8fcfe333d579e854e8199af",
-                    "sha256": "331058324465d3bccd59a1e0cfe822f3d03c93ec97fd1efee43450825f6a87dd",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-admin-boundaries.json.gz",
+                    "bytes": 10425590,
+                    "md5": "9bea390ae4eeec739ea0fa998517753a",
+                    "sha256": "613c70b04ad5e1a2ac136eb8119a39c7f6f0134a1072c58004a5b1c2d1cf1bed",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-boundaries.json.gz",
                     "bytes": 3792461,
-                    "md5": "055c88a7b1c1db6651bf197d24f6933e",
-                    "sha256": "264a78a83ed5e691b311f0e41e70d842429c8595a8c94cdd7099dbbf3df85701",
+                    "md5": "21265aca7beec23a872428884cba20b4",
+                    "sha256": "7a26bc38ebc5f6a3f5ed6aef5e7c4704121d77ceeb92431dd36dd4d3445360d2",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-transit.json.gz",
-                    "bytes": 31621,
-                    "md5": "2dd9c8f101c1f1b85736d2a03623401f",
-                    "sha256": "0621672b581ee9941605cfe5e12b86ec228fa2f8dfcc41bc6b8db9d9e535c217",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-transit.json.gz",
+                    "bytes": 40783,
+                    "md5": "88790d18b3617d0248bce55c84dfc1ee",
+                    "sha256": "7d7758fe290cdb8ac108ac02aa5915b05c6df25eb8afea024ff4157080dc5ef3",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-thailand-meta.json.gz",
-                    "bytes": 499,
-                    "md5": "a9b3e422e6503739c3767361411499b2",
-                    "sha256": "a57b02ae66d555b44d7570e38bdb96d4fa47d67fe438edfac498986293cf52a8",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-meta.json.gz",
+                    "bytes": 509,
+                    "md5": "24d82499d0e2b5fb8dabca01e6bd1334",
+                    "sha256": "0d0687f30ded11fac59ae150b6b12fafc82f43eb5db02fff1e93a0e95b45f6ed",
                     "schemaVersion": 1
                 }
             ]
