@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:30:59.386Z",
+    "generatedAt": "2026-06-20T07:31:18.195Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1619,69 +1619,78 @@
             "regionPath": ["Europe", "Germany", "Berlin"],
             "bbox": [13.08283, 52.33446, 13.762245, 52.6783],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 219976,
+            "totalBytes": 334387,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-berlin-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-poi.json.gz",
                     "bytes": 48467,
-                    "md5": "d8537bf537925b1fd6aaf95d7b22cf7d",
-                    "sha256": "0edf9e0c27fdccb0cce7ccf2caa4077000498053fffc137def915530ace44598",
+                    "md5": "eb9cc49412a11df8a88a70d67499bfbb",
+                    "sha256": "d9114a98eb42436c5c74a63b747958d6dee3244acd92069f4724146bc904338d",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-berlin-measuring-high-speed-rail.json.gz",
-                    "bytes": 708,
-                    "md5": "9bd6199963d9c4ca470f37a7efc92799",
-                    "sha256": "2f8b6c0852f2f8bd2d45dd39c0095e43467fe7058abe7b5354237b3a20ec808a",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-measuring-high-speed-rail.json.gz",
+                    "bytes": 707,
+                    "md5": "470ac5c13a8b548ba06da18ac81f6edf",
+                    "sha256": "30381c9d7a2ef1a5244350482a1fe3ad877450625151bd07ad8e30dae5ced0c4",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-measuring-body-of-water.json.gz",
+                    "bytes": 107399,
+                    "md5": "b1be65434f6c55dc2330e1b5356d1f44",
+                    "sha256": "31c62db9d22c2fa2c276c35913ca069255b367c7c6c1ad560cd9c60be912d8b9",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-berlin-measuring-admin-1st-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-measuring-admin-1st-border.json.gz",
                     "bytes": 10337,
-                    "md5": "1f7732d8f6ec4b9ed57fda77898dd02f",
-                    "sha256": "edb661d68d19d74b801e4a5fa79799811a08e43f41527ba113f09e3b5823db13",
+                    "md5": "9033d28bc6d62598415162b5d6469569",
+                    "sha256": "d2ea66154c23eb475ad7f5b9e65b347f023a0d65527f047c92ca74932546b3e8",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-berlin-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-measuring-admin-boundaries.json.gz",
                     "bytes": 86804,
-                    "md5": "9b7fefa2075ed3d2a30ddffd72aaef41",
-                    "sha256": "f647f45f91d7f8be8465f24612bb8f7e40123ac33707172afb4b901a0220b63c",
+                    "md5": "148243f40b777f3a9b2a171c78006755",
+                    "sha256": "2a6b071cf880406cb0bbc992b462910c842c9a8d34a0b0bbcf3e1820a2035477",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-berlin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-boundaries.json.gz",
                     "bytes": 39647,
-                    "md5": "cd71a1f3ae8953ff37ce0d884bed6207",
-                    "sha256": "805d9dfef67d2744c0d9dbcc7839867822a5cf5689bbfc1bf08edd1b124278c9",
+                    "md5": "57dec44dc26f4535c4798b5041f66c57",
+                    "sha256": "e22d05cb0f0c930d715e064a67aa2a23a98973b2a59eceed367d93553e4b8eb7",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-berlin-transit.json.gz",
-                    "bytes": 33536,
-                    "md5": "dba0ee49d2c654bea27523d10449ebc2",
-                    "sha256": "f9263e68315d74b46c753244cdb7b4b97119d1e6ac900f386ac0088fecbaba92",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-transit.json.gz",
+                    "bytes": 40539,
+                    "md5": "6992f65011eeaeb5ee9f0451f73d3d31",
+                    "sha256": "9e751423ae911e5dc86790483014f04572d65267619cbbe2b7393f5c4330c816",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-berlin-meta.json.gz",
-                    "bytes": 477,
-                    "md5": "265a29b4e94b9c47176065d51419e708",
-                    "sha256": "0812a2aed0811665d497f28ead2d59ce06fada958a461b69753316174e92a03d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-meta.json.gz",
+                    "bytes": 487,
+                    "md5": "9a0fbca8fea1a5cbc4f19f9465994408",
+                    "sha256": "37798dbdb18991217773f742f15c88ac170d43d09ad9b6ef3d471474019a7015",
                     "schemaVersion": 1
                 }
             ]
