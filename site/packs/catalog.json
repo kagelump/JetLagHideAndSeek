@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:37:26.092Z",
+    "generatedAt": "2026-06-20T14:37:48.142Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4858,6 +4858,79 @@
                     "bytes": 488,
                     "md5": "39fd32299d01556b65f13e2345777dbd",
                     "sha256": "0037afd64dc16c4e7b62143937c37a68f255b457bbaada1415c42e640c10aeb5",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-oklahoma",
+            "label": "Oklahoma",
+            "regionPath": ["North America", "US", "Oklahoma"],
+            "bbox": [-103.007815, 33.613476, -94.429894, 37.011328],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 15665054,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-poi.json.gz",
+                    "bytes": 67836,
+                    "md5": "473ae29a75d19397576ae2a0678774a5",
+                    "sha256": "a927b2e73c1d3e1cd698ba1f585eff400dfecb481e8f561968ac4e1e00220b6f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-measuring-body-of-water.json.gz",
+                    "bytes": 14671550,
+                    "md5": "32d46edf127c74e2db6aa4624b527dfc",
+                    "sha256": "70d2f13364948abacb2fb98d9a75508f17a8d847f17bcc86225f790011856514",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-measuring-admin-2nd-border.json.gz",
+                    "bytes": 124839,
+                    "md5": "506daee59a1a9a0ba09532abb24a9a79",
+                    "sha256": "b71c700776e4f51d00f36f82b62167949a53d9643f382c07fe825de0c8c9279c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-measuring-admin-boundaries.json.gz",
+                    "bytes": 468642,
+                    "md5": "f1a0ef09d61476ca237d4a581d21f105",
+                    "sha256": "2abee6d6ae9b0d7889444ff30c3639e474a414876627fa703209e8cc9de0e140",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-boundaries.json.gz",
+                    "bytes": 330183,
+                    "md5": "39c63effca05949e2024e2e591dbfc2b",
+                    "sha256": "a60844bde7c7d59a31a4a049926626290c8cddf89077735c863c866b2322b113",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-transit.json.gz",
+                    "bytes": 1514,
+                    "md5": "8ae41c5c3260cb9f0c59e94cd5a38213",
+                    "sha256": "9f686215fea3a4049e748124d2ad88d82d2dc84e0e4b065dfa93d6f29930a567",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-meta.json.gz",
+                    "bytes": 490,
+                    "md5": "2ee067a9be1532cb21f2fa841401ebec",
+                    "sha256": "52173471cb2868d32fe19f66f0a190b254296921188eb858df64e266119850c3",
                     "schemaVersion": 1
                 }
             ]
