@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:45:29.232Z",
+    "generatedAt": "2026-06-20T07:45:55.778Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2143,87 +2143,96 @@
             "regionPath": ["Europe", "Turkey"],
             "bbox": [25.523985, 35.717, 44.859923, 43.074814],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 23507860,
+            "totalBytes": 38919455,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-poi.json.gz",
                     "bytes": 490461,
-                    "md5": "df74f39ae0323942125ea46bfc2b9deb",
-                    "sha256": "584fdd5ce451fa4b90ca6d0ad6a719416957f8a810f7d441fcd833ed037e4133",
+                    "md5": "c52bc6361f3becd739ee2554bf4b2af6",
+                    "sha256": "14225a5dcd113563555b34cae1af600127a5032ee0e690f4d08439f95f5d9ef0",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-measuring-coastline.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-coastline.json.gz",
                     "bytes": 848514,
-                    "md5": "4b02e63d8bbe9d2f8293739113de6573",
-                    "sha256": "551334a8b40465aad57808a7957cfba6b792fad1fd3db2726201dbe7114febc6",
+                    "md5": "2d4a113f748841d390df401cbce70dd1",
+                    "sha256": "7cfe67769a0ae3aca31bc923a90c7856544a27c90a7781e15d9936e75ad6b83b",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-measuring-high-speed-rail.json.gz",
-                    "bytes": 13236,
-                    "md5": "b8f872fa86674ec7ca26e5d60eb08d73",
-                    "sha256": "4a226c4daf2a23787830e027ad6ff32b4e83de4a3816d0b059f286d4ce0f8295",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-high-speed-rail.json.gz",
+                    "bytes": 13237,
+                    "md5": "7b58a5dd229eb6a44f25b8c390a37d69",
+                    "sha256": "6a002e5c22d61538775c01c8f20c6c491e58133e06b28bad277582d337ca0bf4",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-body-of-water.json.gz",
+                    "bytes": 15410046,
+                    "md5": "235b836c9b788a6bc342471781eaa600",
+                    "sha256": "0f565161ce06d13dbdd67e8134de3cbc942199e064e8f03f9da8515e28d8bf7d",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-measuring-admin-1st-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-admin-1st-border.json.gz",
                     "bytes": 1279175,
-                    "md5": "c9b8d2a069bf941d35eb465077d0c697",
-                    "sha256": "144e64afdc849e1cd7c495d713fd7dd81159dfb0cdaf1470ad0d0b2afbaa8d74",
+                    "md5": "d455045121f0d5b7b46a28578023f6a7",
+                    "sha256": "d1a4bee0d16a379bd77de1746304ca987c47847ca2422937762db72a90f832a7",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-measuring-admin-2nd-border.json.gz",
-                    "bytes": 163799,
-                    "md5": "df1877636a688d7976e2e4a5b062c4c7",
-                    "sha256": "ecb911b0fe56fd05dd1c7d1f687d63243986e12f42a0e1f24876773fb235b24d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-admin-2nd-border.json.gz",
+                    "bytes": 163800,
+                    "md5": "ce254b9cd40a031e3783955033ade9e2",
+                    "sha256": "b5d7b94dcf85759804ea5e5889d08ed6b04fe96c174bc274170b48f2bf9d7491",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-admin-boundaries.json.gz",
                     "bytes": 14147134,
-                    "md5": "3f477c8e53679369112bcc11bee84edd",
-                    "sha256": "9f9cf18d2a2ba8477bc37076570799cb72f75ce07d376d7ee6e145f69e560b19",
+                    "md5": "2df1d43aa474e442ce4b584773d37514",
+                    "sha256": "8b926147438ecb5b14752115095815d7ccc0907cf1fbe822af663c6681e6162f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-boundaries.json.gz",
                     "bytes": 6491676,
-                    "md5": "def5ca8bd6b0130b927d035729df1484",
-                    "sha256": "bf9e7465a435bb341726f524f7938e920070da31b2da8a57355b800c018b6258",
+                    "md5": "00ef72bb2566ff642d8f879ecba0d80a",
+                    "sha256": "0d4b314c2185c9ebbab56fb5d71b9267e82cf7eaec900a75d005275bccf06970",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-transit.json.gz",
-                    "bytes": 73369,
-                    "md5": "da7ff027857a59754dcaf11b0c911bda",
-                    "sha256": "67e14d4845a1fe3ec752770f22bc120935a73b27261650642923a15838225a9b",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-transit.json.gz",
+                    "bytes": 74906,
+                    "md5": "d32efedf788bfba555ea97b30a9e83b6",
+                    "sha256": "d253a9c934d1d658f2184916b47f65258c6980363ee495fdf410ba5c0f3c3dd1",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-turkey-meta.json.gz",
-                    "bytes": 496,
-                    "md5": "d87da3f117c0a107eee476793493b540",
-                    "sha256": "fb16bd926716473bfc6d6b6b2b04b4d419e4bfdf9432f3cf665771443e3db009",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-meta.json.gz",
+                    "bytes": 506,
+                    "md5": "0ef97e410232208141b46bd1bf1c755a",
+                    "sha256": "25ae13f917cd396c1aa83e17752a38cc384f354890d2ce67eea2fd14076cabbf",
                     "schemaVersion": 1
                 }
             ]
