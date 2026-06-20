@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:39:21.833Z",
+    "generatedAt": "2026-06-20T14:39:49.483Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5359,6 +5359,97 @@
                     "bytes": 490,
                     "md5": "370bc0368431388cf9a8a1eba6c6504f",
                     "sha256": "462d5291f076b874b4dd43df9617231763eb6f52910c4771b0731a50c332d037",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-texas",
+            "label": "Texas",
+            "regionPath": ["North America", "US", "Texas"],
+            "bbox": [-106.9125, 25.66764, -93.01897, 36.52618],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 27016858,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-poi.json.gz",
+                    "bytes": 307095,
+                    "md5": "e8ec5b28862285fd020a688260b678d3",
+                    "sha256": "0edebcf18e9fd4fdcfc4618f6e63ff30c9376c343b8d7507126c9337ffbe8484",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-measuring-coastline.json.gz",
+                    "bytes": 274576,
+                    "md5": "e27bd78f89e1d519b24e8c349009ae33",
+                    "sha256": "b49348c58493afd26ee5d8b87586f5295e4414524bf9f1ac79d62ed0e4ff3b79",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-measuring-body-of-water.json.gz",
+                    "bytes": 21711950,
+                    "md5": "8ee89cea359f0d06f6a72d1799043a53",
+                    "sha256": "46a5e76a776293f59394681fc004d08985c7e32d34828ffc5aa461d90081a27a",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-measuring-admin-1st-border.json.gz",
+                    "bytes": 122310,
+                    "md5": "95ef61e7a44cd46c288090bb0cf0cbf8",
+                    "sha256": "d71dbcd190d9c3117df21df93c3f241f4e3d1c8be977bdd611d51cc946cb02ef",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-measuring-admin-2nd-border.json.gz",
+                    "bytes": 997626,
+                    "md5": "94a70eb8e2a7eaa445a40b4d3567ac7a",
+                    "sha256": "68978397952b83220daf244c37e1c8e7ccf321c0103d934ce363f94b3c5d2bec",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-measuring-admin-boundaries.json.gz",
+                    "bytes": 2393468,
+                    "md5": "62deeffb38ba75416c9a2e90e223c2aa",
+                    "sha256": "b385ace99e6a7fa74d04e3451505a93abcdba086bd7deec2695e99387d0f043e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-boundaries.json.gz",
+                    "bytes": 1200149,
+                    "md5": "e7b340caea4de80f5c7e79bea267c867",
+                    "sha256": "55c1f77297c820af31b9aa5031ff7a273ba9e333631ea50c52264eb166c696d1",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-transit.json.gz",
+                    "bytes": 9187,
+                    "md5": "9e334cf43c25db9d33dd25032b9ff657",
+                    "sha256": "3b6c4c77c541e06fd4bbcae3cd2c62e73c3c1cf5c0c4fb6d3c942604929f6993",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-meta.json.gz",
+                    "bytes": 497,
+                    "md5": "538265a3a7d8320f3c7490cee7130b5f",
+                    "sha256": "0233496f7e291b13ef4811148da3697da829c532d99082503303490432c6df88",
                     "schemaVersion": 1
                 }
             ]
