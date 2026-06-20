@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:30:08.932Z",
+    "generatedAt": "2026-06-20T07:30:33.407Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1446,69 +1446,78 @@
             "regionPath": ["Asia", "Vietnam"],
             "bbox": [102.095945, 7.382239, 114.642323, 23.402135],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 14877274,
+            "totalBytes": 26407441,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-vietnam-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-poi.json.gz",
                     "bytes": 153033,
-                    "md5": "1eb6769e91db973c7379523feda017fa",
-                    "sha256": "20bc2fbced4f7f213a0a0818dde60262953185bdc204c9371be68cbc1ef45f19",
+                    "md5": "ce75cd2ef622ec168f0ed58e4b90d70c",
+                    "sha256": "df27299ee6284aa5623b4cfe9c84d219a0c451cc5fcbed3ce12c87f53ad0fbe8",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-vietnam-measuring-coastline.json.gz",
-                    "bytes": 668122,
-                    "md5": "902ec2f7237e94c1590ed5814b2d94ce",
-                    "sha256": "ff1347cc764d5431a20110c5375ad2a8cc9dbf7355ba7b743054c038cbaac16f",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-measuring-coastline.json.gz",
+                    "bytes": 668121,
+                    "md5": "d748ab36774c994388fd4ae0aea4c963",
+                    "sha256": "e6599f9756656967ee7ad2f47b4694ce14efd9ab1a5c657f4195f51fdbf10f3c",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-measuring-body-of-water.json.gz",
+                    "bytes": 11529073,
+                    "md5": "d62d9be63a979978106750c18610f402",
+                    "sha256": "501026401f6a6affabdc78487966bffcedfb87dabe317736ed501162ee8b2ac7",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-vietnam-measuring-admin-1st-border.json.gz",
-                    "bytes": 858420,
-                    "md5": "99f754b85e7e311e17e797e49ad19c2b",
-                    "sha256": "eb0a89e869db7d1711fa52694fd7460962301fa194c3169163c71e22ded0df56",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-measuring-admin-1st-border.json.gz",
+                    "bytes": 858421,
+                    "md5": "23554a53c580dcd77820d6404669c256",
+                    "sha256": "ad2f64899772455378942230e24d0d6b5b726967068254aecfb08cca577bf58e",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-vietnam-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-measuring-admin-boundaries.json.gz",
                     "bytes": 9080835,
-                    "md5": "12ba0b205c6c8ee229d5fe1146a88f4a",
-                    "sha256": "25c1dc9356b62392351def374db9410151d4e1324d28703f328d688c3fe585ec",
+                    "md5": "ae5774af4a2d0653855132e6b86886e5",
+                    "sha256": "b3dbc35c30feb5e9dea40df6d12cb626d8ef383364511ca70516aa0b1c47c99e",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-vietnam-boundaries.json.gz",
-                    "bytes": 4102981,
-                    "md5": "6a44c47b98a807daa199c790afef063a",
-                    "sha256": "f16faadd2d7c5ec4fa3f47fa96b2dd054231fcf4ca0c0831a11b2addd0e01505",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-boundaries.json.gz",
+                    "bytes": 4102979,
+                    "md5": "47fecc939ac2d7c2421ed5091989db0c",
+                    "sha256": "c20d17855e12644f5a5bc20a450a297435a28cdb6824e0d85071688d0765910f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-vietnam-transit.json.gz",
-                    "bytes": 13400,
-                    "md5": "dd00fd02926e1ec910ddeeb282304591",
-                    "sha256": "a1ff884864455f1c30c22966ca85ee832de3091142db6f4c843209aff3c0b01e",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-transit.json.gz",
+                    "bytes": 14485,
+                    "md5": "7ebc97d772650e2a0c4335b4bb724ac7",
+                    "sha256": "b2b60e0e677677822e108e54f046fee56e18516c60feae21201cc70d97095622",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-vietnam-meta.json.gz",
-                    "bytes": 483,
-                    "md5": "c3b9872fb8fcc35a130d9e07a9c1aca8",
-                    "sha256": "e611d3fade67d67af037940fafe07cab9ea753578c05e1fdafaf2603bdeb904f",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-meta.json.gz",
+                    "bytes": 494,
+                    "md5": "05dca593437db119fb723ed934b60a93",
+                    "sha256": "0f09d5354742a54a90c2e270ed8aa3162318beae3c3e613bc847047664770fd9",
                     "schemaVersion": 1
                 }
             ]
