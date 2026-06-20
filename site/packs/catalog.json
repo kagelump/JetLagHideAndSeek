@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:35:31.320Z",
+    "generatedAt": "2026-06-20T14:35:51.032Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4384,6 +4384,79 @@
                     "bytes": 486,
                     "md5": "2782c6575aacfb6b249e28c97fbd858f",
                     "sha256": "9bff5970bdea44b290779755bfb3380e5fcee644ad9db4364f9aaf74e52fe9ad",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-nevada",
+            "label": "Nevada",
+            "regionPath": ["North America", "US", "Nevada"],
+            "bbox": [-120.0074, 35.00053, -114.0379, 42.00391],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 5701108,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-poi.json.gz",
+                    "bytes": 70421,
+                    "md5": "058a5fa3ea32bc1fadfad28397764655",
+                    "sha256": "086acefa2d5a631192f0522a1fc56afd49087ce4244543c1c91c45e3d40d1ffc",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-measuring-body-of-water.json.gz",
+                    "bytes": 5391711,
+                    "md5": "04bebd9fd86d6245f8bc6eb34498fa0d",
+                    "sha256": "f78371f1fbcbd63794a00cd751bcc6660f1454e001e5ef45fbad2503c9df48c6",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-measuring-admin-2nd-border.json.gz",
+                    "bytes": 41918,
+                    "md5": "cab5b3f7cd598467d3af9539f3bef6a1",
+                    "sha256": "31e88d871df629aac3621ac5ec1e23bdaa98e26cffc0547532d31d32af6af6d6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-measuring-admin-boundaries.json.gz",
+                    "bytes": 90973,
+                    "md5": "fc3b7e74208901241c8b8b07085914f2",
+                    "sha256": "149b0181408ed3909bdf97b01e6420a8dba15f24762825bad902187d14ab194d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-boundaries.json.gz",
+                    "bytes": 103577,
+                    "md5": "70006b265d4d831330db3e89e4888fe9",
+                    "sha256": "827a9e0eb7fe98e8d7ef3ad6180b4116db8f9574d60b70427097219084af14ce",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-transit.json.gz",
+                    "bytes": 2029,
+                    "md5": "bc9d5aa585218ac5fd9996969942ba99",
+                    "sha256": "99def75c7192b6a636ae54e6065502f56deb85cb6e4e45f9291a19576cfe0e35",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-meta.json.gz",
+                    "bytes": 479,
+                    "md5": "9c4fe11cfb23f4db483eaeb63fd1d27c",
+                    "sha256": "7c2c80e2bb7d638edc7c845a50d5e8da1cee41f2d192c6b8dc7277ed81ffcad3",
                     "schemaVersion": 1
                 }
             ]
