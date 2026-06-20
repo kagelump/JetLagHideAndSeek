@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:28:24.283Z",
+    "generatedAt": "2026-06-20T07:28:52.859Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1064,78 +1064,87 @@
             "regionPath": ["Asia", "Philippines"],
             "bbox": [112.1661, 4.382696, 127.0742, 21.53021],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 10039152,
+            "totalBytes": 30547835,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-philippines-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-poi.json.gz",
                     "bytes": 224450,
-                    "md5": "148d8137ee98a41b92dd45f4bc0af7e2",
-                    "sha256": "b07e0227b7378689ae9e7d61615240dc5ff0aec51d9a0c8acd039efc66150e79",
+                    "md5": "32f4d54c75a95fa06c5199ab4caee362",
+                    "sha256": "7d285162803df9066c98168587da9c979c0ca66f168d4d0bc7f8d9781acc5bc2",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-philippines-measuring-coastline.json.gz",
-                    "bytes": 3005548,
-                    "md5": "bb237b19266e1ab79f082d46fc613cdd",
-                    "sha256": "c53e4da97897956a4d106c88d6215038590cb52bd47fb54c25438da51bb6340e",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-measuring-coastline.json.gz",
+                    "bytes": 3005549,
+                    "md5": "2fe92c35b8064351083394112c713d82",
+                    "sha256": "d1a2c88c9288e652ae06c073a881ffb01b9882eb3369b3283860d7135a815761",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-measuring-body-of-water.json.gz",
+                    "bytes": 20508575,
+                    "md5": "33788d6df1b24586b025b3060140cb7a",
+                    "sha256": "faa4bff688fd9247eaba43542793c77e039984796782bba15131bd6000abb9b8",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-philippines-measuring-admin-1st-border.json.gz",
-                    "bytes": 572515,
-                    "md5": "af9132839bc9a917d3f3db0e7021078e",
-                    "sha256": "0b4ecde2133925d4c125400e8b43dc3f2b930e79d1ca4508d5014dc40150d9bf",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-measuring-admin-1st-border.json.gz",
+                    "bytes": 572514,
+                    "md5": "aafd2612219f26ad271a134fa2e8d39c",
+                    "sha256": "51b8acc9e41265d9159bfb27df046e917d95eb3ce19f574ad5b14a55d67a1ccb",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-philippines-measuring-admin-2nd-border.json.gz",
-                    "bytes": 54380,
-                    "md5": "8460d39235daf9b5cd13f878b1dcc858",
-                    "sha256": "c9944c62ecd7bf1f6b034aeac42de39c2411a12f36b99e80f5962132a13200d1",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-measuring-admin-2nd-border.json.gz",
+                    "bytes": 54381,
+                    "md5": "628415c1013355daaef8575985f7ed07",
+                    "sha256": "984b0be6911c600a3ef5dc91106b796d9a316f139de54778540ab9fd2a9a8f99",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-philippines-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-measuring-admin-boundaries.json.gz",
                     "bytes": 4343860,
-                    "md5": "5c14bb43cd78c3e166e05ef5927dae6a",
-                    "sha256": "75e939bd69e76b6b78f14ed3d2cc970028ba7335bcd9da4491952b087d152372",
+                    "md5": "b39fc4e2c0cc3a35555c4cd21f77a8cb",
+                    "sha256": "4e701d108887113def85e82bc5b9d4d71e2eaf346d6ac7096d3eab6929836000",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-philippines-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-boundaries.json.gz",
                     "bytes": 1834115,
-                    "md5": "d4f95fc1b4cd68d84b77c2876373283a",
-                    "sha256": "25618a0777068999ab9d2e6966bcc5cb2dd4470bd4f146bacbccad1556071f49",
+                    "md5": "ce913a5a00715ffcb43403f2e2cea8b2",
+                    "sha256": "1d7b2f2c70ac1eca1ceafd5900be3991e462d254788a7960b8593d8c5d31102a",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-philippines-transit.json.gz",
-                    "bytes": 3796,
-                    "md5": "97b9e096900ecc7e09a6345396a8600a",
-                    "sha256": "6c3e63cedbec86dfd4c0beca3ebf103d00185f7430bc756ef072da11c541525d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-transit.json.gz",
+                    "bytes": 3895,
+                    "md5": "58cf3ebc51e29fc2340d40875d9cee12",
+                    "sha256": "f24b122b07da2f71b8e63d5acd7615a749b54d5f04cf22a2e13f84ce86930b95",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-philippines-meta.json.gz",
-                    "bytes": 488,
-                    "md5": "72e5f78249649a64c144f99660d286c0",
-                    "sha256": "80275059e370886554d9e4fd36120b81282b1a15fd9090be3559b858d161a19d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-meta.json.gz",
+                    "bytes": 496,
+                    "md5": "a9a116e743a9cb17e732ca57e0895c1d",
+                    "sha256": "30fe46e67c24ddfc5832abb7332d74aff4f71c72525dd8343e0117d9a78d4a9f",
                     "schemaVersion": 1
                 }
             ]
