@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T08:26:33.846Z",
+    "generatedAt": "2026-06-20T14:33:09.101Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3801,6 +3801,106 @@
                     "bytes": 497,
                     "md5": "2d0775bf5f40ad11d5689ade3fa554b9",
                     "sha256": "f1803ea82facebefcf1e36edd7d558782fd840623276d784eefc31b1010e9731",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-maryland",
+            "label": "Maryland",
+            "regionPath": ["North America", "US", "Maryland"],
+            "bbox": [-79.48857, 37.88396, -74.954079, 40.17054],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 6267532,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-poi.json.gz",
+                    "bytes": 85417,
+                    "md5": "b9a5ab9cd06d486c7d755056659c0628",
+                    "sha256": "2365e764f546828a5faa82480749dd52b3b23ad15eb7e230b071d67b34564bcc",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-coastline.json.gz",
+                    "bytes": 944973,
+                    "md5": "e1b6bac60d2125af7566316585300759",
+                    "sha256": "41b4332f078bf217b92f856dbee62ba05e7aa7af2e4b0a6c1b00f1b607e7ad02",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-high-speed-rail.json.gz",
+                    "bytes": 1960,
+                    "md5": "400fdbfa487637b8b6dda5e55b36a774",
+                    "sha256": "9c39f708d432ce248ad67f7235105abd4883ba33e31468b875e235d49c3c0c1f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-body-of-water.json.gz",
+                    "bytes": 4406014,
+                    "md5": "87e3da1e9e2e242aacdb128fdcf4bc9b",
+                    "sha256": "b3fb6cb4109808899ff4eebe2cb814a920e060df46441fb5f6d440f2f4c3fcfc",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-admin-1st-border.json.gz",
+                    "bytes": 29356,
+                    "md5": "73dee61042e83d0df20cce416b804b3a",
+                    "sha256": "e91a3e67741fe2020633fdd2f19b0ead147f5734ed8d3f676a99f9698697d493",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-admin-2nd-border.json.gz",
+                    "bytes": 153014,
+                    "md5": "eeaa3cfb72ed4ba64a67cdbf42144403",
+                    "sha256": "836f0def760a0250d22640af64de3d463c45732b6ab111aa30f5c0b37670e064",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-admin-boundaries.json.gz",
+                    "bytes": 401186,
+                    "md5": "176c4c256233464146733a20f07ec105",
+                    "sha256": "977b62786578006c7f3eff71fbfef0c798b6cba2ce7e1a938482b2749ff1525e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-boundaries.json.gz",
+                    "bytes": 238676,
+                    "md5": "802aa1892a6528761e0480fc3d0ab61e",
+                    "sha256": "329478436c5b8be0f8ce46d6d9ca5f5685ece11aa98112c7785adcbd5244bd4b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-transit.json.gz",
+                    "bytes": 6413,
+                    "md5": "ec755d73310b26e38a1d75e9a696e2de",
+                    "sha256": "411f7a60caf4d24321f0318a7348456d50c87c7b835fb8eeca12dfc34d954842",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-meta.json.gz",
+                    "bytes": 523,
+                    "md5": "e577aeba352904584a8a5f7562dc7199",
+                    "sha256": "a8eaa6f69b4575f493ec6327a77a95908e3d033d44c95c78f8feb775819a18bb",
                     "schemaVersion": 1
                 }
             ]
