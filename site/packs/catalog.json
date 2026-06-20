@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:49:00.983Z",
+    "generatedAt": "2026-06-20T07:49:22.021Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3154,6 +3154,88 @@
                     "bytes": 510,
                     "md5": "721996864403aba1a741728b65e4c40f",
                     "sha256": "acaef7edab985befc0162af60efcf16b80b1e0164fdb8b863b1bad8d76b575b8",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-georgia",
+            "label": "Georgia",
+            "regionPath": ["North America", "US", "Georgia"],
+            "bbox": [-85.6068, 30.35365, -80.74313, 35.00356],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 18984517,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-poi.json.gz",
+                    "bytes": 117836,
+                    "md5": "b10f5a2d1ece698aa1b065a778711360",
+                    "sha256": "051d35b4e0605e3e6a9ad3b2f191cc2102d9069fe821a842e5901d333da31bea",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-measuring-coastline.json.gz",
+                    "bytes": 62148,
+                    "md5": "eece1c9803c330b8de6c289bb9f0f2a2",
+                    "sha256": "39c98d0f0d8cfd10e94568e6ac4490e66c69fa55a9ccb00c1daaefebfa67e444",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-measuring-body-of-water.json.gz",
+                    "bytes": 16202089,
+                    "md5": "f4f83904c9a8439e59be5cba9e9d1307",
+                    "sha256": "b7359ceb2b99cf6d5d913ff6fb9b7c02eb4dbfc7b4f1c04be70b41fd9ed23f58",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-measuring-admin-2nd-border.json.gz",
+                    "bytes": 617508,
+                    "md5": "5709e5d169ab0f311f784e21057233c7",
+                    "sha256": "260e86dfbf30fd08f9bb698b40d235364dc8f2faa4f408cf6ba4af513b7eb5dc",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-measuring-admin-boundaries.json.gz",
+                    "bytes": 1315775,
+                    "md5": "65420d1b320761f11305f8534b253ad6",
+                    "sha256": "21473a9dfe56966d8ea878218e7d89f19c37f58d0e54612b7680ffea8b6465a4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-boundaries.json.gz",
+                    "bytes": 664876,
+                    "md5": "3ab443c4f00a82ab1a007c1f2c8d186b",
+                    "sha256": "f06d94fe67583dd3324027c27cf1e9bace5c740a0f427e4c902e0eced720dd05",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-transit.json.gz",
+                    "bytes": 3793,
+                    "md5": "24b910994f1da4e288498dd6073bde74",
+                    "sha256": "1739eb5768034ebe36bab18301d5b4d76b07a939ca5ff16764ee854ab0d5a9f8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-meta.json.gz",
+                    "bytes": 492,
+                    "md5": "775d507f32b9c33ffe2550277075c852",
+                    "sha256": "e0940cbc931ebe8a7f106cac169eb31bc5fc337f901b374e7b509fcee5de7dfe",
                     "schemaVersion": 1
                 }
             ]
