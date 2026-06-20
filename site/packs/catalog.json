@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:38:34.933Z",
+    "generatedAt": "2026-06-20T14:38:58.470Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5195,6 +5195,88 @@
                     "bytes": 508,
                     "md5": "a567bc089105bd2910d8d74acbc1cb22",
                     "sha256": "c278fd5c114811b470e9fb5e9a84b19e60198a0f000547c7581ede15f4691f14",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-south-carolina",
+            "label": "South Carolina",
+            "regionPath": ["North America", "US", "South Carolina"],
+            "bbox": [-83.35622, 32.02967, -78.51867, 35.2184],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 11344513,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-poi.json.gz",
+                    "bytes": 67269,
+                    "md5": "6b518cff9217ae4ba7efa1be8d8fd53c",
+                    "sha256": "62fbe08fec160d4083e890ab995782d1658dbca2fac0154e11459fa13954f5a8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-measuring-coastline.json.gz",
+                    "bytes": 30858,
+                    "md5": "e118e5a78f463d171430e39eb5f30143",
+                    "sha256": "65ed08fdff92971f89ac7ecef1d061b732cace312d08394dcdc35ceb59fef602",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-measuring-body-of-water.json.gz",
+                    "bytes": 9736110,
+                    "md5": "53f2a195f2262cbdc3d2466751f1bc40",
+                    "sha256": "c7577b28a91ac50c36f5f9139cb0dffaa512ee974541be029d8e114e8855ba83",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-measuring-admin-2nd-border.json.gz",
+                    "bytes": 275042,
+                    "md5": "50b05db850d6cf8317ac3adf1df9909f",
+                    "sha256": "5c377a4bd876ced420274ccb02a5d83f2fd552d12a11c53f1a79e67bc6a0e8b4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-measuring-admin-boundaries.json.gz",
+                    "bytes": 817257,
+                    "md5": "5fb4e12e2b824b230fb905a0e17d8eb0",
+                    "sha256": "fb6e8a2b204218f59b03bb07e94acedb11eef564398abd902006faa4e6e9aa03",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-boundaries.json.gz",
+                    "bytes": 416414,
+                    "md5": "3c73165150eaf9ee82bcbe1c5ce18eaf",
+                    "sha256": "af3a2349a1028c4fa4c333229ec7b3e911a7d80a0657b8920fc1b00aceb7979d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-transit.json.gz",
+                    "bytes": 1062,
+                    "md5": "b2c31bbfb7a6ea50c697d302ecf1d60f",
+                    "sha256": "e7d8f8cb240cffd45db4caa39c67e3dac71a827506a86334b94bc9fcb9082707",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-meta.json.gz",
+                    "bytes": 501,
+                    "md5": "5f1fcc69a69ad682572dca29a4d2f6eb",
+                    "sha256": "d03db76b0f62fa890a64faaf5a37076cbfed1d69be5c5d25541436b6d8a6c19b",
                     "schemaVersion": 1
                 }
             ]
