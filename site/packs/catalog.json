@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:50:02.536Z",
+    "generatedAt": "2026-06-20T07:50:23.725Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3400,6 +3400,88 @@
                     "bytes": 488,
                     "md5": "b3cb97f004a59c5b6e42794f867e133f",
                     "sha256": "7968b7b049c66114b56b81ce238770958e4f81d1185c1e5f46aef62c662899c2",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-indiana",
+            "label": "Indiana",
+            "regionPath": ["North America", "US", "Indiana"],
+            "bbox": [-88.10327, 37.62705, -84.50399, 41.76301],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 5556128,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-poi.json.gz",
+                    "bytes": 95361,
+                    "md5": "9420481227a7466cb8e39a03c9ccbdfe",
+                    "sha256": "0f0b580c0d1509ad18f6f8f5346d6ef69841c18899b04c1c43f9c3344819cead",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-measuring-body-of-water.json.gz",
+                    "bytes": 4548933,
+                    "md5": "71d1fec730287301c3d8033575c14084",
+                    "sha256": "8f74e81bf0b01184e767aab8960fd3a9fabdbef01230810e4b8d9690a5304c23",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-measuring-admin-1st-border.json.gz",
+                    "bytes": 24267,
+                    "md5": "b6705104c2152f3d02e6e4bf3f6a371a",
+                    "sha256": "27d076c93e939930c1f883b7f3b68ae00a18dd61ea486624f5d7eb30a36dfb8e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-measuring-admin-2nd-border.json.gz",
+                    "bytes": 100725,
+                    "md5": "c4e51ddc746c0341b440699aa2e7fe46",
+                    "sha256": "24ce2f098a02aa5342d5a2a12f471cb5cdf8fa796473cf7d4aa2478c9b9e818e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-measuring-admin-boundaries.json.gz",
+                    "bytes": 471347,
+                    "md5": "36b126602e0056a8c242dbfbe3b9c1e4",
+                    "sha256": "0bf172e4c53e36e67f82a84f868f2b1e03cfeda43ff34c3fd6cd6a6c67df445a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-boundaries.json.gz",
+                    "bytes": 312929,
+                    "md5": "e70d133942219860f97eb6e04c51b668",
+                    "sha256": "ee5cb9971feb810e8426bec63a18e8c4a80d18e5241bc5d2a656bdcaa0ab03fd",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-transit.json.gz",
+                    "bytes": 2075,
+                    "md5": "746e4fc9bd1b71f4691b7e14bce5a85e",
+                    "sha256": "a186cd362fe8c1f1704fc81061d2a05e15b4705c2a45f2dccd6d68aeebb92f0d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-meta.json.gz",
+                    "bytes": 491,
+                    "md5": "be8db069c619aa4dcc798451db8ae1cd",
+                    "sha256": "84dec38486755ca9e788a58d08004bc752c91ea80ad9eb6a9150541884c3cfd0",
                     "schemaVersion": 1
                 }
             ]
