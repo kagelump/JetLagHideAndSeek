@@ -38,6 +38,8 @@ import { fromMeters, toMeters } from "@/shared/distanceUnits";
 import { HIDING_ZONE } from "@/config/appConfig";
 
 export const DEFAULT_RADIUS_METERS = HIDING_ZONE.defaultRadiusM;
+/** Imperial-default radius (miles) applied when a player chooses imperial units. */
+export const DEFAULT_RADIUS_IMPERIAL_MI = HIDING_ZONE.defaultRadiusImperialMi;
 const ZONE_GEOMETRY_DEBOUNCE_MS = 300;
 
 export type HidingZoneImportState = {
@@ -85,6 +87,9 @@ type HidingZoneActionsValue = {
         routeIds: string[] | null,
     ) => void;
     setRadiusDisplayValue: (value: string) => void;
+    // Sets the display value and unit together (meters derived from both).
+    // Use when changing both atomically, e.g. applying a unit-system default.
+    setRadius: (value: string, unit: HidingZoneUnit) => void;
     setRadiusUnit: (unit: HidingZoneUnit) => void;
     togglePreset: (presetId: string) => void;
 };
@@ -324,6 +329,20 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
         setRadiusDisplayValueState(fromMeters(radiusMetersRef.current, unit));
     }, []);
 
+    const setRadius = useCallback((value: string, unit: HidingZoneUnit) => {
+        setRadiusUnitState(unit);
+        setRadiusDisplayValueState(value);
+        const meters = toMeters(value, unit);
+        if (meters === null) return;
+        radiusMetersRef.current = meters;
+        setRadiusMeters(meters);
+        if (zoneGeometryTimerRef.current) {
+            clearTimeout(zoneGeometryTimerRef.current);
+            zoneGeometryTimerRef.current = null;
+        }
+        setZoneGeometryRadiusMeters(meters);
+    }, []);
+
     const markRestored = useCallback(() => {
         setIsRestored(true);
     }, []);
@@ -362,6 +381,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             removePreset,
             replaceSetup,
             setOperatorRouteSelection,
+            setRadius,
             setRadiusDisplayValue,
             setRadiusUnit,
             togglePreset,
@@ -372,6 +392,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             removePreset,
             replaceSetup,
             setOperatorRouteSelection,
+            setRadius,
             setRadiusDisplayValue,
             setRadiusUnit,
             togglePreset,

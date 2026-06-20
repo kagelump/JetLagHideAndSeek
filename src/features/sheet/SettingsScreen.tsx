@@ -26,6 +26,7 @@ import {
     useLabelLanguage,
     useQuestionActions,
     useQuestions,
+    useUnitSystem,
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
 
@@ -50,7 +51,9 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
     const questions = useQuestions();
     const labelLanguage = useLabelLanguage();
     const gameMode = useGameMode();
-    const { setGameMode, setLabelLanguage } = useQuestionActions();
+    const unitSystem = useUnitSystem();
+    const { setGameMode, setLabelLanguage, setUnitSystem } =
+        useQuestionActions();
     const [isShareVisible, setIsShareVisible] = useState(false);
     const [maintenanceResult, setMaintenanceResult] = useState<string | null>(
         null,
@@ -182,6 +185,26 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
 
             <View style={styles.actions}>
                 <Text style={styles.sectionHeading}>Display</Text>
+                <SheetListRow
+                    accessibilityLabel="Toggle imperial units"
+                    description="Show distances in miles instead of meters and kilometers"
+                    onPress={() =>
+                        setUnitSystem(
+                            unitSystem === "imperial" ? "metric" : "imperial",
+                        )
+                    }
+                    testID="settings-unit-system-row"
+                    title="Imperial Units"
+                    trailing={
+                        <Switch
+                            onValueChange={(v) =>
+                                setUnitSystem(v ? "imperial" : "metric")
+                            }
+                            testID="settings-unit-system-switch"
+                            value={unitSystem === "imperial"}
+                        />
+                    }
+                />
                 <SheetListRow
                     accessibilityLabel="Toggle POI label language between native and English"
                     description="Show POI names in English when available"

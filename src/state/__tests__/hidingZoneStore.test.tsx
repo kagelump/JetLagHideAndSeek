@@ -169,6 +169,46 @@ describe("HidingZoneProvider app-state persistence", () => {
         });
     });
 
+    it("setRadius applies value and unit atomically (imperial default)", async () => {
+        let setRadiusFn:
+            | ReturnType<typeof useHidingZoneActions>["setRadius"]
+            | null = null;
+
+        function ActionProbe() {
+            const ctx = useHidingZoneActions();
+            setRadiusFn = ctx.setRadius;
+            return <Probe />;
+        }
+
+        const screen = renderProvider(<ActionProbe />);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        expect(setRadiusFn).not.toBeNull();
+        act(() => {
+            setRadiusFn!("0.25", "mi");
+        });
+
+        // 0.25 mi -> meters, with unit reflected immediately.
+        expect(screen.getByTestId("probe-radius-unit")).toHaveTextContent("mi");
+        expect(screen.getByTestId("probe-radius-meters")).toHaveTextContent(
+            String(0.25 * 1609.344),
+        );
+
+        await waitFor(async () => {
+            const persisted = await loadPersistedAppState();
+            expect(persisted?.hidingZones.radiusUnit).toBe("mi");
+            expect(persisted?.hidingZones.radiusMeters).toBeCloseTo(
+                0.25 * 1609.344,
+                3,
+            );
+        });
+    });
+
     it("persists when selectedPresetIds change via togglePreset", async () => {
         let togglePresetFn:
             | ReturnType<typeof useHidingZoneActions>["togglePreset"]

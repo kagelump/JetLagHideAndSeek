@@ -42,6 +42,15 @@ export const radarDistanceOptionSchema = z.enum([
     "40km",
     "80km",
     "150km",
+    "0.5mi",
+    "1mi",
+    "2mi",
+    "5mi",
+    "10mi",
+    "15mi",
+    "25mi",
+    "50mi",
+    "100mi",
     "other",
 ]);
 

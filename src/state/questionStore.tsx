@@ -51,6 +51,12 @@ import {
 
 export type GameMode = "hider" | "seeker";
 
+/**
+ * Preferred display unit system. Sets the default units for newly created
+ * radar / measuring questions and which radar distance-preset ladder is shown.
+ */
+export type UnitSystem = "metric" | "imperial";
+
 // ---------------------------------------------------------------------------
 // State context — scalar values that change frequently
 // ---------------------------------------------------------------------------
@@ -63,6 +69,10 @@ type QuestionStateValue = {
     isRestored: boolean;
     labelLanguage: "native" | "english";
     seekingStartedAt: number | null;
+    unitSystem: UnitSystem;
+    // Whether the player explicitly overrode the unit system (in Settings). Once
+    // true, the play-area-geography auto-default stops applying.
+    unitSystemChosen: boolean;
 };
 
 const QuestionStateContext = createContext<QuestionStateValue | null>(null);
@@ -90,6 +100,7 @@ const AdminDivisionPresetNameContext = createContext<AdminDivisionPresetName>(
     DEFAULT_ADMIN_DIVISION_PRESET_NAME,
 );
 const SeekingStartedAtContext = createContext<number | null>(null);
+const UnitSystemContext = createContext<UnitSystem>("metric");
 const QuestionIdsContext = createContext<string[] | null>(null);
 const QuestionsByIdContext = createContext<Record<
     string,
@@ -116,6 +127,10 @@ export function useAdminDivisionPresetName(): AdminDivisionPresetName {
 
 export function useSeekingStartedAt(): number | null {
     return useContext(SeekingStartedAtContext);
+}
+
+export function useUnitSystem(): UnitSystem {
+    return useContext(UnitSystemContext);
 }
 
 export function useQuestionIds(): string[] {
@@ -145,6 +160,10 @@ export function useQuestions(): QuestionState[] {
 
 type QuestionActionsValue = {
     addImportedQuestion: (question: QuestionState) => QuestionState;
+    // Applies a derived default unit system (e.g. from play-area geography)
+    // WITHOUT marking it an explicit choice, so a later geography change can
+    // still update it. A manual `setUnitSystem` takes precedence.
+    applyDefaultUnitSystem: (system: UnitSystem) => void;
     createQuestion: (
         type: ImplementedQuestionType,
         options: {
@@ -166,6 +185,8 @@ type QuestionActionsValue = {
     setGameMode: (mode: GameMode) => void;
     setLabelLanguage: (language: "native" | "english") => void;
     setSeekingStartedAt: (timestamp: number | null) => void;
+    // Records an explicit unit-system choice (also marks `unitSystemChosen`).
+    setUnitSystem: (system: UnitSystem) => void;
     updateQuestion: (
         questionId: string,
         updater: (question: QuestionState) => QuestionState,
@@ -215,6 +236,8 @@ export type QuestionSettingsImportState = {
     gameMode: GameMode;
     labelLanguage: "native" | "english";
     seekingStartedAt: number | null;
+    unitSystem: UnitSystem;
+    unitSystemChosen: boolean;
 };
 
 type NormalizedQuestions = {
@@ -245,6 +268,8 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const [seekingStartedAt, setSeekingStartedAtState] = useState<
         number | null
     >(null);
+    const [unitSystem, setUnitSystemState] = useState<UnitSystem>("metric");
+    const [unitSystemChosen, setUnitSystemChosen] = useState(false);
 
     const activeQuestion = useMemo(
         () =>
@@ -299,6 +324,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                 options.center,
                 now,
                 options.category,
+                unitSystem,
             );
             setQuestions((current) => {
                 const byId = cloneQuestionsById(current.byId);
@@ -311,7 +337,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setActiveQuestionIdState(question.id);
             return question;
         },
-        [],
+        [unitSystem],
     );
 
     const addImportedQuestion = useCallback((question: QuestionState) => {
@@ -435,6 +461,8 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setLabelLanguageState(settings.labelLanguage ?? "native");
             setGameModeState(settings.gameMode ?? "seeker");
             setSeekingStartedAtState(settings.seekingStartedAt ?? null);
+            setUnitSystemState(settings.unitSystem ?? "metric");
+            setUnitSystemChosen(settings.unitSystemChosen ?? false);
             const pack =
                 settings.adminDivisionPack ?? DEFAULT_ADMIN_DIVISION_PACK;
             setAdminDivisionPackState(pack);
@@ -459,6 +487,16 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setSeekingStartedAtState(timestamp);
     }, []);
 
+    const setUnitSystem = useCallback((system: UnitSystem) => {
+        setUnitSystemState(system);
+        setUnitSystemChosen(true);
+    }, []);
+
+    const applyDefaultUnitSystem = useCallback((system: UnitSystem) => {
+        // Auto-derived default — leaves `unitSystemChosen` untouched.
+        setUnitSystemState(system);
+    }, []);
+
     const stateValue = useMemo<QuestionStateValue>(
         () => ({
             activeQuestionId,
@@ -468,6 +506,8 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             isRestored,
             labelLanguage,
             seekingStartedAt,
+            unitSystem,
+            unitSystemChosen,
         }),
         [
             activeQuestionId,
@@ -477,12 +517,15 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             isRestored,
             labelLanguage,
             seekingStartedAt,
+            unitSystem,
+            unitSystemChosen,
         ],
     );
 
     const actionsValue = useMemo<QuestionActionsValue>(
         () => ({
             addImportedQuestion,
+            applyDefaultUnitSystem,
             createQuestion,
             deleteQuestion,
             importQuestionSettings,
@@ -494,10 +537,12 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setGameMode,
             setLabelLanguage,
             setSeekingStartedAt,
+            setUnitSystem,
             updateQuestion,
         }),
         [
             addImportedQuestion,
+            applyDefaultUnitSystem,
             createQuestion,
             deleteQuestion,
             importQuestionSettings,
@@ -509,6 +554,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             setGameMode,
             setLabelLanguage,
             setSeekingStartedAt,
+            setUnitSystem,
             updateQuestion,
         ],
     );
@@ -537,7 +583,11 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                                             <SeekingStartedAtContext.Provider
                                                 value={seekingStartedAt}
                                             >
-                                                {children}
+                                                <UnitSystemContext.Provider
+                                                    value={unitSystem}
+                                                >
+                                                    {children}
+                                                </UnitSystemContext.Provider>
                                             </SeekingStartedAtContext.Provider>
                                         </AdminDivisionPresetNameContext.Provider>
                                     </AdminDivisionPackContext.Provider>
@@ -765,21 +815,25 @@ function createDefaultQuestion(
     center: Position,
     now: string,
     category?: MatchingCategory | MeasuringCategory | TentaclesCategory,
+    unitSystem: UnitSystem = "metric",
 ): QuestionState {
+    const imperial = unitSystem === "imperial";
     switch (type) {
-        case "radar":
+        case "radar": {
+            const distanceOption = imperial ? "0.5mi" : "500m";
             return {
                 answer: radarQuestionConfig.defaultAnswer,
                 center,
                 createdAt: now,
-                distanceMeters: radarDistanceOptionMeters["500m"],
-                distanceOption: "500m",
-                distanceUnit: "m",
+                distanceMeters: radarDistanceOptionMeters[distanceOption],
+                distanceOption,
+                distanceUnit: imperial ? "mi" : "m",
                 id: createQuestionId(),
                 isLocked: false,
                 type: "radar",
                 updatedAt: now,
             };
+        }
         case "matching":
             return {
                 answer: "unanswered",
@@ -809,7 +863,7 @@ function createDefaultQuestion(
                 isLocked: false,
                 nearestPoiName: null,
                 seekerDistanceMeters: null,
-                seekerDistanceUnit: "m",
+                seekerDistanceUnit: imperial ? "mi" : "m",
                 type: "measuring",
                 updatedAt: now,
             };

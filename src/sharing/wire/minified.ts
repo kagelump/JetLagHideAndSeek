@@ -89,6 +89,7 @@ const adminDivisionsMinifiedSchema = z.object({
 const radarQuestionMinifiedSchema = z.object({
     [FIELD_MAP.answer]: z.enum(["p", "n"]).optional(),
     [FIELD_MAP.center]: compactCoordSchema,
+    [FIELD_MAP.distanceUnit]: z.enum(["m", "km", "mi"]).optional(),
     [FIELD_MAP.id]: z.string().min(1).optional(),
     [FIELD_MAP.questionType]: z.literal("r").optional(),
     [FIELD_MAP.radiusMeters]: z.number().positive(),
@@ -103,6 +104,15 @@ const radarQuestionMinifiedSchema = z.object({
             "40km",
             "80km",
             "150km",
+            "0.5mi",
+            "1mi",
+            "2mi",
+            "5mi",
+            "10mi",
+            "15mi",
+            "25mi",
+            "50mi",
+            "100mi",
             "other",
         ])
         .optional(),
@@ -368,6 +378,11 @@ function minifyQuestion(question: QuestionWireV1): Record<string, unknown> {
             [FIELD_MAP.radiusMeters]: question.distanceMeters,
             [FIELD_MAP.radiusOption]: question.distanceOption,
         };
+
+        // Only carry a non-default unit (metric "m" is the implicit default).
+        if (question.distanceUnit !== "m") {
+            result[FIELD_MAP.distanceUnit] = question.distanceUnit;
+        }
 
         if (question.answer !== "unanswered") {
             result[FIELD_MAP.answer] = ANSWER_TO_MINIFIED[question.answer];
@@ -765,7 +780,8 @@ function unminifyQuestion(
             (q[FIELD_MAP.radiusOption] as
                 | RadarQuestionWireV1["distanceOption"]
                 | undefined) ?? "other",
-        distanceUnit: "m",
+        distanceUnit:
+            (q[FIELD_MAP.distanceUnit] as "m" | "km" | "mi" | undefined) ?? "m",
         id:
             (q[FIELD_MAP.id] as string | undefined) ??
             `q-imported-${index + 1}`,

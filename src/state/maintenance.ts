@@ -32,6 +32,10 @@ const defaultQuestionSettings = {
     gameMode: "seeker" as const,
     labelLanguage: "native" as const,
     seekingStartedAt: null as number | null,
+    // Mirror fresh-install: clear the override so the unit system re-derives
+    // from the play area's geography.
+    unitSystem: "metric" as const,
+    unitSystemChosen: false,
 };
 
 // ─── Reset Game ────────────────────────────────────────────────────────────

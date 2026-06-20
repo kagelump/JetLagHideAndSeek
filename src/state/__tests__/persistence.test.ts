@@ -125,6 +125,8 @@ describe("AppStateV1 schema", () => {
             gameMode: "seeker",
             labelLanguage: "native",
             seekingStartedAt: null,
+            unitSystem: "metric",
+            unitSystemChosen: false,
         });
         expect(state.questions).toEqual([]);
     });
@@ -257,6 +259,8 @@ describe("AppStateV1 schema", () => {
                 gameMode: "seeker" as const,
                 labelLanguage: "native" as const,
                 seekingStartedAt: null,
+                unitSystem: "metric" as const,
+                unitSystemChosen: false,
             },
         };
         expect(migratePersistedAppState(state)).toEqual(state);

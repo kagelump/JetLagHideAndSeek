@@ -15,23 +15,38 @@ import {
     formatStationDistance,
 } from "@/features/questions/radar/radarGeometry";
 import {
+    imperialRadarPresets,
+    isImperialRadarPreset,
+    metricRadarPresets,
     type RadarDistanceOption,
     type RadarQuestion,
-    radarDistancePresetOptions,
 } from "@/features/questions/radar/radarTypes";
 import { useRadarDistanceDraftInput } from "@/features/questions/radar/useRadarDistanceDraftInput";
 import {
     updateRadarAnswer,
     updateQuestionCenter,
     useQuestionActions,
+    useUnitSystem,
 } from "@/state/questionStore";
 import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { colors } from "@/theme/colors";
 
-const allDistanceOptions: RadarDistanceOption[] = [
-    ...radarDistancePresetOptions,
-    "other",
-];
+/**
+ * The preset ladder to show for a question. A question keeps the ladder it was
+ * created with (metric vs imperial), so the selected chip always highlights;
+ * the unit-system preference only decides the ladder for "other" (no preset).
+ */
+export function getDistanceOptionsFor(
+    distanceOption: RadarDistanceOption,
+    unitSystem: "metric" | "imperial",
+): RadarDistanceOption[] {
+    const imperial =
+        distanceOption === "other"
+            ? unitSystem === "imperial"
+            : isImperialRadarPreset(distanceOption);
+    const presets = imperial ? imperialRadarPresets : metricRadarPresets;
+    return [...presets, "other"];
+}
 
 type RadarQuestionDetailScreenProps = {
     question: RadarQuestion;
@@ -43,6 +58,11 @@ export function RadarQuestionDetailScreen({
     updateQuestion,
 }: RadarQuestionDetailScreenProps) {
     const { selectedStations } = useHidingZoneDerived();
+    const unitSystem = useUnitSystem();
+    const distanceOptions = getDistanceOptionsFor(
+        question.distanceOption,
+        unitSystem,
+    );
     const {
         customDistanceInputRef,
         customDistanceValue,
@@ -84,7 +104,7 @@ export function RadarQuestionDetailScreen({
                     style={styles.optionCarousel}
                     testID="radar-distance-option-carousel"
                 >
-                    {allDistanceOptions.map((option) =>
+                    {distanceOptions.map((option) =>
                         renderDistanceOption({
                             handleDistanceOptionPress,
                             option,

@@ -1073,6 +1073,8 @@ function GameModeProbe() {
                         gameMode: "hider",
                         labelLanguage: "english",
                         seekingStartedAt: null,
+                        unitSystem: "imperial",
+                        unitSystemChosen: true,
                     })
                 }
             />

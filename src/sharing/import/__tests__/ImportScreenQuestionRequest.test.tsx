@@ -233,6 +233,8 @@ describe("ImportScreen — question-request", () => {
                     ],
                     adminDivisionPresetName: "generic",
                     seekingStartedAt: null,
+                    unitSystem: "metric",
+                    unitSystemChosen: false,
                 },
             }),
         );
@@ -316,6 +318,8 @@ describe("ImportScreen — question-request", () => {
                     ],
                     adminDivisionPresetName: "generic",
                     seekingStartedAt: null,
+                    unitSystem: "metric",
+                    unitSystemChosen: false,
                 },
             }),
         );
@@ -389,6 +393,8 @@ describe("ImportScreen — question-request", () => {
                     ],
                     adminDivisionPresetName: "generic",
                     seekingStartedAt: null,
+                    unitSystem: "metric",
+                    unitSystemChosen: false,
                 },
             }),
         );
@@ -475,6 +481,8 @@ describe("ImportScreen — question-request", () => {
                     ],
                     adminDivisionPresetName: "generic",
                     seekingStartedAt: null,
+                    unitSystem: "metric",
+                    unitSystemChosen: false,
                 },
             }),
         );
@@ -557,6 +565,8 @@ describe("ImportScreen — question-request", () => {
                     ],
                     adminDivisionPresetName: "generic",
                     seekingStartedAt: null,
+                    unitSystem: "metric",
+                    unitSystemChosen: false,
                 },
             }),
         );
@@ -620,6 +630,8 @@ describe("ImportScreen — question-request", () => {
                     ],
                     adminDivisionPresetName: "generic",
                     seekingStartedAt: null,
+                    unitSystem: "metric",
+                    unitSystemChosen: false,
                 },
             }),
         );

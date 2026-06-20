@@ -116,6 +116,12 @@ export const APP_CONFIG = {
         maxComponentCacheSize: 50,
         /** Default hiding-zone radius in meters. */
         defaultRadiusM: 600,
+        /**
+         * Default hiding-zone radius shown for imperial users (in miles). Not a
+         * conversion of `defaultRadiusM` — a clean round value chosen as the
+         * imperial-equivalent default.
+         */
+        defaultRadiusImperialMi: 0.25,
     },
 
     map: {

@@ -57,6 +57,10 @@ export const appStateQuestionSettingsSchema = z.object({
     gameMode: z.enum(["hider", "seeker"]).default("seeker"),
     labelLanguage: z.enum(["native", "english"]).default("native"),
     seekingStartedAt: z.number().nullable().default(null),
+    unitSystem: z.enum(["metric", "imperial"]).default("metric"),
+    // Whether the player explicitly overrode the unit system in Settings. Once
+    // true, the play-area-geography auto-default stops applying.
+    unitSystemChosen: z.boolean().default(false),
 });
 
 const metadataSchema = z.object({
@@ -230,6 +234,8 @@ export function createAppStateV1({
             gameMode: questionSettings?.gameMode ?? "seeker",
             labelLanguage: questionSettings?.labelLanguage ?? "native",
             seekingStartedAt: questionSettings?.seekingStartedAt ?? null,
+            unitSystem: questionSettings?.unitSystem ?? "metric",
+            unitSystemChosen: questionSettings?.unitSystemChosen ?? false,
         },
         questions: questions ? [...questions] : [],
         version: 1,
@@ -285,6 +291,8 @@ function addMissingV1Slices(value: unknown): unknown {
                       adminDivisionPresetName: "generic",
                       gameMode: "seeker",
                       labelLanguage: "native",
+                      unitSystem: "metric",
+                      unitSystemChosen: false,
                   },
         questions,
     };
@@ -362,5 +370,7 @@ export function appStateQuestionSettingsToImportState(
         gameMode: questionSettings.gameMode,
         labelLanguage: questionSettings.labelLanguage,
         seekingStartedAt: questionSettings.seekingStartedAt ?? null,
+        unitSystem: questionSettings.unitSystem,
+        unitSystemChosen: questionSettings.unitSystemChosen,
     };
 }

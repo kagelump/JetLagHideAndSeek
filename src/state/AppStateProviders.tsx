@@ -18,11 +18,16 @@ import {
     createAppStateV1,
 } from "@/state/appState";
 import {
+    DEFAULT_RADIUS_IMPERIAL_MI,
+    DEFAULT_RADIUS_METERS,
     HidingZoneProvider,
     useHidingZoneActions,
     useHidingZoneState,
 } from "@/state/hidingZoneStore";
+import { isPlayAreaSet } from "@/features/map/playArea";
 import { cleanOrphanedBoundaryKeys } from "@/features/map/playAreaBoundary";
+import { METERS_PER_MILE } from "@/shared/distanceUnits";
+import { defaultUnitSystemForPlayArea } from "@/shared/unitSystemDefaults";
 import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
 import { loadInstalledPacks } from "@/features/offline/regionPacks";
 import { persistDebounceMs } from "@/state/debounceConfig";
@@ -204,6 +209,48 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
         );
     }, [questionState.adminDivisionPack, questionState.labelLanguage]);
 
+    // Auto-pick the unit system from the play area's geography (imperial in the
+    // US, metric elsewhere) until the player overrides it in Settings. Seeds the
+    // matching hiding-zone radius default while the radius is still untouched.
+    const playArea = playAreaStore.playArea;
+    const { radiusMeters, radiusUnit } = hidingZoneState;
+    const { applyDefaultUnitSystem } = questionActions;
+    const { setRadius } = hidingZoneActions;
+    useEffect(() => {
+        if (!isRestored) return;
+        if (questionState.unitSystemChosen) return;
+        if (!isPlayAreaSet(playArea)) return;
+
+        const next = defaultUnitSystemForPlayArea(playArea);
+        if (next === questionState.unitSystem) return;
+
+        applyDefaultUnitSystem(next);
+
+        // Convert the radius default to match, but only when it's still at
+        // either system's untouched default (don't clobber a custom radius).
+        const imperialMeters = DEFAULT_RADIUS_IMPERIAL_MI * METERS_PER_MILE;
+        const radiusUntouched =
+            (radiusUnit === "m" && radiusMeters === DEFAULT_RADIUS_METERS) ||
+            (radiusUnit === "mi" &&
+                Math.abs(radiusMeters - imperialMeters) < 0.5);
+        if (radiusUntouched) {
+            if (next === "imperial") {
+                setRadius(String(DEFAULT_RADIUS_IMPERIAL_MI), "mi");
+            } else {
+                setRadius(String(DEFAULT_RADIUS_METERS), "m");
+            }
+        }
+    }, [
+        applyDefaultUnitSystem,
+        isRestored,
+        playArea,
+        questionState.unitSystem,
+        questionState.unitSystemChosen,
+        radiusMeters,
+        radiusUnit,
+        setRadius,
+    ]);
+
     useEffect(() => {
         if (!isRestored) return;
 
@@ -231,6 +278,8 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
                     gameMode: questionState.gameMode,
                     labelLanguage: questionState.labelLanguage,
                     seekingStartedAt: questionState.seekingStartedAt,
+                    unitSystem: questionState.unitSystem,
+                    unitSystemChosen: questionState.unitSystemChosen,
                 },
                 questions,
             }),
@@ -246,6 +295,9 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
         questionState.adminDivisionPresetName,
         questionState.gameMode,
         questionState.labelLanguage,
+        questionState.seekingStartedAt,
+        questionState.unitSystem,
+        questionState.unitSystemChosen,
         questions,
     ]);
 

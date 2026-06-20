@@ -94,3 +94,21 @@ describe("SettingsScreen sharing", () => {
         ).toBeTruthy();
     });
 });
+
+describe("SettingsScreen display preferences", () => {
+    it("exposes an imperial units toggle that flips on press", () => {
+        const screen = renderWithProviders(
+            <SettingsScreen onNavigate={jest.fn()} />,
+        );
+
+        const row = screen.getByTestId("settings-unit-system-row");
+        expect(
+            screen.getByTestId("settings-unit-system-switch").props.value,
+        ).toBe(false);
+
+        fireEvent.press(row);
+        expect(
+            screen.getByTestId("settings-unit-system-switch").props.value,
+        ).toBe(true);
+    });
+});

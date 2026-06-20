@@ -313,6 +313,35 @@ describe("minifyEnvelope", () => {
         expect(json.p.q[0].e).toBe("p");
     });
 
+    it("round-trips an imperial radar distance option", () => {
+        const envelope = makeEnvelope({
+            questions: [
+                {
+                    answer: "positive",
+                    center: [139.7, 35.7],
+                    createdAt: "2026-05-17T00:00:00.000Z",
+                    distanceMeters: 0.5 * 1609.344,
+                    distanceOption: "0.5mi",
+                    distanceUnit: "mi",
+                    id: "q-1",
+                    isLocked: false,
+                    type: "radar",
+                    updatedAt: "2026-05-17T00:00:00.000Z",
+                },
+            ],
+        });
+        const mini = minifyEnvelope(envelope);
+        expect(JSON.parse(canonicalize(mini)).p.q[0].d).toBe("0.5mi");
+
+        const restored = unminifyEnvelope(mini);
+        const question = restored.payload.questions?.[0];
+        expect(question?.type).toBe("radar");
+        if (question?.type === "radar") {
+            expect(question.distanceOption).toBe("0.5mi");
+            expect(question.distanceUnit).toBe("mi");
+        }
+    });
+
     it("omits unanswered radar answers from compact questions", () => {
         const envelope = makeEnvelope({
             questions: [
