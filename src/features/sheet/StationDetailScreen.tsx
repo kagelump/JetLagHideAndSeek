@@ -1,6 +1,7 @@
-import { useMemo } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useMemo, useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
+import { CalculatingIndicator } from "@/components/CalculatingIndicator";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { useStationElimination } from "@/features/map/useStationElimination";
@@ -10,6 +11,15 @@ export function StationDetailScreen() {
     const { selectedStations } = useHidingZoneDerived();
     const { remainingCount, totalCount, eliminatedStationIds, isComputing } =
         useStationElimination();
+
+    // Debug: trace when the station detail screen sees computing state change.
+    useEffect(() => {
+        console.log(
+            `[StationDetailScreen] isComputing=${isComputing}, ` +
+                `remaining=${remainingCount}/${totalCount}, ` +
+                `eliminated=${eliminatedStationIds.size}`,
+        );
+    }, [isComputing, remainingCount, totalCount, eliminatedStationIds.size]);
 
     // Sort: remaining stations first, eliminated grouped below.
     // Within each group, sort alphabetically by display name.
@@ -30,10 +40,7 @@ export function StationDetailScreen() {
             {/* Summary header */}
             <View style={styles.summary}>
                 {isComputing ? (
-                    <ActivityIndicator
-                        color={colors.tint}
-                        style={styles.summarySpinner}
-                    />
+                    <CalculatingIndicator style={styles.summarySpinner} />
                 ) : (
                     <Text style={styles.summaryNumber}>
                         {remainingCount}

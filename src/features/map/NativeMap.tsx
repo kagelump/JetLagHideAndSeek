@@ -15,6 +15,7 @@ import {
 
 import { colors } from "@/theme/colors";
 
+import { CalculatingPill } from "@/components/CalculatingIndicator";
 import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { useMarkAppMapReady } from "@/state/AppStateProviders";
 import { usePlayArea } from "@/state/playAreaStore";
@@ -40,6 +41,7 @@ import type { MapPin } from "./getQuestionPins";
 import { HidingZoneLayers } from "./HidingZoneLayers";
 import { MapControls } from "./MapControls";
 import { MapPoiCallout } from "./MapPoiCallout";
+import { CalculatingHeaderShimmer } from "./CalculatingHeaderShimmer";
 import { buildOsmRasterStyleJson } from "./mapStyle";
 import {
     buildCombinedEligibilityMask,
@@ -113,7 +115,19 @@ export function NativeMap({
     const { routeFeatures, stationFeatures, zoneFeatures } =
         useHidingZoneDerived();
     const markAppMapReady = useMarkAppMapReady();
-    const questionMapRenderState = useQuestionMapRenderState();
+    const { renderState: questionMapRenderState, isComputing } =
+        useQuestionMapRenderState();
+
+    // Debug: trace when the map sees isComputing change.
+    useEffect(() => {
+        console.log(
+            `[NativeMap] isComputing=${isComputing}, ` +
+                `maskFeats=${questionMapRenderState.radar.hitMaskFeatures.features.length}`,
+        );
+    }, [
+        isComputing,
+        questionMapRenderState.radar.hitMaskFeatures.features.length,
+    ]);
     const { playArea } = usePlayArea();
     const playAreaIsSet = isPlayAreaSet(playArea);
     const questions = useQuestions();
@@ -459,8 +473,20 @@ export function NativeMap({
                     />
                 </MLMapView>
 
+                <CalculatingHeaderShimmer
+                    active={isComputing}
+                    topInset={insets.top}
+                />
+
                 <View style={[styles.topBar, { paddingTop: insets.top }]}>
                     <Text style={styles.title}>{playArea.label}</Text>
+                </View>
+
+                <View
+                    pointerEvents="none"
+                    style={[styles.pillWrap, { top: insets.top + 52 }]}
+                >
+                    <CalculatingPill active={isComputing} />
                 </View>
 
                 <MapControls
@@ -489,6 +515,12 @@ const styles = StyleSheet.create({
     },
     map: {
         flex: 1,
+    },
+    pillWrap: {
+        alignItems: "center",
+        left: 0,
+        position: "absolute",
+        right: 0,
     },
     title: {
         color: colors.ink,

@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-    ActivityIndicator,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { CalculatingIndicator } from "@/components/CalculatingIndicator";
 import { isPlayAreaSet } from "@/features/map/playArea";
 import { useEliminationPercentage } from "@/features/map/useEliminationPercentage";
 import { useStationElimination } from "@/features/map/useStationElimination";
@@ -34,8 +29,19 @@ function MainSheetContent({
     const { setGameMode, setSeekingStartedAt } = useQuestionActions();
     const { selectedPresetIds } = useHidingZoneState();
     const seekingStartedAt = useSeekingStartedAt();
-    const eliminationPct = useEliminationPercentage();
+    const { value: eliminationPct, isComputing: eliminationPctComputing } =
+        useEliminationPercentage();
     const { remainingCount, isComputing } = useStationElimination();
+
+    // Debug: trace when the HUD sees computing state changes.
+    useEffect(() => {
+        console.log(
+            `[MainSheetContent] station isComputing=${isComputing}, ` +
+                `remainingCount=${remainingCount}, ` +
+                `eliminationPctComputing=${eliminationPctComputing}, ` +
+                `eliminationPct=${eliminationPct}`,
+        );
+    }, [isComputing, remainingCount, eliminationPctComputing, eliminationPct]);
 
     const showFirstRun =
         !isPlayAreaSet(playArea) ||
@@ -236,8 +242,7 @@ function MainSheetContent({
                                     testID="main-stations-remaining"
                                 >
                                     {isComputing ? (
-                                        <ActivityIndicator
-                                            color={colors.tint}
+                                        <CalculatingIndicator
                                             style={styles.statSpinner}
                                         />
                                     ) : (
@@ -250,11 +255,17 @@ function MainSheetContent({
                                     </Text>
                                 </Pressable>
                                 <View style={styles.statItem}>
-                                    <Text style={styles.statNumber}>
-                                        {eliminationPct !== null
-                                            ? `${eliminationPct}%`
-                                            : "—"}
-                                    </Text>
+                                    {eliminationPctComputing ? (
+                                        <CalculatingIndicator
+                                            style={styles.statSpinner}
+                                        />
+                                    ) : (
+                                        <Text style={styles.statNumber}>
+                                            {eliminationPct !== null
+                                                ? `${eliminationPct}%`
+                                                : "—"}
+                                        </Text>
+                                    )}
                                     <Text style={styles.statLabel}>
                                         Eliminated
                                     </Text>
