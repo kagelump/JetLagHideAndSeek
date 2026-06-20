@@ -254,7 +254,12 @@ export function computeLineCategory(
 
     const distance = computeLineDistance(center, category);
     if (!distance || distance.distanceMeters <= 0) {
-        categoryCache.set(key, null);
+        // Don't cache null — the bundle may not be loaded yet
+        // (computeLineDistance deliberately returns null for missing
+        // bundles so they can be async-loaded later). Mirror that policy
+        // here: once bundles load, the outer deferred computation is
+        // re-triggered (via measuringRevision) and this function is called
+        // again with the now-available data.
         return null;
     }
 

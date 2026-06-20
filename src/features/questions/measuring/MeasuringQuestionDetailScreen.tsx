@@ -18,6 +18,7 @@ import { computeLineDistance } from "./lineMeasuringGeometry";
 import { computeNearestPoiDistance } from "./pointMeasuringGeometry";
 import { MeasuringCategoryList } from "./MeasuringCategoryList";
 import { useEnsureMeasuringBundles } from "./useEnsureMeasuringBundles";
+import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
 import type { MeasuringCategory, MeasuringQuestion } from "./measuringTypes";
 
 type MeasuringQuestionDetailScreenProps = {
@@ -38,6 +39,7 @@ type MeasuringAutoResultProps = {
     question: MeasuringQuestion;
     updateQuestion: ReturnType<typeof useQuestionActions>["updateQuestion"];
     distanceResolver: DistanceResolver;
+    /** Bumps when async line bundles finish loading; triggers recompute. */
     bundleRevision?: number;
 };
 
@@ -49,7 +51,16 @@ function MeasuringAutoResult({
 }: MeasuringAutoResultProps) {
     const categoryTitle = getMeasuringCategoryTitle(question.category);
 
+    // Observe the shared deferred computation so we only compute the distance
+    // after its cache is warm. Calling distanceResolver (computeLineDistance
+    // for line categories) during render on a cold cache blocks the JS thread
+    // for ~2 s with turf simplify. Instead, wait for the deferred computation
+    // to settle — it already calls computeLineCategory → computeLineDistance
+    // and populates the LRU cache, so our call will be a fast hit.
+    const { isComputing } = useQuestionMapRenderState();
+
     const result = useMemo(() => {
+        if (isComputing) return null;
         try {
             return distanceResolver(question.center, question.category);
         } catch (err) {
@@ -59,7 +70,13 @@ function MeasuringAutoResult({
             );
             return null;
         }
-    }, [question.center, question.category, distanceResolver, bundleRevision]);
+    }, [
+        question.center,
+        question.category,
+        distanceResolver,
+        bundleRevision,
+        isComputing,
+    ]);
 
     const displayDistance =
         result?.distanceMeters !== undefined && result.distanceMeters !== null
@@ -198,8 +215,10 @@ export function MeasuringQuestionDetailScreen({
     const categoryTitle = getMeasuringCategoryTitle(question.category);
     const [isChanging, setIsChanging] = useState(false);
 
-    // Ensure line bundles are loaded for the current category and bump the
-    // revision when they arrive so the distance computation re-runs.
+    // Ensure line bundles are loaded for the current category. The shared
+    // deferred computation (useQuestionMapRenderState) also calls this hook
+    // internally; this second call is a belt-and-suspenders that covers the
+    // edge case where this screen mounts before the map.
     const bundleRevision = useEnsureMeasuringBundles(
         useMemo(
             () =>

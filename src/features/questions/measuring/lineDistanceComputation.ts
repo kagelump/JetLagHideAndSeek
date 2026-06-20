@@ -264,6 +264,21 @@ export function clearLineDistanceCache(): void {
     distanceCache.clear();
 }
 
+/**
+ * Synchronous cache probe. Returns the cached distance result, or null when
+ * the cache is cold. Callers that cannot afford a ~2 s synchronous
+ * `computeLineDistance` on a cold cache should check this first and skip the
+ * call, letting the deferred computation (useQuestionMapRenderState) populate
+ * the cache without blocking render.
+ */
+export function probeLineDistanceCache(
+    category: MeasuringCategory,
+    center: Position,
+): NearestPointResult | null {
+    const key = cacheKey(category, center);
+    return distanceCache.get(key) ?? null;
+}
+
 // ─── Main distance algorithm ───────────────────────────────────────────────
 
 /**
