@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:40:41.003Z",
+    "generatedAt": "2026-06-20T14:41:06.879Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5623,6 +5623,97 @@
                     "bytes": 509,
                     "md5": "873d4ef68167b3299a2da8826dc7436b",
                     "sha256": "dfd3a0892d52427a09c6f05096a715f0cd93c6b18253c019bea65db6ecf44681",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-washington",
+            "label": "Washington",
+            "regionPath": ["North America", "US", "Washington"],
+            "bbox": [-126.7423, 45.53882, -116.911526, 49.00708],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 15261628,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-poi.json.gz",
+                    "bytes": 197980,
+                    "md5": "a7a1f2025c6aebe6e5c6541cf9493ec3",
+                    "sha256": "6f432c356ba6e424ef01137631db9829d33092b06d972c31522fbe460de69c01",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-measuring-coastline.json.gz",
+                    "bytes": 465530,
+                    "md5": "b24ba7e8e5fd3eecb856ba66518f3124",
+                    "sha256": "55f2e2c9b2bf21a95b76745682681cee48b4ebaf2f4df459c78f4dcdcdda4de8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-measuring-body-of-water.json.gz",
+                    "bytes": 13585090,
+                    "md5": "a90d2726397dbb57b7b6353d2067c6a7",
+                    "sha256": "ce36afec6435a4ba009d3e19a95bd9b9bc95f68f8e957d3f5ba8027dbc314fed",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-measuring-admin-1st-border.json.gz",
+                    "bytes": 6288,
+                    "md5": "3838cd4d56b64fa1e63888b3250f7d89",
+                    "sha256": "89263763631e837c4b43e095884674e28a084e17a814e259942cda640aaba596",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-measuring-admin-2nd-border.json.gz",
+                    "bytes": 210680,
+                    "md5": "e4917d9e9fbba860d7ebc82f11c33726",
+                    "sha256": "2d0c9d6e5708d5635be3897f499cc60c480d4685c865053f6ac669aadf05577c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-measuring-admin-boundaries.json.gz",
+                    "bytes": 488960,
+                    "md5": "dca7ae0dd859bfa13f3a69941a252221",
+                    "sha256": "4e654399cb3b2c53a4110ae83eb435ff41870410c399b5cf019679631487b61d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-boundaries.json.gz",
+                    "bytes": 301962,
+                    "md5": "a10015057fce8b79cc2caa6dfe9ce49e",
+                    "sha256": "147b5c8c66f6d91d91beb517bb8fe76e3d8b31af6e64a99b56abf23b7de096f7",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-transit.json.gz",
+                    "bytes": 4637,
+                    "md5": "336d3a64bbaab6bc84a88d875a1e4f82",
+                    "sha256": "109e0d3096dc26fe866da41de98fabee089a348e9b39f57469051c07f6dda206",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-meta.json.gz",
+                    "bytes": 501,
+                    "md5": "e89828b593aa8d2555cc2583be4ae4bc",
+                    "sha256": "1f4bccb6b76a2c676124740e2aa416e9c60f1927be614e073acc6ea4a28aa819",
                     "schemaVersion": 1
                 }
             ]
