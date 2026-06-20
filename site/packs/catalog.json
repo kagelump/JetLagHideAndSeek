@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:49:41.930Z",
+    "generatedAt": "2026-06-20T07:50:02.536Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3327,6 +3327,79 @@
                     "bytes": 498,
                     "md5": "15815510d16fd1f49eee1af93277b7cc",
                     "sha256": "4d33c2537ef51b5046d46402e079cb9a85816ac22e4ce0f47eb7c09e92d5a5c1",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-illinois",
+            "label": "Illinois",
+            "regionPath": ["North America", "US", "Illinois"],
+            "bbox": [-91.51608, 36.96731, -87.49264, 42.50941],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 13331483,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-poi.json.gz",
+                    "bytes": 209792,
+                    "md5": "ac7ab664752ef4848e52e64cfdaeabc2",
+                    "sha256": "475867ae8e30779066f3ec5b30c10fd2a0114bc575ab4039e40509720a2c75fd",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-measuring-body-of-water.json.gz",
+                    "bytes": 11083804,
+                    "md5": "291c550a39a1f8740c90bd0993f52eef",
+                    "sha256": "e87c97674a09804d83a76a7b184daee5d897ec6fdb1f6382860f74089bba0812",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-measuring-admin-2nd-border.json.gz",
+                    "bytes": 112265,
+                    "md5": "1314256baeec4cbab1fde6745ad79a30",
+                    "sha256": "eadb8720a52ef5070bd3143f1019695258b42cf733c5723937f98fbbb9d4afa6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-measuring-admin-boundaries.json.gz",
+                    "bytes": 1190122,
+                    "md5": "969e01595dc352e9f2fb3b1ed549007c",
+                    "sha256": "5b5f92b65a409eedb22de2a3a47df6376998b36b444c2649be790eeacef6e65d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-boundaries.json.gz",
+                    "bytes": 710904,
+                    "md5": "82d43178c5459764408daaac581c905c",
+                    "sha256": "7d19e6e6d39547fa1b4a4e1eafea147e56c328015e30e83ab885fabd9f98fa7e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-transit.json.gz",
+                    "bytes": 24108,
+                    "md5": "e67f82ab699dffe4a0d57cf47cb1358a",
+                    "sha256": "ba54a9a2820f43640ba3811e625ec71c67f846c41d39b81de081eca14fd2e097",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-meta.json.gz",
+                    "bytes": 488,
+                    "md5": "b3cb97f004a59c5b6e42794f867e133f",
+                    "sha256": "7968b7b049c66114b56b81ce238770958e4f81d1185c1e5f46aef62c662899c2",
                     "schemaVersion": 1
                 }
             ]
