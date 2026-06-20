@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:35:10.353Z",
+    "generatedAt": "2026-06-20T14:35:31.320Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4311,6 +4311,79 @@
                     "bytes": 477,
                     "md5": "943084d1d786d6574273a5a5818e9ed7",
                     "sha256": "949068c0185033017a84299ff181caf1591c211c6681969559837bfd1e076c0e",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-nebraska",
+            "label": "Nebraska",
+            "regionPath": ["North America", "US", "Nebraska"],
+            "bbox": [-104.7301, 40.00015, -95.30703, 43.00172],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 4884678,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-poi.json.gz",
+                    "bytes": 61539,
+                    "md5": "3b927a5f37a135264d37dba10ade74e3",
+                    "sha256": "5472cf2eeb57bf44a3c9dc04a6e8612e80117df2b9f3c4b19f6fd3fb4f27f8ef",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-measuring-body-of-water.json.gz",
+                    "bytes": 4306821,
+                    "md5": "e32f082562215c6afb7c9354fc1c8808",
+                    "sha256": "efcbfb2711122aa7312b37f6d9c141c895100941932aa787d771fc46472fd8b6",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-measuring-admin-2nd-border.json.gz",
+                    "bytes": 46993,
+                    "md5": "2cee8a7d663a3a2af475d8f1283b34dd",
+                    "sha256": "069dfc343c8ce44ceb5a2679c4f0d2514b8d65145ead7387c812c8af6adbf101",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-measuring-admin-boundaries.json.gz",
+                    "bytes": 261238,
+                    "md5": "3e9ffbf8c35980f243cc45b49d8460d5",
+                    "sha256": "4e3202b53ce215dfb8e7e1503bd0b62e6c565964ab20f365e83a165b87535d85",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-boundaries.json.gz",
+                    "bytes": 206837,
+                    "md5": "c678e4e5b4ebdab9c5c3bf6527571285",
+                    "sha256": "8b323f49ba8a4d54b92f093fefd2a8c9fc2ca28d4bad3dc34a08f6e281d3279a",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-transit.json.gz",
+                    "bytes": 764,
+                    "md5": "06f53551eb9bd472d40032902a128371",
+                    "sha256": "cf8baea1440056223539cb90b2d6e639dd23a15f30748808142289891232cd37",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-meta.json.gz",
+                    "bytes": 486,
+                    "md5": "2782c6575aacfb6b249e28c97fbd858f",
+                    "sha256": "9bff5970bdea44b290779755bfb3380e5fcee644ad9db4364f9aaf74e52fe9ad",
                     "schemaVersion": 1
                 }
             ]
