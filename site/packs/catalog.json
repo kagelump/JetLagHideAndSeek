@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:31:18.195Z",
+    "generatedAt": "2026-06-20T07:31:34.397Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1706,60 +1706,69 @@
             ],
             "bbox": [-0.511482, 51.28554, 0.335437, 51.69344],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 259731,
+            "totalBytes": 466476,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-greater-london-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-greater-london-poi.json.gz",
                     "bytes": 87715,
-                    "md5": "b23d456bdc3fe26132e343ea929586ce",
-                    "sha256": "494507520da61434a0e757f5c5709607fa69672c4f9d93aa592f9e5fd0040c0c",
+                    "md5": "b577dd28aa87d8c221fd73692d4ff152",
+                    "sha256": "fd6d729460833fb433709b1e9b4296c083cee10219c3a2fa53e0557a0e49fbcf",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-greater-london-measuring-high-speed-rail.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-greater-london-measuring-high-speed-rail.json.gz",
                     "bytes": 1488,
-                    "md5": "f77f1493564d8f05696ed8ba00a10da8",
-                    "sha256": "069186ec5429bee841f769fb73f129fb4e6458b143c40957fda402e25a6f0fce",
+                    "md5": "6e0597e2e9ac02f868711a96597e32ad",
+                    "sha256": "d45e3a096ab32887dcd7f4e68563a58ec4be2819fa694b9469c734b8ffeb9fb5",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-greater-london-measuring-body-of-water.json.gz",
+                    "bytes": 206627,
+                    "md5": "fb8ed7ac40222304e4fe0aa3df4e9f3e",
+                    "sha256": "967be15ef05dbc82728e89bcf9e78f2d1ae066a1a2315003038451d711add069",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-greater-london-measuring-admin-boundaries.json.gz",
-                    "bytes": 80917,
-                    "md5": "3e48268a52c5b64ed980920dba90d470",
-                    "sha256": "162955123e60eb3812dc3e2f447fcc99f6c78818e7544cc6d22568fe39e2fc81",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-greater-london-measuring-admin-boundaries.json.gz",
+                    "bytes": 80916,
+                    "md5": "f24ae596488e9c3901b334c9be27a006",
+                    "sha256": "88b4f54984d5941d5c5a611d1cea8afce18c85163235aa72bdd044c2ed1db990",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-greater-london-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-greater-london-boundaries.json.gz",
                     "bytes": 33598,
-                    "md5": "72f25cf0c53eb4a7f8bbb00aabd7cf56",
-                    "sha256": "85a7c565a611e92887096b7c7a3fd4228383625b51f0909729500dcb8187c6da",
+                    "md5": "0d7e411fcb69dd8948316ad8a22e5675",
+                    "sha256": "bd137d3412bbd1006827a73c0f7391939c836f9026861a9ae0a1c7a65b83d81f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-greater-london-transit.json.gz",
-                    "bytes": 55512,
-                    "md5": "6a6b56509a080feaed69b846499070fd",
-                    "sha256": "a85a595686b8a9b9b417689919cfde893300292ba9153af339d1c32f10fa4801",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-greater-london-transit.json.gz",
+                    "bytes": 55621,
+                    "md5": "9bce7ea3d93cd1e48163a2a7be43d0c8",
+                    "sha256": "d8e43affe7ef5449ed1bc8ca2eb83400d7e885965dca49df8cea84fd98d764e7",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-greater-london-meta.json.gz",
-                    "bytes": 501,
-                    "md5": "a18eb322e538930d03973ae7d752cd43",
-                    "sha256": "b38e195330eac2e2a60c2d6a2ceb6a2b5747655eb2c35764c1f6ea4f0228d433",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-greater-london-meta.json.gz",
+                    "bytes": 511,
+                    "md5": "b4838b8ba832a4fc03ee08bb517fb83d",
+                    "sha256": "18bcdce7ca445c8942d0ba76a05cbfe362c248a4a7881feff3c1e9002e03affe",
                     "schemaVersion": 1
                 }
             ]
