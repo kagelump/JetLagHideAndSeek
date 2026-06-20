@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:35:51.032Z",
+    "generatedAt": "2026-06-20T14:36:16.612Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4457,6 +4457,106 @@
                     "bytes": 479,
                     "md5": "9c4fe11cfb23f4db483eaeb63fd1d27c",
                     "sha256": "7c2c80e2bb7d638edc7c845a50d5e8da1cee41f2d192c6b8dc7277ed81ffcad3",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-new-jersey",
+            "label": "New Jersey",
+            "regionPath": ["North America", "US", "New Jersey"],
+            "bbox": [-75.83509, 38.55502, -73.67898, 41.35807],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 3874018,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-poi.json.gz",
+                    "bytes": 96780,
+                    "md5": "1af146d34df792f234a788ee03d75e59",
+                    "sha256": "f60e987355716fb17c70e2a09e6afd2a2e11cef77a0121592749483443616f97",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-coastline.json.gz",
+                    "bytes": 401718,
+                    "md5": "22298769d88df4df6f7b6842d00f27f7",
+                    "sha256": "5391cd166e27257d374d19610b3a4df0f11e693f7251ce6edeb8198bebf2df2f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-high-speed-rail.json.gz",
+                    "bytes": 825,
+                    "md5": "1924004703aad1e0501ff2504215f3ea",
+                    "sha256": "d57b100543dc62da2ba52cd711d86469334c288121eba49faba73f3c4f8ef3a5",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-body-of-water.json.gz",
+                    "bytes": 2424904,
+                    "md5": "26d24c056e2646d846f4a00122b13524",
+                    "sha256": "034f3996fe4539580cf86f802056c1108621eb5db861ad735c49c96a761851e2",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-admin-1st-border.json.gz",
+                    "bytes": 13727,
+                    "md5": "e0a0495b0f07950aa4b22450e4394713",
+                    "sha256": "4b8523e3cdf7ddaf956dbb25b30d2eb3c41477eedea2a150b48657e343313909",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-admin-2nd-border.json.gz",
+                    "bytes": 106877,
+                    "md5": "5b34265d41dc124faaddc5e2961e1e46",
+                    "sha256": "ad35df0350a07eae6418beb4a8ad1900a5b4b1fb3e16e78b7fde46566dec638b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-admin-boundaries.json.gz",
+                    "bytes": 515727,
+                    "md5": "01c05234dd1e5c5faeb624826a4bbd9b",
+                    "sha256": "39d1d692e027a874d7c5b2567d1ccd27f926c29fd2c3d5dc65f4878bab832da6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-boundaries.json.gz",
+                    "bytes": 296766,
+                    "md5": "1963af601c6699a7ccf47035d88311c2",
+                    "sha256": "bd45e5b284083a07d4e898f251050710ca820fe8ba5c37143df273ed5eaa21de",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-transit.json.gz",
+                    "bytes": 16178,
+                    "md5": "e95db1558a5a491f1704b88a66aeab8d",
+                    "sha256": "432de5d4c423116e90f903fbf62f5af03422073611d61b1453b55ee3f47a4f3d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-meta.json.gz",
+                    "bytes": 516,
+                    "md5": "8c4574dd67af931a2d391cb4d7ea181a",
+                    "sha256": "4c1d62f40bb1c703e0a7a8b0b5984d035b234df11343cbe9f8a700cc2c523b92",
                     "schemaVersion": 1
                 }
             ]
