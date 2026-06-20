@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:47:33.099Z",
+    "generatedAt": "2026-06-20T07:47:53.625Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -2790,6 +2790,79 @@
                     "bytes": 496,
                     "md5": "01a189a46b3d1576c5bf15d2b0354d61",
                     "sha256": "6cd526567a106af632e8207add95d99edb1a3db9cfadb4a76b3cf7d3d9d63fba",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-colorado",
+            "label": "Colorado",
+            "regionPath": ["North America", "US", "Colorado"],
+            "bbox": [-109.0631, 36.56774, -100.4637, 41.00403],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 20707995,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-poi.json.gz",
+                    "bytes": 153268,
+                    "md5": "66af86f3665e108ed4994b1adcbf1c3a",
+                    "sha256": "60d724e9b66bfcda954c85bc259f973b5b401f181cc9633da9e792ad538634e0",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-measuring-body-of-water.json.gz",
+                    "bytes": 19560454,
+                    "md5": "40c9c65c4045d9c007eafb113f559182",
+                    "sha256": "4b80125cb5adf0b39489a9be8eff288bb01d5a7793794ebf4f76061a98d6c882",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-measuring-admin-2nd-border.json.gz",
+                    "bytes": 218431,
+                    "md5": "58ce6146dbc4bb8958bdfc7c0276eaa4",
+                    "sha256": "43d849002f2baf052f757788a35c9947456ded854e6998063ea4b0f05a40cb6b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-measuring-admin-boundaries.json.gz",
+                    "bytes": 507952,
+                    "md5": "040a226ab7e8be8da56d760be4ee013d",
+                    "sha256": "6308ce19c849e94c3914106623aa6c9e57d01223241dc3250a0659143c80ebd8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-boundaries.json.gz",
+                    "bytes": 261500,
+                    "md5": "444ce9464ee39a06ed8c854016d0ca8e",
+                    "sha256": "10f4cf2d32d26112b017e68c16d19e0b913df4422f4d0a501635db9ab6971b51",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-transit.json.gz",
+                    "bytes": 5892,
+                    "md5": "57815403444d7805ef3991fe933b419d",
+                    "sha256": "4a8c829060b0b6b0c419b812ddca9f58dc30c7e6caa5dc2cf4b45985618319d6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-meta.json.gz",
+                    "bytes": 498,
+                    "md5": "29beddf59f3ed57db48a8634744e8945",
+                    "sha256": "fb241953d69cae0f31e7ed8b5425489db1e0c3aca3b1a1de460ce3e8c47743c9",
                     "schemaVersion": 1
                 }
             ]
