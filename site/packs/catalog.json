@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:30:33.407Z",
+    "generatedAt": "2026-06-20T07:30:59.386Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1528,78 +1528,87 @@
             "regionPath": ["Australia Oceania", "Australia", "New South Wales"],
             "bbox": [140.994781, -37.759836, 160.074672, -28.138982],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 13106320,
+            "totalBytes": 34885283,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/australia-oceania-new-south-wales-poi.json.gz",
-                    "bytes": 307225,
-                    "md5": "ada0e9b75c020a46f6c301c70ba4bcfa",
-                    "sha256": "8fb26e4384f634d003b0c2f7242dab40daf8913cf3a5be7643e54655d704bb33",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-poi.json.gz",
+                    "bytes": 307224,
+                    "md5": "80469b3195394514bf444b1a4029e5df",
+                    "sha256": "3ce97a647ae6a6c1aab66ad2ab7dd8c5764a048839caf892b3b63bfe65d5ba53",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/australia-oceania-new-south-wales-measuring-coastline.json.gz",
-                    "bytes": 206295,
-                    "md5": "d3ba6ae7c5b21cb641d6259fd70d9298",
-                    "sha256": "571ab052da8bd695838959fd1dad967da192a995bcb259538609b490acd58c73",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-measuring-coastline.json.gz",
+                    "bytes": 206296,
+                    "md5": "623374ce3922d423e63bd4a97a7a8add",
+                    "sha256": "0e1dc5e53e96cdd1bace9d9476ce281a4e67c5f618a708143a3f16b28b90ee38",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-measuring-body-of-water.json.gz",
+                    "bytes": 21778790,
+                    "md5": "79b5f0c958493dd8182d098025e08924",
+                    "sha256": "223caba88384df98cb72f95777fd6200f3bac5fcc9ed6b2837bc93ee4f084ebd",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/australia-oceania-new-south-wales-measuring-admin-1st-border.json.gz",
-                    "bytes": 209768,
-                    "md5": "3d0624a85cc5a099bbd699cf352032e9",
-                    "sha256": "0a69fe9764d804ce94ad37ef56b39d0c15ff321b77df87b1142cecb22ee88888",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-measuring-admin-1st-border.json.gz",
+                    "bytes": 209769,
+                    "md5": "793a06c61344e452dde45d329fc48e4d",
+                    "sha256": "d960842b3d81cf898e04d2c72f56457d57317685f4f3a94dfc454a480f4cf5a1",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/australia-oceania-new-south-wales-measuring-admin-2nd-border.json.gz",
-                    "bytes": 50757,
-                    "md5": "129a9b1a5e19681e186b8053572a2ec3",
-                    "sha256": "27ff97442186711ebe2158634dc598f7f4c4c7d5a7034411871b761b3ceefc98",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-measuring-admin-2nd-border.json.gz",
+                    "bytes": 50758,
+                    "md5": "451b14ac4272edcdc94f3dc34ce60c2f",
+                    "sha256": "29bee347f9106ecc8808e2cc84af9999dac274dadc48ea25a154218ad7cf6e13",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/australia-oceania-new-south-wales-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-measuring-admin-boundaries.json.gz",
                     "bytes": 8702422,
-                    "md5": "6edbe1cdeaf57355afa66211fb5ef5f3",
-                    "sha256": "bfa18fb3a34b80baa4df8e42156d916c4a9acf7a1901274999da85bc1b0efe5c",
+                    "md5": "89a502869f1cbdd61a02680a2603cd1f",
+                    "sha256": "ac41b6f6b94c6ddb3685ec36c0e6606af1ebd777445bb8192f85a05ca928b20e",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/australia-oceania-new-south-wales-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-boundaries.json.gz",
                     "bytes": 3605313,
-                    "md5": "6ea8f95f5a73f60f7cd52c20c8fa1bfe",
-                    "sha256": "ec13b0ccfa30d4af5a5a06f684746a668d99694fb590a2b419f4bab07780c72e",
+                    "md5": "c1997716f8c29f74e594a41c03cf9162",
+                    "sha256": "e81fc81800b28ea2d5930768a58f1bb45484e7ea6e3eae1cb51929c9b67a9367",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/australia-oceania-new-south-wales-transit.json.gz",
-                    "bytes": 24023,
-                    "md5": "b6394cb3a26c4541f744b879c5a24b33",
-                    "sha256": "2fe6a43b6b52f8df6f2681aaac16b302fd1ea22cdd5d9998350f18ad6d0b5a24",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-transit.json.gz",
+                    "bytes": 24185,
+                    "md5": "86210723a51b58767b30b686900ff170",
+                    "sha256": "52ee4f33f656253e5b3eb6698852170ab468f164f2bba387d140098c1477ca60",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/australia-oceania-new-south-wales-meta.json.gz",
-                    "bytes": 517,
-                    "md5": "6a84b71113b4576d07bcecf57292bd57",
-                    "sha256": "e6c705669a6bf08a2a74bf14d0673dd51666ec12e135dda32be56065d4fcc70d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-meta.json.gz",
+                    "bytes": 526,
+                    "md5": "d4e6be8b8ab622f2d35a569d662f3c77",
+                    "sha256": "0d3c9d85b76ccaf4cc7c698eabac04ad748599239cbcedb998ee7d64b866ffa6",
                     "schemaVersion": 1
                 }
             ]
