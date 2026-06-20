@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:33:59.160Z",
+    "generatedAt": "2026-06-20T14:34:21.607Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4074,6 +4074,88 @@
                     "bytes": 498,
                     "md5": "e5642bdaa6f5b87736224ef765c0c55a",
                     "sha256": "630b04bb5db153544f071d1eb063f65ad3bdedb8222727873491ba58298e3281",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-mississippi",
+            "label": "Mississippi",
+            "regionPath": ["North America", "US", "Mississippi"],
+            "bbox": [-91.65857, 30.04168, -88.09292, 35.00055],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 5168036,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-poi.json.gz",
+                    "bytes": 33783,
+                    "md5": "4a1aa7dbfa482bd141c0c5e620320dca",
+                    "sha256": "0babc2ba7792c6fa52d5d21d380053ec9e23b4979ac8613391452b3ee0a22edf",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-measuring-coastline.json.gz",
+                    "bytes": 77059,
+                    "md5": "a64e92215eecd2c8b347284c203ba6ad",
+                    "sha256": "afc3db1014242967f439b32646ecf6e63caa9d19fd4c7e65b2f6e090c6a4fc40",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-measuring-body-of-water.json.gz",
+                    "bytes": 4340045,
+                    "md5": "825a662783957f32adf1114c264c810f",
+                    "sha256": "fe5bbcf21352c811bf4c6ac686c4415fc1b2fabc098f7bf69be2eb2b2825da08",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-measuring-admin-2nd-border.json.gz",
+                    "bytes": 182461,
+                    "md5": "e532ef41fa4077d78ae6618e27bc3f1e",
+                    "sha256": "a20f6bd2802a7b64ffca8ae304fee80e099505a08fe9db17c5dc9ea835e4a4f9",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-measuring-admin-boundaries.json.gz",
+                    "bytes": 322759,
+                    "md5": "8c71ffc9e9050e5eed9cf02b7e09264b",
+                    "sha256": "8ccc832274dcf4562a204f0c0e6db8a81f7123bcd284d5fe970c738e14df47ce",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-boundaries.json.gz",
+                    "bytes": 210341,
+                    "md5": "475a68ed0e7c61bbdb7850762d413996",
+                    "sha256": "2ed023fc2cd0c9a124a3764330d993e6b2507d7254e47082c1517488c63b2add",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-transit.json.gz",
+                    "bytes": 1090,
+                    "md5": "e805e5d2e90c82201aef7903eb03c573",
+                    "sha256": "d1202f0d5331fbb724a6675a2069969184b7d50d47ffc9ca1b72829fe54f29e3",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-meta.json.gz",
+                    "bytes": 498,
+                    "md5": "fea0a855ad3c592796f0b52bae38268b",
+                    "sha256": "72129d404538f1575dfacb05567700ff7464bca68d0e5b6a085cdb0c49812907",
                     "schemaVersion": 1
                 }
             ]
