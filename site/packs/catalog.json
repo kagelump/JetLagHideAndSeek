@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:39:49.483Z",
+    "generatedAt": "2026-06-20T14:40:13.553Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5450,6 +5450,88 @@
                     "bytes": 497,
                     "md5": "538265a3a7d8320f3c7490cee7130b5f",
                     "sha256": "0233496f7e291b13ef4811148da3697da829c532d99082503303490432c6df88",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-utah",
+            "label": "Utah",
+            "regionPath": ["North America", "US", "Utah"],
+            "bbox": [-114.0556, 36.9963, -109.0394, 42.00323],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 8689234,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-poi.json.gz",
+                    "bytes": 116655,
+                    "md5": "b620510cd88ac1d34038990640b63131",
+                    "sha256": "c65b3e4b41a494d2e561f4c47d86aaa63202d5a3fca08563c59bdd5865ee0345",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-measuring-body-of-water.json.gz",
+                    "bytes": 7782412,
+                    "md5": "7bfc282c38ff68997eea72aed847f05f",
+                    "sha256": "d1bf709ceb0ba808033bc1991cce249a43757b8c1eb42bcc977b7b5a19708094",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-measuring-admin-1st-border.json.gz",
+                    "bytes": 2185,
+                    "md5": "1d1312bf078053d37990e8b357ff585c",
+                    "sha256": "9946c246259b1199792a4ff6606ca53989acd00282ad77eed07d0327bb37acf7",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-measuring-admin-2nd-border.json.gz",
+                    "bytes": 184956,
+                    "md5": "d5864e3592c3b2c8c074149424bff2f5",
+                    "sha256": "0fbc66b1795a1b3a9b5a4f894cee7b67439c7111d8bccf87326098ccf6216fe0",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-measuring-admin-boundaries.json.gz",
+                    "bytes": 388230,
+                    "md5": "4ed5a2dcb2244f1bf6fe00ba062d7d40",
+                    "sha256": "08cc03499aa47f30e138031b107a49dc5f0404483e39ef975411e618e3fd5d5d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-boundaries.json.gz",
+                    "bytes": 210468,
+                    "md5": "129c0f185fbbb46424dc3ba2edfc2ebc",
+                    "sha256": "bf5aca8a06b80952c02fe4d95043011fb5c21e90ae0c8d6bf089c9e86c6c74b1",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-transit.json.gz",
+                    "bytes": 3841,
+                    "md5": "ec4343f1768741bc438a404ebfeac3d2",
+                    "sha256": "74c866fa46161c9d16c5bc8c71fe5091996182f092279674f8a8fcbbbc94b804",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-meta.json.gz",
+                    "bytes": 487,
+                    "md5": "9e4de80925fe05be53cdf94c2ec437ca",
+                    "sha256": "a710ba971a415318b8cdceb4ac82c2cdb93a7d2d426b8dfb97820c38be6fb263",
                     "schemaVersion": 1
                 }
             ]
