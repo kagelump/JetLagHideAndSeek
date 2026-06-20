@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:28:52.859Z",
+    "generatedAt": "2026-06-20T07:29:17.819Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1155,78 +1155,87 @@
             "regionPath": ["Asia", "South Korea"],
             "bbox": [124.3188, 32.36076, 132.3386, 38.64966],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 8438467,
+            "totalBytes": 13484842,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-south-korea-poi.json.gz",
-                    "bytes": 754196,
-                    "md5": "c5283b5ea62f447c755edbc22b28a4df",
-                    "sha256": "b4647887f42cf65a5bb96c502627ab9e28118481dc5b9188c0d6e3f2443aafb5",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-poi.json.gz",
+                    "bytes": 754194,
+                    "md5": "5963fe21cabc61c1b70b9ec44c632d78",
+                    "sha256": "1676bf5449cf2b8861d2ac4f1a18216908519c1719e78b665dc939e0d777ba80",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-south-korea-measuring-coastline.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-measuring-coastline.json.gz",
                     "bytes": 1320795,
-                    "md5": "0332e61beb9581593edb8e32d142d42d",
-                    "sha256": "fdf3061bbfeed3dff3a481b14c1cbefa1dbf16d635ca9272c9c15f0baa598098",
+                    "md5": "93eab163158723af653f7dd8c1d6b3b1",
+                    "sha256": "6ab9bd273a4e6c4b552742da70508b9c0370cc1265aaaa26f65cb1059ad8ce9f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-measuring-body-of-water.json.gz",
+                    "bytes": 5028112,
+                    "md5": "f9437f4cc44dcc5d14b545e3cf75a8aa",
+                    "sha256": "683195829c9ab74e0da7971b4bcccea83bc9509d8e67ec15166abbc94808e8a0",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-south-korea-measuring-admin-1st-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-measuring-admin-1st-border.json.gz",
                     "bytes": 351902,
-                    "md5": "ea9eccb6bc5753976ee66f692ab9a52f",
-                    "sha256": "8a8c739ae73f54cbd3ecddd8afe04f5cb4d74e46e26ead298c65ea33a7639708",
+                    "md5": "7f4b7e043c9c2e63f7127f219ab01f00",
+                    "sha256": "10ae3270bac914543b8eab522ff4cacb060a218d85b5063ec59b3dc5daf05a14",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-south-korea-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-measuring-admin-2nd-border.json.gz",
                     "bytes": 107448,
-                    "md5": "81c1c815020736e6025df3d5dd6e4d9b",
-                    "sha256": "e94a79736c5969c39532a59ef794b3caa2ea64245e037ad410be8cf290cca9bb",
+                    "md5": "578a354b7f91d8e8bcead6e5155517c1",
+                    "sha256": "a3be464321d789f9f62813755b5117ae1e0fd4f1d69e48e65d5db542fc7452b3",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-south-korea-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-measuring-admin-boundaries.json.gz",
                     "bytes": 4013210,
-                    "md5": "188a4685a79f937348309bced1d055b1",
-                    "sha256": "a31d5c3ba169a2a3ed6d33bd075528f4ab51eabac49a0358d504a6d0ecac5dbc",
+                    "md5": "f494b440b7a83f6bf8435af3f7fb2c80",
+                    "sha256": "7f95d5585c063b56b39ae6dac3c8881220fd46e6cc6b44ef9761994a050f08dc",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-south-korea-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-boundaries.json.gz",
                     "bytes": 1830441,
-                    "md5": "551dfcc50198ed66749d9e38b0c33912",
-                    "sha256": "76c58183d8c47e322f21909f6e04a53770159183b0cd10f3b35ff5e642e49b82",
+                    "md5": "f3c76ba60c600e88b783067f3a4e68c0",
+                    "sha256": "811ab5e38562b5837dd732549417b1ee09d607c0b8a58d88269cb6d921776b7a",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-south-korea-transit.json.gz",
-                    "bytes": 59988,
-                    "md5": "1de02d7e3b1ce122fc52587730dafd72",
-                    "sha256": "db40b94a45ba023dd49b6848728700269e8e5475b5d049af7d4c8c1003618241",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-transit.json.gz",
+                    "bytes": 78244,
+                    "md5": "cc5fbf89056ea58ebf69e707a1b5e322",
+                    "sha256": "0f316223cf9512ddcca41bbb7758a9858f8a6e329132f8f5eae5e76d8d71e6b2",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-south-korea-meta.json.gz",
-                    "bytes": 487,
-                    "md5": "9f2d4203b79f2bf210a517e0e7aa59c4",
-                    "sha256": "c22a719c9e089dbbf8ee0152114587557faabd970e5580fdfcfe79a202bcc50a",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-meta.json.gz",
+                    "bytes": 496,
+                    "md5": "e9f7818cf3764e70832967c3ebbd459e",
+                    "sha256": "23d85d1db0660d8b8e27940c99a0271df05e47f982b852e0e3bf57268d5403aa",
                     "schemaVersion": 1
                 }
             ]
