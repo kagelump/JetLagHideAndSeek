@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:32:19.167Z",
+    "generatedAt": "2026-06-20T07:32:37.119Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1970,60 +1970,69 @@
             "regionPath": ["Europe", "Spain", "Madrid"],
             "bbox": [-4.589539, 39.881157, -3.050423, 41.16864],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 592652,
+            "totalBytes": 1266406,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-madrid-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-madrid-poi.json.gz",
                     "bytes": 88487,
-                    "md5": "47b0edaeb3f6a889f60392108aa09538",
-                    "sha256": "8dc4ba3788d3335066d7bfb86d69c8e335bb7bb48f1de26498bf475da8163600",
+                    "md5": "2973e211ede3a481c7096fdf7b2c8e09",
+                    "sha256": "e0dc69953d7fe309a24c8f7f4d4ec4b9973c464d07cf01c6b18b41ed0c86fceb",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-madrid-measuring-high-speed-rail.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-madrid-measuring-high-speed-rail.json.gz",
                     "bytes": 5836,
-                    "md5": "066a4533ee6b41ba74528c1774e19ceb",
-                    "sha256": "ff0fca4082de35253809c20a91b0517fbd4c047a376798b95114d2754f69ddc4",
+                    "md5": "ad02d7750eeee41efabef147901db564",
+                    "sha256": "e8a636dd11fa3707ae9902f879e49b8eb59cb34458ae1f4dd3db93e0688249b6",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-madrid-measuring-body-of-water.json.gz",
+                    "bytes": 666491,
+                    "md5": "d36bffbb480828a2a0e34e36a7e9866a",
+                    "sha256": "680f260801e94dbe4e69a7b0287f3d0e8916de35d4cf415aa7be784c6728966f",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-madrid-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-madrid-measuring-admin-boundaries.json.gz",
                     "bytes": 324217,
-                    "md5": "96c33bc6583f64b6a9effc7dbaf82df9",
-                    "sha256": "e46691ac523ffb0be466131a78e78e124d17bb2fca6e8422cd0b1c29c64c403d",
+                    "md5": "0448ca26b213cfc80eb33766fee0f326",
+                    "sha256": "55a768779af1b637c1b06a7eb29eb42a80076161cc87d925f58f63352b7ddd0a",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-madrid-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-madrid-boundaries.json.gz",
                     "bytes": 155759,
-                    "md5": "d0345e0da9da58edb3676cddb8f39cfb",
-                    "sha256": "e78258bac4d5810c44bbf5324fc74095f5a87ded196eb269127bb95ffc7ea421",
+                    "md5": "af3dee8562792d1fbccf2eeb8a759543",
+                    "sha256": "6b637e71003604db39679a3c9f589a3cf9e84685f791905e34f279adc6650592",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-madrid-transit.json.gz",
-                    "bytes": 17869,
-                    "md5": "414ff038fba7a853d6058327bb0c03c2",
-                    "sha256": "14c2271c8a182fcb78b36d4d967c86429f92e713f90621ce147023333370393d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-madrid-transit.json.gz",
+                    "bytes": 25121,
+                    "md5": "63f4945e0bb78b99a61e60c83fdc0085",
+                    "sha256": "32033fc0bd184354487af6d36c3537a50c9a5be596f0e3ab0e077bf29a65bd85",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/europe-madrid-meta.json.gz",
-                    "bytes": 484,
-                    "md5": "347a9399e8427395b5ac1c95f869467c",
-                    "sha256": "07dacb887ae919a0edbe628e2dc526744a5837bded67a7b9284c99f43c399dd3",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-madrid-meta.json.gz",
+                    "bytes": 495,
+                    "md5": "66cc8def543c5b924a0b8b26471315d0",
+                    "sha256": "54399636368f83a968e6ef6e5c7f4e0058a8187d7a16f19c1eb18983521445f1",
                     "schemaVersion": 1
                 }
             ]
