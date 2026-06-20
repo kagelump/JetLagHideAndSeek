@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:29:17.819Z",
+    "generatedAt": "2026-06-20T07:29:41.415Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -1246,93 +1246,93 @@
             "regionPath": ["Asia", "Taiwan"],
             "bbox": [118.1036, 20.72799, 122.9312, 26.60305],
             "osmSnapshot": "2026-06-12",
-            "totalBytes": 12857298,
+            "totalBytes": 12986266,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-poi.json.gz",
                     "bytes": 361405,
-                    "md5": "4faf1936315710ea7edc8303a8794249",
-                    "sha256": "e55d95003f09ae8cee4e8197c254f4c91faecc83d9603399e75b62e1ae243045",
+                    "md5": "2374568857d2a10ea8eed65b0ad0a35e",
+                    "sha256": "08a075c5f3e8635c66eb9ccabd2f80cc9fae8d9f39f7b20d037917909849461a",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "coastline",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-measuring-coastline.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-coastline.json.gz",
                     "bytes": 193827,
-                    "md5": "150853f11c986e1a7ee52a760cf5f7e4",
-                    "sha256": "8ec769bc4f318caca017aa9f51c96c5c9efc39b69f03da788ad1b4349216faaf",
+                    "md5": "1952e72feaf991b6ff9bbb2ea6f49de6",
+                    "sha256": "4e7a848a163d99a192bc7d065c568c185c490b1ed1822f84154eff4dd62fe670",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-measuring-high-speed-rail.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-high-speed-rail.json.gz",
                     "bytes": 2815,
-                    "md5": "936051fac0a3003701c7c1fe26ef21f1",
-                    "sha256": "55a0af99fae9aa2fab81e48f0eeea27c625ac34b2340635635472d8741f54e7b",
+                    "md5": "d1c38e33b74148d1eb953c538889ca76",
+                    "sha256": "78c9ea91337025f192383fc941bb0bb88f8a855e8c50ff8fa6847a7b4555e7bb",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "body-of-water",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-measuring-body-of-water.json.gz",
-                    "bytes": 5526141,
-                    "md5": "c8b88b167ad1bf34d4d376ab502ab3f3",
-                    "sha256": "3b2198321f734d2d0e430bcef6e305a2a7b0389cb8af3227b1c995908e22bdc9",
-                    "schemaVersion": 1
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-body-of-water.json.gz",
+                    "bytes": 5647065,
+                    "md5": "e7eaeef3726f25636282f195a9928fe0",
+                    "sha256": "300921f6673e2bf6a441ddbf3eb213b2e5960647ec7d1ae27ac7a375528ed53a",
+                    "schemaVersion": 2
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-measuring-admin-1st-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-admin-1st-border.json.gz",
                     "bytes": 296027,
-                    "md5": "41715c2700ebbcfda6f2ac8de7c99927",
-                    "sha256": "1e0ebab946d1ecfb88ca8bbdb246a207ba17de31d6577ae1aea5600f499a1a23",
+                    "md5": "8357855b9043e35fa1fcd93f0f3adcd6",
+                    "sha256": "bc29c2905d395aa7d24c9f95d5b8db43e0bf3aa3374ac97993126a0364656b05",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-admin-2nd-border.json.gz",
                     "bytes": 392617,
-                    "md5": "78d734f201645591e05de5ec5278ee90",
-                    "sha256": "ec0bb3dfc59a8e1ad87fe34161526645b1ba516c3abadbf00a730bc09911843c",
+                    "md5": "89fece78ee32629c8dfa434e638940dc",
+                    "sha256": "7a60f7b58f590907536d7171715ee67ffc70801e2f90e8cfaa7e9d1186e96d51",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-admin-boundaries.json.gz",
                     "bytes": 3878382,
-                    "md5": "e3b6c3e9676a1f019013e1474ee4595a",
-                    "sha256": "0e1c643584fba5d8d936bf2be138c69b66797453d245e02a95d3b7f86a296537",
+                    "md5": "b4274bc76505489585783e9d5da0440b",
+                    "sha256": "2c1091428de3decbb78545add6ed7729fda6b2f8051844e9403b4e7ee521522f",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-boundaries.json.gz",
                     "bytes": 2124790,
-                    "md5": "5efccdc71e1a5f4ad78e25df588f4230",
-                    "sha256": "c37aeb3c49875c27ce6afbb06c28d113ae831e1370ee8a72a540f13b0af0ca4d",
+                    "md5": "1191263e3795b291f7a5b23c917bf61b",
+                    "sha256": "3597e8f5ae6135d07ff2d5733beac47ca82120b4c3d2a86aeb4783afc734f076",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-transit.json.gz",
-                    "bytes": 80793,
-                    "md5": "dec04f4fc5c7dd7910edeb010d106393",
-                    "sha256": "bbdf0bb3bf4b6e86c4a38c85572d9c646fc8b73577f0ca1a23c8fc2aee30d51d",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-transit.json.gz",
+                    "bytes": 88837,
+                    "md5": "9e951940146b0d42c199c8bbe7639f86",
+                    "sha256": "d57d984ffbdb08b5a987e4c84783790606881ca80a84a30c8ad4339ffb0a75f7",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-taiwan-meta.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-meta.json.gz",
                     "bytes": 501,
                     "md5": "4a3ca0d61d54a4fc92b47140150303d3",
                     "sha256": "2521f9cea31bda0a1262f53e9e5c4765cbb5ab6d2f5f729e9df8c4dca4e05a0d",
