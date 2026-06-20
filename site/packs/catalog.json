@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:38:12.474Z",
+    "generatedAt": "2026-06-20T14:38:34.933Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5104,6 +5104,97 @@
                     "bytes": 510,
                     "md5": "928310e6e7c99526ebe14733d358a10e",
                     "sha256": "13b2e63769453ffcf87cdee0f14e2d3c083516dcc1ffb943c1c4157f67f5c119",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-rhode-island",
+            "label": "Rhode Island",
+            "regionPath": ["North America", "US", "Rhode Island"],
+            "bbox": [-71.91456, 40.9992, -71.063691, 42.01938],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 782893,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-poi.json.gz",
+                    "bytes": 21110,
+                    "md5": "46a57437a41d6a21b49917728f769318",
+                    "sha256": "5c3719cf3ecfa1fd547252975ac65dd8a39ed4e0024b2b823ad8a5d8b50a42c6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-measuring-coastline.json.gz",
+                    "bytes": 119309,
+                    "md5": "a429fcc93a6dc6d4615d141b64c628c9",
+                    "sha256": "392b7bff985ec10dae1ffda109511cb5574bde2fe5c7fbbd5e59ba664b6bdf5f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-measuring-high-speed-rail.json.gz",
+                    "bytes": 647,
+                    "md5": "2b01b97cec34baec01956792a29cc54d",
+                    "sha256": "18cb2fdf002538af5ae9d8b595f4c08e19d419923a92d677d8f07741f9fcd93e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-measuring-body-of-water.json.gz",
+                    "bytes": 442884,
+                    "md5": "f6580b0503d77d24b9f0dd62b450d64b",
+                    "sha256": "caf12b9b9bad2a9d9918ae69f728982a2ed91e4ae0c6842045e0e546ee3b0163",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-measuring-admin-2nd-border.json.gz",
+                    "bytes": 13571,
+                    "md5": "c124a9afa94bee6ab42c2e29ae9fab17",
+                    "sha256": "4dc2d06596f0058d8aa13820424cdee46ebad88dd6c3566be19514ec6c5b71d3",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-measuring-admin-boundaries.json.gz",
+                    "bytes": 123410,
+                    "md5": "6eabe4fb172d91c1a699d9711b135d76",
+                    "sha256": "b5720c6f560ed5ee12463b1490ddc0bd60f0bb8268e412f69635bce9c6bb83f6",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-boundaries.json.gz",
+                    "bytes": 60263,
+                    "md5": "edcfa26eb096cc4f567651c7fe5582df",
+                    "sha256": "d9cdbf0403165347a988a952abe662aa1f4a5c002792a6d48adc5b46d82e793e",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-transit.json.gz",
+                    "bytes": 1191,
+                    "md5": "46f46ecdbb2704a2adae464fa7d53e97",
+                    "sha256": "c3006af2c44d6a7f85c72af237ee538d038b8a43e321a12d2c79c78434d17822",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-meta.json.gz",
+                    "bytes": 508,
+                    "md5": "a567bc089105bd2910d8d74acbc1cb22",
+                    "sha256": "c278fd5c114811b470e9fb5e9a84b19e60198a0f000547c7581ede15f4691f14",
                     "schemaVersion": 1
                 }
             ]
