@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-19T15:04:35.146Z",
+    "generatedAt": "2026-06-20T07:23:07.773Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -9,69 +9,78 @@
             "regionPath": ["Asia", "China", "Beijing"],
             "bbox": [115.415497, 39.440833, 117.509508, 41.063822],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 1067619,
+            "totalBytes": 1712206,
             "artifacts": [
                 {
                     "kind": "poi",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-china-beijing-poi.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-poi.json.gz",
                     "bytes": 124169,
-                    "md5": "a7cf3a408aa9af23dc2776da196fb1a6",
-                    "sha256": "03afa33352a71ae01058feec9332617b3053ebdc4ea2331af8fee92c30d19521",
+                    "md5": "a3661755d55456be5b800db9ef81c385",
+                    "sha256": "0c097d40424f65c1c14bf1cf5ef60ecaff16f05bf68c307f57fdfec635c35d8c",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "high-speed-rail",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-china-beijing-measuring-high-speed-rail.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-measuring-high-speed-rail.json.gz",
                     "bytes": 6139,
-                    "md5": "43099608a5e2026193d9d304f7a8fa24",
-                    "sha256": "d735a2211d51d293e63605cd2cb37f0cd18fcbaa8e8d56e0cc126242f9df0bb8",
+                    "md5": "eba0b8c8d0a50ffbb62b2eef308957ad",
+                    "sha256": "f3345e0f382040e8dc9e77408222ff67270f6f7a203a6efcadc1e2fcf71fb705",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-measuring-body-of-water.json.gz",
+                    "bytes": 635834,
+                    "md5": "ad2a02b65bb081bd1b2da6e45fbc2c1f",
+                    "sha256": "390f9b589d7d6f915753d3a0698004af163bb5f5487a47301faa1f99c5b7fca5",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
                     "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-china-beijing-measuring-admin-2nd-border.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-measuring-admin-2nd-border.json.gz",
                     "bytes": 3380,
-                    "md5": "0611b81b02da4ee19ca30573f32b5740",
-                    "sha256": "570c451e682f853778ac4fa871832da58327e03b75f795d7647ab22674c98096",
+                    "md5": "f511fb5f25d435279cd208a622f6fc6b",
+                    "sha256": "b5d9995339725a7273e44b83eb1c3291c947a0d891c958e69a8e607961621633",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "measuring",
                     "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-china-beijing-measuring-admin-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-measuring-admin-boundaries.json.gz",
                     "bytes": 616003,
-                    "md5": "48cf0bc3f57640faf3358ec35a5812b9",
-                    "sha256": "f97932622f6fd81a0a64fafc68ec92c31e0faeca141b0a523332cbc8ae0fd968",
+                    "md5": "3f4050803da0ed4010c40965622958d8",
+                    "sha256": "f488b32bbef8af99342e90cba59015ceb664862cddb0e0a2515171bc1db18b03",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-china-beijing-boundaries.json.gz",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-boundaries.json.gz",
                     "bytes": 292459,
-                    "md5": "a98082774d3f22be1a1735d8e2ed480a",
-                    "sha256": "1f6520d34b649b2d036dd1a31e04ebdd1905e587fb435f348f0b8b9b1fc345ce",
+                    "md5": "b63f809c8bddc915c262a0a4a14c84cf",
+                    "sha256": "4704795eba27172f688a15de81897beee72de01c69156f9d4d20c73ee3520ad7",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "transit",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-china-beijing-transit.json.gz",
-                    "bytes": 24969,
-                    "md5": "cb14efcbe62b56b35eb2523dcb4e06de",
-                    "sha256": "dfa9a1dedc185f350623d0dba62991f73fa9298317eff012206102b86630727b",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-transit.json.gz",
+                    "bytes": 33714,
+                    "md5": "b2ac58ef4a2989d13836b436560a59ed",
+                    "sha256": "80e89e1eed694678087532cce202244465c3ce836d69ef8b2fa08b1def170f0b",
                     "schemaVersion": 1
                 },
                 {
                     "kind": "meta",
                     "category": null,
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/asia-china-beijing-meta.json.gz",
-                    "bytes": 500,
-                    "md5": "3743fd7df97e8a1344094a8cf5401652",
-                    "sha256": "10a2203d8337631bda48788d1cbd56e3175eddd1cfa0a55b7adcf202880ce1b4",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-meta.json.gz",
+                    "bytes": 508,
+                    "md5": "9cf72b0dffd34052e2ed0cec1f94a79e",
+                    "sha256": "c4a3d358bce48c19f708e6b6395366386bc3c311eb421c45e6f14c7e83cda248",
                     "schemaVersion": 1
                 }
             ]
