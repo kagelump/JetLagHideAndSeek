@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:33:35.598Z",
+    "generatedAt": "2026-06-20T14:33:59.160Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4001,6 +4001,79 @@
                     "bytes": 513,
                     "md5": "1f515d81d48dcec796cf06c5848cb7cb",
                     "sha256": "21d4bba2e36027825f361cb2860fcf7747a942c9cbed1a110b5863e038f72a12",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-minnesota",
+            "label": "Minnesota",
+            "regionPath": ["North America", "US", "Minnesota"],
+            "bbox": [-97.27158, 43.49909, -89.36208, 49.99714],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 26778321,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-poi.json.gz",
+                    "bytes": 132988,
+                    "md5": "07296cc22405e905dcc550b3e9c341f6",
+                    "sha256": "2962e3a773dfcda096b1f9bba04b75d9b127c7cbefd9b12882a085d718aefcac",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-measuring-body-of-water.json.gz",
+                    "bytes": 24885475,
+                    "md5": "dff3a09a2a898de259880d8cdbfe5eea",
+                    "sha256": "f1473f41ef4ce3938acad675e99efb543451f7585ddb320a39433fa4b0047d76",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-measuring-admin-2nd-border.json.gz",
+                    "bytes": 197852,
+                    "md5": "8ab2fb6a6f3b6fb353ea12ca731a10ad",
+                    "sha256": "5df17188959eefc22f79dddf0bb58ba579b43449a9c7527206b30aff31ddd85d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-measuring-admin-boundaries.json.gz",
+                    "bytes": 913013,
+                    "md5": "f2c1807970e9a2b55cc7fb5972eb27fc",
+                    "sha256": "ed866168f5fb31200b3cab4fca79c0d02ee10fa424ecb4457a733a756fd4a760",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-boundaries.json.gz",
+                    "bytes": 644552,
+                    "md5": "29102a00250d932888cd9947291d6722",
+                    "sha256": "bccc67f5937b2b9a01778588e06c1bc787486b2dd5a51569521418555049e0d2",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-transit.json.gz",
+                    "bytes": 3943,
+                    "md5": "ce066881067cc25954a6f8778ccdc557",
+                    "sha256": "e5942a4346ce88df3672ad96b556dd6cb10ba8bfbe734aed796d4375b92655a9",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-meta.json.gz",
+                    "bytes": 498,
+                    "md5": "e5642bdaa6f5b87736224ef765c0c55a",
+                    "sha256": "630b04bb5db153544f071d1eb063f65ad3bdedb8222727873491ba58298e3281",
                     "schemaVersion": 1
                 }
             ]
