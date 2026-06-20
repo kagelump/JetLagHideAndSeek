@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:37:48.142Z",
+    "generatedAt": "2026-06-20T14:38:12.474Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -5013,6 +5013,97 @@
                     "bytes": 492,
                     "md5": "a4cd92e363a0f276179de9e5131e5ccb",
                     "sha256": "054d1e0ab9fea918e5008d42b33133855ae628f278129f9e23c53f9987911cd3",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-pennsylvania",
+            "label": "Pennsylvania",
+            "regionPath": ["North America", "US", "Pennsylvania"],
+            "bbox": [-81.37832, 38.92139, -74.687612, 42.516493],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 10247177,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-poi.json.gz",
+                    "bytes": 215082,
+                    "md5": "99e2b1b7a68cb27b472724919ce3785a",
+                    "sha256": "3a94eda7d434cd308c7726271fb3cc9e552945b04957fe7070c66fd0e51043db",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-measuring-coastline.json.gz",
+                    "bytes": 5564,
+                    "md5": "b3556c9c7304990123aa9e10e3042453",
+                    "sha256": "5d8277a9e5caf40bdb388fe61cab6b21c55b39776b9754458c8d5bb01b90f080",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-measuring-high-speed-rail.json.gz",
+                    "bytes": 1005,
+                    "md5": "7e9a54b15dd44f38efcf8b27eb8a8d13",
+                    "sha256": "6a827d3ce32b573fe8d4f668a48df84bea4dc0e9b4a89876c78fd219dd50da2d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-measuring-body-of-water.json.gz",
+                    "bytes": 7217602,
+                    "md5": "4f09da571b4da141b99da9349bc2a185",
+                    "sha256": "ec4cdfae26b1307fe832fc94e940b9f9cf24ce1cd46cb2cfcece0058ea6e4b44",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-measuring-admin-2nd-border.json.gz",
+                    "bytes": 187811,
+                    "md5": "2fc09b82cefaa2df125f86aca5955b09",
+                    "sha256": "9521afd6e17704536e2507cfadb213bcf93615fd035201457b6b7556bed87c8f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-measuring-admin-boundaries.json.gz",
+                    "bytes": 1608835,
+                    "md5": "750eed415268c93a1a0e7d5d143f5a5c",
+                    "sha256": "21df5a2d0b336f132360f06c3fbac309ac1357861f216210cc2fbd3061b93fa4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-boundaries.json.gz",
+                    "bytes": 984912,
+                    "md5": "1049bcafcc93dd76083cccba28dab4d6",
+                    "sha256": "cd5aedb2a3734fbee8c97c1a54b593c49857e6bcac9db030f1dc12cc8368085d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-transit.json.gz",
+                    "bytes": 25856,
+                    "md5": "f989a323b6d741296d7cf7d399f99bb0",
+                    "sha256": "bdab421553321abdd600fb7a9b5313ad354d9db98bdfea911dae454d4e93eee1",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-meta.json.gz",
+                    "bytes": 510,
+                    "md5": "928310e6e7c99526ebe14733d358a10e",
+                    "sha256": "13b2e63769453ffcf87cdee0f14e2d3c083516dcc1ffb943c1c4157f67f5c119",
                     "schemaVersion": 1
                 }
             ]
