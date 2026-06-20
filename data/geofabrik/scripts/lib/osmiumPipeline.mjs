@@ -9,10 +9,11 @@
  * @module osmiumPipeline
  */
 
-import { execFileSync, execSync } from "node:child_process";
-import { existsSync, writeFileSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, writeFileSync, createReadStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import { tmpdir } from "node:os";
 
 /**
@@ -60,13 +61,22 @@ export async function assembleAdminBoundaries({
     // Step 2: extract relation IDs, then pull complete relations + member ways.
     console.log(`  [osmium] Extracting relation IDs...`);
     const idsPath = join(workDir, "admin-rel-ids.txt");
-    const opl = execSync(`osmium cat "${adminRelsPbf}" -f opl`, {
-        maxBuffer: 512 * 1024 * 1024,
-    }).toString();
+    const oplPath = join(workDir, "admin-rels.opl");
+    execFileSync(
+        "osmium",
+        ["cat", adminRelsPbf, "-f", "opl", "-o", oplPath, "-O"],
+        { stdio: "inherit" },
+    );
+    // Stream the OPL file line-by-line rather than reading it into a single
+    // string — the north-america parent PBF produces ~1 GB of OPL output,
+    // which exceeds Node's ~512 MB string limit.
     const ids = [];
-    for (const line of opl.split("\n")) {
+    const rl = createInterface({
+        input: createReadStream(oplPath, { encoding: "utf8" }),
+        crlfDelay: Infinity,
+    });
+    for await (const line of rl) {
         if (!line.startsWith("r")) continue;
-        // Keep the 'r' prefix so osmium getid knows the type.
         ids.push(line.split(" ")[0]);
     }
     writeFileSync(idsPath, ids.join("\n") + "\n");
@@ -100,34 +110,50 @@ export async function assembleAdminBoundaries({
         );
     }
 
-    // Step 3: export to GeoJSON with assembled polygon geometries.
-    const geojsonPath = join(workDir, "admin-boundaries.geojson");
-    console.log(`  [osmium] Exporting to GeoJSON...`);
+    // Step 3: export to GeoJSONSeq (one feature per line) so we can stream-
+    // parse without hitting Node's ~512 MB string limit.  The assembled
+    // admin-boundary set for the north-america parent PBF runs ~1 GB.
+    const geojsonseqPath = join(workDir, "admin-boundaries.geojsonseq");
+    console.log(`  [osmium] Exporting to GeoJSONSeq...`);
     execFileSync(
         "osmium",
         [
             "export",
             adminCompletePbf,
             "-f",
-            "geojson",
+            "geojsonseq",
             "-a",
             "type,id",
             "-o",
-            geojsonPath,
+            geojsonseqPath,
             "-O",
         ],
         { stdio: "inherit" },
     );
 
-    // Parse the result.
-    const raw = readFileSync(geojsonPath, "utf8");
-    const fc = JSON.parse(raw);
-
+    // Stream-parse the GeoJSONSeq.
     const features = [];
     let droppedNoName = 0;
     let droppedBroken = 0;
 
-    for (const feature of fc.features ?? []) {
+    const RS = String.fromCharCode(0x1e);
+    const rl2 = createInterface({
+        input: createReadStream(geojsonseqPath, { encoding: "utf8" }),
+        crlfDelay: Infinity,
+    });
+    for await (const line of rl2) {
+        const clean = line.startsWith(RS)
+            ? line.slice(1).trim()
+            : line.trim();
+        if (!clean) continue;
+
+        let feature;
+        try {
+            feature = JSON.parse(clean);
+        } catch {
+            continue;
+        }
+
         // Only interested in assembled relation polygons.
         if (feature.properties?.["@type"] !== "relation") continue;
 
