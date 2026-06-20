@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:49:22.021Z",
+    "generatedAt": "2026-06-20T07:49:41.930Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3236,6 +3236,97 @@
                     "bytes": 492,
                     "md5": "775d507f32b9c33ffe2550277075c852",
                     "sha256": "e0940cbc931ebe8a7f106cac169eb31bc5fc337f901b374e7b509fcee5de7dfe",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-hawaii",
+            "label": "Hawaii",
+            "regionPath": ["North America", "US", "Hawaii"],
+            "bbox": [-179.8483, 10.83575, -137.5228, 29.09624],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 1114592,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-poi.json.gz",
+                    "bytes": 45387,
+                    "md5": "1b4573074a36285944dc559e18ea873f",
+                    "sha256": "074c9cbb7e555f8d656538339f09855a2bad32ced1ff92cf0537472729f3be76",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-measuring-coastline.json.gz",
+                    "bytes": 191297,
+                    "md5": "158e55a4e89c3e95f15066c9f51ac310",
+                    "sha256": "365bce3459357c6c1dfd1591e812a9df8ae2ddf87076977e12116de5ef009021",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-measuring-body-of-water.json.gz",
+                    "bytes": 785710,
+                    "md5": "ee302500597d38f52934c62f5641768a",
+                    "sha256": "b9388a1c93bd4a597d710c76d17b0780ac4f9ffdd6cd18e38b16d30520d97732",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-measuring-admin-1st-border.json.gz",
+                    "bytes": 17670,
+                    "md5": "d1fddd24ddbbaae89f3971e3c9e497f8",
+                    "sha256": "183f938807570b79e5667fc6527922ead72644c67a59e1a11a56cf3dabbd57fb",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-measuring-admin-2nd-border.json.gz",
+                    "bytes": 20583,
+                    "md5": "feea4ca651355740be9f15df87d0083a",
+                    "sha256": "0d5b38f9b28be9b3bd604d3765eee397e69506d37d4c05542ef2535dd79c4ab8",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-measuring-admin-boundaries.json.gz",
+                    "bytes": 36112,
+                    "md5": "70d8498ee12116c78311399b193428a3",
+                    "sha256": "eafdf22b16e2dec44f47635a029a6fa49ac902e7cc19c922af704b349bfc525b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-boundaries.json.gz",
+                    "bytes": 15692,
+                    "md5": "dc49f6df04ee5d701c9adb7b492305a9",
+                    "sha256": "925f77665859830374da485c824fd8dde4d21a2c1f8b62fccba92a77681dcbab",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-transit.json.gz",
+                    "bytes": 1643,
+                    "md5": "ca915be69a330fa406bba8c164ed4d1a",
+                    "sha256": "db2639a0d23036ff1bbe700d630cf38b3adced08242cc94ad517ee5a783291ff",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-meta.json.gz",
+                    "bytes": 498,
+                    "md5": "15815510d16fd1f49eee1af93277b7cc",
+                    "sha256": "4d33c2537ef51b5046d46402e079cb9a85816ac22e4ce0f47eb7c09e92d5a5c1",
                     "schemaVersion": 1
                 }
             ]
