@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:34:21.607Z",
+    "generatedAt": "2026-06-20T14:34:47.852Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4156,6 +4156,88 @@
                     "bytes": 498,
                     "md5": "fea0a855ad3c592796f0b52bae38268b",
                     "sha256": "72129d404538f1575dfacb05567700ff7464bca68d0e5b6a085cdb0c49812907",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-missouri",
+            "label": "Missouri",
+            "regionPath": ["North America", "US", "Missouri"],
+            "bbox": [-95.77751, 35.99466, -88.87132, 40.61664],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 9224531,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-poi.json.gz",
+                    "bytes": 103341,
+                    "md5": "034167615ffa3ff85497a953f163b330",
+                    "sha256": "b27c31e88abfede598aaa80500b3e8b2abd5fcdef7f49ed2417e5fc31c9ff965",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-measuring-body-of-water.json.gz",
+                    "bytes": 7785575,
+                    "md5": "38f7afec3e3507ce098c24e61c8970b6",
+                    "sha256": "411a3b01f9942fee163dd49df7b227048da8a3af4d7de313033950ec17b37e54",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-measuring-admin-1st-border.json.gz",
+                    "bytes": 28913,
+                    "md5": "9a926c67f7f7c5f60a93d8374d9526c4",
+                    "sha256": "91eab76a13ddb9e40c38b374c26a7d4c167e4850b1b2ff4f07bc240b90e206a5",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-measuring-admin-2nd-border.json.gz",
+                    "bytes": 141410,
+                    "md5": "059eae9c12c3b908219b65ffe423188e",
+                    "sha256": "a521455674a5d2e2d1845262f5921e0ddb17f8cab208e6b7161bbcb173811c4c",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-measuring-admin-boundaries.json.gz",
+                    "bytes": 678527,
+                    "md5": "aecd2f1829ea372697d61492936ea6de",
+                    "sha256": "65703c460f3708a920e04ba4402e11fc66550451223a8c9849d85765f532950d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-boundaries.json.gz",
+                    "bytes": 482082,
+                    "md5": "1271e695caacd59fcee9c3bd3327661b",
+                    "sha256": "0d96d6583bd8fd2b9a76e731f3137d96a64de75983ec2deb4072bb2f6b4a82b4",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-transit.json.gz",
+                    "bytes": 4190,
+                    "md5": "4886a3b439712d7d14a2a9de26f45034",
+                    "sha256": "293e4745ab7d636eda5cad1d009114bb8c264dfc911e652731c6145b8acbcf96",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-meta.json.gz",
+                    "bytes": 493,
+                    "md5": "970efb12b879e8023c15a252259c9e98",
+                    "sha256": "dcc68e33cfeb642aa6a3498511782d8ddc8d25a95bb4ade32701fbd9ad99e5c8",
                     "schemaVersion": 1
                 }
             ]
