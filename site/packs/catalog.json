@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T07:51:03.539Z",
+    "generatedAt": "2026-06-20T07:51:22.081Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3637,6 +3637,79 @@
                     "bytes": 484,
                     "md5": "657a41ccb76c37eb23fd3e8521fb36f4",
                     "sha256": "fd686f9871a072bd60281f91c853637cbfbab1b6a0feb06fe8b508523ed1e488",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-kentucky",
+            "label": "Kentucky",
+            "regionPath": ["North America", "US", "Kentucky"],
+            "bbox": [-89.61845, 36.49325, -81.95512, 39.20518],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 5214215,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-poi.json.gz",
+                    "bytes": 71307,
+                    "md5": "2a978b449b4cc31e37984a30cf35b747",
+                    "sha256": "e168ba16e32ab9a1d2317dc13729100daf5eb20cd1b8c0e1f44107444332428b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-measuring-body-of-water.json.gz",
+                    "bytes": 3088374,
+                    "md5": "c2391594ca6c5ef4226ca1bdd7d2f59e",
+                    "sha256": "1feef47c9bb64a98dfb3ed0eb9f6308bf21d6e76d6a00ceb70650ed139ca0377",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-measuring-admin-2nd-border.json.gz",
+                    "bytes": 579446,
+                    "md5": "9a815326d90c23d0516c8a42e03f94c4",
+                    "sha256": "ececc89752ab27ad04d8d7156c7813ceb47d8c1124136802d75fa6cd2dd369c3",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-measuring-admin-boundaries.json.gz",
+                    "bytes": 937437,
+                    "md5": "5e48fb1d78414a2ff734c4db4e0c5e55",
+                    "sha256": "5bb396e926cb70a59978c5a0b4ed478b7ccf91928f061f4726215ce351ec8d37",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-boundaries.json.gz",
+                    "bytes": 536360,
+                    "md5": "3b6e778af35da32e5883f0e42fc7ee60",
+                    "sha256": "98c9fd6f5640b2b6cee1ae4ae7a59f617cfecf1e42eee97276508548afd7a208",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-transit.json.gz",
+                    "bytes": 803,
+                    "md5": "643cd24551376e3a8e38bdcdc4670d8c",
+                    "sha256": "41d8369a89720669de47a1d19301c1de86e74917bf715bd019b40a07fbd7d502",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-meta.json.gz",
+                    "bytes": 488,
+                    "md5": "8fef20fa12933200c5ba14ead4264280",
+                    "sha256": "1cc2ce24918420e3e3bb747b3ada94f0db380ff534558d6148777e5be6aa08c8",
                     "schemaVersion": 1
                 }
             ]
