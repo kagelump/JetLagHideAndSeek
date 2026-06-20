@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:36:16.612Z",
+    "generatedAt": "2026-06-20T14:36:38.989Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -4557,6 +4557,79 @@
                     "bytes": 516,
                     "md5": "8c4574dd67af931a2d391cb4d7ea181a",
                     "sha256": "4c1d62f40bb1c703e0a7a8b0b5984d035b234df11343cbe9f8a700cc2c523b92",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-new-mexico",
+            "label": "New Mexico",
+            "regionPath": ["North America", "US", "New Mexico"],
+            "bbox": [-109.0504, 27.02788, -96.11707, 37.00184],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 11069633,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-poi.json.gz",
+                    "bytes": 99300,
+                    "md5": "2e8d88e732f7336b2e4f28e8922205ea",
+                    "sha256": "769d601385294f869302e9973b7527efa234b272cf0e70517a25fbfe95658300",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-measuring-body-of-water.json.gz",
+                    "bytes": 10493288,
+                    "md5": "addf9504d9d097b7d5a0c6897728526c",
+                    "sha256": "6f4f2295dff280ec066c16171dab96ea5653985849f30a3b099454c5b3802367",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-measuring-admin-2nd-border.json.gz",
+                    "bytes": 51382,
+                    "md5": "539bc5e8af2ddf78f6788eb4be281e4a",
+                    "sha256": "c9d2dc7a6997e533eb91f66c20c87262101a830b60f16dcb113d4a63ec6c57a2",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-measuring-admin-boundaries.json.gz",
+                    "bytes": 139712,
+                    "md5": "fad981f12ecaf2a349b1da3c0a339805",
+                    "sha256": "a266827c3020787b0cd2614dc0ebce8ed4d6804582a3f50689a740d8674f3cee",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-boundaries.json.gz",
+                    "bytes": 283773,
+                    "md5": "be0676b01d950424cdf5c86f6eec8ab9",
+                    "sha256": "a2036019054155155b283cb6faeac91fd808e14d3de4485f9e1bd3731b8b7d8d",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-transit.json.gz",
+                    "bytes": 1686,
+                    "md5": "9e6ced267064aad619a0fd47c40f90af",
+                    "sha256": "349976fa87b668efa6972eaf77a4b69a2673364c06a3f1d85cb83b208dd25e5b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-meta.json.gz",
+                    "bytes": 492,
+                    "md5": "9b30d253d89225d53df8949d60284e75",
+                    "sha256": "50779ce436a7fecc300e3f29d687487ba759486ad10d3817f2cbc092e9da4d66",
                     "schemaVersion": 1
                 }
             ]
