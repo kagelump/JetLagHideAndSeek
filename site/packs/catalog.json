@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "generatedAt": "2026-06-20T14:33:09.101Z",
+    "generatedAt": "2026-06-20T14:33:35.598Z",
     "attributionUrl": "https://jetlag.hinoka.org/packs/NOTICE",
     "packs": [
         {
@@ -3901,6 +3901,106 @@
                     "bytes": 523,
                     "md5": "e577aeba352904584a8a5f7562dc7199",
                     "sha256": "a8eaa6f69b4575f493ec6327a77a95908e3d033d44c95c78f8feb775819a18bb",
+                    "schemaVersion": 1
+                }
+            ]
+        },
+        {
+            "id": "north-america-us-massachusetts",
+            "label": "Massachusetts",
+            "regionPath": ["North America", "US", "Massachusetts"],
+            "bbox": [-73.51096, 40.82573, -68.71948, 42.88768],
+            "osmSnapshot": "2026-06-20",
+            "totalBytes": 4443840,
+            "artifacts": [
+                {
+                    "kind": "poi",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-poi.json.gz",
+                    "bytes": 158403,
+                    "md5": "5a36fd8c27301c1138cb39dadb626882",
+                    "sha256": "2d5d2db792b2fd7f2d272ae28304f19bd76a786ea4335ab3171b05a5e9ccdc2f",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "coastline",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-coastline.json.gz",
+                    "bytes": 242669,
+                    "md5": "9fd30505262955401fe75e263756c75b",
+                    "sha256": "623aa513e8e9a97ea2c22bbd84a2f264c9a1e83efa55f4e7ab640d1b05764a18",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "high-speed-rail",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-high-speed-rail.json.gz",
+                    "bytes": 790,
+                    "md5": "6f3e4ef7e4c1d7b1b1734d5482ddc97c",
+                    "sha256": "537e9da89930d45e88db619dc0afcc4ab2fdaf5ecefef8e11d78f48cfe15a960",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "body-of-water",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-body-of-water.json.gz",
+                    "bytes": 3503759,
+                    "md5": "035bf92b6e0e2bd74a94ff1aa9e1ddeb",
+                    "sha256": "95e2d06f9ad5fa87644cd2669d3543b1ea57d56fdcc15bea394a974e8aa2bceb",
+                    "schemaVersion": 2
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-1st-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-admin-1st-border.json.gz",
+                    "bytes": 9998,
+                    "md5": "56218e725cd33c7c1d64a7b0e8cad664",
+                    "sha256": "ee917ed7ad61342043af8f0ee2b57f92d09aa36f463ff11780415b776d303c64",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-2nd-border",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-admin-2nd-border.json.gz",
+                    "bytes": 49434,
+                    "md5": "467a51f698bc5fd05b795f6a55487ee0",
+                    "sha256": "7972075c09b79e68d73c829d061e22e500e607a34460ed45711fc42e8affb68b",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "measuring",
+                    "category": "admin-boundaries",
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-admin-boundaries.json.gz",
+                    "bytes": 292948,
+                    "md5": "ecd17a190d534dc5cb5a7e9490e85f3f",
+                    "sha256": "2f47c18dc7a1e44bd60b0cfa64c6665821025919644c736a26139221c37a50b0",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "boundaries",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-boundaries.json.gz",
+                    "bytes": 173188,
+                    "md5": "d083f62f5936106d70c698eace147e4b",
+                    "sha256": "df450318299659088806b41487201f6f6605628fc401d5a822ef7f9f0f4075df",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "transit",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-transit.json.gz",
+                    "bytes": 12138,
+                    "md5": "6528ac425781a952a46e946f290e3ff0",
+                    "sha256": "968c68f98614ef7189269ddcde86f1eb4cdc34ca8198461ce5ac5bbe80cd4cab",
+                    "schemaVersion": 1
+                },
+                {
+                    "kind": "meta",
+                    "category": null,
+                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-meta.json.gz",
+                    "bytes": 513,
+                    "md5": "1f515d81d48dcec796cf06c5848cb7cb",
+                    "sha256": "21d4bba2e36027825f361cb2860fcf7747a942c9cbed1a110b5863e038f72a12",
                     "schemaVersion": 1
                 }
             ]
