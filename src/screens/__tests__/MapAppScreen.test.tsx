@@ -550,6 +550,13 @@ describe("MapAppScreen", () => {
                 .geometry.coordinates,
         ).toEqual([139.6503, 35.6762]);
 
+        // The question map render state is computed off the render path
+        // (useDeferredComputation), so flush the deferred work before each
+        // assertion on a derived map overlay (radar areas, eligibility mask).
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
+
         const radarShape = getMapShapeSource(screen, "radar-question-areas")
             .props.shape;
         expect(radarShape.features).toHaveLength(1);
@@ -576,6 +583,9 @@ describe("MapAppScreen", () => {
             screen.getByTestId("radar-answer-option-positive").props
                 .accessibilityState,
         ).toEqual({ selected: true });
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         expect(
             getMapShapeSource(screen, "radar-question-areas").props.shape
                 .features,
@@ -591,6 +601,9 @@ describe("MapAppScreen", () => {
         ).toBe(false);
 
         fireEvent.press(screen.getByTestId("radar-answer-option-negative"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         expect(
             getMapShapeSource(screen, "combined-inside-mask-19631009").props
                 .shape.features,
@@ -602,6 +615,9 @@ describe("MapAppScreen", () => {
         ).toBe(false);
 
         fireEvent.press(screen.getByTestId("radar-answer-option-unanswered"));
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         expect(
             getMapShapeSource(screen, "radar-question-areas").props.shape
                 .features,
@@ -611,6 +627,9 @@ describe("MapAppScreen", () => {
         expect(
             screen.getByTestId("radar-distance-meters").props.children,
         ).toEqual(["Current distance ", 1000, " m"]);
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         expect(
             getMapShapeSource(screen, "radar-question-areas").props.shape
                 .features[0].properties.distanceMeters,
@@ -729,6 +748,12 @@ describe("MapAppScreen", () => {
         expect(
             screen.getByTestId("radar-distance-meters").props.children,
         ).toEqual(["Current distance ", 1000, " m"]);
+        // The question map render state is computed off the render path
+        // (useDeferredComputation), so flush the deferred work before asserting
+        // the derived map overlay.
+        act(() => {
+            jest.advanceTimersByTime(300);
+        });
         expect(
             getMapShapeSource(screen, "radar-question-areas").props.shape
                 .features[0].properties.distanceMeters,

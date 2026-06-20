@@ -6,6 +6,22 @@ import {
     waitFor,
 } from "@testing-library/react-native";
 
+// Stub out the shared deferred-computation hook so MeasuringAutoResult can
+// call it without needing the full provider tree. jest.mock is hoisted above
+// imports, so use requireActual inside the factory.
+jest.mock("@/features/questions/questionGeometry", () => {
+    const actual = jest.requireActual(
+        "@/features/questions/questionGeometry",
+    ) as typeof import("@/features/questions/questionGeometry");
+    return {
+        ...actual,
+        useQuestionMapRenderState: () => ({
+            isComputing: false,
+            renderState: actual.EMPTY_QUESTION_MAP_RENDER_STATE,
+        }),
+    };
+});
+
 import { MeasuringQuestionDetailScreen } from "@/features/questions/measuring/MeasuringQuestionDetailScreen";
 import {
     clearPointBufferCache,
