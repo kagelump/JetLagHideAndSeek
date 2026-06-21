@@ -23,6 +23,9 @@ import {
     useAdminDivisionPresetName,
 } from "@/state/questionStore";
 import { colors } from "@/theme/colors";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("ShareSetup");
 
 type ShareSetupModalProps = {
     hidingZones: HidingZoneExportState;
@@ -83,16 +86,13 @@ export function ShareSetupModal({
 
     useEffect(() => {
         if (visible) {
-            console.log("[ShareSetup] Generated link:", link);
+            log.debug("Generated link:", link);
         }
     }, [visible, link]);
 
     useEffect(() => {
         if (debugMode === "full") {
-            console.log(
-                "[ShareSetup] Full JSON envelope:",
-                JSON.stringify(envelope, null, 2),
-            );
+            log.debug("Full JSON envelope:", JSON.stringify(envelope, null, 2));
         }
     }, [debugMode, envelope]);
 

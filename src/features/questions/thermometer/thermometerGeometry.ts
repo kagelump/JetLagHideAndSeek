@@ -17,6 +17,9 @@ import type {
     ThermometerRenderState,
 } from "./thermometerTypes";
 import { THERMOMETER } from "@/config/appConfig";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("thermometerGeometry");
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -229,8 +232,8 @@ export function buildHalfPlane(
         const dMin = sign === 1 ? -1 : -L; // allow slop on the bisector edge
         const dMax = sign === 1 ? L : 1;
         if (anchorD < dMin || anchorD > dMax) {
-            console.warn(
-                `[thermometerGeometry] half-plane side verification failed: ` +
+            log.warn(
+                `half-plane side verification failed: ` +
                     `anchorD=${anchorD.toFixed(1)} not in [${dMin.toFixed(1)}, ${dMax.toFixed(1)}] ` +
                     `(answer=${answer})`,
             );

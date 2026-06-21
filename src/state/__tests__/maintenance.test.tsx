@@ -47,6 +47,21 @@ function StateProbe() {
 
 type ResetFn = () => Promise<void>;
 
+/**
+ * `AppStateProviders` persists on unmount via a fire-and-forget
+ * `persistAppState` (see its unmount-cleanup `flushPersist`). When a *prior*
+ * suite's provider unmounts, that un-awaited write can still be in flight when
+ * this suite's `beforeEach` clears AsyncStorage — and land *after* the clear,
+ * repopulating `app-state:*` keys mid-test. That's the historical ~1/12
+ * full-suite flake (it never reproduces in isolation). `persistAppState` chains
+ * several `await`s, so drain a couple of macrotask ticks to let any pending
+ * write settle, then clear with a clean slate.
+ */
+async function drainPendingPersistWrites(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 // ─── useResetGame ──────────────────────────────────────────────────────────
 
 describe("useResetGame", () => {
@@ -54,6 +69,7 @@ describe("useResetGame", () => {
 
     beforeEach(async () => {
         resetGame = null;
+        await drainPendingPersistWrites();
         await AsyncStorage.clear();
         queryClient.clear();
         clearOsmMatchingMemoryCache();
@@ -151,6 +167,7 @@ describe("useResetGame", () => {
 
 describe("clearAppCaches", () => {
     beforeEach(async () => {
+        await drainPendingPersistWrites();
         await AsyncStorage.clear();
         queryClient.clear();
         clearOsmMatchingMemoryCache();

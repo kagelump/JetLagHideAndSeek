@@ -20,6 +20,9 @@ import { usePlayArea } from "@/state/playAreaStore";
 import { bboxIntersects, EARTH_RADIUS_METERS } from "@/shared/geojson";
 import type { Bbox } from "@/shared/geojson";
 import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("useStationElimination");
 
 const CIRCLE_STEPS = HIDING_ZONE.circleSteps;
 
@@ -467,8 +470,8 @@ export function useStationElimination(): StationEliminationResult {
         // Cache hit → update state immediately (no loading flash).
         const hit = getCachedResult(stations, zf, boundary, radiusMeters, qrs);
         if (hit) {
-            console.log(
-                `[useStationElimination] cache HIT — remaining=${hit.remainingCount}/${hit.totalCount}`,
+            log.debug(
+                `cache HIT — remaining=${hit.remainingCount}/${hit.totalCount}`,
             );
             setResult(hit);
             return;
@@ -476,8 +479,8 @@ export function useStationElimination(): StationEliminationResult {
 
         // Cache miss → show loading state and defer the heavy work.
         const computeId = ++computeIdRef.current;
-        console.log(
-            `[useStationElimination] cache MISS — setting isComputing=true, ` +
+        log.debug(
+            `cache MISS — setting isComputing=true, ` +
                 `stations=${stations.length}, zoneFeats=${zf.features.length}`,
         );
         setResult({
@@ -491,9 +494,7 @@ export function useStationElimination(): StationEliminationResult {
         let rafId: number | null = null;
         const handle = InteractionManager.runAfterInteractions(() => {
             if (computeId !== computeIdRef.current) {
-                console.log(
-                    `[useStationElimination] runAfterInteractions STALE computeId=${computeId}`,
-                );
+                log.debug(`runAfterInteractions STALE computeId=${computeId}`);
                 return;
             }
             // Yield one frame so React can commit the loading state before
@@ -501,8 +502,8 @@ export function useStationElimination(): StationEliminationResult {
             rafId = requestAnimationFrame(() => {
                 rafId = null;
                 if (computeId !== computeIdRef.current) return;
-                console.log(
-                    `[useStationElimination] runAfterInteractions START compute ` +
+                log.debug(
+                    `runAfterInteractions START compute ` +
                         `(computeId=${computeId}, elapsed=${(performance.now() - t0).toFixed(0)}ms)`,
                 );
                 const r = computeStationElimination(
@@ -514,8 +515,8 @@ export function useStationElimination(): StationEliminationResult {
                     qrs,
                 );
                 const dt = (performance.now() - t0).toFixed(0);
-                console.log(
-                    `[useStationElimination] runAfterInteractions DONE compute ` +
+                log.debug(
+                    `runAfterInteractions DONE compute ` +
                         `(computeId=${computeId}, elapsed=${dt}ms, remaining=${r.remainingCount}/${r.totalCount})`,
                 );
                 if (computeId !== computeIdRef.current) return; // stale

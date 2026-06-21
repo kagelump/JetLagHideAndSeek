@@ -6,6 +6,9 @@ import { SheetScrollView } from "@/features/sheet/SheetScrollView";
 import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { useStationElimination } from "@/features/map/useStationElimination";
 import { colors } from "@/theme/colors";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("StationDetailScreen");
 
 export function StationDetailScreen() {
     const { selectedStations } = useHidingZoneDerived();
@@ -14,8 +17,8 @@ export function StationDetailScreen() {
 
     // Debug: trace when the station detail screen sees computing state change.
     useEffect(() => {
-        console.log(
-            `[StationDetailScreen] isComputing=${isComputing}, ` +
+        log.debug(
+            `isComputing=${isComputing}, ` +
                 `remaining=${remainingCount}/${totalCount}, ` +
                 `eliminated=${eliminatedStationIds.size}`,
         );

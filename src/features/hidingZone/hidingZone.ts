@@ -24,6 +24,9 @@ import type {
     ZoneFeature,
     ZoneFeatureProperties,
 } from "./hidingZoneTypes";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("hidingZone");
 
 const STATION_FALLBACK_COLOR = "#1f6f78";
 
@@ -538,8 +541,8 @@ export function getPresetPlayAreaStats(
         0,
     );
     if (__DEV__) {
-        console.log(
-            `[hidingZone] getPresetPlayAreaStats: ${totalInArea}/${totalStations} stations in play area bbox across ${presets.length} presets`,
+        log.debug(
+            `getPresetPlayAreaStats: ${totalInArea}/${totalStations} stations in play area bbox across ${presets.length} presets`,
         );
     }
     return stats;

@@ -204,6 +204,54 @@ Keep `MapAppScreen` a coordinator. Don't make it the owner of every mode, form,
 network request, and map side effect. If a new workflow has state, put it in a
 focused feature/store and let the map render derived data.
 
+## Logging
+
+All diagnostics in `src/` go through the namespaced logger
+(`src/shared/logger.ts`). **Raw `console.*` is banned in `src/**/_.{ts,tsx}`** by
+an eslint `no-console`rule (exceptions:`src/shared/logger.ts`itself and test
+files). This keeps hot-path logs (geometry / mask / search loops, where each`console._` is a synchronous RN bridge call) off in production and individually
+tunable.
+
+Usage:
+
+```ts
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("myFeature"); // one per module, near the top
+log.debug("computed", n, "candidates"); // dev-only; free to leave in hot paths
+log.info("bundle loaded"); // dev-only
+log.warn("falling back to JS path"); // always emitted
+log.error("install failed", err); // always emitted
+```
+
+- **Levels:** `debug < info < warn < error < silent`. `debug`/`info` are
+  **dev-only** (never emitted in a non-`__DEV__` build — a production safety floor
+  the config cannot override). `warn`/`error` always emit unless a namespace is
+  `silent`.
+- **Namespace = the `createLogger` string.** It is folded into the message as
+  `[namespace] …`, so don't hand-write a `[prefix]` in the message string (that
+  double-tags). Pre-existing sub-tags (e.g. `[adminBoundary]` inside
+  `osmMatchingCache`) are fine as message content.
+- **Tag placement:** a leading string arg becomes `[ns] <string>`; a leading
+  non-string (an `Error`, an object) gets `[ns]` as a separate first argument.
+
+### Turning a namespace down
+
+When you're done debugging a noisy namespace, **demote it — don't delete the
+logs**. Two ways:
+
+1. **Config file (persistent):** edit `LOGGING_CONFIG.namespaces` in
+   `src/config/logging.ts`, e.g. `lineBuffer: "silent"` or `search: "warn"`. The
+   file lists the known namespaces. This is the normal "blacklist a namespace"
+   knob.
+2. **Runtime (transient):** call
+   `setLoggerNamespaceLevel("lineBuffer", "silent")` (or `undefined` to restore
+   the config default) — e.g. from a dev menu — to mute/unmute without editing
+   the config.
+
+Default level is `debug` (everything shows in dev). A test asserting on a logged
+message should expect the folded `"[namespace] message"` string.
+
 ## MapLibre and Geometry Rules
 
 - Coordinates are `[longitude, latitude]`; bboxes are `[west, south, east, north]`.

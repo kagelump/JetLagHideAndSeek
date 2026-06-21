@@ -17,6 +17,9 @@ import {
 import { colors } from "@/theme/colors";
 
 import { DrawerAction, SeekTimeModal } from "./sheetComponents";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("MainSheetContent");
 
 function MainSheetContent({
     onNavigate,
@@ -35,8 +38,8 @@ function MainSheetContent({
 
     // Debug: trace when the HUD sees computing state changes.
     useEffect(() => {
-        console.log(
-            `[MainSheetContent] station isComputing=${isComputing}, ` +
+        log.debug(
+            `station isComputing=${isComputing}, ` +
                 `remainingCount=${remainingCount}, ` +
                 `eliminationPctComputing=${eliminationPctComputing}, ` +
                 `eliminationPct=${eliminationPct}`,

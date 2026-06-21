@@ -7,6 +7,9 @@ import { getBundledCategoryColumns, OSM_TYPES } from "./bundledPois";
 import type { RawCategory } from "./bundledPois";
 import type { MatchingCategory } from "./matchingTypes";
 import type { OsmFeatureWithDistance } from "./osmMatching";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("spatialIndex");
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -153,7 +156,7 @@ export function querySpatialIndex(
     const reconstructMs = Date.now() - rT0;
 
     if (__DEV__) {
-        console.log(
+        log.debug(
             `[spatialIndex:query] ${category} r=${radiusMeters}m → ${indices.length} indices ` +
                 `(build:${buildMs}ms query:${queryMs}ms reconstruct:${reconstructMs}ms)`,
         );

@@ -14,6 +14,9 @@ import type {
 } from "geojson";
 
 import type { GeometryBackend } from "./geometryBackend";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("js");
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -45,7 +48,6 @@ function featureToGeom(f: Feature<Polygon | MultiPolygon>): Geom {
 }
 
 /** Timing log prefix. */
-const LOG_PREFIX = "[js]";
 
 // ─── Backend ───────────────────────────────────────────────────────────────
 
@@ -79,8 +81,8 @@ export const jsGeometryBackend: GeometryBackend = {
                     ? (fc.features[0] as Feature<Polygon | MultiPolygon>)
                     : null;
                 const ms = performance.now() - t0;
-                console.log(
-                    `[js] bufferMeters FC(${geom.features.length}) r=${meters} qs=${quadrantSegments} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                log.debug(
+                    `bufferMeters FC(${geom.features.length}) r=${meters} qs=${quadrantSegments} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                 );
                 return result;
             }
@@ -92,12 +94,12 @@ export const jsGeometryBackend: GeometryBackend = {
             }) as Feature<Polygon | MultiPolygon> | undefined;
 
             const ms = performance.now() - t0;
-            console.log(
-                `[js] bufferMeters ${geom.geometry?.type ?? "?"} r=${meters} qs=${quadrantSegments} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+            log.debug(
+                `bufferMeters ${geom.geometry?.type ?? "?"} r=${meters} qs=${quadrantSegments} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
             );
             return result ?? null;
         } catch (err) {
-            console.warn("[js] bufferMeters failed:", err);
+            log.warn("bufferMeters failed:", err);
             return null;
         }
     },
@@ -111,12 +113,12 @@ export const jsGeometryBackend: GeometryBackend = {
                 polyDifference(featureToGeom(a), featureToGeom(b)),
             );
             const ms = performance.now() - t0;
-            console.log(
-                `${LOG_PREFIX} difference ${a.geometry.type} vs ${b.geometry.type} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+            log.debug(
+                `difference ${a.geometry.type} vs ${b.geometry.type} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
             );
             return result;
         } catch (err) {
-            console.warn(`${LOG_PREFIX} difference failed:`, err);
+            log.warn(`difference failed:`, err);
             return null;
         }
     },
@@ -128,12 +130,12 @@ export const jsGeometryBackend: GeometryBackend = {
                 polyUnion(featureToGeom(a), featureToGeom(b)),
             );
             const ms = performance.now() - t0;
-            console.log(
-                `${LOG_PREFIX} union ${a.geometry.type} vs ${b.geometry.type} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+            log.debug(
+                `union ${a.geometry.type} vs ${b.geometry.type} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
             );
             return result;
         } catch (err) {
-            console.warn(`${LOG_PREFIX} union failed:`, err);
+            log.warn(`union failed:`, err);
             return null;
         }
     },
@@ -145,12 +147,12 @@ export const jsGeometryBackend: GeometryBackend = {
                 polyIntersection(featureToGeom(a), featureToGeom(b)),
             );
             const ms = performance.now() - t0;
-            console.log(
-                `${LOG_PREFIX} intersection ${a.geometry.type} vs ${b.geometry.type} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+            log.debug(
+                `intersection ${a.geometry.type} vs ${b.geometry.type} → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
             );
             return result;
         } catch (err) {
-            console.warn(`${LOG_PREFIX} intersection failed:`, err);
+            log.warn(`intersection failed:`, err);
             return null;
         }
     },
@@ -161,9 +163,7 @@ export const jsGeometryBackend: GeometryBackend = {
             if (a.geometry.type === "Polygon") {
                 // A single polygon has no self-overlap — return it as-is.
                 const ms = performance.now() - t0;
-                console.log(
-                    `${LOG_PREFIX} unaryUnion Polygon (no-op) in ${ms.toFixed(0)}ms`,
-                );
+                log.debug(`unaryUnion Polygon (no-op) in ${ms.toFixed(0)}ms`);
                 return {
                     ...a,
                     properties: { ...a.properties },
@@ -174,8 +174,8 @@ export const jsGeometryBackend: GeometryBackend = {
             const polys = a.geometry.coordinates as Position[][][];
             if (polys.length <= 1) {
                 const ms = performance.now() - t0;
-                console.log(
-                    `${LOG_PREFIX} unaryUnion MultiPolygon(${polys.length}) (no-op) in ${ms.toFixed(0)}ms`,
+                log.debug(
+                    `unaryUnion MultiPolygon(${polys.length}) (no-op) in ${ms.toFixed(0)}ms`,
                 );
                 return {
                     ...a,
@@ -189,12 +189,12 @@ export const jsGeometryBackend: GeometryBackend = {
                 polyUnion(geoms[0], ...geoms.slice(1)),
             );
             const ms = performance.now() - t0;
-            console.log(
-                `${LOG_PREFIX} unaryUnion MultiPolygon(${polys.length}) → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+            log.debug(
+                `unaryUnion MultiPolygon(${polys.length}) → ${result ? result.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
             );
             return result;
         } catch (err) {
-            console.warn(`${LOG_PREFIX} unaryUnion failed:`, err);
+            log.warn(`unaryUnion failed:`, err);
             return null;
         }
     },

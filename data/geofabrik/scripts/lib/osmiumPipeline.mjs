@@ -142,9 +142,7 @@ export async function assembleAdminBoundaries({
         crlfDelay: Infinity,
     });
     for await (const line of rl2) {
-        const clean = line.startsWith(RS)
-            ? line.slice(1).trim()
-            : line.trim();
+        const clean = line.startsWith(RS) ? line.slice(1).trim() : line.trim();
         if (!clean) continue;
 
         let feature;

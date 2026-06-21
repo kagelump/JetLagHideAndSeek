@@ -64,6 +64,9 @@ import { useMapCallout } from "./useMapCallout";
 import { usePinDrag } from "./usePinDrag";
 import { useUserLocation } from "./useUserLocation";
 import { VoronoiOutlineLayers } from "./VoronoiOutlineLayers";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("NativeMap");
 
 setAccessToken(null);
 
@@ -120,8 +123,8 @@ export function NativeMap({
 
     // Debug: trace when the map sees isComputing change.
     useEffect(() => {
-        console.log(
-            `[NativeMap] isComputing=${isComputing}, ` +
+        log.debug(
+            `isComputing=${isComputing}, ` +
                 `maskFeats=${questionMapRenderState.radar.hitMaskFeatures.features.length}`,
         );
     }, [

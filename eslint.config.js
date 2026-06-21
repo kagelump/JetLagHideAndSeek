@@ -67,6 +67,22 @@ module.exports = [
         },
     },
     {
+        // Ban raw `console` in app source: every diagnostic must go through the
+        // namespaced, level-gated logger (`src/shared/logger.ts`) so hot-path
+        // logs stay off in production and can be demoted per-namespace via
+        // `src/config/logging.ts`. See AGENTS.md → "Logging".
+        files: ["src/**/*.{ts,tsx}"],
+        ignores: [
+            "src/**/__tests__/**",
+            "src/**/*.test.{ts,tsx}",
+            // The logger is the one place allowed to touch `console`.
+            "src/shared/logger.ts",
+        ],
+        rules: {
+            "no-console": "error",
+        },
+    },
+    {
         files: ["src/features/questions/**/*DetailScreen.tsx"],
         rules: {
             "no-restricted-imports": [

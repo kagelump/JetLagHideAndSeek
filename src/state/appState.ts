@@ -15,6 +15,9 @@ import {
 import type { HidingZoneImportState } from "@/state/hidingZoneStore";
 import type { PlayAreaImportState } from "@/state/playAreaStore";
 import type { QuestionSettingsImportState } from "@/state/questionStore";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("appState");
 
 export const appStatePlayAreaSchema = z.object({
     bbox: bboxSchema,
@@ -83,8 +86,7 @@ export function safeParseQuestions(
     questions: unknown,
 ): AppStateV1["questions"] {
     if (!Array.isArray(questions)) {
-        if (__DEV__)
-            console.warn("Questions is not an array, defaulting to empty");
+        if (__DEV__) log.warn("Questions is not an array, defaulting to empty");
         return [];
     }
 
@@ -98,7 +100,7 @@ export function safeParseQuestions(
                 typeof q === "object" && q !== null && "id" in q
                     ? String(q.id)
                     : "unknown";
-            console.warn(
+            log.warn(
                 `Dropping invalid question (id=${id}):`,
                 result.error.issues,
             );
@@ -116,10 +118,7 @@ export function safeParseHidingZones(
     const result = appStateHidingZonesSchema.safeParse(value);
     if (result.success) return result.data;
     if (__DEV__) {
-        console.warn(
-            "Invalid hiding zones, using default:",
-            result.error.issues,
-        );
+        log.warn("Invalid hiding zones, using default:", result.error.issues);
     }
     return { ...DEFAULT_HIDING_ZONES };
 }
@@ -131,7 +130,7 @@ export function safeParsePlayArea(value: unknown): AppStateV1["playArea"] {
     const result = appStatePlayAreaSchema.safeParse(value);
     if (result.success) return result.data;
     if (__DEV__) {
-        console.warn("Invalid play area, using default:", result.error.issues);
+        log.warn("Invalid play area, using default:", result.error.issues);
     }
     return { ...unsetPlayArea };
 }
@@ -145,7 +144,7 @@ export function safeParseQuestionSettings(
     const result = appStateQuestionSettingsSchema.safeParse(value);
     if (result.success) return result.data;
     if (__DEV__) {
-        console.warn(
+        log.warn(
             "Invalid question settings, using defaults:",
             result.error.issues,
         );
@@ -163,7 +162,7 @@ function safeParseMetadata(value: unknown): {
     if (result.success) return result.data;
     const now = new Date().toISOString();
     if (__DEV__) {
-        console.warn(
+        log.warn(
             "Invalid metadata, using current timestamp:",
             result.error.issues,
         );

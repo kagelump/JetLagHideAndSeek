@@ -89,7 +89,7 @@ export function selectWindowFeatures(
         }
     }
     const tIterMs = performance.now() - tIter0;
-    console.log(
+    log.debug(
         `[selectWindow] bundle load: ${tLoadMs.toFixed(0)}ms, ` +
             `bbox scan ${totalFeatures} features → ${result.length} hits ` +
             `in ${tIterMs.toFixed(0)}ms`,
@@ -275,7 +275,7 @@ export function computeLineCategory(
         marginM,
     );
     const tWindowMs = performance.now() - tWindow0;
-    console.log(
+    log.debug(
         `[lineCategory] selectWindowFeatures: ${windowFeatures.length} features ` +
             `in window (margin=${marginM.toFixed(0)}m) in ${tWindowMs.toFixed(0)}ms`,
     );
@@ -360,3 +360,6 @@ export {
     clearClippedLineCache,
     clipLineFeaturesToPlayArea,
 } from "./lineClipping";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("lineMeasuring");

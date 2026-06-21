@@ -29,6 +29,9 @@ import {
     computePointUnionBuffer,
 } from "./pointMeasuringGeometry";
 import type { MeasuringRenderState } from "./measuringTypes";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("measuringGeometry");
 
 // ─── Render state ───────────────────────────────────────────────────────────
 
@@ -71,8 +74,8 @@ export function buildMeasuringRenderState(
                     playAreaBbox,
                 );
             } catch (err) {
-                console.warn(
-                    `[measuringGeometry] computeLineCategory failed for category=${q.category} center=${q.center}:`,
+                log.warn(
+                    `computeLineCategory failed for category=${q.category} center=${q.center}:`,
                     err,
                 );
                 continue;
@@ -143,8 +146,8 @@ export function buildMeasuringRenderState(
                         bufferFeatures,
                     );
                 } catch (err) {
-                    console.warn(
-                        `[measuringGeometry] computeLineBufferCached failed for category=${q.category}:`,
+                    log.warn(
+                        `computeLineBufferCached failed for category=${q.category}:`,
                         err,
                     );
                     continue;
@@ -166,8 +169,8 @@ export function buildMeasuringRenderState(
             try {
                 dist = computeNearestPoiDistance(q.center, q.category);
             } catch (err) {
-                console.warn(
-                    `[measuringGeometry] computeNearestPoiDistance failed for category=${q.category} center=${q.center}:`,
+                log.warn(
+                    `computeNearestPoiDistance failed for category=${q.category} center=${q.center}:`,
                     err,
                 );
                 continue;
@@ -204,8 +207,8 @@ export function buildMeasuringRenderState(
                         playAreaBbox,
                     );
                 } catch (err) {
-                    console.warn(
-                        `[measuringGeometry] computePointUnionBuffer failed for category=${q.category}:`,
+                    log.warn(
+                        `computePointUnionBuffer failed for category=${q.category}:`,
                         err,
                     );
                     continue;
@@ -251,8 +254,8 @@ export function buildMeasuringRenderState(
             );
             const tPolyToLineMs = performance.now() - tPolyToLine0;
             if (__DEV__) {
-                console.log(
-                    `[measuringGeometry] polygonFeaturesToLineFeatures: ` +
+                log.debug(
+                    `polygonFeaturesToLineFeatures: ` +
                         `${nearby.windowFeatures.length} window → ${lineOnlyFeatures.length} line features ` +
                         `in ${tPolyToLineMs.toFixed(0)}ms for ${q.category}`,
                 );
@@ -262,8 +265,8 @@ export function buildMeasuringRenderState(
             const dilated = getDilatedPlayArea(playAreaBoundary);
             const tDilateMs = performance.now() - tDilate0;
             if (__DEV__) {
-                console.log(
-                    `[measuringGeometry] [${getGeometryBackend().name}] getDilatedPlayArea in ${tDilateMs.toFixed(0)}ms`,
+                log.debug(
+                    `[${getGeometryBackend().name}] getDilatedPlayArea in ${tDilateMs.toFixed(0)}ms`,
                 );
             }
 
@@ -286,8 +289,8 @@ export function buildMeasuringRenderState(
                       );
             const tClipMs = performance.now() - tClip0;
             if (__DEV__) {
-                console.log(
-                    `[measuringGeometry] clipLineFeaturesToPlayArea: ` +
+                log.debug(
+                    `clipLineFeaturesToPlayArea: ` +
                         `${lineOnlyFeatures.length} → ${clipped.length} features ` +
                         `in ${tClipMs.toFixed(0)}ms for ${q.category}`,
                 );
@@ -311,16 +314,16 @@ export function buildMeasuringRenderState(
     }
     const tLineFeaturesMs = performance.now() - tLineFeatures0;
     if (__DEV__) {
-        console.log(
-            `[measuringGeometry] lineFeatures derivation: ${lineFeatures.length} total ` +
+        log.debug(
+            `lineFeatures derivation: ${lineFeatures.length} total ` +
                 `in ${tLineFeaturesMs.toFixed(0)}ms`,
         );
     }
 
     const tTotalMs = performance.now() - tTotal0;
     if (__DEV__) {
-        console.log(
-            `[measuringGeometry] buildMeasuringRenderState total: ${tTotalMs.toFixed(0)}ms ` +
+        log.debug(
+            `buildMeasuringRenderState total: ${tTotalMs.toFixed(0)}ms ` +
                 `for ${measuring.length} question(s)`,
         );
     }

@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
 import { OFFLINE } from "@/config/appConfig";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("packCatalog");
 
 // ─── Zod schemas ─────────────────────────────────────────────────────────
 
@@ -61,12 +64,10 @@ async function fetchCatalog(url: string): Promise<Catalog> {
     // refetch can otherwise return stale bytes after a republish. The query
     // param is the portable guarantee; `cache: "no-store"` is belt-and-braces.
     const bustUrl = `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
-    console.log("[packCatalog] Fetching catalog from:", bustUrl);
+    log.debug("Fetching catalog from:", bustUrl);
     const response = await fetch(bustUrl, { cache: "no-store" });
     if (!response.ok) {
-        console.error(
-            `[packCatalog] Catalog fetch failed: HTTP ${response.status} from ${url}`,
-        );
+        log.error(`Catalog fetch failed: HTTP ${response.status} from ${url}`);
         throw new Error(
             `Catalog fetch failed for ${url}: HTTP ${response.status}`,
         );
@@ -75,7 +76,7 @@ async function fetchCatalog(url: string): Promise<Catalog> {
     try {
         return catalogSchema.parse(raw);
     } catch (err) {
-        console.error("[packCatalog] Catalog schema validation failed:", err);
+        log.error("Catalog schema validation failed:", err);
         throw err;
     }
 }

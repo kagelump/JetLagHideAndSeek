@@ -8,6 +8,9 @@ import type {
 } from "geojson";
 import { VORONOI } from "@/config/appConfig";
 import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("clipVoronoiCells");
 
 const MAX_CACHE_SIZE = VORONOI.maxClipCacheSize;
 const cache = new Map<string, FeatureCollection<Polygon | MultiPolygon>>();
@@ -172,7 +175,7 @@ export function clipCellsToPlayArea<
         // Move to end (LRU)
         cache.delete(key);
         cache.set(key, cached as FeatureCollection<Polygon | MultiPolygon>);
-        console.log(
+        log.debug(
             `[clipCells] ${cells.features.length} cells → ${cached.features.length} features (cached)`,
         );
         return cached;
@@ -262,7 +265,7 @@ export function clipCellsToPlayArea<
             });
         } catch (err) {
             if (__DEV__) {
-                console.warn(
+                log.warn(
                     "[clipCellsToPlayArea] skipping degenerate cell:",
                     err,
                 );
@@ -278,7 +281,7 @@ export function clipCellsToPlayArea<
 
     const durationMs = Date.now() - t0;
     if (cells.features.length > 0) {
-        console.log(
+        log.debug(
             `[clipCells] ${cells.features.length} cells → ${resultFeatures.length} features ` +
                 `(fast:${fastPathHits} slow:${slowPathHits} dropped:${droppedCells}) ` +
                 `in ${durationMs}ms`,

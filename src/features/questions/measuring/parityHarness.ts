@@ -44,6 +44,9 @@ import type { MeasuringCategory } from "./measuringTypes";
 import { LINE_MEASURING_CATEGORIES } from "./measuringCategories";
 import { selectWindowFeatures } from "./lineMeasuringGeometry";
 import { simplifyPolygonBufferFeatures } from "./lineBufferComputation";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("parityHarness");
 
 // ─── Async helpers ────────────────────────────────────────────────────────
 
@@ -51,7 +54,7 @@ import { simplifyPolygonBufferFeatures } from "./lineBufferComputation";
 const yieldToUI = () => new Promise<void>((r) => setTimeout(r, 0));
 
 function harnessLog(...args: unknown[]): void {
-    console.log(`[parityHarness]`, ...args);
+    log.debug(``, ...args);
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -399,9 +402,7 @@ function computeSymDiffRatio(
     // floating-point epsilon after unprojection; polyclip-ts treats those as
     // invalid. Also filter rings with < 3 distinct coords.
     if (!isValidPolyClipInput(a) || !isValidPolyClipInput(b)) {
-        console.warn(
-            "[parityHarness] symDiff skipped: geometry invalid for polyclip-ts",
-        );
+        log.warn("symDiff skipped: geometry invalid for polyclip-ts");
         return NaN;
     }
 
@@ -419,7 +420,7 @@ function computeSymDiffRatio(
         const interArea = geomAreaM2(i as unknown as Polygon | MultiPolygon);
         return (unionArea - interArea) / unionArea;
     } catch (err) {
-        console.warn("[parityHarness] symDiff polyclip-ts failed:", err);
+        log.warn("symDiff polyclip-ts failed:", err);
         return NaN;
     }
 }

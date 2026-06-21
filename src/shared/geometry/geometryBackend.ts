@@ -11,6 +11,9 @@ import type {
 import { APP_CONFIG } from "@/config/appConfig";
 import { jsGeometryBackend } from "./jsGeometryBackend";
 import { geosGeometryBackend } from "./geosGeometryBackend";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("geometryBackend");
 
 // ─── Interface ───────────────────────────────────────────────────────────
 
@@ -155,8 +158,8 @@ export function getGeometryBackend(): GeometryBackend {
     // ── Force JS ────────────────────────────────────────────────
     if (configBackend === "js") {
         _backend = jsGeometryBackend;
-        console.log(
-            '[geometryBackend] backend=js reason=config (backend forced to "js" in APP_CONFIG)',
+        log.debug(
+            'backend=js reason=config (backend forced to "js" in APP_CONFIG)',
         );
         return _backend;
     }
@@ -183,14 +186,14 @@ export function getGeometryBackend(): GeometryBackend {
     if (configBackend === "geos") {
         if (nativeAvailable) {
             _backend = geosGeometryBackend;
-            console.log(
-                '[geometryBackend] backend=geos reason=config (backend forced to "geos" in APP_CONFIG)',
+            log.debug(
+                'backend=geos reason=config (backend forced to "geos" in APP_CONFIG)',
             );
             _checkAbiMismatch(nativeAbi);
             return _backend;
         }
-        console.warn(
-            "[geometryBackend] backend=js reason=fallback — native-geometry module not found. " +
+        log.warn(
+            "backend=js reason=fallback — native-geometry module not found. " +
                 "Rebuild the dev client (expo prebuild + run:ios/android) to enable GEOS.",
         );
         _backend = jsGeometryBackend;
@@ -200,15 +203,15 @@ export function getGeometryBackend(): GeometryBackend {
     // ── Auto ────────────────────────────────────────────────────
     if (nativeAvailable) {
         _backend = geosGeometryBackend;
-        console.log(
-            "[geometryBackend] backend=geos reason=auto (native-geometry module available)",
+        log.debug(
+            "backend=geos reason=auto (native-geometry module available)",
         );
         _checkAbiMismatch(nativeAbi);
         return _backend;
     }
 
-    console.log(
-        "[geometryBackend] backend=js reason=unavailable (native-geometry module not found)",
+    log.debug(
+        "backend=js reason=unavailable (native-geometry module not found)",
     );
     _backend = jsGeometryBackend;
     return _backend;
@@ -233,8 +236,8 @@ function _checkAbiMismatch(nativeAbi: number): void {
 
     if (nativeAbi < expected) {
         _abiWarned = true;
-        console.warn(
-            `[geometryBackend] native-geometry binary is stale (abi ${nativeAbi} < expected ${expected}) — ` +
+        log.warn(
+            `native-geometry binary is stale (abi ${nativeAbi} < expected ${expected}) — ` +
                 "rebuild the dev client (expo prebuild + run:ios/android) to enable all GEOS ops. " +
                 "Buffer is still native; overlay ops will fall back to JS per op.",
         );

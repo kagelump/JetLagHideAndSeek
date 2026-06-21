@@ -1,6 +1,7 @@
 import { multiLineString } from "@turf/helpers";
 
 import { type Position } from "@/shared/geojson";
+import { createLogger } from "@/shared/logger";
 import {
     getGeometryBackend,
     type GeometryBackend,
@@ -27,6 +28,8 @@ import {
     simplifyPolygonCoords,
     lineLengthMeters,
 } from "./lineDistanceComputation";
+
+const log = createLogger("lineBuffer");
 
 // ─── Buffer cache ──────────────────────────────────────────────────────────
 
@@ -194,8 +197,8 @@ export function applyBufferBudget(
         const coords = working.reduce((s, l) => s + l.length, 0);
         if (segs <= MAX_BUFFER_SEGMENTS && coords <= MAX_BUFFER_COORDS) {
             if (round > 0) {
-                console.log(
-                    `[lineBuffer] budget met after ${round} escalation round(s): ` +
+                log.debug(
+                    `budget met after ${round} escalation round(s): ` +
                         `${segs} segs, ${coords} coords`,
                 );
             }
@@ -209,8 +212,8 @@ export function applyBufferBudget(
     }
 
     // Final round: enforce hard caps by keeping the largest features.
-    console.log(
-        `[lineBuffer] budget escalation exhausted (6 rounds), ` +
+    log.debug(
+        `budget escalation exhausted (6 rounds), ` +
             `enforcing hard cap: ${working.length} → ${MAX_BUFFER_SEGMENTS} segs`,
     );
     // Sort by coordinate count descending (longest features first).
@@ -294,15 +297,15 @@ export function computeLineBuffer(
                 );
                 if (buf) polygonBuffers.push(buf);
             } catch (err) {
-                console.warn(
-                    `[lineBuffer] [${getGeometryBackend().name}] polygon buffer failed:`,
+                log.warn(
+                    `[${getGeometryBackend().name}] polygon buffer failed:`,
                     err,
                 );
             }
         }
 
-        console.log(
-            `[lineBuffer] [${getGeometryBackend().name}] polygon path: ` +
+        log.debug(
+            `[${getGeometryBackend().name}] polygon path: ` +
                 `${polyFeatures.length} input polys → ${prepared.length} ` +
                 `prepared → ${polygonBuffers.length} buffers`,
         );
@@ -344,15 +347,15 @@ export function computeLineBuffer(
         }
 
         if (droppedShort > 0) {
-            console.log(
-                `[lineBuffer] dropped ${droppedShort} short features (< ${minFeatureLenM.toFixed(0)}m)`,
+            log.debug(
+                `dropped ${droppedShort} short features (< ${minFeatureLenM.toFixed(0)}m)`,
             );
         }
 
         const totalCoords = lines.reduce((sum, l) => sum + l.length, 0);
 
-        console.log(
-            `[lineBuffer] ${lineFeatures.length} features in window, ` +
+        log.debug(
+            `${lineFeatures.length} features in window, ` +
                 `${lines.length} segments, ${totalCoords} total coords`,
         );
 
@@ -393,8 +396,8 @@ export function computeLineBuffer(
                     0,
                 );
 
-                console.log(
-                    `[lineBuffer] after dedup: ${cleanBufLines.length} segs, ` +
+                log.debug(
+                    `after dedup: ${cleanBufLines.length} segs, ` +
                         `${cleanCoords} coords → simplify(${simplifyTol.toFixed(0)}m): ` +
                         `${simpleCoords} coords`,
                 );
@@ -409,10 +412,7 @@ export function computeLineBuffer(
                     try {
                         merged = multiLineString(budgetedLines);
                     } catch (err) {
-                        console.warn(
-                            `[lineBuffer] multiLineString failed:`,
-                            err,
-                        );
+                        log.warn(`multiLineString failed:`, err);
                     }
 
                     if (merged) {
@@ -425,15 +425,15 @@ export function computeLineBuffer(
                                     BUFFER_STEPS,
                                 );
                         } catch (err) {
-                            console.warn(
-                                `[lineBuffer] [${getGeometryBackend().name}] buffer failed:`,
+                            log.warn(
+                                `[${getGeometryBackend().name}] buffer failed:`,
                                 err,
                             );
                         }
                         const bufferMs = performance.now() - t0;
                         if (lineBufferResult) {
-                            console.log(
-                                `[lineBuffer] [${getGeometryBackend().name}] line buffer done: ` +
+                            log.debug(
+                                `[${getGeometryBackend().name}] line buffer done: ` +
                                     `${lineBufferResult.geometry.type} in ${bufferMs.toFixed(0)}ms`,
                             );
                         }
@@ -490,7 +490,7 @@ export function computeLineBuffer(
         const dissolved = dissolveBuffersByBinaryUnion(allBuffers, backend);
         if (dissolved) return dissolved;
     } catch (err) {
-        console.warn(`[lineBuffer] binary-union dissolve failed:`, err);
+        log.warn(`binary-union dissolve failed:`, err);
     }
 
     // Fallback: un-dissolved merge. Correct coverage; heavier downstream, and

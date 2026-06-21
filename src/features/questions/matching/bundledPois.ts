@@ -1,5 +1,8 @@
 import type { Bbox } from "@/shared/geojson";
 import type { MatchingCategory, OsmFeature } from "./matchingTypes";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("bundledPois");
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -87,8 +90,8 @@ function loadRegionRaw(regionId: string): RawRegion | null {
     // Schema version guard — a mismatched asset won't crash the app.
     if (raw.schemaVersion !== 1) {
         if (__DEV__) {
-            console.warn(
-                `[bundledPois] Region "${regionId}" has unsupported schemaVersion ${raw.schemaVersion} — treating as unavailable.`,
+            log.warn(
+                `Region "${regionId}" has unsupported schemaVersion ${raw.schemaVersion} — treating as unavailable.`,
             );
         }
         regionCache.set(regionId, null);
@@ -202,8 +205,8 @@ export function getBundledCategoryFeatures(
         (col.nameEn && col.nameEn.length !== col.count)
     ) {
         if (__DEV__) {
-            console.error(
-                `[bundledPois] Category "${regionId}:${category}" has inconsistent ` +
+            log.error(
+                `Category "${regionId}:${category}" has inconsistent ` +
                     `column lengths (count=${col.count}, lon=${col.lon.length}, ` +
                     `lat=${col.lat.length}) — treating as empty.`,
             );

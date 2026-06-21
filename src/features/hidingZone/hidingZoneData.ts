@@ -1,6 +1,9 @@
 import type { HidingZonePreset } from "./hidingZoneTypes";
 import type { Bbox } from "@/shared/geojson";
 import { bboxIntersects } from "@/shared/geojson";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("hidingZoneData");
 
 // ─── Module-level cache ────────────────────────────────────────────────────
 
@@ -68,8 +71,8 @@ export function registerTransitSource(
         }
     }
 
-    console.log(
-        `[hidingZoneData] registerTransitSource: ${packId} with ${presetSummaries.length} preset summaries`,
+    log.debug(
+        `registerTransitSource: ${packId} with ${presetSummaries.length} preset summaries`,
     );
     packTransitSources.set(packId, { packId, path, presetSummaries });
     // Clear any cached presets for this pack so they reload with new data.
@@ -214,8 +217,8 @@ async function loadPackTransitBundle(
         const lastSep = fullPath.lastIndexOf("/");
         const dir = fullPath.slice(0, lastSep);
         const name = fullPath.slice(lastSep + 1);
-        console.log(
-            `[hidingZoneData] Loading pack transit bundle: ${source.packId} from ${dir}/${name}`,
+        log.debug(
+            `Loading pack transit bundle: ${source.packId} from ${dir}/${name}`,
         );
         const raw = await new File(dir, name).text();
         const bundle = JSON.parse(raw);
@@ -224,8 +227,8 @@ async function loadPackTransitBundle(
                 ...p,
                 id: `${source.packId}:${p.id}`,
             })) ?? [];
-        console.log(
-            `[hidingZoneData] ${source.packId}: ${presets.length} presets loaded, ` +
+        log.debug(
+            `${source.packId}: ${presets.length} presets loaded, ` +
                 `total stations: ${presets.reduce((s, p) => s + (p.stations?.length ?? 0), 0)}`,
         );
 
@@ -233,10 +236,7 @@ async function loadPackTransitBundle(
         bundleCache.set(source.packId, presets);
         return presets;
     } catch (err) {
-        console.error(
-            `[hidingZoneData] Failed to load pack transit bundle ${source.packId}:`,
-            err,
-        );
+        log.error(`Failed to load pack transit bundle ${source.packId}:`, err);
         bundleCache.set(source.packId, []);
         return [];
     }

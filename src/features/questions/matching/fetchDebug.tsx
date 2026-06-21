@@ -9,6 +9,9 @@ import {
 import { StyleSheet, Text } from "react-native";
 
 import { colors } from "@/theme/colors";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("fetchDebug");
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -165,8 +168,8 @@ export function useReportFetchDebug(): (info: FetchDebugInfo) => void {
     const ctx = useContext(FetchDebugContext);
     if (!ctx) {
         if (__DEV__) {
-            console.warn(
-                "[fetchDebug] useReportFetchDebug called outside a <FetchDebugScope>. " +
+            log.warn(
+                "useReportFetchDebug called outside a <FetchDebugScope>. " +
                     "Wrap the question sheet in <FetchDebugScope> so the fetch-debug " +
                     "footer renders.",
             );

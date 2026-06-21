@@ -13,6 +13,9 @@ import {
     safeParseQuestions,
     type AppStateV1,
 } from "@/state/appState";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("persistence");
 
 const LEGACY_APP_STATE_KEY = "app-state:v1";
 const APP_STATE_METADATA_KEY = "app-state:metadata:v1";
@@ -49,7 +52,7 @@ export async function persistAppState(state: AppStateV1): Promise<void> {
         await AsyncStorage.multiSet(serializeSlices(state));
         await AsyncStorage.removeItem(LEGACY_APP_STATE_KEY);
     } catch (e) {
-        if (__DEV__) console.warn("Failed to persist app state:", e);
+        if (__DEV__) log.warn("Failed to persist app state:", e);
     }
 }
 
@@ -69,7 +72,7 @@ export async function clearPersistedAppState(): Promise<void> {
             ...APP_STATE_SLICE_KEYS,
         ]);
     } catch (e) {
-        if (__DEV__) console.warn("Failed to clear persisted state:", e);
+        if (__DEV__) log.warn("Failed to clear persisted state:", e);
     }
 }
 
@@ -78,7 +81,7 @@ async function loadSplitPersistedAppState(): Promise<AppStateV1 | null> {
     try {
         entries = await AsyncStorage.multiGet([...APP_STATE_SLICE_KEYS]);
     } catch (e) {
-        if (__DEV__) console.warn("Failed to read persisted state slices:", e);
+        if (__DEV__) log.warn("Failed to read persisted state slices:", e);
         return null;
     }
 
@@ -153,7 +156,7 @@ function tryParseJson(raw: string | null, label: string): unknown | null {
         return JSON.parse(raw) as unknown;
     } catch (e) {
         if (__DEV__) {
-            console.warn(`Invalid JSON in slice "${label}", using default:`, e);
+            log.warn(`Invalid JSON in slice "${label}", using default:`, e);
         }
         return null;
     }
@@ -176,7 +179,7 @@ function safeParseMetadata(value: unknown): {
         return { createdAt: v.createdAt, updatedAt: v.updatedAt };
     }
     const now = new Date().toISOString();
-    if (__DEV__) console.warn("Invalid metadata, using current timestamp");
+    if (__DEV__) log.warn("Invalid metadata, using current timestamp");
     return { createdAt: now, updatedAt: now };
 }
 
@@ -190,9 +193,7 @@ async function resolvePlayAreaSlice(
 ): Promise<AppStateV1["playArea"]> {
     if (raw === null) {
         if (__DEV__)
-            console.warn(
-                "Play area reference is missing, using unset play area",
-            );
+            log.warn("Play area reference is missing, using unset play area");
         return { ...unsetPlayArea };
     }
 
@@ -201,10 +202,7 @@ async function resolvePlayAreaSlice(
         parsed = JSON.parse(raw);
     } catch (e) {
         if (__DEV__) {
-            console.warn(
-                "Invalid JSON in play area reference, using default:",
-                e,
-            );
+            log.warn("Invalid JSON in play area reference, using default:", e);
         }
         await removeItem(APP_STATE_PLAY_AREA_KEY);
         return { ...unsetPlayArea };
@@ -218,9 +216,7 @@ async function resolvePlayAreaSlice(
 
     // Data is valid JSON but not a valid play area reference — clear the key
     if (__DEV__) {
-        console.warn(
-            "Invalid play area reference shape, using unset play area",
-        );
+        log.warn("Invalid play area reference shape, using unset play area");
     }
     await removeItem(APP_STATE_PLAY_AREA_KEY);
     return { ...unsetPlayArea };
@@ -259,7 +255,7 @@ async function readJson(key: string): Promise<unknown | null> {
         if (raw === null || raw === undefined) return null;
         return JSON.parse(raw) as unknown;
     } catch (e) {
-        if (__DEV__) console.warn(`Failed to read JSON from key "${key}":`, e);
+        if (__DEV__) log.warn(`Failed to read JSON from key "${key}":`, e);
         await removeItem(key);
         return null;
     }
@@ -269,6 +265,6 @@ async function removeItem(key: string) {
     try {
         await AsyncStorage.removeItem(key);
     } catch (e) {
-        if (__DEV__) console.warn(`Failed to remove key "${key}":`, e);
+        if (__DEV__) log.warn(`Failed to remove key "${key}":`, e);
     }
 }

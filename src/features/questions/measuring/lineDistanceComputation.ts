@@ -13,6 +13,9 @@ import { APP_CONFIG, MEASURING_LINE } from "@/config/appConfig";
 import type { Feature, MultiLineString, Polygon, MultiPolygon } from "geojson";
 import type { MeasuringCategory } from "./measuringTypes";
 import type { LineOrPolygonFeature } from "./lineMeasuringGeometry";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("lineDistance");
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -297,8 +300,8 @@ export function computeLineDistance(
         // Promote to most-recently-used.
         distanceCache.delete(key);
         distanceCache.set(key, cached);
-        console.log(
-            `[lineDistance] cache hit for ${category} @ ${center[0].toFixed(6)},${center[1].toFixed(6)}`,
+        log.debug(
+            `cache hit for ${category} @ ${center[0].toFixed(6)},${center[1].toFixed(6)}`,
         );
         return cached;
     }
@@ -313,8 +316,8 @@ export function computeLineDistance(
         return null;
     }
     const totalFeatures = bundles.reduce((s, b) => s + b.features.length, 0);
-    console.log(
-        `[lineDistance] bundle load: ${totalFeatures} features in ${tLoadMs.toFixed(0)}ms`,
+    log.debug(
+        `bundle load: ${totalFeatures} features in ${tLoadMs.toFixed(0)}ms`,
     );
 
     const marginDeg = MEASURING_LINE.queryMarginM * DEG_PER_METER;
@@ -370,8 +373,8 @@ export function computeLineDistance(
         }
     }
     const tFilterMs = performance.now() - tFilter0;
-    console.log(
-        `[lineDistance] bbox filter: ${bboxHits} hits, ${bboxMisses} misses ` +
+    log.debug(
+        `bbox filter: ${bboxHits} hits, ${bboxMisses} misses ` +
             `→ ${lines.length} rings in ${tFilterMs.toFixed(0)}ms`,
     );
 
@@ -422,8 +425,8 @@ export function computeLineDistance(
         0,
     );
 
-    console.log(
-        `[lineDistance] clean: ${lines.length}→${cleanLines.length} rings ` +
+    log.debug(
+        `clean: ${lines.length}→${cleanLines.length} rings ` +
             `(${tCleanMs.toFixed(0)}ms), ` +
             `simplify: ${preSimplifyCoords}→${postSimplifyCoords} coords ` +
             `(${tSimplifyMs.toFixed(0)}ms)`,
@@ -437,8 +440,8 @@ export function computeLineDistance(
             point(center),
         );
     } catch (err) {
-        console.warn(
-            `[lineDistance] nearestPointOnLine failed for category=${category} center=${center}:`,
+        log.warn(
+            `nearestPointOnLine failed for category=${category} center=${center}:`,
             err,
         );
         distanceCache.set(key, null);
@@ -446,8 +449,8 @@ export function computeLineDistance(
     }
     const turfMs = performance.now() - t0;
 
-    console.log(
-        `[lineDistance] ${preSimplifyCoords} coords → simplify(${MEASURING_LINE.nearestPointSimplifyM}m): ` +
+    log.debug(
+        `${preSimplifyCoords} coords → simplify(${MEASURING_LINE.nearestPointSimplifyM}m): ` +
             `${postSimplifyCoords} coords, turf in ${turfMs.toFixed(0)}ms`,
     );
     const nearestPoint = snapped.geometry.coordinates as Position;

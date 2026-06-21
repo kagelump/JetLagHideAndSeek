@@ -11,6 +11,9 @@ import {
     type OsmMatchingCacheSource,
 } from "./osmMatchingCache";
 import type { OsmFeatureWithDistance } from "./osmMatching";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("prog");
 
 const PROGRESSIVE_MAX_RADIUS_METERS = MATCHING.progressiveMaxRadiusM;
 const MIN_INITIAL_RADIUS_METERS = MATCHING.minInitialRadiusM;
@@ -81,8 +84,8 @@ export async function searchMatchingFeaturesProgressive(
     let isFirstIteration = true;
     let iter = 0;
 
-    console.log(
-        `[prog] start category=${category} center=[${lon.toFixed(4)},${lat.toFixed(4)}] ` +
+    log.debug(
+        `start category=${category} center=[${lon.toFixed(4)},${lat.toFixed(4)}] ` +
             `stationR=${stationRadiusMeters} initialR=${currentRadius} ` +
             `unbounded=${options?.unbounded ?? false} forceRefresh=${options?.forceRefresh ?? false}`,
     );
@@ -95,8 +98,8 @@ export async function searchMatchingFeaturesProgressive(
         );
         const doForceRefresh = isFirstIteration && options?.forceRefresh;
 
-        console.log(
-            `[prog] iter=${iter} radius=${effectiveRadius} forceRefresh=${doForceRefresh}`,
+        log.debug(
+            `iter=${iter} radius=${effectiveRadius} forceRefresh=${doForceRefresh}`,
         );
 
         const result = await findMatchingFeaturesWithIndex(category, center, {
@@ -108,13 +111,13 @@ export async function searchMatchingFeaturesProgressive(
         });
         isFirstIteration = false;
 
-        console.log(
-            `[prog] iter=${iter} cacheResult: ${result.candidates.length} raw candidates, source=${result.source}`,
+        log.debug(
+            `iter=${iter} cacheResult: ${result.candidates.length} raw candidates, source=${result.source}`,
         );
 
         // Honour abort signals between iterations.
         if (options?.signal?.aborted) {
-            console.log(`[prog] iter=${iter} signal aborted, throwing`);
+            log.debug(`iter=${iter} signal aborted, throwing`);
             const abortError = new Error("Aborted");
             abortError.name = "AbortError";
             throw abortError;
@@ -127,16 +130,16 @@ export async function searchMatchingFeaturesProgressive(
             (c) => c.distanceMeters <= effectiveRadius,
         );
 
-        console.log(
-            `[prog] iter=${iter} inRadius=${inRadius.length} ` +
+        log.debug(
+            `iter=${iter} inRadius=${inRadius.length} ` +
                 `(filtered from ${result.candidates.length} raw)`,
         );
 
         // Admin boundary containment is binary — expanding the radius never
         // finds more matches.  Short-circuit on the first iteration.
         if (isAdminBoundaryCategory(category)) {
-            console.log(
-                `[prog] iter=${iter} STOP: admin boundary (${inRadius.length} matches)`,
+            log.debug(
+                `iter=${iter} STOP: admin boundary (${inRadius.length} matches)`,
             );
             return {
                 candidates: inRadius,
@@ -156,8 +159,8 @@ export async function searchMatchingFeaturesProgressive(
             playAreaBbox !== null &&
             searchCoversBbox(lon, lat, effectiveRadius, playAreaBbox)
         ) {
-            console.log(
-                `[prog] iter=${iter} STOP: covers play area, returning ${inRadius.length}`,
+            log.debug(
+                `iter=${iter} STOP: covers play area, returning ${inRadius.length}`,
             );
             return {
                 candidates: inRadius,
@@ -172,8 +175,8 @@ export async function searchMatchingFeaturesProgressive(
         // Stop if we have more than 10 in-radius candidates — the search
         // area is already dense enough for a good matching question.
         if (inRadius.length > 10) {
-            console.log(
-                `[prog] iter=${iter} STOP: >10 candidates (${inRadius.length}), returning`,
+            log.debug(
+                `iter=${iter} STOP: >10 candidates (${inRadius.length}), returning`,
             );
             return {
                 candidates: inRadius,
@@ -187,8 +190,8 @@ export async function searchMatchingFeaturesProgressive(
 
         // Stop at the hard cap to prevent runaway expansion.
         if (effectiveRadius >= PROGRESSIVE_MAX_RADIUS_METERS) {
-            console.log(
-                `[prog] iter=${iter} STOP: hard cap ${PROGRESSIVE_MAX_RADIUS_METERS}, returning ${inRadius.length}`,
+            log.debug(
+                `iter=${iter} STOP: hard cap ${PROGRESSIVE_MAX_RADIUS_METERS}, returning ${inRadius.length}`,
             );
             return {
                 candidates: inRadius,

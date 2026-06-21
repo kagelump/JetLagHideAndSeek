@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { InteractionManager } from "react-native";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("useDeferredComputation");
 
 /**
  * Result of {@link useDeferredComputation}.
@@ -87,17 +90,14 @@ export function useDeferredComputation<T>(
         // Cache hit → adopt synchronously, no loading state.
         const hit = getCachedRef.current ? getCachedRef.current(key) : null;
         if (hit !== null) {
-            console.log(
-                "[useDeferredComputation] sync cache HIT — key:",
-                key.slice(0, 80),
-            );
+            log.debug("sync cache HIT — key:", key.slice(0, 80));
             setState({ value: hit, isComputing: false });
             return;
         }
 
         const computeId = ++computeIdRef.current;
-        console.log(
-            `[useDeferredComputation] cache MISS — scheduling computeId=${computeId}, ` +
+        log.debug(
+            `cache MISS — scheduling computeId=${computeId}, ` +
                 `key=${key.slice(0, 80)}`,
         );
 
@@ -111,8 +111,8 @@ export function useDeferredComputation<T>(
 
         const handle = InteractionManager.runAfterInteractions(() => {
             if (computeId !== computeIdRef.current) {
-                console.log(
-                    `[useDeferredComputation] runAfterInteractions STALE ` +
+                log.debug(
+                    `runAfterInteractions STALE ` +
                         `(computeId=${computeId}, current=${computeIdRef.current})`,
                 );
                 return;
@@ -124,14 +124,14 @@ export function useDeferredComputation<T>(
             rafId = requestAnimationFrame(() => {
                 rafId = null;
                 if (computeId !== computeIdRef.current) return;
-                console.log(
-                    `[useDeferredComputation] runAfterInteractions START compute ` +
+                log.debug(
+                    `runAfterInteractions START compute ` +
                         `(computeId=${computeId}, elapsed=${(performance.now() - t0).toFixed(0)}ms)`,
                 );
                 const value = computeRef.current();
                 const dt = (performance.now() - t0).toFixed(0);
-                console.log(
-                    `[useDeferredComputation] runAfterInteractions DONE compute ` +
+                log.debug(
+                    `runAfterInteractions DONE compute ` +
                         `(computeId=${computeId}, elapsed=${dt}ms)`,
                 );
                 if (computeId !== computeIdRef.current) return;

@@ -25,6 +25,9 @@ import {
 } from "./osmMatching";
 import { clearBundledRegionCache } from "./bundledPois";
 import { clearSpatialIndexCache, querySpatialIndex } from "./spatialIndex";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("osmMatchingCache");
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -362,10 +365,7 @@ function revalidateInBackground(
         })
         .catch((err) => {
             // Keep serving the stale entry when Overpass is unavailable.
-            console.warn(
-                "[osmMatchingCache] background revalidation failed:",
-                err,
-            );
+            log.warn("background revalidation failed:", err);
             return entry.features;
         })
         .finally(() => {
@@ -609,7 +609,7 @@ export async function findMatchingFeaturesWithIndex(
         );
         const qDurationMs = Date.now() - qT0;
         if (candidates !== null) {
-            console.log(
+            log.debug(
                 `[spatialIndex] ${category} ${coveringRegion} r=${requestedRadius}m → ` +
                     `${candidates.length} candidates in ${qDurationMs}ms`,
             );
@@ -627,7 +627,7 @@ export async function findMatchingFeaturesWithIndex(
                 },
             };
         }
-        console.log(
+        log.debug(
             `[spatialIndex] ${category} ${coveringRegion} → null (unavailable), falling back to Overpass`,
         );
     }
@@ -643,7 +643,7 @@ export async function findMatchingFeaturesWithIndex(
         const qDurationMs = Date.now() - qT0;
 
         if (candidates !== null) {
-            console.log(
+            log.debug(
                 `[adminBoundary] ${category} osmLevel=${adminLevel} → ` +
                     `${candidates.length} candidates in ${qDurationMs}ms`,
             );
@@ -661,14 +661,14 @@ export async function findMatchingFeaturesWithIndex(
         }
         // null means bundle unavailable (e.g. point outside extract bbox) —
         // fall through to Overpass.
-        console.log(
+        log.debug(
             `[adminBoundary] ${category} → null (outside bundle bbox), falling back to Overpass`,
         );
     }
 
     // Fall back to Overpass caching path.
     if (!coveringRegion) {
-        console.log(
+        log.debug(
             `[spatialIndex] ${category} no covering region, falling back to Overpass`,
         );
     }

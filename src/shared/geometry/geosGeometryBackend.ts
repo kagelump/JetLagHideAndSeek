@@ -37,6 +37,9 @@ import {
     projectGeometry,
     unprojectGeometry,
 } from "./bufferProjection";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("geos");
 
 // ─── Overlay helpers (G5) ─────────────────────────────────────────────────
 
@@ -108,7 +111,7 @@ function binaryGeosOp(
     const tDecodeMs = __DEV__ ? performance.now() - tDecode0 : 0;
 
     if (__DEV__) {
-        console.log(
+        log.debug(
             `[geosPerf] encode=${tEncodeMs.toFixed(2)}ms ` +
                 `native=${tNativeMs.toFixed(2)}ms ` +
                 `decode=${tDecodeMs.toFixed(2)}ms ` +
@@ -149,7 +152,7 @@ const _fallbackWarned = new Set<string>();
 function warnOncePerOp(opName: string): void {
     if (_fallbackWarned.has(opName)) return;
     _fallbackWarned.add(opName);
-    console.warn(
+    log.warn(
         `[geometryBackend] native ${opName} missing — using JS fallback. ` +
             "Rebuild the dev client (expo prebuild + run:ios/android) to enable GEOS overlay ops.",
     );
@@ -267,7 +270,7 @@ function bufferFeature(
                 : projSanity.nonFinite > 0
                   ? "projection introduced non-finite coords (AEQD centroid degenerate?)"
                   : "ring closure lost (not NaN-related)";
-        console.warn(
+        log.warn(
             `[geosSanity] ${geom.type} will be REJECTED by native GEOS: ` +
                 `projected nonFinite=${projSanity.nonFinite}/${projSanity.total} ` +
                 `unclosedRings=${projSanity.unclosedRings}/${projSanity.rings}; ` +
@@ -299,7 +302,7 @@ function bufferFeature(
     const unprojected = unprojectGeometry(buffered, proj);
 
     if (__DEV__) {
-        console.log(
+        log.debug(
             `[geosPerf] encode=${tEncodeMs.toFixed(2)}ms ` +
                 `native=${tNativeMs.toFixed(2)}ms ` +
                 `decode=${tDecodeMs.toFixed(2)}ms ` +
@@ -335,8 +338,8 @@ export const geosGeometryBackend: GeometryBackend = {
                 }
                 const ms = performance.now() - t0;
                 if (__DEV__) {
-                    console.log(
-                        `[geos] bufferMeters FC(${geom.features.length}) r=${meters} qs=${quadrantSegments} → ` +
+                    log.debug(
+                        `bufferMeters FC(${geom.features.length}) r=${meters} qs=${quadrantSegments} → ` +
                             `${results.length} features (returning ${results[0]?.geometry.type ?? "null"}) in ${ms.toFixed(0)}ms`,
                     );
                 }
@@ -351,16 +354,16 @@ export const geosGeometryBackend: GeometryBackend = {
             );
             const ms = performance.now() - t0;
             if (__DEV__) {
-                console.log(
-                    `[geos] bufferMeters ${geom.geometry?.type ?? "?"} r=${meters} qs=${quadrantSegments} → ` +
+                log.debug(
+                    `bufferMeters ${geom.geometry?.type ?? "?"} r=${meters} qs=${quadrantSegments} → ` +
                         `${result?.geometry.type ?? "null"} in ${ms.toFixed(0)}ms`,
                 );
             }
             return result;
         } catch (err) {
             const ms = performance.now() - t0;
-            console.warn(
-                `[geos] bufferMeters failed (${ms.toFixed(0)}ms), falling back to JS:`,
+            log.warn(
+                `bufferMeters failed (${ms.toFixed(0)}ms), falling back to JS:`,
                 err,
             );
             return jsGeometryBackend.bufferMeters(
@@ -389,8 +392,8 @@ export const geosGeometryBackend: GeometryBackend = {
             if (outcome.status === "native") {
                 const ms = performance.now() - t0;
                 if (__DEV__) {
-                    console.log(
-                        `[geos] difference ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                    log.debug(
+                        `difference ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                     );
                 }
                 return outcome.feature;
@@ -399,15 +402,15 @@ export const geosGeometryBackend: GeometryBackend = {
             const jsResult = jsGeometryBackend.difference(a, b);
             const ms = performance.now() - t0;
             if (__DEV__) {
-                console.log(
-                    `[geos] difference → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                log.debug(
+                    `difference → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                 );
             }
             return jsResult;
         } catch (err) {
             const ms = performance.now() - t0;
-            console.warn(
-                `[geos] difference failed (${ms.toFixed(0)}ms), falling back to JS:`,
+            log.warn(
+                `difference failed (${ms.toFixed(0)}ms), falling back to JS:`,
                 err,
             );
             return jsGeometryBackend.difference(a, b);
@@ -427,8 +430,8 @@ export const geosGeometryBackend: GeometryBackend = {
             if (outcome.status === "native") {
                 const ms = performance.now() - t0;
                 if (__DEV__) {
-                    console.log(
-                        `[geos] union ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                    log.debug(
+                        `union ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                     );
                 }
                 return outcome.feature;
@@ -436,15 +439,15 @@ export const geosGeometryBackend: GeometryBackend = {
             const jsResult = jsGeometryBackend.union(a, b);
             const ms = performance.now() - t0;
             if (__DEV__) {
-                console.log(
-                    `[geos] union → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                log.debug(
+                    `union → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                 );
             }
             return jsResult;
         } catch (err) {
             const ms = performance.now() - t0;
-            console.warn(
-                `[geos] union failed (${ms.toFixed(0)}ms), falling back to JS:`,
+            log.warn(
+                `union failed (${ms.toFixed(0)}ms), falling back to JS:`,
                 err,
             );
             return jsGeometryBackend.union(a, b);
@@ -464,8 +467,8 @@ export const geosGeometryBackend: GeometryBackend = {
             if (outcome.status === "native") {
                 const ms = performance.now() - t0;
                 if (__DEV__) {
-                    console.log(
-                        `[geos] intersection ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                    log.debug(
+                        `intersection ${a.geometry.type} vs ${b.geometry.type} → ${outcome.feature ? outcome.feature.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                     );
                 }
                 return outcome.feature;
@@ -473,15 +476,15 @@ export const geosGeometryBackend: GeometryBackend = {
             const jsResult = jsGeometryBackend.intersection(a, b);
             const ms = performance.now() - t0;
             if (__DEV__) {
-                console.log(
-                    `[geos] intersection → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                log.debug(
+                    `intersection → native unavailable, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                 );
             }
             return jsResult;
         } catch (err) {
             const ms = performance.now() - t0;
-            console.warn(
-                `[geos] intersection failed (${ms.toFixed(0)}ms), falling back to JS:`,
+            log.warn(
+                `intersection failed (${ms.toFixed(0)}ms), falling back to JS:`,
                 err,
             );
             return jsGeometryBackend.intersection(a, b);
@@ -517,8 +520,8 @@ export const geosGeometryBackend: GeometryBackend = {
                 const jsResult = jsGeometryBackend.unaryUnion(a);
                 const ms = performance.now() - t0;
                 if (__DEV__) {
-                    console.log(
-                        `[geos] unaryUnion → native null, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
+                    log.debug(
+                        `unaryUnion → native null, JS fallback → ${jsResult ? jsResult.geometry.type : "null"} in ${ms.toFixed(0)}ms`,
                     );
                 }
                 return jsResult;
@@ -529,7 +532,7 @@ export const geosGeometryBackend: GeometryBackend = {
             const tDecodeMs = __DEV__ ? performance.now() - tDecode0 : 0;
 
             if (__DEV__) {
-                console.log(
+                log.debug(
                     `[geosPerf] encode=${tEncodeMs.toFixed(2)}ms ` +
                         `native=${tNativeMs.toFixed(2)}ms ` +
                         `decode=${tDecodeMs.toFixed(2)}ms ` +
@@ -546,15 +549,15 @@ export const geosGeometryBackend: GeometryBackend = {
             };
             const ms = performance.now() - t0;
             if (__DEV__) {
-                console.log(
-                    `[geos] unaryUnion ${geom.type} → ${result.geometry.type} in ${ms.toFixed(0)}ms`,
+                log.debug(
+                    `unaryUnion ${geom.type} → ${result.geometry.type} in ${ms.toFixed(0)}ms`,
                 );
             }
             return result;
         } catch (err) {
             const ms = performance.now() - t0;
-            console.warn(
-                `[geos] unaryUnion failed (${ms.toFixed(0)}ms), falling back to JS:`,
+            log.warn(
+                `unaryUnion failed (${ms.toFixed(0)}ms), falling back to JS:`,
                 err,
             );
             return jsGeometryBackend.unaryUnion(a);

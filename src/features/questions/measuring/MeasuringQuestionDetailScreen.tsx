@@ -20,6 +20,9 @@ import { MeasuringCategoryList } from "./MeasuringCategoryList";
 import { useEnsureMeasuringBundles } from "./useEnsureMeasuringBundles";
 import { useQuestionMapRenderState } from "@/features/questions/questionGeometry";
 import type { MeasuringCategory, MeasuringQuestion } from "./measuringTypes";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("MeasuringDetail");
 
 type MeasuringQuestionDetailScreenProps = {
     question: MeasuringQuestion;
@@ -64,10 +67,7 @@ function MeasuringAutoResult({
         try {
             return distanceResolver(question.center, question.category);
         } catch (err) {
-            console.warn(
-                `[MeasuringAutoResult] distance resolver failed:`,
-                err,
-            );
+            log.warn(`[MeasuringAutoResult] distance resolver failed:`, err);
             return null;
         }
     }, [

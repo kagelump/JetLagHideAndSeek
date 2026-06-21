@@ -36,6 +36,9 @@ import {
     transitPayloadSchema,
     metaPayloadSchema,
 } from "./packSchemas";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("regionPacks");
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -178,8 +181,8 @@ async function getInstalledIndex(): Promise<InstalledIndex> {
         const result = installedIndexSchema.safeParse(parsed);
         if (!result.success) {
             if (__DEV__) {
-                console.warn(
-                    "[regionPacks] Installed index validation failed:",
+                log.warn(
+                    "Installed index validation failed:",
                     result.error.issues,
                 );
             }
@@ -287,8 +290,8 @@ function registerArtifact(
                 kind: p.kind,
             }));
             if (__DEV__) {
-                console.log(
-                    `[regionPacks] registerArtifact transit ${packId}: ` +
+                log.debug(
+                    `registerArtifact transit ${packId}: ` +
                         `${presetSummaries.length} preset summaries ` +
                         `(first bbox: ${presetSummaries[0]?.bbox?.join(",") ?? "none"})`,
                 );
@@ -426,8 +429,8 @@ async function installPackInternal(
                 status: "installed",
             });
         } catch (err) {
-            console.warn(
-                `[regionPacks] Artifact ${artifact.kind}${artifact.category ? `-${artifact.category}` : ""} ` +
+            log.warn(
+                `Artifact ${artifact.kind}${artifact.category ? `-${artifact.category}` : ""} ` +
                     `in pack "${pack.id}" failed:`,
                 err,
             );
@@ -509,8 +512,8 @@ async function installSingleArtifact(
         ) {
             const plainUrl = artifact.url.replace(/\.json\.gz$/, ".json");
             if (__DEV__) {
-                console.log(
-                    `[regionPacks] ${packId}/${artifact.kind}: .gz 404, retrying plain ${plainUrl}`,
+                log.debug(
+                    `${packId}/${artifact.kind}: .gz 404, retrying plain ${plainUrl}`,
                 );
             }
             const plainDest = jsonFile(
@@ -572,8 +575,8 @@ async function installSingleArtifact(
 
         // The file is already at the plain JSON path — register and exit.
         if (__DEV__) {
-            console.log(
-                `[regionPacks] ${packId}/${artifact.kind}: installed via plain JSON fallback`,
+            log.debug(
+                `${packId}/${artifact.kind}: installed via plain JSON fallback`,
             );
         }
         registerArtifact(packId, artifact.kind, artifact.category, raw);
@@ -647,8 +650,8 @@ async function installSingleArtifact(
     // include schemaVersion (buildTransit.mjs now emits schemaVersion: 1).
     if (raw.schemaVersion === undefined) {
         if (__DEV__) {
-            console.log(
-                `[regionPacks] ${packId}/${artifact.kind}: schemaVersion absent in payload, ` +
+            log.debug(
+                `${packId}/${artifact.kind}: schemaVersion absent in payload, ` +
                     `defaulting to expected ${artifact.schemaVersion}`,
             );
         }
@@ -757,10 +760,7 @@ async function retryPackInternal(
                 });
             }
         } catch (err) {
-            console.warn(
-                `[regionPacks] Retry failed for ${pack.id}/${artifact.kind}:`,
-                err,
-            );
+            log.warn(`Retry failed for ${pack.id}/${artifact.kind}:`, err);
             // Refresh the failed entry so the UI reflects the latest reason and
             // whether it's an unrecoverable bundle error vs. a transient one.
             const key = artifact.category
@@ -847,8 +847,8 @@ export async function loadInstalledPacks(): Promise<void> {
 
     for (const packId of Object.keys(index)) {
         if (!VALID_PACK_ID.test(packId)) {
-            console.warn(
-                `[regionPacks] Skipping invalid pack id "${packId}" in installed index.`,
+            log.warn(
+                `Skipping invalid pack id "${packId}" in installed index.`,
             );
             continue;
         }
@@ -884,8 +884,8 @@ export async function loadInstalledPacks(): Promise<void> {
                         const raw = JSON.parse(jsonStr);
                         // Minimal check: verify it's an object.
                         if (typeof raw !== "object" || raw === null) {
-                            console.warn(
-                                `[regionPacks] POI payload is not an object for pack "${packId}" — skipping`,
+                            log.warn(
+                                `POI payload is not an object for pack "${packId}" — skipping`,
                             );
                             continue;
                         }
@@ -922,8 +922,8 @@ export async function loadInstalledPacks(): Promise<void> {
                         const parsed =
                             boundariesIndexPayloadSchema.safeParse(indexData);
                         if (!parsed.success) {
-                            console.warn(
-                                `[regionPacks] Boundaries index validation failed for pack "${packId}": ` +
+                            log.warn(
+                                `Boundaries index validation failed for pack "${packId}": ` +
                                     parsed.error.issues
                                         .map((i) => i.message)
                                         .join("; "),
@@ -955,8 +955,8 @@ export async function loadInstalledPacks(): Promise<void> {
                         const data = JSON.parse(jsonStr);
                         const parsed = transitPayloadSchema.safeParse(data);
                         if (!parsed.success) {
-                            console.warn(
-                                `[regionPacks] Transit payload validation failed for pack "${packId}": ` +
+                            log.warn(
+                                `Transit payload validation failed for pack "${packId}": ` +
                                     parsed.error.issues
                                         .map((i) => i.message)
                                         .join("; "),
@@ -993,8 +993,8 @@ export async function loadInstalledPacks(): Promise<void> {
                         const data = JSON.parse(jsonStr);
                         const parsed = metaPayloadSchema.safeParse(data);
                         if (!parsed.success) {
-                            console.warn(
-                                `[regionPacks] Meta payload validation failed for pack "${packId}": ` +
+                            log.warn(
+                                `Meta payload validation failed for pack "${packId}": ` +
                                     parsed.error.issues
                                         .map((i) => i.message)
                                         .join("; "),
@@ -1017,8 +1017,8 @@ export async function loadInstalledPacks(): Promise<void> {
                     }
                 }
             } catch (err) {
-                console.warn(
-                    `[regionPacks] Failed to load artifact ${artifact.kind} ` +
+                log.warn(
+                    `Failed to load artifact ${artifact.kind} ` +
                         `from pack "${packId}":`,
                     err,
                 );

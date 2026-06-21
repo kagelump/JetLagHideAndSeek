@@ -21,6 +21,9 @@ import {
     MEASURING_POINT,
     gridDedupCellSize,
 } from "@/config/appConfig";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("pointMeasuring");
 
 export type NearestPoiResult = {
     /** Nearest POI location (GeoJSON [lon, lat]). */
@@ -175,7 +178,7 @@ export function computeNearestPoiDistance(
     // Defensive: validate column lengths match count.
     if (col.lon.length !== col.count || col.lat.length !== col.count) {
         if (__DEV__) {
-            console.warn(
+            log.warn(
                 `[pointDistance] Column length mismatch for ${regionId}:${matchingCategory}`,
             );
         }
@@ -278,7 +281,7 @@ export function computePointUnionBuffer(
     // Defensive: validate column lengths.
     if (col.lon.length !== col.count || col.lat.length !== col.count) {
         if (__DEV__) {
-            console.warn(
+            log.warn(
                 `[pointBuffer] Column length mismatch for ${regionId}:${matchingCategory}`,
             );
         }
@@ -316,7 +319,7 @@ export function computePointUnionBuffer(
         return null;
     }
 
-    console.log(
+    log.debug(
         `[pointBuffer] ${survivingIndices.length} / ${col.count} POIs in query window`,
     );
 
@@ -350,7 +353,7 @@ export function computePointUnionBuffer(
 
     const dedupedCount = dedupKeep.size;
 
-    console.log(
+    log.debug(
         `[pointBuffer] grid-dedup (ε=${cellSizeM.toFixed(0)}m): ` +
             `${subsetCount} → ${dedupedCount} points`,
     );
@@ -376,7 +379,7 @@ export function computePointUnionBuffer(
     try {
         mp = multiPoint(pts);
     } catch (err) {
-        console.warn(`[pointBuffer] multiPoint failed:`, err);
+        log.warn(`[pointBuffer] multiPoint failed:`, err);
         bufferCache.set(key, null);
         return null;
     }
@@ -392,7 +395,7 @@ export function computePointUnionBuffer(
             8, // Low circle resolution; union smooths the result.
         );
     } catch (err) {
-        console.warn(
+        log.warn(
             `[pointBuffer] [${getGeometryBackend().name}] buffer failed:`,
             err,
         );
@@ -402,14 +405,14 @@ export function computePointUnionBuffer(
     const bufferMs = performance.now() - t0;
 
     if (!result) {
-        console.log(
+        log.debug(
             `[pointBuffer] [${getGeometryBackend().name}] buffer returned null`,
         );
         bufferCache.set(key, null);
         return null;
     }
 
-    console.log(
+    log.debug(
         `[pointBuffer] buffer done: ${result.geometry.type} ` +
             `in ${bufferMs.toFixed(0)}ms (${pts.length} points, r=${radiusMeters}m)`,
     );

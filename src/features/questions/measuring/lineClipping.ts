@@ -12,6 +12,9 @@ import type {
     MultiPolygon,
 } from "geojson";
 import { featureBbox, computeBboxFromCoords } from "./lineDistanceComputation";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("lineClipping");
 
 // ─── ε-dilated clip polygon ────────────────────────────────────────────────
 
@@ -51,9 +54,7 @@ export function getDilatedPlayArea(
 
     if (!dilated || !dilated.geometry) {
         // Fallback: return the first feature as-is (should never happen).
-        console.warn(
-            "[dilatedPlayArea] buffer returned empty; using raw boundary",
-        );
+        log.warn("[dilatedPlayArea] buffer returned empty; using raw boundary");
         const fallback = features[0] as Feature<Polygon | MultiPolygon>;
         if (fallback) return fallback;
         // Absolute last resort: a tiny square around origin.
@@ -204,7 +205,7 @@ export function clipLineFeaturesToPlayArea(
     }
 
     const tTotalMs = performance.now() - tStart;
-    console.log(
+    log.debug(
         `[clipLineFeatures] done: ${features.length} → ${result.length} features ` +
             `(${totalLines} lines) in ${tTotalMs.toFixed(0)}ms`,
     );

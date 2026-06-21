@@ -7,6 +7,9 @@ import {
     loadLineBundle,
 } from "./lineBundleLoader";
 import type { MeasuringCategory, MeasuringQuestion } from "./measuringTypes";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("useEnsureMeasuringBundles");
 
 /**
  * Hook that ensures measuring line bundles are loaded for all currently
@@ -37,10 +40,7 @@ export function useEnsureMeasuringBundles(
             await loadLineBundle(category);
             setRevision((r) => r + 1);
         } catch (err) {
-            console.warn(
-                `[useEnsureMeasuringBundles] loadLineBundle failed for ${category}:`,
-                err,
-            );
+            log.warn(`loadLineBundle failed for ${category}:`, err);
         } finally {
             loadingRef.current.delete(key);
         }

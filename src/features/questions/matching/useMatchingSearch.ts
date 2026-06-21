@@ -8,6 +8,9 @@ import {
     type ProgressiveSearchResult,
 } from "./progressiveSearch";
 import { useReportFetchDebug } from "./fetchDebug";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("search");
 
 const OVERPASS_ERROR_MESSAGE =
     "Unable to search. Check your connection and try again.";
@@ -66,8 +69,8 @@ export function useMatchingSearch(
             abortControllerRef.current = abortController;
 
             const generation = ++searchGenerationRef.current;
-            console.log(
-                `[search] performSearch #${generation} category=${category} forceRefresh=${forceRefresh} unbounded=${options?.unbounded ?? false}`,
+            log.debug(
+                `performSearch #${generation} category=${category} forceRefresh=${forceRefresh} unbounded=${options?.unbounded ?? false}`,
             );
             setIsLoading(true);
             setError(null);
@@ -93,14 +96,14 @@ export function useMatchingSearch(
                         adminDivisionPack,
                     },
                 );
-                console.log(
-                    `[search] performSearch #${generation} done in ${Date.now() - t0}ms — ${result.candidates.length} candidates, source=${result.source}`,
+                log.debug(
+                    `performSearch #${generation} done in ${Date.now() - t0}ms — ${result.candidates.length} candidates, source=${result.source}`,
                 );
 
                 // Ignore stale responses from earlier searches.
                 if (generation !== searchGenerationRef.current) {
-                    console.log(
-                        `[search] performSearch #${generation} discarded (stale, current=#${searchGenerationRef.current})`,
+                    log.debug(
+                        `performSearch #${generation} discarded (stale, current=#${searchGenerationRef.current})`,
                     );
                     return null;
                 }
@@ -120,15 +123,10 @@ export function useMatchingSearch(
             } catch (err) {
                 // Silently ignore aborted requests — a newer search is in flight.
                 if (err instanceof Error && err.name === "AbortError") {
-                    console.log(
-                        `[search] performSearch #${generation} aborted`,
-                    );
+                    log.debug(`performSearch #${generation} aborted`);
                     return null;
                 }
-                console.error(
-                    `[search] performSearch #${generation} error:`,
-                    err,
-                );
+                log.error(`performSearch #${generation} error:`, err);
                 if (generation === searchGenerationRef.current) {
                     setError(OVERPASS_ERROR_MESSAGE);
                     reportDebug({
@@ -143,12 +141,12 @@ export function useMatchingSearch(
             } finally {
                 if (generation === searchGenerationRef.current) {
                     setIsLoading(false);
-                    console.log(
-                        `[search] performSearch #${generation} setIsLoading(false)`,
+                    log.debug(
+                        `performSearch #${generation} setIsLoading(false)`,
                     );
                 } else {
-                    console.log(
-                        `[search] performSearch #${generation} skipped setIsLoading(false) — current gen=#${searchGenerationRef.current}`,
+                    log.debug(
+                        `performSearch #${generation} skipped setIsLoading(false) — current gen=#${searchGenerationRef.current}`,
                     );
                 }
             }

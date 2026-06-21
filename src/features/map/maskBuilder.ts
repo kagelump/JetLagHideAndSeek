@@ -2,6 +2,9 @@ import type { Feature, MultiPolygon, Polygon } from "geojson";
 import type { GeoJsonFeatureCollection, Position } from "./geojsonTypes";
 import { MAP } from "@/config/appConfig";
 import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("maskBuilder");
 
 export const WORLD_MASK_RING: Position[] = [
     [-180, -85],
@@ -231,8 +234,8 @@ export function buildCombinedEligibilityMask(
         );
         eligibleArea = intersected ? featureToCoords(intersected) : [];
         if (__DEV__) {
-            console.log(
-                `[maskBuilder] intersection(${requiredGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
+            log.debug(
+                `intersection(${requiredGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
             );
         }
     }
@@ -253,8 +256,8 @@ export function buildCombinedEligibilityMask(
         }
         if (excludedGeoms.length > 1) {
             if (__DEV__) {
-                console.log(
-                    `[maskBuilder] union(${excludedGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
+                log.debug(
+                    `union(${excludedGeoms.length} geoms) in ${(performance.now() - t0).toFixed(2)}ms`,
                 );
             }
         }
@@ -267,8 +270,8 @@ export function buildCombinedEligibilityMask(
             );
             eligibleArea = diffResult ? featureToCoords(diffResult) : [];
             if (__DEV__) {
-                console.log(
-                    `[maskBuilder] difference(eligibleArea, excludedArea) in ${(performance.now() - t1).toFixed(2)}ms`,
+                log.debug(
+                    `difference(eligibleArea, excludedArea) in ${(performance.now() - t1).toFixed(2)}ms`,
                 );
             }
         }
@@ -287,8 +290,8 @@ export function buildCombinedEligibilityMask(
         ? featureToCoords(diffResult)
         : [];
     if (__DEV__) {
-        console.log(
-            `[maskBuilder] difference(playArea, eligibleArea) in ${(performance.now() - t2).toFixed(2)}ms`,
+        log.debug(
+            `difference(playArea, eligibleArea) in ${(performance.now() - t2).toFixed(2)}ms`,
         );
     }
 

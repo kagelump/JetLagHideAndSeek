@@ -146,7 +146,7 @@ describe("ShareQuestionButton", () => {
         await new Promise((r) => setTimeout(r, 0));
 
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-            "ShareQuestionButton: share failed",
+            "[ShareQuestionButton] share failed",
             unexpectedError,
         );
 

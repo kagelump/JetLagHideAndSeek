@@ -16,6 +16,9 @@ import {
     makeOsmKey,
 } from "@/features/questions/matching/matchingVoronoi";
 import { clipCellsToPlayArea } from "@/features/questions/clipVoronoiCells";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("osmMatchingGeometry");
 
 export function buildOsmMatchingRenderState(
     questions: QuestionState[],
@@ -106,7 +109,7 @@ export function buildOsmMatchingRenderState(
     }
 
     const durationMs = Date.now() - t0;
-    console.log(
+    log.debug(
         `[renderState] osmMatching: ${osmMatchingQuestions.length} questions, ` +
             `${hitFeatures.length} hit / ${missFeatures.length} miss / ` +
             `${poiFeatures.length} pois / ${outlineFeatures.length} outlines ` +

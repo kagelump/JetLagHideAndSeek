@@ -22,6 +22,9 @@ import { usePlayArea } from "@/state/playAreaStore";
 import { useQuestions } from "@/state/questionStore";
 import { buildOsmMatchingRenderState } from "./matching/osmMatchingGeometry";
 import { useEnsureMeasuringBundles } from "./measuring/useEnsureMeasuringBundles";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("questionGeometry");
 
 export function buildQuestionMapRenderState(
     questions: QuestionState[],
@@ -249,8 +252,8 @@ export function useQuestionMapRenderState(): UseQuestionMapRenderStateResult {
 
         const measuringQs = questions.filter((q) => q.type === "measuring");
         if (measuringQs.length > 0) {
-            console.log(
-                `[questionGeometry] building render state for ${measuringQs.length} measuring question(s) ` +
+            log.debug(
+                `building render state for ${measuringQs.length} measuring question(s) ` +
                     `[${measuringQs.map((q) => `${(q as any).category}=${q.answer}`).join(", ")}]`,
             );
         }
@@ -276,8 +279,8 @@ export function useQuestionMapRenderState(): UseQuestionMapRenderStateResult {
     const prevComputingRef = useRef(isComputing);
     useEffect(() => {
         if (prevComputingRef.current !== isComputing) {
-            console.log(
-                `[questionGeometry] isComputing ${prevComputingRef.current} → ${isComputing} ` +
+            log.debug(
+                `isComputing ${prevComputingRef.current} → ${isComputing} ` +
                     `(featureCount=${value.radar.hitMaskFeatures.features.length})`,
             );
             prevComputingRef.current = isComputing;

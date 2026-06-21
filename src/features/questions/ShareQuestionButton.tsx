@@ -6,6 +6,9 @@ import type { QuestionState } from "@/features/questions/questionTypes";
 import { buildQuestionRequestEnvelope } from "@/sharing/export/buildEnvelope";
 import { buildImportLink } from "@/sharing/links/buildLink";
 import { colors } from "@/theme/colors";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("ShareQuestionButton");
 
 // iOS uses the box-and-arrow glyph; Android uses the connected-nodes glyph.
 const SHARE_ICON_NAME =
@@ -33,7 +36,7 @@ export function ShareQuestionButton({ question }: { question: QuestionState }) {
                 return; // user dismissed — no-op
             }
             // Unexpected error — log it so we can debug.
-            console.warn("ShareQuestionButton: share failed", err);
+            log.warn("share failed", err);
         }
     };
 

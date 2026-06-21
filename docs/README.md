@@ -23,5 +23,4 @@ Historical, pre-promotion planning notes live in [`archive/`](./archive/).
 > transit-expansion, remove-bundled-Japan, sharing, native-geometry plans) was
 > consolidated into `implementation_notes.md` and deleted. Use `git log` to
 > recover the play-by-play if needed.
-> </content>
-> </invoke>
+> </content> > </invoke>

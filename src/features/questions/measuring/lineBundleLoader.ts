@@ -8,6 +8,9 @@ import type {
 
 import type { Bbox } from "@/shared/geojson";
 import type { MeasuringCategory } from "./measuringTypes";
+import { createLogger } from "@/shared/logger";
+
+const log = createLogger("lineBundle");
 
 export type BundleFeature = Feature<
     LineString | MultiLineString | Polygon | MultiPolygon
@@ -62,8 +65,8 @@ export function registerMeasuringSource(
         if (cache.has(category)) {
             cache.delete(category);
             mergedCache.delete(category);
-            console.log(
-                `[lineBundle] invalidated cache for ${category} due to pack source registration`,
+            log.debug(
+                `invalidated cache for ${category} due to pack source registration`,
             );
         }
     }
@@ -87,8 +90,8 @@ export function unregisterMeasuringSources(packId: string): void {
             if (cache.has(category)) {
                 cache.delete(category);
                 mergedCache.delete(category);
-                console.log(
-                    `[lineBundle] invalidated cache for ${category} after unregistering ${packId}`,
+                log.debug(
+                    `invalidated cache for ${category} after unregistering ${packId}`,
                 );
             }
         }
@@ -179,14 +182,14 @@ export async function loadLineBundle(
                     ];
 
                     merged.source += `; ${packBundle.source}`;
-                    console.log(
-                        `[lineBundle] merged pack ${source.packId} into ${category}: ` +
+                    log.debug(
+                        `merged pack ${source.packId} into ${category}: ` +
                             `${packBundle.features.length} features (now ${merged.features.length} total)`,
                     );
                 }
             } catch (err) {
-                console.warn(
-                    `[lineBundle] failed to load pack source for ${category} ` +
+                log.warn(
+                    `failed to load pack source for ${category} ` +
                         `from ${source.packId} at ${source.path}:`,
                     err,
                 );
@@ -197,8 +200,8 @@ export async function loadLineBundle(
     cache.set(category, merged);
     mergedCache.add(category);
     if (merged) {
-        console.log(
-            `[lineBundle] loadLineBundle(${category}): ${merged.features.length} features after merge`,
+        log.debug(
+            `loadLineBundle(${category}): ${merged.features.length} features after merge`,
         );
     }
     return merged;
