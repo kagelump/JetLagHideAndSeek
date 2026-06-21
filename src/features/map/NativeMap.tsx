@@ -431,6 +431,7 @@ export function NativeMap({
                         radar={questionMapRenderState.radar}
                     />
                     <OsmMatchingLayers
+                        onPoiPress={showCalloutFromPress}
                         osmMatching={questionMapRenderState.osmMatching}
                         visible={isQuestionDetailRoute}
                     />

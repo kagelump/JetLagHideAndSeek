@@ -97,6 +97,38 @@ function BackButton({ onPress }: { onPress: () => void }) {
     );
 }
 
+// ─── HeaderActionButton ───────────────────────────────────────────────────────
+
+/**
+ * A right-aligned text action for `ChildSheetShell`'s header `accessory` slot —
+ * e.g. Play Area's "Continue" or Hiding Zones' "Done", sitting inline with the
+ * Back button so they aren't covered by content or the keyboard.
+ */
+function HeaderActionButton({
+    label,
+    onPress,
+    testID,
+}: {
+    label: string;
+    onPress: () => void;
+    testID?: string;
+}) {
+    return (
+        <Pressable
+            accessibilityLabel={label}
+            accessibilityRole="button"
+            onPress={onPress}
+            style={({ pressed }) => [
+                styles.headerAction,
+                pressed ? styles.actionPressed : null,
+            ]}
+            testID={testID}
+        >
+            <Text style={styles.headerActionText}>{label}</Text>
+        </Pressable>
+    );
+}
+
 // ─── DrawerAction ─────────────────────────────────────────────────────────────
 
 type DrawerActionProps = {
@@ -280,6 +312,20 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
 
+    // HeaderActionButton
+    headerAction: {
+        alignItems: "flex-end",
+        justifyContent: "center",
+        minHeight: 44,
+        paddingHorizontal: 4,
+        paddingVertical: 4,
+    },
+    headerActionText: {
+        color: colors.tint,
+        fontSize: 16,
+        fontWeight: "800",
+    },
+
     // DrawerAction
     action: {
         alignItems: "center",
@@ -387,5 +433,6 @@ export {
     QuestionDetailShell,
     BackButton,
     DrawerAction,
+    HeaderActionButton,
     SeekTimeModal,
 };

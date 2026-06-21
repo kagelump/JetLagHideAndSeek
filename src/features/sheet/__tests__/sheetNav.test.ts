@@ -40,6 +40,18 @@ describe("getNavDirection", () => {
             expect(getNavDirection("play-area", "hiding-zone")).toBe("back");
         });
     });
+
+    it("goes forward into the operator line picker", () => {
+        expect(getNavDirection("hiding-zone", "hiding-zone-operator")).toBe(
+            "forward",
+        );
+    });
+
+    it("goes back out of the operator line picker", () => {
+        expect(getNavDirection("hiding-zone-operator", "hiding-zone")).toBe(
+            "back",
+        );
+    });
 });
 
 describe("getBackTarget", () => {
@@ -65,5 +77,9 @@ describe("getBackTarget", () => {
 
     it("returns questions for add-question", () => {
         expect(getBackTarget("add-question")).toBe("questions");
+    });
+
+    it("returns hiding-zone for the operator line picker (not settings)", () => {
+        expect(getBackTarget("hiding-zone-operator")).toBe("hiding-zone");
     });
 });

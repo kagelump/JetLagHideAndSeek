@@ -42,7 +42,11 @@ const mockOsmMatching: OsmMatchingRenderState = {
 describe("OsmMatchingLayers", () => {
     it("renders shape source with POI features when visible", () => {
         const screen = render(
-            <OsmMatchingLayers osmMatching={mockOsmMatching} visible />,
+            <OsmMatchingLayers
+                onPoiPress={() => {}}
+                osmMatching={mockOsmMatching}
+                visible
+            />,
         );
 
         const source = screen
@@ -54,7 +58,11 @@ describe("OsmMatchingLayers", () => {
 
     it("renders selected POI layer with red stroke filter", () => {
         const screen = render(
-            <OsmMatchingLayers osmMatching={mockOsmMatching} visible />,
+            <OsmMatchingLayers
+                onPoiPress={() => {}}
+                osmMatching={mockOsmMatching}
+                visible
+            />,
         );
 
         const selectedLayer = screen
@@ -68,7 +76,11 @@ describe("OsmMatchingLayers", () => {
 
     it("renders unselected POI layer with black stroke filter", () => {
         const screen = render(
-            <OsmMatchingLayers osmMatching={mockOsmMatching} visible />,
+            <OsmMatchingLayers
+                onPoiPress={() => {}}
+                osmMatching={mockOsmMatching}
+                visible
+            />,
         );
 
         const unselectedLayer = screen
@@ -84,6 +96,23 @@ describe("OsmMatchingLayers", () => {
         expect(unselectedLayer?.props.style.circleRadius).toBe(6);
     });
 
+    it("wires onPoiPress to the POI shape source for tap-to-name callouts", () => {
+        const onPoiPress = jest.fn();
+        const screen = render(
+            <OsmMatchingLayers
+                onPoiPress={onPoiPress}
+                osmMatching={mockOsmMatching}
+                visible
+            />,
+        );
+
+        const source = screen
+            .getAllByTestId("map-shape-source")
+            .find((s) => s.props.id === "osm-matching-pois");
+        expect(source?.props.onPress).toBe(onPoiPress);
+        expect(source?.props.hitbox).toEqual({ width: 32, height: 32 });
+    });
+
     it("keeps shape source mounted even with empty POI features", () => {
         const emptyState: OsmMatchingRenderState = {
             hitMaskFeatures: { features: [], type: "FeatureCollection" },
@@ -92,7 +121,11 @@ describe("OsmMatchingLayers", () => {
             voronoiOutlineFeatures: { features: [], type: "FeatureCollection" },
         };
         const screen = render(
-            <OsmMatchingLayers osmMatching={emptyState} visible />,
+            <OsmMatchingLayers
+                onPoiPress={() => {}}
+                osmMatching={emptyState}
+                visible
+            />,
         );
 
         // Source stays mounted with 0 features — prevents MapLibre from
@@ -106,7 +139,11 @@ describe("OsmMatchingLayers", () => {
 
     it("clears POI features when not visible, keeping source mounted", () => {
         const screen = render(
-            <OsmMatchingLayers osmMatching={mockOsmMatching} visible={false} />,
+            <OsmMatchingLayers
+                onPoiPress={() => {}}
+                osmMatching={mockOsmMatching}
+                visible={false}
+            />,
         );
 
         const source = screen

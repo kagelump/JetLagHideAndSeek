@@ -8,6 +8,7 @@ export type SheetRouteName =
     | "settings"
     | "play-area"
     | "hiding-zone"
+    | "hiding-zone-operator"
     | "offline-data"
     | "admin-divisions"
     | "geometry-parity"

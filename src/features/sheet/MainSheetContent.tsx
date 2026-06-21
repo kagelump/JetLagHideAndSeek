@@ -9,7 +9,6 @@ import type { SheetRouteName } from "@/features/sheet/sheetRoutes";
 import { usePlayArea } from "@/state/playAreaStore";
 import { useHidingZoneState } from "@/state/hidingZoneStore";
 import {
-    useGameMode,
     useQuestionActions,
     useQuestionIds,
     useSeekingStartedAt,
@@ -28,8 +27,7 @@ function MainSheetContent({
 }) {
     const { playArea } = usePlayArea();
     const questionIds = useQuestionIds();
-    const gameMode = useGameMode();
-    const { setGameMode, setSeekingStartedAt } = useQuestionActions();
+    const { setSeekingStartedAt } = useQuestionActions();
     const { selectedPresetIds } = useHidingZoneState();
     const seekingStartedAt = useSeekingStartedAt();
     const { value: eliminationPct, isComputing: eliminationPctComputing } =
@@ -178,25 +176,17 @@ function MainSheetContent({
                                     </Text>
                                 </View>
                                 <Pressable
-                                    accessibilityLabel={`Switch to ${gameMode === "hider" ? "seeker" : "hider"} mode`}
+                                    accessibilityLabel="Add question"
                                     accessibilityRole="button"
-                                    onPress={() =>
-                                        setGameMode(
-                                            gameMode === "hider"
-                                                ? "seeker"
-                                                : "hider",
-                                        )
-                                    }
+                                    onPress={() => onNavigate("add-question")}
                                     style={({ pressed }) => [
-                                        styles.modeChip,
+                                        styles.addQuestionChip,
                                         pressed ? styles.actionPressed : null,
                                     ]}
-                                    testID="main-mode-chip"
+                                    testID="main-add-question"
                                 >
-                                    <Text style={styles.modeChipText}>
-                                        {gameMode === "hider"
-                                            ? "Hider"
-                                            : "Seeker"}
+                                    <Text style={styles.addQuestionChipText}>
+                                        + Add Question
                                     </Text>
                                 </Pressable>
                             </View>
@@ -274,21 +264,6 @@ function MainSheetContent({
                                     </Text>
                                 </View>
                             </View>
-
-                            <Pressable
-                                accessibilityLabel="Add question"
-                                accessibilityRole="button"
-                                onPress={() => onNavigate("add-question")}
-                                style={({ pressed }) => [
-                                    styles.primaryButton,
-                                    pressed ? styles.actionPressed : null,
-                                ]}
-                                testID="main-add-question"
-                            >
-                                <Text style={styles.primaryButtonText}>
-                                    + Add Question
-                                </Text>
-                            </Pressable>
 
                             <View style={styles.navRows}>
                                 <DrawerAction
@@ -426,16 +401,16 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
     },
-    modeChip: {
-        backgroundColor: colors.button,
+    addQuestionChip: {
+        backgroundColor: colors.tint,
         borderRadius: 16,
         paddingHorizontal: 14,
-        paddingVertical: 6,
+        paddingVertical: 8,
     },
-    modeChipText: {
+    addQuestionChipText: {
         color: colors.white,
         fontSize: 14,
-        fontWeight: "700",
+        fontWeight: "800",
     },
     statCard: {
         backgroundColor: colors.card,

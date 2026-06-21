@@ -112,7 +112,8 @@ function getRouteSnapIndex(route: SheetRouteName): number {
     return route === "matching" ||
         route === "measuring" ||
         route === "admin-divisions" ||
-        route === "play-area"
+        route === "play-area" ||
+        route === "hiding-zone-operator"
         ? SHEET_SNAP_INDEX.large
         : SHEET_SNAP_INDEX.medium;
 }

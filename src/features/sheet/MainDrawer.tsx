@@ -16,7 +16,10 @@ import Animated, {
     withTiming,
 } from "react-native-reanimated";
 
-import { HidingZoneScreen } from "@/features/hidingZone/HidingZoneScreen";
+import {
+    HidingZoneScreen,
+    OperatorDrillDownRoute,
+} from "@/features/hidingZone/HidingZoneScreen";
 import { PlayAreaScreen } from "@/features/playArea/PlayAreaScreen";
 import { StationDetailScreen } from "@/features/sheet/StationDetailScreen";
 import { AddQuestionScreen } from "@/features/questions/AddQuestionScreen";
@@ -31,6 +34,7 @@ import { getBackTarget, getNavDirection } from "@/features/sheet/sheetNav";
 import { MainSheetContent } from "@/features/sheet/MainSheetContent";
 import {
     ChildSheetShell,
+    HeaderActionButton,
     QuestionDetailShell,
 } from "@/features/sheet/sheetComponents";
 import { ANIMATION } from "@/config/appConfig";
@@ -256,16 +260,36 @@ function renderRouteContent(
             );
         case "play-area":
             return (
-                <ChildSheetShell onBack={() => onNavigate("settings")}>
+                <ChildSheetShell
+                    accessory={
+                        <HeaderActionButton
+                            label="Continue"
+                            onPress={() => onNavigate("hiding-zone")}
+                            testID="play-area-continue"
+                        />
+                    }
+                    onBack={() => onNavigate("settings")}
+                >
                     <PlayAreaScreen onNavigate={onNavigate} />
                 </ChildSheetShell>
             );
         case "hiding-zone":
             return (
-                <ChildSheetShell onBack={() => onNavigate("settings")}>
-                    <HidingZoneScreen />
+                <ChildSheetShell
+                    accessory={
+                        <HeaderActionButton
+                            label="Done"
+                            onPress={() => onNavigate("main")}
+                            testID="hiding-zone-done"
+                        />
+                    }
+                    onBack={() => onNavigate("settings")}
+                >
+                    <HidingZoneScreen onNavigate={onNavigate} />
                 </ChildSheetShell>
             );
+        case "hiding-zone-operator":
+            return <OperatorDrillDownRoute onNavigate={onNavigate} />;
         case "offline-data":
             return (
                 <ChildSheetShell onBack={() => onNavigate("settings")}>

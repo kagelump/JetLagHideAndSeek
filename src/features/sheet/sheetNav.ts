@@ -10,6 +10,7 @@ const ROUTE_GRAPH = [
     { name: "settings", parent: "main" },
     { name: "play-area", parent: "settings" },
     { name: "hiding-zone", parent: "settings" },
+    { name: "hiding-zone-operator", parent: "hiding-zone" },
     { name: "offline-data", parent: "settings" },
     { name: "admin-divisions", parent: "settings" },
     { name: "geometry-parity", parent: "settings" },
@@ -52,6 +53,7 @@ buildMaps();
 const LEAF_ROUTES = new Set<SheetRouteName>([
     "question-detail",
     "station-detail",
+    "hiding-zone-operator",
 ]);
 
 export function getNavDirection(

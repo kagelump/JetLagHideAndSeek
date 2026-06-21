@@ -63,6 +63,11 @@ type HidingZoneStateValue = {
     selectedRouteIds: Record<string, string[]>;
     /** Station ids manually eliminated by the seeker (ghost questions). */
     eliminatedStationIds: string[];
+    /**
+     * Preset whose line picker is open on the `hiding-zone-operator` route.
+     * Transient navigation state — not persisted.
+     */
+    operatorDrillDownPresetId: string | null;
 };
 
 const HidingZoneStateContext = createContext<HidingZoneStateValue | null>(null);
@@ -95,6 +100,8 @@ type HidingZoneActionsValue = {
     // Use when changing both atomically, e.g. applying a unit-system default.
     setRadius: (value: string, unit: HidingZoneUnit) => void;
     setRadiusUnit: (unit: HidingZoneUnit) => void;
+    /** Open/close the operator line-picker route (null closes it). */
+    setOperatorDrillDownPresetId: (presetId: string | null) => void;
     togglePreset: (presetId: string) => void;
     /** Mark a station as manually eliminated by the seeker (ghost question). */
     eliminateStation: (stationId: string) => void;
@@ -170,6 +177,9 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
     const [eliminatedStationIds, setEliminatedStationIds] = useState<string[]>(
         [],
     );
+    const [operatorDrillDownPresetId, setOperatorDrillDownPresetId] = useState<
+        string | null
+    >(null);
     const [presetsRevision, setPresetsRevision] = useState(0);
     const radiusMetersRef = useRef<number>(DEFAULT_RADIUS_METERS);
     const zoneGeometryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -441,6 +451,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             selectedPresetIds,
             selectedRouteIds,
             eliminatedStationIds,
+            operatorDrillDownPresetId,
         }),
         [
             isRestored,
@@ -450,6 +461,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             selectedPresetIds,
             selectedRouteIds,
             eliminatedStationIds,
+            operatorDrillDownPresetId,
         ],
     );
 
@@ -463,6 +475,7 @@ export function HidingZoneProvider({ children }: { children: ReactNode }) {
             setRadius,
             setRadiusDisplayValue,
             setRadiusUnit,
+            setOperatorDrillDownPresetId,
             togglePreset,
             eliminateStation,
             restoreStation,

@@ -242,6 +242,46 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                 style={styles.container}
                 contentContainerStyle={styles.scrollContent}
             >
+                <View
+                    style={styles.searchSection}
+                    onLayout={(e) => setSearchSectionY(e.nativeEvent.layout.y)}
+                >
+                    <Text style={styles.sectionTitle}>Search</Text>
+                    <TextInput
+                        accessibilityLabel="Search play areas"
+                        onChangeText={setQuery}
+                        onFocus={handleSearchFocus}
+                        placeholder="Search a city or region"
+                        ref={searchInputRef}
+                        style={styles.input}
+                        testID="play-area-search-input"
+                        value={query}
+                    />
+                    {isSearching ? (
+                        <Text style={styles.loading}>Searching...</Text>
+                    ) : null}
+                    {searchError ? (
+                        <Text style={styles.error}>
+                            {searchError instanceof Error
+                                ? searchError.message
+                                : "Search failed."}
+                        </Text>
+                    ) : null}
+                    {showNoResults ? (
+                        <Text style={styles.noResults}>No matches found.</Text>
+                    ) : null}
+                    {results.map((result) => (
+                        <ResultRow
+                            key={result.osmId}
+                            result={result}
+                            onApply={() => {
+                                void applyRelationId(String(result.osmId));
+                                snapToIndex(SHEET_SNAP_INDEX.medium);
+                            }}
+                        />
+                    ))}
+                </View>
+
                 <View style={styles.summaryHeader}>
                     <Text style={styles.summaryLabel}>Current</Text>
                     <Text style={styles.summaryTitle}>{playArea.label}</Text>
@@ -288,46 +328,6 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                         })}
                     </View>
                 ) : null}
-
-                <View
-                    style={styles.section}
-                    onLayout={(e) => setSearchSectionY(e.nativeEvent.layout.y)}
-                >
-                    <Text style={styles.sectionTitle}>Search</Text>
-                    <TextInput
-                        accessibilityLabel="Search play areas"
-                        onChangeText={setQuery}
-                        onFocus={handleSearchFocus}
-                        placeholder="Search a city or region"
-                        ref={searchInputRef}
-                        style={styles.input}
-                        testID="play-area-search-input"
-                        value={query}
-                    />
-                    {isSearching ? (
-                        <Text style={styles.loading}>Searching...</Text>
-                    ) : null}
-                    {searchError ? (
-                        <Text style={styles.error}>
-                            {searchError instanceof Error
-                                ? searchError.message
-                                : "Search failed."}
-                        </Text>
-                    ) : null}
-                    {showNoResults ? (
-                        <Text style={styles.noResults}>No matches found.</Text>
-                    ) : null}
-                    {results.map((result) => (
-                        <ResultRow
-                            key={result.osmId}
-                            result={result}
-                            onApply={() => {
-                                void applyRelationId(String(result.osmId));
-                                snapToIndex(SHEET_SNAP_INDEX.medium);
-                            }}
-                        />
-                    ))}
-                </View>
 
                 <View style={styles.section}>
                     <Pressable
@@ -376,22 +376,6 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                             </Pressable>
                         </View>
                     ) : null}
-                    <View style={styles.stickyFooter}>
-                        <Pressable
-                            accessibilityLabel="Continue to hiding zones"
-                            accessibilityRole="button"
-                            onPress={() => onNavigate("hiding-zone")}
-                            style={({ pressed }) => [
-                                styles.continueButton,
-                                pressed ? styles.actionPressed : null,
-                            ]}
-                            testID="play-area-continue"
-                        >
-                            <Text style={styles.continueButtonText}>
-                                Continue
-                            </Text>
-                        </Pressable>
-                    </View>
                 </View>
             </SheetScrollView>
 
@@ -580,18 +564,6 @@ const styles = StyleSheet.create({
         lineHeight: 28,
     },
     container: {},
-    continueButton: {
-        alignItems: "center",
-        backgroundColor: colors.tint,
-        borderRadius: 8,
-        justifyContent: "center",
-        minHeight: 50,
-    },
-    continueButtonText: {
-        color: colors.white,
-        fontSize: 16,
-        fontWeight: "800",
-    },
     error: {
         color: colors.error,
         fontSize: 13,
@@ -673,6 +645,9 @@ const styles = StyleSheet.create({
         paddingTop: 0,
         paddingBottom: 200,
     },
+    searchSection: {
+        marginTop: 4,
+    },
     section: {
         marginTop: 12,
     },
@@ -682,14 +657,9 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         marginBottom: 10,
     },
-    stickyFooter: {
-        borderTopColor: colors.border,
-        borderTopWidth: 1,
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-    },
     summaryHeader: {
         marginBottom: 4,
+        marginTop: 12,
     },
     summaryLabel: {
         color: colors.tint,

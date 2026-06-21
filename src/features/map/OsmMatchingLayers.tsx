@@ -1,3 +1,5 @@
+import type { OnPressEvent } from "@maplibre/maplibre-react-native";
+
 import type { OsmMatchingRenderState } from "@/features/questions/matching/matchingTypes";
 
 import { MLCircleLayer, MLShapeSource } from "./mapLibrePrimitives";
@@ -8,11 +10,14 @@ const EMPTY_POI_FEATURES = {
 } as const;
 
 type OsmMatchingLayersProps = {
+    /** Raises a POI callout when a marker is tapped (see `useMapCallout`). */
+    onPoiPress: (event: OnPressEvent) => void;
     osmMatching: OsmMatchingRenderState;
     visible: boolean;
 };
 
 export function OsmMatchingLayers({
+    onPoiPress,
     osmMatching,
     visible,
 }: OsmMatchingLayersProps) {
@@ -24,7 +29,12 @@ export function OsmMatchingLayers({
     const poiFeatures = visible ? osmMatching.poiFeatures : EMPTY_POI_FEATURES;
 
     return (
-        <MLShapeSource id="osm-matching-pois" shape={poiFeatures}>
+        <MLShapeSource
+            id="osm-matching-pois"
+            hitbox={{ width: 32, height: 32 }}
+            onPress={onPoiPress}
+            shape={poiFeatures}
+        >
             <MLCircleLayer
                 filter={["==", "isSelected", true]}
                 id="osm-matching-poi-selected"
