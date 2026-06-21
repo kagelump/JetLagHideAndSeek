@@ -34,19 +34,25 @@ export function unquantize(x, y) {
 }
 
 /**
- * Encode a single ring as a length-prefixed delta array.
+ * Encode a single ring directly into an existing output array.
  *
- * Returns `[ringLen, x0, y0, dx1, dy1, dx2, dy2, …]`.
- * The length includes the first absolute pair but not the ringLen itself.
+ * Appends `[ringLen, x0, y0, dx1, dy1, dx2, dy2, …]` to `out` in place. The
+ * ringLen prefix is back-filled after the pairs are written, so no intermediate
+ * array is allocated and no spread/`apply` is performed. This is the only
+ * encoding path that touches per-point data, so large rings (tens of thousands
+ * of points — complex coastlines like New York or Alaska) never build an
+ * argument list and so cannot overflow the call stack. See
+ * docs/bugs/deltaEncode-stack-overflow.md.
  *
  * @param {[number, number][]} ring - array of [lon, lat] pairs
- * @returns {number[]}
+ * @param {number[]} out - output array to append to
  */
-export function encodeDeltaRing(ring) {
+export function encodeDeltaRingInto(ring, out) {
     if (ring.length < 3)
         throw new Error(`Ring too short: ${ring.length} points`);
 
-    const out = [];
+    const ringLenIdx = out.length;
+    out.push(0); // placeholder for ringLen, back-filled below
     let px, py;
 
     for (let i = 0; i < ring.length; i++) {
@@ -56,17 +62,28 @@ export function encodeDeltaRing(ring) {
             px = x;
             py = y;
         } else {
-            const dx = x - px;
-            const dy = y - py;
-            out.push(dx, dy);
+            out.push(x - px, y - py);
             px = x;
             py = y;
         }
     }
 
-    // ringLen includes the first abs pair but not itself
-    const ringLen = out.length;
-    out.unshift(ringLen);
+    // ringLen includes the pair data but not the ringLen slot itself.
+    out[ringLenIdx] = out.length - ringLenIdx - 1;
+}
+
+/**
+ * Encode a single ring as a standalone length-prefixed delta array.
+ *
+ * Returns `[ringLen, x0, y0, dx1, dy1, dx2, dy2, …]`.
+ * The length includes the first absolute pair but not the ringLen itself.
+ *
+ * @param {[number, number][]} ring - array of [lon, lat] pairs
+ * @returns {number[]}
+ */
+export function encodeDeltaRing(ring) {
+    const out = [];
+    encodeDeltaRingInto(ring, out);
     return out;
 }
 
@@ -124,8 +141,7 @@ export function encodeDeltaPolygon(geometry) {
     for (const rings of polygons) {
         out.push(rings.length); // ringCount for this polygon
         for (const ring of rings) {
-            const delta = encodeDeltaRing(ring);
-            out.push(...delta);
+            encodeDeltaRingInto(ring, out); // appends in place — no spread
         }
     }
 

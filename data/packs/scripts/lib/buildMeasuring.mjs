@@ -24,6 +24,7 @@ import { gzipSync } from "node:zlib";
 import YAML from "yaml";
 
 import { applyPostFilter } from "../../../geofabrik/scripts/lib/postFilters.mjs";
+import { pushAll } from "./arrayUtil.mjs";
 import {
     cleanCoordsInline,
     countDupPairs,
@@ -522,7 +523,7 @@ export async function buildMeasuringArtifact({
                     );
                 }
                 features.length = 0;
-                features.push(...kept);
+                pushAll(features, kept);
             }
         }
 
@@ -693,7 +694,7 @@ export async function buildMeasuringArtifact({
                     WATER_EMIT_CELL_DEG,
                 );
                 features.length = 0;
-                features.push(...bucketed);
+                pushAll(features, bucketed);
                 console.log(
                     `  [measuring/${catDef.key}] [dissolve] emit re-tile: ` +
                         `${mergedPolyCoords.length} member polygon(s) → ` +
@@ -831,9 +832,9 @@ export async function buildMeasuringArtifact({
                                 `(${clippedCount} trimmed, ${clippedSegments} segments)`,
                         );
                     }
-                    features.push(...clipped);
+                    pushAll(features, clipped);
                 } else {
-                    features.push(...simplified);
+                    pushAll(features, simplified);
                 }
             }
         }
@@ -913,7 +914,7 @@ export async function buildMeasuringArtifact({
             );
 
             features.length = 0;
-            features.push(...resimplified);
+            pushAll(features, resimplified);
         }
 
         // If we ended up with zero features after full processing, skip.

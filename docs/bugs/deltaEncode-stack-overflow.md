@@ -1,8 +1,30 @@
 # `encodeDeltaPolygon` stack overflow on large boundary polygons
 
 **Filed:** 2026-06-21
-**Severity:** Medium — blocks full-catalog `--all` rebuilds.
+**Status:** FIXED 2026-06-21 — root-caused + defense-in-depth (see "Fix" below).
+**Severity:** Medium — blocked full-catalog `--all` rebuilds.
 **Subsystem:** `data/packs/scripts/lib/deltaEncode.mjs`
+
+## Fix (2026-06-21)
+
+Root cause removed at source: `encodeDeltaRingInto(ring, out)` now encodes each
+ring **directly into** the shared output buffer (back-filling the `ringLen`
+prefix), so the per-point path never builds an intermediate `delta` array and
+never spreads it as call arguments. `encodeDeltaRing` is kept as a thin wrapper
+over it. `encodeDeltaPolygon` calls `encodeDeltaRingInto` — the `out.push(...delta)`
+site is gone.
+
+Defense in depth: added `pushAll(target, source)` (`arrayUtil.mjs`), a
+loop-based bulk-append with no argument-count ceiling, and routed every
+remaining large-array spread in the pipeline through it — the five
+`features.push(...)` sites in `buildMeasuring.mjs` (water-dense regions emit
+tens of thousands of features) and the `leftoverStations.push(...opRecords)`
+site in `buildTransit.mjs`. Tiny bounded spreads (error lists in
+`catalogSchema.mjs`) were left as-is.
+
+Regression coverage: `deltaEncode.test.mjs` encodes a 60k-point ring without
+throwing and asserts the in-place `ringLen` prefix; `arrayUtil.test.mjs` pushes
+500k elements without overflow.
 
 ## Symptoms
 

@@ -9,6 +9,7 @@ import {
     encodeDeltaPolygon,
     decodeDeltaPolygon,
     encodeDeltaRing,
+    encodeDeltaRingInto,
     decodeDeltaRing,
     quantize,
     unquantize,
@@ -215,6 +216,54 @@ describe("encodeDeltaPolygon / decodeDeltaPolygon round-trip", () => {
                 }
             }
         }
+    });
+});
+
+describe("large rings do not overflow the call stack (regression)", () => {
+    // Build a closed ring with many points. Before the in-place refactor,
+    // encodeDeltaPolygon did `out.push(...delta)` with delta ~= 2N+1 elements,
+    // which overflowed V8's argument limit at ~5k+ points and crashed
+    // north-america-us-new-york. See docs/bugs/deltaEncode-stack-overflow.md.
+    function bigRing(n) {
+        const ring = [];
+        for (let i = 0; i < n; i++) {
+            const t = (2 * Math.PI * i) / n;
+            // Quantize-friendly coordinates around Tokyo; distinct per point.
+            ring.push([139.0 + Math.cos(t) * 0.5, 35.0 + Math.sin(t) * 0.5]);
+        }
+        ring.push(ring[0]); // close the ring
+        return ring;
+    }
+
+    it("encodes a 60k-point Polygon ring without throwing", () => {
+        const ring = bigRing(60_000);
+        const geometry = { type: "Polygon", coordinates: [ring] };
+
+        let encoded;
+        assert.doesNotThrow(() => {
+            encoded = encodeDeltaPolygon(geometry);
+        });
+
+        const decoded = decodeDeltaPolygon(encoded);
+        assert.equal(decoded.length, 1);
+        assert.equal(decoded[0].length, 1);
+        assert.equal(decoded[0][0].length, ring.length);
+    });
+
+    it("encodeDeltaRingInto appends in place with a correct ringLen prefix", () => {
+        const ring = bigRing(5_000);
+        const out = [42]; // pre-existing content must be preserved
+        assert.doesNotThrow(() => encodeDeltaRingInto(ring, out));
+
+        assert.equal(out[0], 42);
+        const ringLen = out[1];
+        // ringLen counts the pair data (2 per point) but not the prefix slot.
+        assert.equal(ringLen, ring.length * 2);
+        assert.equal(out.length, 1 + 1 + ringLen);
+
+        // Round-trips via the standalone decoder.
+        const decoded = decodeDeltaRing(out.slice(1));
+        assert.equal(decoded.length, ring.length);
     });
 });
 

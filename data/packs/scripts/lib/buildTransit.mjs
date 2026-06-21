@@ -30,6 +30,7 @@ import {
 } from "../../../transit/scripts/lib/osmStations.mjs";
 import { extractRouteRelationsFromPbf } from "../../../transit/scripts/lib/extractOsmRoutes.mjs";
 import { attachRoutesToPresets } from "../../../transit/scripts/lib/attachRoutes.mjs";
+import { pushAll } from "./arrayUtil.mjs";
 
 /**
  * Build the transit artifact for a region.
@@ -366,7 +367,7 @@ function buildPresets(records, regionId, lines, normalizeOp) {
         if (opRecords.length === 0) continue;
 
         if (operator === "other" || opRecords.length < MIN_OPERATOR_STATIONS) {
-            leftoverStations.push(...opRecords);
+            pushAll(leftoverStations, opRecords);
             continue;
         }
 
