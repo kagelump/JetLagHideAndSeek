@@ -1,9 +1,13 @@
 import { useMemo, useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { CalculatingIndicator } from "@/components/CalculatingIndicator";
 import { SheetScrollView } from "@/features/sheet/SheetScrollView";
-import { useHidingZoneDerived } from "@/state/hidingZoneStore";
+import {
+    useHidingZoneDerived,
+    useHidingZoneActions,
+    useHidingZoneState,
+} from "@/state/hidingZoneStore";
 import { useStationElimination } from "@/features/map/useStationElimination";
 import { colors } from "@/theme/colors";
 import { createLogger } from "@/shared/logger";
@@ -12,20 +16,39 @@ const log = createLogger("StationDetailScreen");
 
 export function StationDetailScreen() {
     const { selectedStations } = useHidingZoneDerived();
-    const { remainingCount, totalCount, eliminatedStationIds, isComputing } =
-        useStationElimination();
+    const { eliminatedStationIds: manualEliminatedIds } = useHidingZoneState();
+    const { eliminateStation, restoreStation } = useHidingZoneActions();
+    const {
+        remainingCount,
+        totalCount,
+        eliminatedStationIds,
+        stationAreas,
+        isComputing,
+    } = useStationElimination();
 
     // Debug: trace when the station detail screen sees computing state change.
     useEffect(() => {
         log.debug(
             `isComputing=${isComputing}, ` +
                 `remaining=${remainingCount}/${totalCount}, ` +
-                `eliminated=${eliminatedStationIds.size}`,
+                `eliminated=${eliminatedStationIds.size}, ` +
+                `areas=${stationAreas.size}`,
         );
-    }, [isComputing, remainingCount, totalCount, eliminatedStationIds.size]);
+    }, [
+        isComputing,
+        remainingCount,
+        totalCount,
+        eliminatedStationIds.size,
+        stationAreas.size,
+    ]);
 
-    // Sort: remaining stations first, eliminated grouped below.
-    // Within each group, sort alphabetically by display name.
+    const manualEliminatedSet = useMemo(
+        () => new Set(manualEliminatedIds),
+        [manualEliminatedIds],
+    );
+
+    // Sort: most area remaining first; eliminated stations (both geometric
+    // and manual) sink to the bottom. Tie-break alphabetically by display name.
     const sortedStations = useMemo(() => {
         if (selectedStations.length === 0) return [];
         const displayName = (s: (typeof selectedStations)[number]) =>
@@ -34,9 +57,14 @@ export function StationDetailScreen() {
             const aElim = eliminatedStationIds.has(a.id);
             const bElim = eliminatedStationIds.has(b.id);
             if (aElim !== bElim) return aElim ? 1 : -1;
+            if (!aElim) {
+                const aM2 = stationAreas.get(a.id)?.remainingM2 ?? 0;
+                const bM2 = stationAreas.get(b.id)?.remainingM2 ?? 0;
+                if (aM2 !== bM2) return bM2 - aM2; // most area first
+            }
             return displayName(a).localeCompare(displayName(b));
         });
-    }, [selectedStations, eliminatedStationIds]);
+    }, [selectedStations, eliminatedStationIds, stationAreas]);
 
     return (
         <SheetScrollView contentContainerStyle={styles.contentContainer}>
@@ -65,6 +93,15 @@ export function StationDetailScreen() {
                         const isEliminated = eliminatedStationIds.has(
                             station.id,
                         );
+                        const isManualElim = manualEliminatedSet.has(
+                            station.id,
+                        );
+                        const areaInfo = stationAreas.get(station.id);
+                        const pct =
+                            areaInfo && !isEliminated
+                                ? Math.round(areaInfo.fraction * 100)
+                                : null;
+
                         return (
                             <View key={station.id} style={styles.stationRow}>
                                 {/* Route color dots */}
@@ -96,8 +133,45 @@ export function StationDetailScreen() {
                                     {station.nameEn || station.name}
                                 </Text>
 
-                                {/* Eliminated badge */}
-                                {isEliminated ? (
+                                {/* Area percentage (remaining stations only) */}
+                                {!isEliminated && pct !== null ? (
+                                    <Text style={styles.areaPct}>{pct}%</Text>
+                                ) : null}
+
+                                {/* Manual eliminate / restore button */}
+                                {isManualElim ? (
+                                    <TouchableOpacity
+                                        accessibilityLabel={`Restore ${station.nameEn || station.name}`}
+                                        accessibilityRole="button"
+                                        testID={`station-restore-${station.id}`}
+                                        style={styles.actionButton}
+                                        onPress={() =>
+                                            restoreStation(station.id)
+                                        }
+                                    >
+                                        <Text style={styles.actionButtonText}>
+                                            Restore
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : !isEliminated ? (
+                                    <TouchableOpacity
+                                        accessibilityLabel={`Eliminate ${station.nameEn || station.name}`}
+                                        accessibilityRole="button"
+                                        testID={`station-eliminate-${station.id}`}
+                                        style={styles.actionButton}
+                                        onPress={() =>
+                                            eliminateStation(station.id)
+                                        }
+                                    >
+                                        <Text style={styles.actionButtonText}>
+                                            Eliminate
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : null}
+
+                                {/* Eliminated badge (geometric only — manual
+                                    shows the Restore button instead) */}
+                                {isEliminated && !isManualElim ? (
                                     <View style={styles.eliminatedBadge}>
                                         <Text
                                             style={styles.eliminatedBadgeText}
@@ -116,6 +190,26 @@ export function StationDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+    actionButton: {
+        borderColor: colors.tint,
+        borderRadius: 4,
+        borderWidth: 1,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    actionButtonText: {
+        color: colors.tint,
+        fontSize: 11,
+        fontWeight: "700",
+    },
+    areaPct: {
+        color: colors.muted,
+        fontVariant: ["tabular-nums"],
+        fontSize: 13,
+        fontWeight: "600",
+        minWidth: 36,
+        textAlign: "right",
+    },
     colorDots: {
         alignItems: "center",
         flexDirection: "row",

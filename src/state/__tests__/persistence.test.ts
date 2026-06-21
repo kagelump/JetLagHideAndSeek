@@ -295,6 +295,7 @@ describe("AppStateV1 schema", () => {
             radiusMeters: 500,
             radiusUnit: "m",
             selectedPresetIds: [],
+            eliminatedStationIds: [],
         });
     });
 });
@@ -416,6 +417,7 @@ describe("app-state persistence", () => {
             radiusMeters: 500,
             radiusUnit: "m",
             selectedPresetIds: [],
+            eliminatedStationIds: [],
         });
         expect(result?.playArea.osmId).toBe(0);
         expect(result?.questions).toEqual([]);
@@ -475,6 +477,7 @@ describe("app-state persistence", () => {
             radiusMeters: 500,
             radiusUnit: "m",
             selectedPresetIds: [],
+            eliminatedStationIds: [],
         });
         expect(result?.metadata).toEqual(makeAppState().metadata);
 
@@ -485,5 +488,58 @@ describe("app-state persistence", () => {
             "app-state:question-settings:v1",
         );
         expect(questionSettings).not.toBeNull();
+    });
+
+    it("round-trips eliminatedStationIds: old blobs without the field default to []", async () => {
+        // Write a v1 blob without the eliminatedStationIds field (old persisted data).
+        await AsyncStorage.setItem(
+            "app-state:hiding-zones:v1",
+            JSON.stringify({
+                radiusMeters: 600,
+                radiusUnit: "m",
+                selectedPresetIds: [],
+            }),
+        );
+        await AsyncStorage.setItem(
+            "app-state:play-area:v1",
+            JSON.stringify(makeAppState().playArea),
+        );
+        await AsyncStorage.setItem(
+            "app-state:questions:v1",
+            JSON.stringify([]),
+        );
+        await AsyncStorage.setItem(
+            "app-state:question-settings:v1",
+            JSON.stringify(makeAppState().questionSettings),
+        );
+        await AsyncStorage.setItem(
+            "app-state:metadata:v1",
+            JSON.stringify(makeAppState().metadata),
+        );
+
+        const result = await loadPersistedAppState();
+        expect(result).not.toBeNull();
+        // The field defaults to [] for old blobs.
+        expect(result?.hidingZones.eliminatedStationIds).toEqual([]);
+    });
+
+    it("round-trips eliminatedStationIds through persist and load", async () => {
+        const state = createAppStateV1({
+            hidingZones: {
+                radiusMeters: 700,
+                radiusUnit: "m",
+                selectedPresetIds: [],
+                eliminatedStationIds: ["station-1", "station-2"],
+            },
+            now: new Date("2026-05-18T00:00:00.000Z"),
+            playArea: defaultPlayArea,
+        });
+        await persistAppState(state);
+
+        const loaded = await loadPersistedAppState();
+        expect(loaded?.hidingZones.eliminatedStationIds).toEqual([
+            "station-1",
+            "station-2",
+        ]);
     });
 });

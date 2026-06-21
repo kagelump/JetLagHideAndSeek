@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { InteractionManager } from "react-native";
 import circle from "@turf/circle";
 import type { Feature, MultiPolygon, Polygon } from "geojson";
@@ -20,11 +20,19 @@ import { usePlayArea } from "@/state/playAreaStore";
 import { bboxIntersects, EARTH_RADIUS_METERS } from "@/shared/geojson";
 import type { Bbox } from "@/shared/geojson";
 import { getGeometryBackend } from "@/shared/geometry/geometryBackend";
+import { geomAreaM2 } from "@/shared/geometry/parityMetrics";
 import { createLogger } from "@/shared/logger";
 
 const log = createLogger("useStationElimination");
 
 const CIRCLE_STEPS = HIDING_ZONE.circleSteps;
+
+export type StationAreaInfo = {
+    /** Eligible fraction of the station's circle, in [0, 1]. */
+    fraction: number;
+    /** Eligible area within the circle, m² (used as the sort key). */
+    remainingM2: number;
+};
 
 export type StationEliminationResult = {
     /**
@@ -36,6 +44,8 @@ export type StationEliminationResult = {
     totalCount: number;
     /** Set of station IDs that are fully eliminated (empty while loading). */
     eliminatedStationIds: Set<string>;
+    /** Per-station area info, keyed by station id. Empty while loading. */
+    stationAreas: Map<string, StationAreaInfo>;
     /** True while the async computation is pending. */
     isComputing: boolean;
 };
@@ -208,6 +218,7 @@ export function computeStationElimination(
     radiusMeters: number,
     playAreaBbox: Bbox | undefined,
     questionRenderState: QuestionMapRenderState,
+    manuallyEliminatedIds: Set<string> = new Set(),
 ): StationEliminationResult {
     // ── Guard clauses ──────────────────────────────────────────────
 
@@ -216,15 +227,24 @@ export function computeStationElimination(
             remainingCount: 0,
             totalCount: 0,
             eliminatedStationIds: new Set(),
+            stationAreas: new Map(),
             isComputing: false,
         };
     }
 
     if (!boundary || boundary.features.length === 0) {
+        const areas = new Map<string, StationAreaInfo>();
+        for (const s of stations) {
+            areas.set(s.id, {
+                fraction: 1,
+                remainingM2: Math.PI * radiusMeters * radiusMeters,
+            });
+        }
         return {
             remainingCount: stations.length,
             totalCount: stations.length,
             eliminatedStationIds: new Set(),
+            stationAreas: areas,
             isComputing: false,
         };
     }
@@ -240,6 +260,7 @@ export function computeStationElimination(
             remainingCount: 0,
             totalCount: 0,
             eliminatedStationIds: new Set(),
+            stationAreas: new Map(),
             isComputing: false,
         };
     }
@@ -253,10 +274,25 @@ export function computeStationElimination(
 
     // Fast path: empty mask → all stations remaining.
     if (mask.features.length === 0) {
+        const areas = new Map<string, StationAreaInfo>();
+        // Compute circle area analytically for each station (avoids building
+        // a polygon just for area measurement on the fast path).
+        for (const station of clipped) {
+            const fraction = manuallyEliminatedIds.has(station.id) ? 0 : 1;
+            areas.set(station.id, {
+                fraction,
+                remainingM2:
+                    fraction > 0 ? Math.PI * radiusMeters * radiusMeters : 0,
+            });
+        }
+        const manuallyEliminated = clipped.filter((s) =>
+            manuallyEliminatedIds.has(s.id),
+        );
         return {
-            remainingCount: clipped.length,
+            remainingCount: clipped.length - manuallyEliminated.length,
             totalCount: clipped.length,
-            eliminatedStationIds: new Set(),
+            eliminatedStationIds: new Set(manuallyEliminated.map((s) => s.id)),
+            stationAreas: areas,
             isComputing: false,
         };
     }
@@ -266,10 +302,21 @@ export function computeStationElimination(
     const maskFeature = fcToSingleFeature(mask);
 
     if (!boundaryFeature || !maskFeature) {
+        const areas = new Map<string, StationAreaInfo>();
+        const eliminated = new Set<string>();
+        for (const station of clipped) {
+            const elim = manuallyEliminatedIds.has(station.id);
+            areas.set(station.id, {
+                fraction: elim ? 0 : 1,
+                remainingM2: elim ? 0 : Math.PI * radiusMeters * radiusMeters,
+            });
+            if (elim) eliminated.add(station.id);
+        }
         return {
-            remainingCount: clipped.length,
+            remainingCount: clipped.length - eliminated.size,
             totalCount: clipped.length,
-            eliminatedStationIds: new Set(),
+            eliminatedStationIds: eliminated,
+            stationAreas: areas,
             isComputing: false,
         };
     }
@@ -280,10 +327,17 @@ export function computeStationElimination(
     // If difference is null, the entire play area is masked → zero remaining.
     if (!eligibleFeature) {
         const eliminated = new Set(clipped.map((s) => s.id));
+        // Force manual eliminations (they're already in eliminated).
+        for (const id of manuallyEliminatedIds) eliminated.add(id);
+        const areas = new Map<string, StationAreaInfo>();
+        for (const station of clipped) {
+            areas.set(station.id, { fraction: 0, remainingM2: 0 });
+        }
         return {
             remainingCount: 0,
             totalCount: clipped.length,
             eliminatedStationIds: eliminated,
+            stationAreas: areas,
             isComputing: false,
         };
     }
@@ -292,14 +346,28 @@ export function computeStationElimination(
     const maskBboxValue = fcBbox(mask);
     const remaining: string[] = [];
     const eliminated: string[] = [];
+    const stationAreas = new Map<string, StationAreaInfo>();
 
     for (const station of clipped) {
+        // Force manually eliminated stations to 0 regardless of geometry.
+        if (manuallyEliminatedIds.has(station.id)) {
+            eliminated.push(station.id);
+            stationAreas.set(station.id, { fraction: 0, remainingM2: 0 });
+            continue;
+        }
+
         const stationBbox = circleBbox(station.lat, station.lon, radiusMeters);
 
         // Fast path: station circle bbox doesn't overlap mask bbox →
         // the circle is entirely outside the ineligible region.
         if (maskBboxValue && !bboxIntersects(stationBbox, maskBboxValue)) {
             remaining.push(station.id);
+            // Circle area analytically: π·r² (planar approximation; parity
+            // with geomAreaM2 is not needed for a sort key at city scale).
+            stationAreas.set(station.id, {
+                fraction: 1,
+                remainingM2: Math.PI * radiusMeters * radiusMeters,
+            });
             continue;
         }
 
@@ -318,8 +386,17 @@ export function computeStationElimination(
 
         if (intersectionResult) {
             remaining.push(station.id);
+            const circleArea = geomAreaM2(stationCircle.geometry);
+            const intersectionArea = geomAreaM2(intersectionResult.geometry);
+            const fraction =
+                circleArea > 0 ? Math.min(1, intersectionArea / circleArea) : 0;
+            stationAreas.set(station.id, {
+                fraction,
+                remainingM2: intersectionArea,
+            });
         } else {
             eliminated.push(station.id);
+            stationAreas.set(station.id, { fraction: 0, remainingM2: 0 });
         }
     }
 
@@ -327,6 +404,7 @@ export function computeStationElimination(
         remainingCount: remaining.length,
         totalCount: clipped.length,
         eliminatedStationIds: new Set(eliminated),
+        stationAreas,
         isComputing: false,
     };
 }
@@ -346,16 +424,30 @@ function buildCacheKey(
     boundary: MaskFeatureCollection | null,
     radiusMeters: number,
     questionRenderState: QuestionMapRenderState,
+    manuallyEliminatedIds?: Set<string>,
+    playAreaBbox?: Bbox,
 ): string {
     const n = stations.length;
     const stationSig =
         n === 0
             ? "0"
             : `${n}:${stations[0].id}:${stations[Math.floor(n / 2)].id}:${stations[n - 1].id}`;
-    const zoneSig = `${zoneFeatures.features.length}:${radiusMeters}`;
-    const boundarySig = boundary ? String(boundary.features.length) : "0";
+    // Include the actual geometry radius (from zone feature properties)
+    // so the key invalidates when the debounced zone geometry updates,
+    // not just when the canonical radius changes.
+    const firstFeature = zoneFeatures.features[0] as
+        | { properties?: { radiusMeters?: number } }
+        | undefined;
+    const zoneRadius = firstFeature?.properties?.radiusMeters ?? radiusMeters;
+    const zoneSig = `${zoneFeatures.features.length}:${radiusMeters}:${zoneRadius}`;
+    const boundarySig = boundary
+        ? `${boundary.features.length}:${bboxString(playAreaBbox ?? null)}`
+        : "0";
     const qSig = renderStateSignature(questionRenderState);
-    return `${stationSig}|${zoneSig}|${boundarySig}|${qSig}`;
+    const manualSig = manuallyEliminatedIds?.size
+        ? `manual:${[...manuallyEliminatedIds].sort().join(",")}`
+        : "";
+    return `${stationSig}|${zoneSig}|${boundarySig}|${qSig}|${manualSig}`;
 }
 
 /**
@@ -368,6 +460,8 @@ export function getCachedResult(
     boundary: MaskFeatureCollection | null,
     radiusMeters: number,
     questionRenderState: QuestionMapRenderState,
+    manuallyEliminatedIds?: Set<string>,
+    playAreaBbox?: Bbox,
 ): StationEliminationResult | null {
     const key = buildCacheKey(
         stations,
@@ -375,6 +469,8 @@ export function getCachedResult(
         boundary,
         radiusMeters,
         questionRenderState,
+        manuallyEliminatedIds,
+        playAreaBbox,
     );
     const cached = resultCache.get(key);
     if (cached) {
@@ -393,6 +489,8 @@ function putCachedResult(
     radiusMeters: number,
     questionRenderState: QuestionMapRenderState,
     result: StationEliminationResult,
+    manuallyEliminatedIds?: Set<string>,
+    playAreaBbox?: Bbox,
 ): void {
     const key = buildCacheKey(
         stations,
@@ -400,6 +498,8 @@ function putCachedResult(
         boundary,
         radiusMeters,
         questionRenderState,
+        manuallyEliminatedIds,
+        playAreaBbox,
     );
     lruEvictCache();
     resultCache.set(key, result);
@@ -420,8 +520,8 @@ function putCachedResult(
  * `remainingCount` is `null` and `isComputing` is `true`.
  */
 export function useStationElimination(): StationEliminationResult {
-    const { selectedStations, zoneFeatures } = useHidingZoneDerived();
-    const { radiusMeters } = useHidingZoneState();
+    const { selectedStations, activeZoneFeatures } = useHidingZoneDerived();
+    const { radiusMeters, eliminatedStationIds } = useHidingZoneState();
     const { playArea } = usePlayArea();
     const {
         renderState: questionMapRenderState,
@@ -433,11 +533,26 @@ export function useStationElimination(): StationEliminationResult {
 
     // Derive the dependencies we pass to useEffect / cache.
     const stations = selectedStations;
-    const zf = zoneFeatures;
+    // Use active zone (without manually eliminated stations) as the
+    // eligibility numerator — this makes manual elimination count as
+    // elimination progress and reshapes the eligible region correctly.
+    const zf = activeZoneFeatures;
     const qrs = questionMapRenderState;
+    const manuallyEliminatedSet = useMemo(
+        () => new Set(eliminatedStationIds),
+        [eliminatedStationIds],
+    );
 
     // Check the module cache synchronously on every render.
-    const cached = getCachedResult(stations, zf, boundary, radiusMeters, qrs);
+    const cached = getCachedResult(
+        stations,
+        zf,
+        boundary,
+        radiusMeters,
+        qrs,
+        manuallyEliminatedSet,
+        bbox,
+    );
 
     // Track the latest result (initialised from cache if available).
     const [result, setResult] = useState<StationEliminationResult>(
@@ -445,6 +560,7 @@ export function useStationElimination(): StationEliminationResult {
             remainingCount: null,
             totalCount: stations.length,
             eliminatedStationIds: new Set(),
+            stationAreas: new Map(),
             isComputing: true,
         },
     );
@@ -461,6 +577,8 @@ export function useStationElimination(): StationEliminationResult {
             boundary,
             radiusMeters,
             qrs,
+            manuallyEliminatedSet,
+            bbox,
         );
 
         // Same cache key as last effect run → nothing changed.
@@ -468,7 +586,15 @@ export function useStationElimination(): StationEliminationResult {
         cacheKeyRef.current = cacheKey;
 
         // Cache hit → update state immediately (no loading flash).
-        const hit = getCachedResult(stations, zf, boundary, radiusMeters, qrs);
+        const hit = getCachedResult(
+            stations,
+            zf,
+            boundary,
+            radiusMeters,
+            qrs,
+            manuallyEliminatedSet,
+            bbox,
+        );
         if (hit) {
             log.debug(
                 `cache HIT — remaining=${hit.remainingCount}/${hit.totalCount}`,
@@ -487,6 +613,7 @@ export function useStationElimination(): StationEliminationResult {
             remainingCount: null,
             totalCount: stations.length,
             eliminatedStationIds: new Set(),
+            stationAreas: new Map(),
             isComputing: true,
         });
 
@@ -513,6 +640,7 @@ export function useStationElimination(): StationEliminationResult {
                     radiusMeters,
                     bbox,
                     qrs,
+                    manuallyEliminatedSet,
                 );
                 const dt = (performance.now() - t0).toFixed(0);
                 log.debug(
@@ -520,7 +648,16 @@ export function useStationElimination(): StationEliminationResult {
                         `(computeId=${computeId}, elapsed=${dt}ms, remaining=${r.remainingCount}/${r.totalCount})`,
                 );
                 if (computeId !== computeIdRef.current) return; // stale
-                putCachedResult(stations, zf, boundary, radiusMeters, qrs, r);
+                putCachedResult(
+                    stations,
+                    zf,
+                    boundary,
+                    radiusMeters,
+                    qrs,
+                    r,
+                    manuallyEliminatedSet,
+                    bbox,
+                );
                 setResult(r);
             });
         });
@@ -529,7 +666,15 @@ export function useStationElimination(): StationEliminationResult {
             if (rafId !== null) cancelAnimationFrame(rafId);
             handle.cancel();
         };
-    }, [stations, zf, boundary, radiusMeters, bbox, qrs]);
+    }, [
+        stations,
+        zf,
+        boundary,
+        radiusMeters,
+        bbox,
+        qrs,
+        manuallyEliminatedSet,
+    ]);
 
     // Treat an upstream render-state recompute as "still computing" too — the
     // elimination inputs (the question render state) aren't final yet.

@@ -18,7 +18,7 @@ export type EliminationPercentageResult = {
 
 export function useEliminationPercentage(): EliminationPercentageResult {
     const { playArea } = usePlayArea();
-    const { zoneFeatures } = useHidingZoneDerived();
+    const { zoneFeatures, activeZoneFeatures } = useHidingZoneDerived();
     const { renderState: questionMapRenderState, isComputing } =
         useQuestionMapRenderState();
 
@@ -26,18 +26,26 @@ export function useEliminationPercentage(): EliminationPercentageResult {
         if (!playArea.boundary || zoneFeatures.features.length === 0)
             return null;
 
+        // Denominator: full hiding zone (unchanged — baseline area).
         const zoneArea = zoneBaselineArea(playArea.boundary, zoneFeatures);
         if (zoneArea <= 0) return null;
 
+        // Numerator: active zone (excludes manually eliminated stations),
+        // so manual elimination raises the hero elimination percentage.
         return zoneEliminationPercent(
             eligibleArea(
                 playArea.boundary,
-                zoneFeatures,
+                activeZoneFeatures,
                 questionMapRenderState,
             ),
             zoneArea,
         );
-    }, [playArea.boundary, zoneFeatures, questionMapRenderState]);
+    }, [
+        playArea.boundary,
+        zoneFeatures,
+        activeZoneFeatures,
+        questionMapRenderState,
+    ]);
 
     return { value, isComputing };
 }

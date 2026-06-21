@@ -199,4 +199,171 @@ describe("computeStationElimination", () => {
         expect(result.eliminatedStationIds.has("b")).toBe(false);
         expect(result.eliminatedStationIds.has("c")).toBe(false);
     });
+
+    // ── Area Math Tests ──────────────────────────────────────────────
+
+    it("populates stationAreas for every clipped station", () => {
+        const result = computeStationElimination(
+            threeStations,
+            emptyZoneFeatures,
+            boundary10x10,
+            600,
+            bbox10x10,
+            emptyRenderState,
+        );
+        expect(result.stationAreas.size).toBe(3);
+        expect(result.stationAreas.has("a")).toBe(true);
+        expect(result.stationAreas.has("b")).toBe(true);
+        expect(result.stationAreas.has("c")).toBe(true);
+    });
+
+    it("reports fraction=1 for a station whose circle is fully inside eligible area", () => {
+        // No mask → all stations are fully eligible.
+        const result = computeStationElimination(
+            threeStations,
+            emptyZoneFeatures,
+            boundary10x10,
+            600,
+            bbox10x10,
+            emptyRenderState,
+        );
+        for (const area of result.stationAreas.values()) {
+            expect(area.fraction).toBe(1);
+            expect(area.remainingM2).toBeGreaterThan(0);
+        }
+    });
+
+    it("reports fraction=0 for a fully eliminated station", () => {
+        const fullMaskState: QuestionMapRenderState = {
+            ...emptyRenderState,
+            radar: {
+                hitMaskFeatures: emptyFC(),
+                missMaskFeatures: boundary10x10,
+            },
+        } as unknown as QuestionMapRenderState;
+
+        const result = computeStationElimination(
+            threeStations,
+            emptyZoneFeatures,
+            boundary10x10,
+            600,
+            bbox10x10,
+            fullMaskState,
+        );
+        // All stations eliminated by the full-cover mask.
+        expect(result.eliminatedStationIds.size).toBe(3);
+        for (const area of result.stationAreas.values()) {
+            expect(area.fraction).toBe(0);
+            expect(area.remainingM2).toBe(0);
+        }
+    });
+
+    it("reports fraction≈0.5 for a station half-covered by a radar miss mask", () => {
+        // A miss mask covering the right half of the 10x10 play area.
+        // Station sA at (5,5) is on the edge; its 600m circle straddles.
+        // Station sB at (2,2) is fully left → stays 100%.
+        // Station sC at (8,8) is fully right → eliminated.
+        const rightHalf = squareFC(5, 0, 10, 10);
+        const state: QuestionMapRenderState = {
+            ...emptyRenderState,
+            radar: {
+                hitMaskFeatures: emptyFC(),
+                missMaskFeatures: rightHalf,
+            },
+        } as unknown as QuestionMapRenderState;
+
+        const result = computeStationElimination(
+            threeStations,
+            emptyZoneFeatures,
+            boundary10x10,
+            600,
+            bbox10x10,
+            state,
+        );
+
+        // sC should be eliminated.
+        expect(result.eliminatedStationIds.has("c")).toBe(true);
+        const cArea = result.stationAreas.get("c")!;
+        expect(cArea.fraction).toBe(0);
+
+        // sB should be fully remaining.
+        expect(result.eliminatedStationIds.has("b")).toBe(false);
+        const bArea = result.stationAreas.get("b")!;
+        expect(bArea.fraction).toBe(1);
+
+        // sA straddles — fraction should be between 0 and 1 (tolerance ~0.1
+        // due to planar circle steps).
+        const aArea = result.stationAreas.get("a")!;
+        expect(aArea.fraction).toBeGreaterThan(0);
+        expect(aArea.fraction).toBeLessThan(1);
+    });
+
+    // ── Manual Elimination Tests ────────────────────────────────────
+
+    it("forces manually eliminated stations to fraction=0 regardless of geometry", () => {
+        // No mask → all stations geometrically eligible.
+        const manualSet = new Set(["a"]);
+        const result = computeStationElimination(
+            threeStations,
+            emptyZoneFeatures,
+            boundary10x10,
+            600,
+            bbox10x10,
+            emptyRenderState,
+            manualSet,
+        );
+
+        expect(result.eliminatedStationIds.has("a")).toBe(true);
+        expect(result.remainingCount).toBe(2);
+
+        const aArea = result.stationAreas.get("a")!;
+        expect(aArea.fraction).toBe(0);
+        expect(aArea.remainingM2).toBe(0);
+
+        // Other stations unaffected.
+        expect(result.stationAreas.get("b")!.fraction).toBe(1);
+        expect(result.stationAreas.get("c")!.fraction).toBe(1);
+    });
+
+    it("adds manually eliminated stations to eliminatedStationIds", () => {
+        // One station geometrically eliminated by mask, one manually.
+        const centerMask = squareFC(4, 4, 6, 6);
+        const state: QuestionMapRenderState = {
+            ...emptyRenderState,
+            radar: {
+                hitMaskFeatures: emptyFC(),
+                missMaskFeatures: centerMask,
+            },
+        } as unknown as QuestionMapRenderState;
+
+        const manualSet = new Set(["b"]);
+        const result = computeStationElimination(
+            threeStations,
+            emptyZoneFeatures,
+            boundary10x10,
+            600,
+            bbox10x10,
+            state,
+            manualSet,
+        );
+
+        // sA eliminated by geometry, sB eliminated manually.
+        expect(result.eliminatedStationIds.has("a")).toBe(true);
+        expect(result.eliminatedStationIds.has("b")).toBe(true);
+        // sC still remaining.
+        expect(result.eliminatedStationIds.has("c")).toBe(false);
+        expect(result.remainingCount).toBe(1);
+    });
+
+    it("returns empty stationAreas when nothing to compute", () => {
+        const result = computeStationElimination(
+            [],
+            emptyZoneFeatures,
+            boundary10x10,
+            600,
+            bbox10x10,
+            emptyRenderState,
+        );
+        expect(result.stationAreas.size).toBe(0);
+    });
 });

@@ -115,7 +115,7 @@ export function NativeMap({
     } | null>(null);
     const insets = useSafeAreaInsets();
     const { height } = useSafeAreaFrame();
-    const { routeFeatures, stationFeatures, zoneFeatures } =
+    const { routeFeatures, stationFeatures, zoneFeatures, activeZoneFeatures } =
         useHidingZoneDerived();
     const markAppMapReady = useMarkAppMapReady();
     const { renderState: questionMapRenderState, isComputing } =
@@ -256,7 +256,7 @@ export function NativeMap({
         // overlay differs only in substituting the live thermometer-drag hit
         // mask, passed here as an override so the assembly logic stays unforked.
         const { required, excluded } = buildEligibilityConstraints(
-            zoneFeatures,
+            activeZoneFeatures,
             questionMapRenderState,
             {
                 thermometer: {
@@ -272,7 +272,7 @@ export function NativeMap({
     }, [
         playAreaIsSet,
         playArea.boundary,
-        zoneFeatures,
+        activeZoneFeatures,
         questionMapRenderState.radar.hitMaskFeatures,
         questionMapRenderState.radar.missMaskFeatures,
         questionMapRenderState.transitLine.hitMaskFeatures,

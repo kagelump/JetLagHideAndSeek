@@ -102,6 +102,7 @@ describe("HidingZoneProvider app-state persistence", () => {
                 radiusMeters: 600,
                 radiusUnit: "m",
                 selectedPresetIds: [],
+                eliminatedStationIds: [],
             });
             expect(persisted?.questions).toEqual([]);
         });
@@ -263,6 +264,152 @@ describe("HidingZoneProvider app-state persistence", () => {
         expect(persisted?.hidingZones.radiusMeters).toBe(700);
         expect(persisted?.hidingZones.radiusUnit).toBe("km");
         expect(persisted?.hidingZones.selectedPresetIds).toEqual(["toei"]);
+    });
+});
+
+describe("HidingZoneProvider manual elimination", () => {
+    beforeEach(async () => {
+        await AsyncStorage.clear();
+    });
+
+    it("eliminateStation adds to the set and restoreStation removes it", async () => {
+        let actions: ReturnType<typeof useHidingZoneActions> | null = null;
+
+        function ElimProbe() {
+            actions = useHidingZoneActions();
+            const { eliminatedStationIds } = useHidingZoneState();
+            return (
+                <View>
+                    <Probe />
+                    <Text testID="eliminated">
+                        {eliminatedStationIds.join(",")}
+                    </Text>
+                </View>
+            );
+        }
+
+        const screen = renderProvider(<ElimProbe />);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        expect(screen.getByTestId("eliminated")).toHaveTextContent("");
+
+        act(() => actions!.eliminateStation("station-a"));
+        expect(screen.getByTestId("eliminated")).toHaveTextContent("station-a");
+
+        // Idempotent — adding again does nothing.
+        act(() => actions!.eliminateStation("station-a"));
+        expect(screen.getByTestId("eliminated")).toHaveTextContent("station-a");
+
+        act(() => actions!.eliminateStation("station-b"));
+        expect(screen.getByTestId("eliminated")).toHaveTextContent(
+            "station-a,station-b",
+        );
+
+        act(() => actions!.restoreStation("station-a"));
+        expect(screen.getByTestId("eliminated")).toHaveTextContent("station-b");
+
+        act(() => actions!.restoreStation("station-b"));
+        expect(screen.getByTestId("eliminated")).toHaveTextContent("");
+
+        // Restoring non-existent id is a no-op.
+        act(() => actions!.restoreStation("nonexistent"));
+        expect(screen.getByTestId("eliminated")).toHaveTextContent("");
+    });
+
+    it("clearEliminatedStations removes all manual eliminations", async () => {
+        let actions: ReturnType<typeof useHidingZoneActions> | null = null;
+
+        function ClearProbe() {
+            actions = useHidingZoneActions();
+            const { eliminatedStationIds } = useHidingZoneState();
+            return (
+                <View>
+                    <Probe />
+                    <Text testID="eliminated">
+                        {eliminatedStationIds.join(",")}
+                    </Text>
+                </View>
+            );
+        }
+
+        const screen = renderProvider(<ClearProbe />);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        act(() => actions!.eliminateStation("a"));
+        act(() => actions!.eliminateStation("b"));
+        expect(screen.getByTestId("eliminated")).toHaveTextContent("a,b");
+
+        act(() => actions!.clearEliminatedStations());
+        expect(screen.getByTestId("eliminated")).toHaveTextContent("");
+    });
+
+    it("persists and restores eliminatedStationIds", async () => {
+        // Persist with eliminations.
+        await persistAppState(
+            makeAppState({
+                radiusMeters: 600,
+                radiusUnit: "m",
+                selectedPresetIds: [],
+                eliminatedStationIds: ["tokyo-station", "ueno-station"],
+            }),
+        );
+
+        let stateRead: string[] = [];
+        function PersistProbe() {
+            const { eliminatedStationIds } = useHidingZoneState();
+            stateRead = eliminatedStationIds;
+            return <Probe />;
+        }
+
+        const screen = renderProvider(<PersistProbe />);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        expect(stateRead).toEqual(["tokyo-station", "ueno-station"]);
+    });
+
+    it("round-trips empty eliminatedStationIds (old blob compat)", async () => {
+        // Simulate an old persisted blob without the field.
+        await AsyncStorage.setItem(
+            "app-state:hiding-zones:v1",
+            JSON.stringify({
+                radiusMeters: 700,
+                radiusUnit: "m",
+                selectedPresetIds: [],
+                // eliminatedStationIds absent
+            }),
+        );
+
+        let stateRead: string[] = [];
+        function CompatProbe() {
+            const { eliminatedStationIds } = useHidingZoneState();
+            stateRead = eliminatedStationIds;
+            return <Probe />;
+        }
+
+        const screen = renderProvider(<CompatProbe />);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        expect(stateRead).toEqual([]);
     });
 });
 

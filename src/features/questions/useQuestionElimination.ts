@@ -47,7 +47,8 @@ export function useQuestionElimination(
     liveOverride?: QuestionState | null,
 ): QuestionElimination | null {
     const { playArea } = usePlayArea();
-    const { zoneFeatures, selectedStations } = useHidingZoneDerived();
+    const { zoneFeatures, activeZoneFeatures, selectedStations } =
+        useHidingZoneDerived();
     const { radiusMeters } = useHidingZoneState();
     const questions = useQuestions();
     const { renderState: committedRenderState } = useQuestionMapRenderState();
@@ -67,6 +68,7 @@ export function useQuestionElimination(
             Polygon | MultiPolygon
         >;
 
+        // Denominator: full hiding zone (unchanged — baseline area).
         const zoneArea = zoneBaselineArea(boundary, zoneFeatures);
         if (zoneArea <= 0) return null;
 
@@ -102,6 +104,11 @@ export function useQuestionElimination(
         // (memoized) committed render state so this matches the hero stat
         // exactly. When overriding (thermometer drag), build synchronously
         // — those categories don't trigger heavy line-distance compute.
+        //
+        // Numerator: activeZoneFeatures (excludes manually eliminated
+        // stations) so manual elimination counts toward the total but is NOT
+        // attributed to any single question — it telescopes to the
+        // question-eliminated portion only.
         const fullRenderState = liveOverride
             ? buildQuestionMapRenderState(
                   effectiveQuestions,
@@ -112,7 +119,7 @@ export function useQuestionElimination(
               )
             : committedRenderState;
         const totalPct = zoneEliminationPercent(
-            eligibleArea(boundary, zoneFeatures, fullRenderState),
+            eligibleArea(boundary, activeZoneFeatures, fullRenderState),
             zoneArea,
         );
 
@@ -140,12 +147,12 @@ export function useQuestionElimination(
                 );
             eligibleBefore = eligibleArea(
                 boundary,
-                zoneFeatures,
+                activeZoneFeatures,
                 buildRenderState(effectiveQuestions.slice(0, index)),
             );
             eligibleAfter = eligibleArea(
                 boundary,
-                zoneFeatures,
+                activeZoneFeatures,
                 buildRenderState(effectiveQuestions.slice(0, index + 1)),
             );
         } else {
@@ -163,8 +170,16 @@ export function useQuestionElimination(
                 return { totalPct, byThisPct: 0 };
             }
 
-            eligibleBefore = eligibleArea(boundary, zoneFeatures, beforeState);
-            eligibleAfter = eligibleArea(boundary, zoneFeatures, afterState);
+            eligibleBefore = eligibleArea(
+                boundary,
+                activeZoneFeatures,
+                beforeState,
+            );
+            eligibleAfter = eligibleArea(
+                boundary,
+                activeZoneFeatures,
+                afterState,
+            );
         }
 
         return {
@@ -184,6 +199,7 @@ export function useQuestionElimination(
         playArea.bbox,
         playArea.osmId,
         zoneFeatures,
+        activeZoneFeatures,
         selectedStations,
         radiusMeters,
         measuringRevision,

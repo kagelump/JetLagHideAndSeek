@@ -32,6 +32,7 @@ export const appStateHidingZonesSchema = z.object({
     radiusMeters: z.number().positive(),
     radiusUnit: z.enum(["m", "km", "mi"]),
     selectedPresetIds: z.array(z.string()),
+    eliminatedStationIds: z.array(z.string()).default([]),
 });
 
 export const appStateQuestionsSchema = z.array(questionSchema);
@@ -75,6 +76,7 @@ const DEFAULT_HIDING_ZONES: AppStateV1["hidingZones"] = {
     radiusMeters: 500,
     radiusUnit: "m",
     selectedPresetIds: [],
+    eliminatedStationIds: [],
 };
 
 /**
@@ -210,6 +212,7 @@ export function createAppStateV1({
             radiusMeters: hidingZones.radiusMeters,
             radiusUnit: hidingZones.radiusUnit,
             selectedPresetIds: [...hidingZones.selectedPresetIds],
+            eliminatedStationIds: [...(hidingZones.eliminatedStationIds ?? [])],
         },
         metadata: {
             createdAt: metadata?.createdAt ?? timestamp,
@@ -356,6 +359,7 @@ export function appStateHidingZonesToImportState(
         radiusMeters: hidingZones.radiusMeters,
         radiusUnit: hidingZones.radiusUnit,
         selectedPresetIds: [...hidingZones.selectedPresetIds],
+        eliminatedStationIds: [...(hidingZones.eliminatedStationIds ?? [])],
     };
 }
 

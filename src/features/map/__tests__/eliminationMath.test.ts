@@ -320,3 +320,57 @@ describe("strict-ordering contribution decomposition", () => {
         expect(q1 + q2).toBe(total);
     });
 });
+
+describe("manual elimination overlap correctness", () => {
+    // Two overlapping stations X and Y. Eliminating X must remove ONLY X's
+    // exclusive area; the overlap region X ∩ Y must stay eligible (Y is still
+    // active). A naive mask-subtraction approach (subtract circle_X) would
+    // wrongly delete the overlap — this test guards against that bug.
+
+    it("preserves overlap between a manually eliminated station and a live neighbour", () => {
+        const boundary = squareFC(0, 0, 10, 10);
+
+        // Two zone features that represent overlapping station circles.
+        // X covers the left; Y covers the right; they overlap in the middle.
+        const zoneX = squareFC(0, 0, 6, 10); // station X circle
+        const zoneY = squareFC(4, 0, 10, 10); // station Y circle
+        const fullZone: GeoJsonFeatureCollection = {
+            type: "FeatureCollection",
+            features: [zoneX.features[0], zoneY.features[0]],
+        };
+
+        // Active zone = only Y (simulating X being manually eliminated).
+        const activeZone: GeoJsonFeatureCollection = {
+            type: "FeatureCollection",
+            features: [zoneY.features[0]],
+        };
+
+        const fullBaseline = zoneBaselineArea(boundary, fullZone);
+        const fullEligible = eligibleArea(
+            boundary,
+            fullZone,
+            makeRenderState(),
+        );
+        const activeEligible = eligibleArea(
+            boundary,
+            activeZone,
+            makeRenderState(),
+        );
+
+        // Full zone has larger eligible area than just Y alone.
+        expect(fullBaseline).toBeGreaterThan(0);
+        expect(fullEligible).toBeGreaterThan(activeEligible);
+
+        // The difference is X's exclusive area (the left portion that Y
+        // doesn't cover), NOT the entire X circle. If mask subtraction were
+        // used, the overlap (4,0)-(6,10) would be wrongly removed and
+        // activeEligible would equal `zoneY ∩ boundary ∩ ¬zoneX` which is
+        // smaller than `zoneY ∩ boundary`.
+        const exclusiveXArea = fullEligible - activeEligible;
+        const fullXArea = featureCollectionArea(zoneX);
+
+        // X's exclusive area should be strictly less than X's full area
+        // (the overlap with Y is preserved).
+        expect(exclusiveXArea).toBeLessThan(fullXArea * 0.9);
+    });
+});
