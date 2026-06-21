@@ -141,7 +141,15 @@ export interface GeometryBackend {
 
 // ─── Selection ───────────────────────────────────────────────────────────
 
+/** The *configured* backend value, as read from `APP_CONFIG.geometry.backend`. */
+export type GeometryBackendConfig = "auto" | "js" | "geos";
+
 let _backend: GeometryBackend | null = null;
+
+// Runtime override of the configured backend, consulted *before* APP_CONFIG.
+// Default `null` ⇒ no override, so reads are byte-identical to today. Set only
+// via `setGeometryBackendConfigOverride` (the gated e2e controls + tests).
+let _backendConfigOverride: GeometryBackendConfig | null = null;
 
 /**
  * Returns the active {@link GeometryBackend}, selected once on first call
@@ -153,7 +161,7 @@ let _backend: GeometryBackend | null = null;
 export function getGeometryBackend(): GeometryBackend {
     if (_backend) return _backend;
 
-    const configBackend = APP_CONFIG.geometry.backend;
+    const configBackend = _backendConfigOverride ?? APP_CONFIG.geometry.backend;
 
     // ── Force JS ────────────────────────────────────────────────
     if (configBackend === "js") {
@@ -254,4 +262,24 @@ function _checkAbiMismatch(nativeAbi: number): void {
  */
 export function __setGeometryBackendForTest(b: GeometryBackend | null): void {
     _backend = b;
+}
+
+/**
+ * Override the *configured* backend at runtime (the value normally read from
+ * `APP_CONFIG.geometry.backend`), then re-resolve on the next
+ * {@link getGeometryBackend} call. Unlike {@link __setGeometryBackendForTest},
+ * this flows through the real native probe — so `"geos"` still falls back to JS
+ * when the native module is absent (e.g. in Jest).
+ *
+ * Pass `null` to clear the override. The memo and the one-shot ABI warning are
+ * reset so the next call re-selects. Only the gated e2e controls
+ * (`src/testing/e2e/e2eControls.ts`) and tests call this; the read it adds to
+ * the selection path is a cheap nullish coalesce off the memoized fast path.
+ */
+export function setGeometryBackendConfigOverride(
+    backend: GeometryBackendConfig | null,
+): void {
+    _backendConfigOverride = backend;
+    _backend = null;
+    _abiWarned = false;
 }

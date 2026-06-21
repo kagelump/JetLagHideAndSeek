@@ -1,6 +1,7 @@
 # Deep-Link E2E Test Suite
 
-Status: **Planning** (no code yet). Owner: TBD. Audience: junior SWEs.
+Status: **Planning** (no code yet; revalidated against the tree 2026-06-22).
+Owner: TBD. Audience: junior SWEs.
 
 This folder plans a suite of **deep-link-driven end-to-end tests**: Maestro flows
 that open a _test-only_ deep link to seed arbitrary app state, then assert on the

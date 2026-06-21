@@ -12,6 +12,19 @@ The suite has two halves:
 
 Both ship **disabled** in production. Everything below is gated.
 
+> **Revalidated 2026-06-22.** All seams below confirmed present in the current
+> tree. Two execution details were added since the original write-up:
+>
+> 1. **No-console rule.** Since the 2026-06-21 logging-primitive landing, raw
+>    `console.*` is eslint-banned in `src/**/*.{ts,tsx}` (`AGENTS.md` → Logging).
+>    Every module under `src/testing/e2e/**` (controls store, readout) must use
+>    `createLogger("e2e")` for diagnostics or it fails `pnpm check`. The route
+>    `app/e2e/index.tsx` is under `app/`, not `src/`, so a bare `console.log` for
+>    the C0 spike is fine there — but prefer the logger for anything that stays.
+> 2. **Geometry-backend memoization** (§3) — the dispatcher caches its selection
+>    on first call, so the runtime override must reset that cache, not merely be
+>    consulted "after the env default."
+
 ---
 
 ## 0. End-to-end picture
@@ -189,9 +202,16 @@ export function applyE2eScenario({
 > `applyImport` unit tests, and we get the production normalizations for free.
 
 The geometry-backend control needs a runtime switch. Today the backend is read
-once from `APP_CONFIG.geometry.backend` (env-derived in `appConfig.ts`). Add a
-small mutable override the geometry dispatcher consults (a test-only setter that
-`applyE2eScenario` calls). Scope this carefully — see epic Task B0.
+once from `APP_CONFIG.geometry.backend` (env-derived in `appConfig.ts`) and then
+**memoized**: `getGeometryBackend()` in `src/shared/geometry/geometryBackend.ts`
+caches the selection in a module-level `let _backend` on the first call and
+returns it for the rest of the process (`geometryBackend.ts:144–156`). So a
+test-only override cannot just be "read after the env default" — by the time a
+scenario applies, `_backend` is usually already populated from app start. The
+override must **reset / invalidate that memo** (e.g. set
+`_backend = null` so the next call re-selects, or branch on the override before
+the cache check) and stay a cheap module-level read so it never regresses the hot
+path. Scope this carefully — see epic Task B0.
 
 ---
 
@@ -263,23 +283,37 @@ What to expose (start small, grow per scenario need):
 
 ## 5. Maestro integration
 
-- **New route is reachable via `openLink`.** Maestro's `openLink:
-jetlag-hide-seek-v2://e2e?d=...` fires the custom scheme. Because the dev client
-  intercepts custom schemes, confirm whether the flow must wrap the link the way
-  `bootstrap.yaml` wraps `MAESTRO_DEV_CLIENT_URL` (Expo dev-client deep links use
-  the `exp+slug://expo-development-client/?url=...` form). **Spike this early**
-  (epic Task C0): the test link may need to be passed _through_ the dev-client URL
-  rather than opened directly.
-- **Flow shape:**
+- **New route is reachable via `openLink` — RESOLVED (C0 spike, 2026-06-22).**
+  `openLink: jetlag-hide-seek-v2://e2e?d=...` (the **direct custom scheme**, no
+  dev-client wrapping) routes correctly to `app/e2e/index.tsx` once
+  `bootstrap.yaml` has connected the dev client to Metro, and the `d` query param
+  survives intact. **Form B (wrapping the link in the
+  `exp+slug://expo-development-client/?url=...` dev-client URL) is _not_ needed.**
+  See the C0 addendum at the end of this section for the exact form and the two
+  timing hazards the spike surfaced.
+- **Flow shape (hardened per the C0 spike):**
     ```yaml
     appId: com.raycatdev.hideandseek.v2
     ---
     - clearState
     - runFlow: bootstrap.yaml # boots app, grants location, connects Metro
     - openLink: ${E2E_RADAR_MISS_LINK} # the test deep link (env-injected)
+    # iOS *intermittently* shows an "Open in <app>?" SpringBoard prompt for the
+    # custom scheme. Give it a beat to render, then tap it if present — tolerate
+    # its absence (iOS often delivers the URL directly).
+    - waitForAnimationToEnd:
+          timeout: 5000
+    - runFlow:
+          when:
+              visible: "Open"
+          commands:
+              - tapOn: "Open"
+    # Gate on ready=1 with extendedWaitUntil — NEVER a bare assertVisible right
+    # after openLink. On a cold connect the bundle is still building and the
+    # native a11y tree lags the JS mount (the spike caught exactly this).
     - extendedWaitUntil:
           visible: "e2e-readout:ready=1"
-          timeout: 30000
+          timeout: 60000
     - assertVisible: "e2e-readout:backend=geos"
     - assertVisible: "e2e-readout:totalPct=4[0-9]\\..*" # band, not exact
     ```
@@ -290,6 +324,46 @@ jetlag-hide-seek-v2://e2e?d=...` fires the custom scheme. Because the dev client
   `scripts/e2e/build-scenario-link.mjs`) and injects them into the Maestro `env`
   map alongside `MAESTRO_DEV_CLIENT_URL`, so flows reference `${E2E_*_LINK}` and
   never embed giant base64 blobs inline.
+
+### C0 addendum — the working deep-link form (spike, 2026-06-22)
+
+Empirically verified on the booted `iPhone 16 Pro / iOS 18.3` sim against the
+installed dev build, via `E2E_FLOW=deeplink-spike pnpm test:e2e:ios:stack` with a
+throwaway `app/e2e/index.tsx` (logs on mount + renders an accessible
+`e2e-spike:mounted=1;d=<value>` label) and `e2e/deeplink-spike.yaml`.
+
+**Working form:** after `runFlow: bootstrap.yaml` (which connects the dev client
+to Metro), `openLink: "jetlag-hide-seek-v2://e2e?d=<base64url>"` lands on
+`app/e2e/index.tsx` and the `d` query param arrives intact (proven: a route that
+echoes `d` rendered `e2e-spike:mounted=1;d=spiketest`, asserted green on a single
+attempt with no retry). The dev client does **not** require the
+`exp+slug://expo-development-client/?url=...` wrapper for an _already-connected_
+app — the custom scheme is registered by the dev build and expo-router handles
+the `/e2e` path directly. The `exp+slug://…` wrapper remains only for the
+_initial connect_, which `bootstrap.yaml` already owns.
+
+**Two timing hazards the spike surfaced (both handled in the flow shape above):**
+
+1. **Intermittent iOS "Open in <app>?" SpringBoard prompt.** On one run iOS
+   showed this confirmation over the running app and blocked delivery (route never
+   mounted) until "Open" was tapped; on two other runs it never appeared and the
+   URL was delivered directly. It is **nondeterministic**, so the flow must tap
+   "Open" _tolerantly_ (`runFlow: when: visible: "Open"` after a
+   `waitForAnimationToEnd` beat) — never an unconditional tap (it would hang when
+   the prompt is absent) and never assume it won't appear. This is the same prompt
+   `bootstrap.yaml` already taps through for the dev-client URL.
+2. **Cold-connect bundle + a11y-tree settle race.** On the first connect Metro is
+   still bundling (~10 s, 2185 modules) when `openLink` fires; the route mounted
+   (JS `useEffect` logged) but a **bare `assertVisible` fired too early and
+   failed** because the native accessibility tree lagged the JS mount. Always gate
+   the post-deep-link assert on `extendedWaitUntil visible: "…:ready=1"` with a
+   generous timeout, never an immediate `assertVisible`. **This is direct
+   empirical justification for the `ready=1` sentinel in §4** — it is not
+   optional polish; without it the suite flakes on cold connects.
+
+**Fallback (now moot):** the epic's risk note proposed routing test links through
+the production `/i` import route if the custom scheme failed. The custom scheme
+works, so that fallback is unnecessary.
 
 ---
 

@@ -1,9 +1,21 @@
 # Research: Deep-Link E2E Test Suite
 
-Date: 2026-06-15. Audience: junior SWEs. Status: research complete, ready to design.
+Date: 2026-06-15. **Revalidated 2026-06-22** against the current tree (nothing of
+the harness is built yet; `src/testing/` does not exist). Audience: junior SWEs.
+Status: research complete, ready to design.
 
 This doc answers: **what gap are we filling, what already exists that we build on,
 and why is a test-only deep link the right tool?** Read it before `design.md`.
+
+> **Revalidation note (2026-06-22).** The architecture and seam analysis still
+> holds — every code seam this epic reuses (`applyImport`, the full-key wire
+> schemas, `useQuestionElimination`, `eliminationMath`, the geometry dispatcher,
+> the CI associated-domains gate) was re-confirmed present. Two doc pointers in §2
+> went stale and were re-anchored to live sources (`docs/architecture-audit.md`
+> and the whole `docs/native-geometry/` dir were deleted and consolidated into
+> `docs/implementation_notes.md`). See `epic.md` / `design.md` for the matching
+> execution-detail fixes (no-console rule, geometry-backend memoization,
+> `reconnect.yaml` capture).
 
 ---
 
@@ -25,23 +37,37 @@ machine checking the numbers are correct._ That is what this epic adds.
 
 ## 2. Existing research & audit pointers (don't re-derive these)
 
-- **`docs/architecture-audit.md` §4 "Testing Strategy" (lines 160–195)** — the
-  canonical list of coverage gaps. It explicitly flags:
-    - "E2E brittleness": `play-area.yaml`, `hiding-zone.yaml`, `radar-question.yaml`
-      "rely on percentage-coordinate taps (`point: "38%,39%"`) … break if snap
-      points, font scale, or safe-area insets change."
-    - "Missing E2E": **Deep-link import flow (`/i`)**, pin-drag, play-area error
-      paths, hiding-zone radius verification.
-    - This epic's deep-link seeding directly removes the coordinate-tap brittleness
-      for state setup (we stop _tapping_ state in and start _injecting_ it).
-- **`docs/native-geometry/native-module-test-suite-plan.md` (line 69)** — sets the
-  policy that "Map rendering, bottom sheet, deep links — that is the 1 Maestro
-  smoke's job." We are **extending** that job deliberately, not contradicting it:
-  the smoke stays a smoke; these are new, separately-selectable flows.
-- **`docs/native-geometry/research-findings/RQ-E1.md`** — the two infra fixes that
-  make Maestro green on CI (native-geometry `link:` dep + iOS associated-domains
-  gate via `E2E_DISABLE_IOS_ASSOCIATED_DOMAINS`). Our new env flag for test hooks
-  follows the same pattern (see design §5).
+> **Stale-pointer fix (2026-06-22):** the first two bullets below originally
+> cited `docs/architecture-audit.md` and `docs/native-geometry/*`, both since
+> **deleted** and consolidated into `docs/implementation_notes.md`. The bullets
+> are re-anchored to live sources.
+
+- **E2E brittleness is visible directly in the flows.** Today's flows rely on
+  percentage-coordinate taps — `e2e/bootstrap.yaml` taps `point: "91%,48%"` and
+  `e2e/smoke.yaml` taps `point: "50%,45%"` — which break if snap points, font
+  scale, or safe-area insets change. The historical per-question flows
+  (`play-area.yaml`, `hiding-zone.yaml`, `radar-question.yaml`) were consolidated
+  away; only their screenshot artifacts remain under `e2e/artifacts/`. The
+  brittleness rationale is now codified in `AGENTS.md` → "React Native E2E and
+  Accessibility" (Maestro drives the native a11y tree, not the React tree; prefer
+  stable native-accessible targets over coordinate taps). This epic's deep-link
+  seeding directly removes the coordinate-tap brittleness for state **setup** — we
+  stop _tapping_ state in and start _injecting_ it. The **deep-link import flow
+  (`/i`)** itself remains uncovered by E2E.
+- **The "one Maestro smoke" policy** ("map rendering, bottom sheet, deep links —
+  that is the smoke's job") now lives in `AGENTS.md` → Testing Expectations
+  (Maestro for "native accessibility, bottom-sheet, MapLibre, or app-start
+  changes"). We are **extending** that job deliberately, not contradicting it: the
+  smoke stays a smoke; these are new, separately-selectable flows registered in
+  the `flows` array.
+- **The CI infra fix is already shipped, not a doc.** The two fixes that make
+  Maestro green on CI — the `native-geometry` workspace dep and the iOS
+  associated-domains gate — are embodied in code: `app.config.ts` owns
+  `associatedDomains` entirely so the `E2E_DISABLE_IOS_ASSOCIATED_DOMAINS` env var
+  can fully strip it (`app.config.ts:11`), and `.github/workflows/maestro-e2e.yml`
+  sets `E2E_DISABLE_IOS_ASSOCIATED_DOMAINS: "1"` before the build
+  (`maestro-e2e.yml:171`). Our new `EXPO_PUBLIC_E2E_HOOKS` flag follows the same
+  pattern and drops in at the same place (design §1, §5).
 - **`docs/sharing_strat.md`** — the production deep-link/sharing design. Our
   test-only schema is a _sibling_ of this, not a modification of it. Section 1561:
   "Deep link, QR code, share sheet, pasted URL … should all produce the same

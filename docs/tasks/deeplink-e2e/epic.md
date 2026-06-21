@@ -11,11 +11,20 @@ the dev client receives the test link.**
 Legend: 🔒 = safety-critical (get a careful review). 🧪 = needs a Jest suite.
 🤖 = involves the device/CI.
 
+> **Revalidated 2026-06-22.** Plan re-confirmed against the current tree — every
+> reused seam exists, nothing of the harness is built yet. Three task notes were
+> corrected since the original write-up (details inline): **B0** — the geometry
+> dispatcher memoizes its selection, so the override must reset that cache;
+> **C0/C2** — the 2026-06-21 no-console rule bans `console.*` in `src/**`, so the
+> readout/controls must use `createLogger` (the `app/e2e` route is exempt);
+> **D4** — `reconnect.yaml` currently lives **only** in ephemeral
+> `.claude/worktrees/*`, so capture it into `e2e/` before it's GC'd.
+
 ---
 
 ## Phase A — Schema, parsing, gating (no device needed)
 
-### A0 — Gate constant 🔒🧪
+### A0 — Gate constant 🔒🧪 — ✅ DONE (2026-06-22)
 
 Create `src/testing/e2e/isE2eHooksEnabled.ts` exporting
 `E2E_HOOKS_ENABLED = __DEV__ && process.env.EXPO_PUBLIC_E2E_HOOKS === "1"`.
@@ -26,7 +35,7 @@ Create `src/testing/e2e/isE2eHooksEnabled.ts` exporting
   this constant.
 - **Run:** `pnpm test -- isE2eHooksEnabled`.
 
-### A1 — Scenario schema 🧪
+### A1 — Scenario schema 🧪 — ✅ DONE (2026-06-22)
 
 Create `src/testing/e2e/scenarioSchema.ts` per design §2. Reuse the full-key wire
 schemas from `src/sharing/wire/schema.ts` (`playAreaWireSchema`,
@@ -39,7 +48,7 @@ schemas from `src/sharing/wire/schema.ts` (`playAreaWireSchema`,
   (proves the wire-schema reuse actually fits authored questions).
 - **Run:** `pnpm test -- scenarioSchema`.
 
-### A2 — Link parse/encode 🧪
+### A2 — Link parse/encode 🧪 — ✅ DONE (2026-06-22)
 
 Create `src/testing/e2e/parseE2eLink.ts`: extract the `d` query param (mirror
 `src/sharing/links/parseLink.ts`'s `extractPayload`), base64url-decode (reuse
@@ -54,25 +63,30 @@ Return a discriminated result `{ ok: true; scenario } | { ok: false; error }`.
 
 ## Phase B — Applying scenarios into the app (no device needed)
 
-### B0 — Runtime geometry-backend override 🔒🧪
+### B0 — Runtime geometry-backend override 🔒🧪 — ✅ DONE (2026-06-22)
 
 Today the backend is read once from `APP_CONFIG.geometry.backend`
-(`src/config/appConfig.ts`, env-derived). Add a small mutable override the
-geometry dispatcher consults **after** the env default, in
-`src/shared/geometry/` (find where `backend` is read and branch on an override).
-Expose `setGeometryBackendOverride(b)` / `getActiveGeometryBackend()` in
-`src/testing/e2e/e2eControls.ts`, and have them **no-op / report the static value
-when `E2E_HOOKS_ENABLED` is false**.
+(`src/config/appConfig.ts`, env-derived) and then **memoized**:
+`getGeometryBackend()` in `src/shared/geometry/geometryBackend.ts` caches the
+selection in a module-level `let _backend` on the first call
+(`geometryBackend.ts:144–156`). So the override cannot simply be "consulted after
+the env default" — by scenario-apply time `_backend` is usually already set from
+app start. Add a small mutable override that the dispatcher honors by **resetting
+that memo** (set `_backend = null` so the next call re-selects, or branch on the
+override before the cache check). Expose `setGeometryBackendOverride(b)` /
+`getActiveGeometryBackend()` in `src/testing/e2e/e2eControls.ts`, and have them
+**no-op / report the static value when `E2E_HOOKS_ENABLED` is false**.
 
 - **AC:** With hooks off, behavior is byte-identical to today (override ignored).
-  With hooks on, setting `"js"` then `"geos"` flips what the dispatcher uses.
-  Jest covers both.
+  With hooks on, setting `"js"` then `"geos"` flips what the dispatcher uses on
+  the **next** `getGeometryBackend()` call (i.e. the memo is invalidated). Jest
+  covers both.
 - **Caution:** Keep the override read on the hot path cheap (a module-level
   variable, not context). Don't regress geometry perf. Run `pnpm test:geos`
   locally if you touch the dispatcher.
 - **Run:** `pnpm test -- e2eControls && pnpm test:geos`.
 
-### B1 — e2e controls store 🧪
+### B1 — e2e controls store 🧪 — ✅ DONE (2026-06-22)
 
 Flesh out `src/testing/e2e/e2eControls.ts`: a tiny store (module-level or React
 context — match neighboring `src/state` patterns) holding
@@ -82,7 +96,7 @@ hooks `useE2eReadoutState()` and setters used by `applyE2eScenario`.
 - **AC:** Setters update; hooks read; everything inert when hooks off.
 - **Run:** `pnpm test -- e2eControls`.
 
-### B2 — applyE2eScenario 🧪
+### B2 — applyE2eScenario 🧪 — ✅ DONE (2026-06-22)
 
 Create `src/testing/e2e/applyE2eScenario.ts` per design §3. Wrap
 `scenario.state` in an `app-state` `WireEnvelope` and delegate seeding to the
@@ -99,7 +113,7 @@ existing `applyImport` (`src/sharing/import/applyImport.ts`); apply controls
 
 ## Phase C — Device entry point & readout (device/CI involved)
 
-### C0 — Dev-client deep-link spike 🤖🔒 (**do before any flow work**)
+### C0 — Dev-client deep-link spike 🤖🔒 (**do before any flow work**) — ✅ DONE (2026-06-22)
 
 Determine how Maestro must deliver `jetlag-hide-seek-v2://e2e?d=...` to the **dev
 client**. Custom-scheme links may need wrapping in the
@@ -110,8 +124,29 @@ working form.
 
 - **AC:** A one-paragraph addendum to `design.md` §5 stating the exact `openLink`
   form that lands on `app/e2e/index.tsx`. A throwaway flow proves the route
-  mounts (log a console line from the route on entry).
+  mounts (log a console line from the route on entry — fine here because
+  `app/e2e/index.tsx` is under `app/`, outside the `src/**` no-console rule; use
+  `createLogger` for anything that stays).
 - **Run:** `pnpm test:e2e:ios:stack` (or `:stack` for Android) with a temp flow.
+
+> **RESULT (verified on `iPhone 16 Pro / iOS 18.3`).** The **direct custom
+> scheme** `openLink: "jetlag-hide-seek-v2://e2e?d=<base64url>"` routes to
+> `app/e2e/index.tsx` after `bootstrap.yaml` connects the dev client; the `d`
+> param survives intact (asserted green, single attempt). **No Form-B
+> dev-client wrapping needed**; the `/i`-import fallback in the risk note is
+> moot. Two timing hazards must be handled in every flow: (1) the **intermittent**
+> iOS "Open in <app>?" prompt → tap "Open" _tolerantly_ after a
+> `waitForAnimationToEnd` beat; (2) the **cold-connect bundle/a11y settle race**
+> → gate asserts on `extendedWaitUntil ready=1`, never a bare `assertVisible`
+> (this empirically justifies the §4 `ready=1` sentinel). Full write-up + the
+> hardened flow shape: `design.md` §5 + "C0 addendum".
+>
+> **Throwaway spike artifacts** (delete or fold into C1/C4):
+>
+> - `app/e2e/index.tsx` — ungated stub; C1 replaces it with the gated impl.
+> - `e2e/deeplink-spike.yaml` — the spike flow.
+> - the `deeplink-spike` entry in `scripts/e2e-maestro-stack.mjs`'s `flows`
+>   array (marked `TEMP`).
 
 ### C1 — Gated route 🔒🧪
 
@@ -139,6 +174,10 @@ settled (no in-flight async geometry derivation).
   pins `totalPct=42.13`-style output. `pointerEvents="none"`.
 - **Caution (iOS a11y):** the readout's value is the `accessibilityLabel`, not
   just the text child — see `AGENTS.md` "React Native E2E and Accessibility".
+- **Caution (no-console):** this module and everything else under
+  `src/testing/e2e/**` is inside the `src/**` eslint `no-console` zone. Use
+  `createLogger("e2e")` for any diagnostics — a bare `console.*` reddens
+  `pnpm check`.
 - **Run:** `pnpm test -- E2eDebugReadout && pnpm check`.
 
 ### C3 — Link-builder CLI + stack wiring 🤖
@@ -197,9 +236,15 @@ against `maskBuilder.ts` polarity convention + `docs/buglist1.md`.
 
 ### D4 — Persistence round-trip 🤖
 
-Seed via deep link → relaunch (the `reconnect.yaml` pattern, currently in
-worktrees — port it) → assert the readout is unchanged.
+Seed via deep link → relaunch (the `reconnect.yaml` pattern) → assert the readout
+is unchanged.
 
+- **Prereq (do early, 2026-06-22):** `reconnect.yaml` exists **only** in ephemeral
+  `.claude/worktrees/*` (e.g. `.claude/worktrees/e2e-hardening/e2e/reconnect.yaml`),
+  not in the main `e2e/` tree — those worktrees can be garbage-collected at any
+  time. Copy it into `e2e/reconnect.yaml` (or re-derive the relaunch pattern:
+  re-`openLink` `${MAESTRO_DEV_CLIENT_URL}` without `clearState`) and commit it
+  before building this scenario, so the source can't vanish.
 - **AC:** Post-relaunch `totalPct` equals pre-relaunch.
 
 ### D5 — Multi-question ordering contribution 🤖
