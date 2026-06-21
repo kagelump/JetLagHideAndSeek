@@ -190,6 +190,25 @@ export function setDefaultAdminConfig(
     _defaultLabelLanguage = language;
 }
 
+/**
+ * Read the active admin-division pack / label language for non-React consumers.
+ *
+ * The single source of truth is React state (`questionStore`), but the
+ * Overpass-QL generation and the measuring admin-border runtime adapter run
+ * outside the component tree and cannot read context. They read this module
+ * global, kept in sync via `setDefaultAdminConfig` (see its JSDoc for the
+ * call-site discipline). Returns `undefined` until the first sync.
+ */
+export function getDefaultAdminDivisionPack():
+    | AdminDivisionNamePack
+    | undefined {
+    return _defaultAdminDivisionPack;
+}
+
+export function getDefaultLabelLanguage(): "native" | "english" {
+    return _defaultLabelLanguage;
+}
+
 export function getCategoryConfig(
     category: MatchingCategory,
     adminDivisionPack?: AdminDivisionNamePack,

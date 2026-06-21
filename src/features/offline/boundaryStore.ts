@@ -217,7 +217,17 @@ export async function getBoundaryPolygon(
         const name = fullPath.slice(lastSep + 1);
         const raw = await new File(dir, name).text();
 
-        const polygons: Record<string, number[]> = JSON.parse(raw);
+        // The installer writes the polygons file as a `{ schemaVersion,
+        // regionId, polygons: {...} }` envelope (see regionPacks install).
+        // Accept that envelope, and tolerate a bare `{ [relationId]: encoded }`
+        // map for forward/backward compatibility.
+        const parsed = JSON.parse(raw) as
+            | { polygons?: Record<string, number[]> }
+            | Record<string, number[]>;
+        const polygons: Record<string, number[]> =
+            parsed && typeof parsed === "object" && "polygons" in parsed
+                ? ((parsed.polygons ?? {}) as Record<string, number[]>)
+                : (parsed as Record<string, number[]>);
         const encoded = polygons[String(relationId)];
         if (!encoded) return null;
 
@@ -291,6 +301,63 @@ export function getAvailableBoundaryLevels(): number[] {
         }
     }
     return [...levels].sort((a, b) => a - b);
+}
+
+/**
+ * Count index entries per admin level across installed packs.
+ * Surfaced in the Admin Divisions settings UI so the user sees how many
+ * relations back each level (a level with 0 relations would yield empty
+ * matching/measuring results).
+ */
+export function getBoundaryLevelCounts(): Record<number, number> {
+    const counts: Record<number, number> = {};
+    for (const source of sources.values()) {
+        for (const entry of source.index) {
+            counts[entry.adminLevel] = (counts[entry.adminLevel] ?? 0) + 1;
+        }
+    }
+    return counts;
+}
+
+/**
+ * Decode every boundary polygon at the given admin level across installed
+ * packs. Used by the unified admin-border runtime adapter so measuring
+ * "distance to admin border" reads from the SAME boundary polygons as
+ * matching, instead of a separate measuring-admin line bundle.
+ *
+ * Returns decoded MultiPolygon coordinates per relation. Decoding goes through
+ * the same LRU-cached `getBoundaryPolygon` path.
+ */
+export async function getBoundaryPolygonsAtLevel(osmLevel: number): Promise<
+    {
+        relationId: number;
+        name: string;
+        nameEn?: string;
+        coords: MultiPolygonCoords;
+    }[]
+> {
+    const out: {
+        relationId: number;
+        name: string;
+        nameEn?: string;
+        coords: MultiPolygonCoords;
+    }[] = [];
+
+    for (const [packId, source] of sources) {
+        for (const entry of source.index) {
+            if (entry.adminLevel !== osmLevel) continue;
+            const coords = await getBoundaryPolygon(packId, entry.relationId);
+            if (!coords || coords.length === 0) continue;
+            out.push({
+                relationId: entry.relationId,
+                name: entry.name,
+                nameEn: entry.nameEn,
+                coords,
+            });
+        }
+    }
+
+    return out;
 }
 
 /** Clear all state (for testing). */

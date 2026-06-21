@@ -149,6 +149,68 @@ export function getAdminDivisionQueryTags(
 }
 
 // ---------------------------------------------------------------------------
+// Admin border tiers (measuring)
+// ---------------------------------------------------------------------------
+
+/**
+ * Measuring "distance to admin border" categories. These are the line-based
+ * counterpart to the polygon-based matching admin categories: each border tier
+ * reuses the SAME `AdminDivisionNamePack` so the OSM level + label stay in sync
+ * with matching. Tier index maps into the 4-entry pack (0 = 1st admin division,
+ * 1 = 2nd) — there are deliberately only two border tiers (see
+ * "Keep two border tiers" design decision).
+ */
+export type AdminBorderCategory = "admin-1st-border" | "admin-2nd-border";
+
+export const ADMIN_BORDER_TIER_INDEX: Record<AdminBorderCategory, number> = {
+    "admin-1st-border": 0,
+    "admin-2nd-border": 1,
+};
+
+export function isAdminBorderCategory(
+    category: string,
+): category is AdminBorderCategory {
+    return Object.prototype.hasOwnProperty.call(
+        ADMIN_BORDER_TIER_INDEX,
+        category,
+    );
+}
+
+/** The OSM admin_level (number) that a measuring border tier resolves to. */
+export function getAdminBorderOsmLevel(
+    pack: AdminDivisionNamePack,
+    category: AdminBorderCategory,
+): number {
+    const entry = pack[ADMIN_BORDER_TIER_INDEX[category]];
+    return parseInt(entry.osmLevel, 10);
+}
+
+/**
+ * Display title for a measuring border tier, derived from the shared pack.
+ * Reuses the matching admin label (e.g. "Prefecture", "State", or the generic
+ * "1st Admin Division (OSM level 4)") and appends " Border".
+ */
+export function getAdminBorderLabel(
+    pack: AdminDivisionNamePack,
+    category: AdminBorderCategory,
+    language: "native" | "english",
+): string {
+    const index = ADMIN_BORDER_TIER_INDEX[category];
+    const matchingCategory = (["admin-1st", "admin-2nd"] as const)[index];
+    const base = getAdminDivisionLabel(pack, matchingCategory, language);
+    return `${base} Border`;
+}
+
+/** Overpass-QL tag selector for a measuring border tier (relations only). */
+export function getAdminBorderQueryTags(
+    pack: AdminDivisionNamePack,
+    category: AdminBorderCategory,
+): string {
+    const level = getAdminBorderOsmLevel(pack, category);
+    return `(relation["boundary"="administrative"]["admin_level"="${level}"];)`;
+}
+
+// ---------------------------------------------------------------------------
 // Category config builders
 // ---------------------------------------------------------------------------
 

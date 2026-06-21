@@ -59,16 +59,63 @@ const fsCache: Record<string, string> = {};
 (globalThis as unknown as { __fsCache?: Record<string, string> }).__fsCache =
     fsCache;
 
+// Mock the boundary store: the unified admin-border adapter reads decoded
+// polygons from it. Production decodes via a dynamic import("expo-file-system")
+// that Jest can't resolve to the mock (see boundaryStore.test.ts .todo), so we
+// drive the adapter's input directly here and assert its ring→line transform.
+type BoundaryPolygon = {
+    relationId: number;
+    name: string;
+    nameEn?: string;
+    coords: number[][][][];
+};
+jest.mock("@/features/offline/boundaryStore", () => {
+    let levels: number[] = [];
+    let level = 0;
+    let polys: BoundaryPolygon[] = [];
+    return {
+        __esModule: true,
+        getAvailableBoundaryLevels: jest.fn(() => levels),
+        getBoundaryPolygonsAtLevel: jest.fn(async (lv: number) =>
+            lv === level ? polys : [],
+        ),
+        __reset: () => {
+            levels = [];
+            level = 0;
+            polys = [];
+        },
+        __seed: (lv: number, p: BoundaryPolygon[]) => {
+            levels = [lv];
+            level = lv;
+            polys = p;
+        },
+    };
+});
+
+const boundaryStoreMock = jest.requireMock(
+    "@/features/offline/boundaryStore",
+) as {
+    __reset: () => void;
+    __seed: (lv: number, p: BoundaryPolygon[]) => void;
+};
+
 import {
     __clearLineBundlesForTest,
     __clearPackSourcesForTest,
     __getPackSourcesForTest,
     __setLineBundleForTest,
     getLineBundle,
+    hasPackSources,
+    invalidateAdminBorderBundles,
     loadLineBundle,
     registerMeasuringSource,
     unregisterMeasuringSources,
 } from "../lineBundleLoader";
+import {
+    ADMIN_DIVISION_PRESETS,
+    clonePack,
+} from "@/features/questions/matching/adminDivisionConfig";
+import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
 
 import type { MeasuringCategory } from "../measuringTypes";
 
@@ -416,5 +463,90 @@ describe("useEnsureMeasuringBundles", () => {
         const { result } = renderHook(() => hook(questions));
         expect(typeof result.current).toBe("number");
         expect(result.current).toBeGreaterThanOrEqual(0);
+    });
+});
+
+// ─── Admin border bundle from boundary store (unified path) ───────────────────
+
+describe("admin border bundles (unified from boundaries)", () => {
+    // A unit square ring as decoded MultiPolygon coords (poly → rings → ring).
+    const SQUARE_COORDS = [
+        [
+            [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [1, 0],
+                [0, 0],
+            ],
+        ],
+    ];
+
+    function registerSquareBoundary(level: number) {
+        boundaryStoreMock.__seed(level, [
+            {
+                relationId: 100,
+                name: "Test Region",
+                nameEn: "Test Region",
+                coords: SQUARE_COORDS,
+            },
+        ]);
+    }
+
+    beforeEach(() => {
+        __clearLineBundlesForTest();
+        __clearPackSourcesForTest();
+        boundaryStoreMock.__reset();
+        // Japan pack: 1st tier → OSM level 4, 2nd tier → level 7.
+        setDefaultAdminConfig(
+            clonePack(ADMIN_DIVISION_PRESETS.japan),
+            "english",
+        );
+    });
+
+    it("builds an admin-1st-border bundle from boundary polygon rings", async () => {
+        registerSquareBoundary(4);
+
+        const bundle = await loadLineBundle("admin-1st-border");
+        expect(bundle).not.toBeNull();
+        expect(bundle!.source).toBe("boundary-store");
+        expect(bundle!.features).toHaveLength(1);
+        const feat = bundle!.features[0];
+        expect(feat.geometry.type).toBe("LineString");
+        expect(
+            (feat.geometry as { coordinates: number[][] }).coordinates,
+        ).toEqual([
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0],
+        ]);
+    });
+
+    it("resolves the tier's level from the active admin pack", async () => {
+        // Boundary data only at level 7 → admin-1st (level 4) finds nothing,
+        // admin-2nd (level 7) builds from it.
+        registerSquareBoundary(7);
+
+        expect(await loadLineBundle("admin-1st-border")).toBeNull();
+        invalidateAdminBorderBundles();
+        const second = await loadLineBundle("admin-2nd-border");
+        expect(second).not.toBeNull();
+        expect(second!.features).toHaveLength(1);
+    });
+
+    it("hasPackSources reflects boundary availability at the tier level", () => {
+        registerSquareBoundary(4);
+        expect(hasPackSources("admin-1st-border")).toBe(true);
+        expect(hasPackSources("admin-2nd-border")).toBe(false);
+    });
+
+    it("invalidateAdminBorderBundles drops the cached bundle", async () => {
+        registerSquareBoundary(4);
+        await loadLineBundle("admin-1st-border");
+        expect(getLineBundle("admin-1st-border")).not.toBeNull();
+        invalidateAdminBorderBundles();
+        expect(getLineBundle("admin-1st-border")).toBeNull();
     });
 });

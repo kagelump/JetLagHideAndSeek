@@ -397,6 +397,23 @@ message should expect the folded `"[namespace] message"` string.
 - Per-pack overrides: when an installed pack's `meta.adminLevels.matching` is
   present, it takes precedence over both presets (see
   `src/features/offline/adminLevelDefaults.ts`).
+- **One schema, matching + measuring.** The `AdminDivisionNamePack` is the single
+  source of truth for admin levels. The two measuring border tiers
+  (`admin-1st-border`, `admin-2nd-border`) derive their OSM level + title from
+  the *same* pack (tier index via `ADMIN_BORDER_TIER_INDEX`; helpers
+  `getAdminBorder{OsmLevel,Label,QueryTags}`). Never re-hardcode border levels or
+  titles in `measuringCategories.ts` — they're built dynamically. There are
+  deliberately only **two** border tiers.
+- **Border geometry comes from `boundaries`, not a separate line bundle.**
+  `loadLineBundle("admin-*-border")` builds line features from the boundary
+  polygon rings in installed packs (`buildAdminBorderBundle` →
+  `boundaryStore.getBoundaryPolygonsAtLevel`). Changing the admin pack must call
+  `invalidateAdminBorderBundles()` (the store already does). The pipeline still
+  emits `measuring-admin-*-border` as a fallback; cutting it is a follow-up.
+- **The settings UI gates levels to the bundle.** `AdminDivisionScreen` shows a
+  level picker constrained to `getAvailableBoundaryLevels()` (+ counts from
+  `getBoundaryLevelCounts()`) when a pack is installed; free-text only when none
+  is (live Overpass). It is the single screen for both matching and border tiers.
 
 ## POI Spatial Index
 

@@ -5,6 +5,10 @@ import {
     measuringCategories,
     measuringCategoriesBySection,
 } from "@/features/questions/measuring/measuringCategories";
+import {
+    ADMIN_DIVISION_PRESETS,
+    clonePack,
+} from "@/features/questions/matching/adminDivisionConfig";
 
 const LINE_KEYS = [
     "high-speed-rail",
@@ -85,13 +89,24 @@ describe("measuringCategories", () => {
     });
 
     describe("titles", () => {
-        it("uses updated admin border titles", () => {
+        it("derives generic admin border titles by default", () => {
+            // With no pack synced, border titles fall back to the generic pack.
             expect(getMeasuringCategoryTitle("admin-1st-border")).toBe(
-                "Prefecture Border",
+                "1st Admin Division (OSM level 4) Border",
             );
             expect(getMeasuringCategoryTitle("admin-2nd-border")).toBe(
-                "Ward / Municipality Border",
+                "2nd Admin Division (OSM level 6) Border",
             );
+        });
+
+        it("derives admin border titles + levels from the supplied pack", () => {
+            const japan = clonePack(ADMIN_DIVISION_PRESETS.japan);
+            expect(
+                getMeasuringCategoryTitle("admin-1st-border", japan, "english"),
+            ).toBe("Prefecture Border");
+            expect(
+                getMeasuringCategoryTitle("admin-2nd-border", japan, "english"),
+            ).toBe("City Border");
         });
     });
 });

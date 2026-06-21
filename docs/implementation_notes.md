@@ -770,6 +770,35 @@ the non-obvious design decisions that still constrain current work.
 - Pre-launch the pack schema is free to break (no migration shims). Don't add
   back-compat code for it until launch.
 
+### Admin levels — unified matching + measuring (2026-06-21)
+
+- **Single source of truth:** the `AdminDivisionNamePack` (4-tuple of
+  osmLevel + labels, `adminDivisionConfig.ts`) drives *both* the matching
+  `admin-1st…admin-4th` categories *and* the two measuring border tiers. A
+  measuring border tier maps into the pack by index — `admin-1st-border` → tier
+  0, `admin-2nd-border` → tier 1 (`ADMIN_BORDER_TIER_INDEX`). Border title +
+  OSM level come from the pack via `getAdminBorder{OsmLevel,Label,QueryTags}`,
+  so the old hardcoded `4`/`7` + Japan titles ("Prefecture/Ward") are gone.
+  Decision of record: **keep exactly two border tiers** (not one-per-level).
+- **One runtime source:** measuring "distance to admin border" derives its line
+  geometry from the boundary **polygon rings** already in the `boundaries`
+  artifact (the unified adapter `buildAdminBorderBundle` in `lineBundleLoader.ts`
+  via `boundaryStore.getBoundaryPolygonsAtLevel`), not a separate
+  `measuring-admin-*-border` line bundle. The pipeline still *emits* those
+  artifacts (app-side-first scope) but the app no longer depends on them; the
+  legacy pack measuring source remains a fallback. Cutting them from
+  `buildMeasuring.mjs` + republishing packs is the follow-up.
+- **Bundle-aware UI:** `AdminDivisionScreen` is the one unified surface. When an
+  offline pack is installed it constrains the OSM-level picker to
+  `getAvailableBoundaryLevels()` (with per-level relation counts from
+  `getBoundaryLevelCounts()`) so a user can't pick a level with no data; with no
+  pack it falls back to free-text (live Overpass). Changing the pack invalidates
+  cached border bundles (`invalidateAdminBorderBundles`, called from the store).
+- **Fixed in passing:** `boundaryStore.getBoundaryPolygon` read the polygons
+  file as a bare `{ [relationId]: encoded }` map, but the installer writes a
+  `{ schemaVersion, regionId, polygons }` envelope — the read now unwraps it.
+  This path backs both the matching async admin query and the new border adapter.
+
 ### Native GEOS geometry backend + cross-engine parity
 
 - The GEOS op pipeline is single-sourced in

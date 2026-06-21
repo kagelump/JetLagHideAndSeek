@@ -8,6 +8,16 @@ import type {
 
 import type { Bbox } from "@/shared/geojson";
 import type { MeasuringCategory } from "./measuringTypes";
+import {
+    getBoundaryPolygonsAtLevel,
+    getAvailableBoundaryLevels,
+} from "@/features/offline/boundaryStore";
+import {
+    getAdminBorderOsmLevel,
+    isAdminBorderCategory,
+    type AdminBorderCategory,
+} from "@/features/questions/matching/adminDivisionConfig";
+import { getDefaultAdminDivisionPack } from "@/features/questions/matching/matchingCategories";
 import { createLogger } from "@/shared/logger";
 
 const log = createLogger("lineBundle");
@@ -103,6 +113,17 @@ export function __clearPackSourcesForTest(): void {
     packSources.clear();
 }
 
+/**
+ * Drop cached admin-border bundles so the next load rebuilds them against the
+ * current admin-division pack. Call when the user changes admin levels.
+ */
+export function invalidateAdminBorderBundles(): void {
+    for (const category of ["admin-1st-border", "admin-2nd-border"] as const) {
+        cache.delete(category);
+        mergedCache.delete(category);
+    }
+}
+
 /** Test seam: inject a synthetic bundle (or null) for a category. */
 export function __setLineBundleForTest(
     category: MeasuringCategory,
@@ -152,6 +173,20 @@ export async function loadLineBundle(
     // Return cached merge when present.
     if (mergedCache.has(category) && cache.has(category)) {
         return cache.get(category) ?? null;
+    }
+
+    // Admin border categories are unified onto the boundary polygons already
+    // shipped in the `boundaries` artifact — they derive their level from the
+    // shared admin-division pack, not a separate measuring-admin line bundle.
+    if (isAdminBorderCategory(category)) {
+        const adminBundle = await buildAdminBorderBundle(category);
+        if (adminBundle) {
+            cache.set(category, adminBundle);
+            mergedCache.add(category);
+            return adminBundle;
+        }
+        // No boundary data — fall through to legacy pack measuring sources so
+        // older packs that still ship measuring-admin-*-border keep working.
     }
 
     // Build merged bundle from registered pack sources.
@@ -208,9 +243,103 @@ export async function loadLineBundle(
 }
 
 /**
+ * Resolve the OSM admin level a border tier maps to, from the active
+ * admin-division pack. Returns null when the pack hasn't been synced yet.
+ */
+function resolveBorderLevel(category: AdminBorderCategory): number | null {
+    const pack = getDefaultAdminDivisionPack();
+    if (!pack) return null;
+    const level = getAdminBorderOsmLevel(pack, category);
+    return Number.isFinite(level) ? level : null;
+}
+
+/**
+ * Build a measuring line bundle for an admin border tier from the boundary
+ * polygons in installed packs. Each polygon ring becomes a LineString feature
+ * (matching the legacy `polygon-to-ring` artifact shape), so the existing
+ * line-distance pipeline and reference-line rendering work unchanged.
+ *
+ * Returns null when no installed pack carries boundaries at the resolved level.
+ */
+async function buildAdminBorderBundle(
+    category: AdminBorderCategory,
+): Promise<LineBundle | null> {
+    const level = resolveBorderLevel(category);
+    if (level == null) return null;
+
+    const polygons = await getBoundaryPolygonsAtLevel(level);
+    if (polygons.length === 0) return null;
+
+    const features: BundleFeature[] = [];
+    let west = Infinity,
+        south = Infinity,
+        east = -Infinity,
+        north = -Infinity;
+
+    for (const { relationId, name, nameEn, coords } of polygons) {
+        const props = {
+            relationId,
+            name,
+            ...(nameEn ? { "name:en": nameEn } : {}),
+        };
+        for (const poly of coords) {
+            for (const ring of poly) {
+                if (ring.length < 2) continue;
+                let rw = Infinity,
+                    rs = Infinity,
+                    re = -Infinity,
+                    rn = -Infinity;
+                for (const [lon, lat] of ring) {
+                    if (lon < rw) rw = lon;
+                    if (lon > re) re = lon;
+                    if (lat < rs) rs = lat;
+                    if (lat > rn) rn = lat;
+                }
+                if (rw < west) west = rw;
+                if (rs < south) south = rs;
+                if (re > east) east = re;
+                if (rn > north) north = rn;
+                features.push({
+                    type: "Feature",
+                    bbox: [rw, rs, re, rn],
+                    geometry: { type: "LineString", coordinates: ring },
+                    properties: { ...props },
+                });
+            }
+        }
+    }
+
+    if (features.length === 0) return null;
+
+    log.debug(
+        `built ${category} bundle from boundaries (level ${level}): ` +
+            `${features.length} ring features`,
+    );
+
+    return {
+        schemaVersion: 1,
+        category,
+        generatedAt: new Date().toISOString(),
+        source: "boundary-store",
+        extractBbox: [west, south, east, north],
+        features,
+    };
+}
+
+/**
  * Returns true if a category has registered pack sources.
+ *
+ * Admin border categories are backed by the boundary store rather than a
+ * registered measuring source, so they report `true` whenever any installed
+ * pack carries boundaries at the tier's resolved level.
  */
 export function hasPackSources(category: MeasuringCategory): boolean {
+    if (isAdminBorderCategory(category)) {
+        const level = resolveBorderLevel(category);
+        if (level == null) return false;
+        if (getAvailableBoundaryLevels().includes(level)) return true;
+        // Fall through: a legacy pack may still register a measuring source.
+    }
     const sources = packSources.get(category);
     return sources !== undefined && sources.length > 0;
 }
