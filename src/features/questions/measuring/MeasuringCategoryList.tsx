@@ -1,8 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors } from "@/theme/colors";
+import { useAdminDivisionPack, useLabelLanguage } from "@/state/questionStore";
+import { isAdminBorderCategory } from "@/features/questions/matching/adminDivisionConfig";
 
 import {
+    buildAdminMeasuringBorderConfig,
     measuringCategoriesBySection,
     type MeasuringCategoryConfig,
 } from "./measuringCategories";
@@ -70,11 +73,26 @@ export function MeasuringCategoryList({
     onSelect,
     testIDPrefix = "measuring-category",
 }: MeasuringCategoryListProps) {
+    const adminPack = useAdminDivisionPack();
+    const labelLanguage = useLabelLanguage();
+
     return (
         <View style={styles.container}>
             {sectionOrder.map((section) => {
-                const categories = measuringCategoriesBySection[section];
-                if (!categories || categories.length === 0) return null;
+                const baseCategories = measuringCategoriesBySection[section];
+                if (!baseCategories || baseCategories.length === 0) return null;
+
+                // Admin border rows derive their title/level from the shared
+                // admin-division pack so they track the current region.
+                const categories = baseCategories.map((config) =>
+                    isAdminBorderCategory(config.category)
+                        ? buildAdminMeasuringBorderConfig(
+                              config.category,
+                              adminPack,
+                              labelLanguage,
+                          )
+                        : config,
+                );
 
                 return (
                     <View key={section} style={styles.section}>

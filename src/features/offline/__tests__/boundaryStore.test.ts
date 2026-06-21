@@ -22,6 +22,7 @@ import {
     anyPackIntersectsBbox,
     getRegisteredBoundaryPackIds,
     getAvailableBoundaryLevels,
+    getBoundaryLevelCounts,
     resetBoundaryStore,
     getAllBoundaryEntries,
 } from "../boundaryStore";
@@ -293,6 +294,21 @@ describe("boundary source lifecycle", () => {
             [7],
         );
         expect(getAllBoundaryEntries()).toHaveLength(3);
+    });
+
+    it("getBoundaryLevelCounts tallies index entries per level", () => {
+        registerBoundarySource(
+            "p1",
+            "/i.json",
+            "/p.json",
+            [
+                makeEntry({ relationId: 1, name: "A", adminLevel: 4 }),
+                makeEntry({ relationId: 2, name: "B", adminLevel: 7 }),
+                makeEntry({ relationId: 3, name: "C", adminLevel: 7 }),
+            ],
+            [4, 7],
+        );
+        expect(getBoundaryLevelCounts()).toEqual({ 4: 1, 7: 2 });
     });
 });
 

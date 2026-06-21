@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
     Alert,
     Pressable,
@@ -15,6 +15,11 @@ import {
     type AdminDivisionNamePack,
     type AdminDivisionPresetName,
 } from "@/features/questions/matching/adminDivisionConfig";
+import {
+    getAvailableBoundaryLevels,
+    getBoundaryLevelCounts,
+} from "@/features/offline/boundaryStore";
+import { useInstalledPacks } from "@/features/offline/regionPacks";
 import {
     useAdminDivisionPack,
     useAdminDivisionPresetName,
@@ -34,6 +39,33 @@ export function AdminDivisionScreen() {
         useQuestionActions();
     const [editing, setEditing] = useState<EditingEntry | null>(null);
     const [editValue, setEditValue] = useState("");
+
+    // Levels actually present in installed offline packs. The level picker is
+    // constrained to these so a user can't select a level with no boundary
+    // data (which would yield empty matching/border results). `useInstalledPacks`
+    // is the reactive trigger; the boundary store itself is module-level.
+    const installedPacks = useInstalledPacks();
+    const availableLevels = useMemo(
+        () => getAvailableBoundaryLevels(),
+        [installedPacks.data],
+    );
+    const levelCounts = useMemo(
+        () => getBoundaryLevelCounts(),
+        [installedPacks.data],
+    );
+    const hasBundleLevels = availableLevels.length > 0;
+
+    const setLevelForIndex = (index: number, osmLevel: string) => {
+        setAdminDivisionPack(
+            (prev) =>
+                prev.map((entry, i) =>
+                    i === index ? { ...entry, osmLevel } : entry,
+                ) as AdminDivisionNamePack,
+        );
+        // A direct level edit diverges from a stock preset.
+        setAdminDivisionPresetName("generic");
+        setEditing(null);
+    };
 
     const selectPreset = (name: AdminDivisionPresetName) => {
         // Deep-clone so the preset's module-level const is never shared
@@ -127,24 +159,96 @@ export function AdminDivisionScreen() {
             {/* 4 admin division entry rows */}
             <View style={styles.section}>
                 <Text style={styles.sectionHeading}>Admin Division Levels</Text>
+                <Text style={styles.helpText}>
+                    These levels drive both matching “admin division” questions
+                    and measuring “admin border” questions. The 1st and 2nd
+                    divisions are also used as the two measuring border tiers.
+                </Text>
+                {hasBundleLevels ? (
+                    <Text style={styles.helpText}>
+                        Showing only levels available in your installed offline
+                        data.
+                    </Text>
+                ) : (
+                    <Text style={styles.helpText}>
+                        No offline data installed — levels are queried live and
+                        can be set to any OSM admin_level.
+                    </Text>
+                )}
                 {pack.map((entry, index) => (
                     <View key={index} style={styles.entryCard}>
                         <View style={styles.entryHeader}>
                             <Text style={styles.entryOrdinal}>
                                 {ordinal(index + 1)} Admin. Division
                             </Text>
+                            {index < 2 ? (
+                                <Text style={styles.entryCaption}>
+                                    also “admin border” tier {index + 1}
+                                </Text>
+                            ) : null}
                         </View>
 
-                        {/* OSM Level row */}
-                        <EditableRow
-                            editing={
-                                editing?.index === index &&
-                                editing?.field === "osmLevel"
-                            }
-                            label="OSM Level"
-                            onPress={() => startEdit(index, "osmLevel")}
-                            value={entry.osmLevel}
-                        />
+                        {/* OSM Level — picker when bundle levels exist, else free text */}
+                        {hasBundleLevels ? (
+                            <View style={styles.levelPicker}>
+                                <Text style={styles.editableRowLabel}>
+                                    OSM Level
+                                </Text>
+                                <View style={styles.levelChipRow}>
+                                    {availableLevels.map((lv) => {
+                                        const lvStr = String(lv);
+                                        const active = entry.osmLevel === lvStr;
+                                        const count = levelCounts[lv] ?? 0;
+                                        return (
+                                            <Pressable
+                                                accessibilityLabel={`Set ${ordinal(index + 1)} admin division to OSM level ${lv}`}
+                                                accessibilityRole="button"
+                                                accessibilityState={{
+                                                    selected: active,
+                                                }}
+                                                key={lv}
+                                                onPress={() =>
+                                                    setLevelForIndex(
+                                                        index,
+                                                        lvStr,
+                                                    )
+                                                }
+                                                style={[
+                                                    styles.levelChip,
+                                                    active
+                                                        ? styles.levelChipActive
+                                                        : null,
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.levelChipText,
+                                                        active
+                                                            ? styles.levelChipTextActive
+                                                            : null,
+                                                    ]}
+                                                >
+                                                    {lv}
+                                                    {count > 0
+                                                        ? ` (${count})`
+                                                        : ""}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+                        ) : (
+                            <EditableRow
+                                editing={
+                                    editing?.index === index &&
+                                    editing?.field === "osmLevel"
+                                }
+                                label="OSM Level"
+                                onPress={() => startEdit(index, "osmLevel")}
+                                value={entry.osmLevel}
+                            />
+                        )}
 
                         {/* Native label row */}
                         <EditableRow
@@ -392,13 +496,59 @@ const styles = StyleSheet.create({
         marginTop: 10,
         padding: 12,
     },
+    entryCaption: {
+        color: colors.muted,
+        fontSize: 11,
+        fontStyle: "italic",
+    },
     entryHeader: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 8,
+        justifyContent: "space-between",
         marginBottom: 4,
     },
     entryOrdinal: {
         color: colors.ink,
         fontSize: 15,
         fontWeight: "800",
+    },
+    helpText: {
+        color: colors.muted,
+        fontSize: 12,
+        lineHeight: 17,
+        marginBottom: 6,
+    },
+    levelChip: {
+        backgroundColor: colors.buttonSubtle,
+        borderColor: colors.border,
+        borderRadius: 6,
+        borderWidth: 1,
+        minHeight: 36,
+        justifyContent: "center",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    levelChipActive: {
+        backgroundColor: colors.tint,
+        borderColor: colors.tint,
+    },
+    levelChipRow: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+        marginTop: 6,
+    },
+    levelChipText: {
+        color: colors.ink,
+        fontSize: 14,
+        fontWeight: "700",
+    },
+    levelChipTextActive: {
+        color: colors.white,
+    },
+    levelPicker: {
+        marginTop: 6,
     },
     presetChip: {
         backgroundColor: colors.card,

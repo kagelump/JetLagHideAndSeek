@@ -15,6 +15,7 @@ import {
     DEFAULT_ADMIN_DIVISION_PRESET_NAME,
 } from "@/features/questions/matching/adminDivisionConfig";
 import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
+import { invalidateAdminBorderBundles } from "@/features/questions/measuring/lineBundleLoader";
 import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
 import { radarQuestionConfig } from "@/features/questions/radar/radarConfig";
 import {
@@ -442,6 +443,9 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                         : packOrUpdater;
                 // Keep module-level admin config in sync — see setDefaultAdminConfig JSDoc.
                 setDefaultAdminConfig(next, labelLanguage);
+                // Admin border (measuring) bundles derive their level from the
+                // pack — drop them so the next load rebuilds at the new level.
+                invalidateAdminBorderBundles();
                 return next;
             });
         },
@@ -475,6 +479,7 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
             // correct admin division labels from the first render.
             // See setDefaultAdminConfig JSDoc in matchingCategories.ts.
             setDefaultAdminConfig(pack, settings.labelLanguage ?? "native");
+            invalidateAdminBorderBundles();
         },
         [],
     );

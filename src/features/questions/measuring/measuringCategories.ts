@@ -1,5 +1,17 @@
 import type { MatchingCategory } from "@/features/questions/matching/matchingTypes";
 import { deriveOsmQueryTags } from "@/features/questions/matching/matchingSelectors";
+import {
+    type AdminBorderCategory,
+    type AdminDivisionNamePack,
+    DEFAULT_ADMIN_DIVISION_PACK,
+    getAdminBorderLabel,
+    getAdminBorderQueryTags,
+    isAdminBorderCategory,
+} from "@/features/questions/matching/adminDivisionConfig";
+import {
+    getDefaultAdminDivisionPack,
+    getDefaultLabelLanguage,
+} from "@/features/questions/matching/matchingCategories";
 import type { MeasuringCategory } from "./measuringTypes";
 
 export type MeasuringCategorySection =
@@ -101,21 +113,37 @@ export const measuringCategories: MeasuringCategoryConfig[] = [
         section: "Borders & Lines",
         title: "Body of Water",
     },
+    // The two admin border tiers derive their OSM level + title from the shared
+    // admin-division pack (so they stay in sync with matching and adapt per
+    // region). These static entries are baseline defaults; the live config is
+    // produced by `getMeasuringCategoryConfig` / `buildAdminMeasuringBorderConfigs`.
     {
         category: "admin-1st-border",
         implemented: true,
-        osmQueryTags:
-            '(relation["boundary"="administrative"]["admin_level"="4"];)',
+        osmQueryTags: getAdminBorderQueryTags(
+            DEFAULT_ADMIN_DIVISION_PACK,
+            "admin-1st-border",
+        ),
         section: "Borders & Lines",
-        title: "Prefecture Border",
+        title: getAdminBorderLabel(
+            DEFAULT_ADMIN_DIVISION_PACK,
+            "admin-1st-border",
+            "english",
+        ),
     },
     {
         category: "admin-2nd-border",
         implemented: true,
-        osmQueryTags:
-            '(relation["boundary"="administrative"]["admin_level"="7"];)',
+        osmQueryTags: getAdminBorderQueryTags(
+            DEFAULT_ADMIN_DIVISION_PACK,
+            "admin-2nd-border",
+        ),
         section: "Borders & Lines",
-        title: "Ward / Municipality Border",
+        title: getAdminBorderLabel(
+            DEFAULT_ADMIN_DIVISION_PACK,
+            "admin-2nd-border",
+            "english",
+        ),
     },
     {
         category: "mountain",
@@ -212,12 +240,58 @@ export const measuringCategoriesBySection = measuringCategories.reduce<
     {} as Record<MeasuringCategorySection, MeasuringCategoryConfig[]>,
 );
 
+/**
+ * Build the live config for one admin border tier from a pack + language.
+ * Both the title and the Overpass-QL level come from the shared pack, so the
+ * measuring border stays in sync with the matching admin division at the same
+ * tier (see "Keep two border tiers" design decision).
+ */
+export function buildAdminMeasuringBorderConfig(
+    category: AdminBorderCategory,
+    pack: AdminDivisionNamePack,
+    language: "native" | "english",
+): MeasuringCategoryConfig {
+    return {
+        category,
+        implemented: true,
+        osmQueryTags: getAdminBorderQueryTags(pack, category),
+        section: "Borders & Lines",
+        title: getAdminBorderLabel(pack, category, language),
+    };
+}
+
+/** Live configs for both admin border tiers. */
+export function buildAdminMeasuringBorderConfigs(
+    pack: AdminDivisionNamePack,
+    language: "native" | "english",
+): MeasuringCategoryConfig[] {
+    return (
+        ["admin-1st-border", "admin-2nd-border"] as AdminBorderCategory[]
+    ).map((c) => buildAdminMeasuringBorderConfig(c, pack, language));
+}
+
 export function getMeasuringCategoryConfig(
     category: MeasuringCategory,
+    pack?: AdminDivisionNamePack,
+    language?: "native" | "english",
 ): MeasuringCategoryConfig | undefined {
+    if (isAdminBorderCategory(category)) {
+        const activePack =
+            pack ??
+            getDefaultAdminDivisionPack() ??
+            DEFAULT_ADMIN_DIVISION_PACK;
+        const lang = language ?? getDefaultLabelLanguage();
+        return buildAdminMeasuringBorderConfig(category, activePack, lang);
+    }
     return measuringCategories.find((c) => c.category === category);
 }
 
-export function getMeasuringCategoryTitle(category: MeasuringCategory): string {
-    return getMeasuringCategoryConfig(category)?.title ?? category;
+export function getMeasuringCategoryTitle(
+    category: MeasuringCategory,
+    pack?: AdminDivisionNamePack,
+    language?: "native" | "english",
+): string {
+    return (
+        getMeasuringCategoryConfig(category, pack, language)?.title ?? category
+    );
 }
