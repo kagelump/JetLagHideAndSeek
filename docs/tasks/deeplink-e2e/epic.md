@@ -148,7 +148,7 @@ working form.
 > - the `deeplink-spike` entry in `scripts/e2e-maestro-stack.mjs`'s `flows`
 >   array (marked `TEMP`).
 
-### C1 — Gated route 🔒🧪
+### C1 — Gated route 🔒🧪 — ✅ DONE (2026-06-22)
 
 Create `app/e2e/index.tsx`: read `d` via `useLocalSearchParams`; if
 `!E2E_HOOKS_ENABLED` render the `+not-found` UI; else parse (A2), apply (B2) using
@@ -161,7 +161,7 @@ assert failure paths too).
   invalid `d` shows the error node.
 - **Run:** `pnpm test -- app/e2e`.
 
-### C2 — Debug readout overlay 🧪
+### C2 — Debug readout overlay 🧪 — ✅ DONE (2026-06-22)
 
 Create `src/testing/e2e/E2eDebugReadout.tsx` per design §4 and mount it in
 `src/screens/MapAppScreen.tsx`. Start with keys: `name`, `backend`, `ready`,
@@ -180,7 +180,7 @@ settled (no in-flight async geometry derivation).
   `pnpm check`.
 - **Run:** `pnpm test -- E2eDebugReadout && pnpm check`.
 
-### C3 — Link-builder CLI + stack wiring 🤖
+### C3 — Link-builder CLI + stack wiring 🤖 — ✅ DONE (2026-06-22)
 
 Create `scripts/e2e/build-scenario-link.mjs` (JSON file → encoded
 `jetlag-hide-seek-v2://e2e?d=...`). Wire `scripts/e2e-maestro-stack.mjs` to build
@@ -193,7 +193,27 @@ links for registered scenarios and inject them into the Maestro `env` map; add
   the builder (round-trip with `parseE2eLink` logic) passes.
 - **Run:** `node scripts/e2e/build-scenario-link.mjs e2e/scenarios/<x>.json`.
 
-### C4 — First green flow 🤖
+### C4 — First green flow 🤖 — ✅ DONE (2026-06-22)
+
+> **RESULT.** `E2E_FLOW=deeplink-smoke pnpm test:e2e:ios:stack` passes on the
+> `iPhone 16 Pro / iOS 18.3` sim, single attempt. The flow seeds
+> `e2e/scenarios/smoke-seed.json` (Tokyo play area + one unanswered radar) via
+> the deep link and asserts `e2e-readout:ready=1`, `name=smoke-seed`,
+> `backend=js`. The device log confirms the scenario's `geometryBackend: "js"`
+> override took effect (`backend=js reason=config`).
+>
+> **Two implementation findings (folded into design.md):**
+>
+> - **Maestro `${VAR}` only auto-inherits `MAESTRO_`-prefixed shell vars.** A
+>   plain OS env var (`E2E_SMOKE_SEED_LINK`) resolved to the literal `undefined`
+>   and `simctl openurl` failed with `NSOSStatusErrorDomain -50`. Fix: the stack
+>   injects scenario links via `maestro test --env KEY=VALUE`, not the process
+>   env (design §5).
+> - **`ready=1` means "derivation settled" (`!isComputing`), not "has a value."**
+>   A bare play-area scenario has no hiding-zone stations, so `totalPct` is null,
+>   but it has still settled. The readout renders `totalPct` only when a value
+>   exists and `ready=1` whenever settled (design §4) — otherwise the smoke flow
+>   could never reach `ready=1`.
 
 Author `e2e/scenarios/smoke-seed.json` (play area + one radar question, no answer)
 and `e2e/deeplink-smoke.yaml`: bootstrap → openLink → wait `ready=1` → assert

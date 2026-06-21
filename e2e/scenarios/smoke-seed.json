@@ -1,0 +1,28 @@
+{
+    "kind": "e2e-scenario",
+    "name": "smoke-seed",
+    "controls": { "geometryBackend": "js", "showReadout": true },
+    "state": {
+        "playArea": {
+            "bbox": [139.5, 35.5, 140.0, 35.9],
+            "center": [139.75, 35.7],
+            "label": "Tokyo 23 Wards",
+            "osmId": 19631009,
+            "osmType": "R"
+        },
+        "questions": [
+            {
+                "answer": "unanswered",
+                "center": [139.75, 35.7],
+                "createdAt": "2026-06-22T00:00:00.000Z",
+                "distanceMeters": 5000,
+                "distanceOption": "5km",
+                "distanceUnit": "m",
+                "id": "smoke-radar-1",
+                "isLocked": false,
+                "type": "radar",
+                "updatedAt": "2026-06-22T00:00:00.000Z"
+            }
+        ]
+    }
+}

@@ -1,0 +1,26 @@
+appId: com.raycatdev.hideandseek.v2
+---
+# First deep-link-seeded flow: inject a play area + one radar question via the
+# test-only deep link (no UI taps), then assert the readout reports the scenario
+# and the forced geometry backend. The link is built from
+# e2e/scenarios/smoke-seed.json by the stack script and injected as
+# ${E2E_SMOKE_SEED_LINK}.
+- clearState
+- runFlow: bootstrap.yaml
+- openLink: "${E2E_SMOKE_SEED_LINK}"
+# iOS intermittently shows an "Open in <app>?" prompt for the custom scheme;
+# give it a beat to render, then tap it if present (tolerate its absence).
+- waitForAnimationToEnd:
+      timeout: 5000
+- runFlow:
+      when:
+          visible: "Open"
+      commands:
+          - tapOn: "Open"
+# Gate on the settle sentinel before asserting — never a bare assertVisible.
+- extendedWaitUntil:
+      visible: "e2e-readout:ready=1"
+      timeout: 60000
+- assertVisible: "e2e-readout:name=smoke-seed"
+- assertVisible: "e2e-readout:backend=js"
+- takeScreenshot: e2e/artifacts/deeplink-smoke/smoke-seed

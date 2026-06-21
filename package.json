@@ -45,7 +45,7 @@
         "geos:build:android": "bash modules/native-geometry/scripts/build-geos-android.sh",
         "site:build": "node scripts/build-share-site-config.mjs",
         "typecheck": "tsc --noEmit",
-        "pretest": "node --test scripts/e2e-maestro-stack-config.test.mjs data/geofabrik/scripts/poiReducer.test.mjs data/transit/scripts/lib/*.test.mjs data/packs/scripts/lib/*.test.mjs tools/data-viewer/__tests__/*.test.mjs",
+        "pretest": "node --test scripts/e2e-maestro-stack-config.test.mjs scripts/e2e/build-scenario-link.test.mjs data/geofabrik/scripts/poiReducer.test.mjs data/transit/scripts/lib/*.test.mjs data/packs/scripts/lib/*.test.mjs tools/data-viewer/__tests__/*.test.mjs",
         "test": "jest",
         "test:geos": "node scripts/run-geos-tests.mjs",
         "test:data:default-zones": "node scripts/build-default-zone-metadata.mjs --check",

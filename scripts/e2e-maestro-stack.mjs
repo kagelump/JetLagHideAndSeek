@@ -1,10 +1,11 @@
 /* global URL, console, fetch, process, setTimeout */
 
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { platform } from "node:os";
 import { join } from "node:path";
 
+import { buildScenarioLink } from "./e2e/build-scenario-link.mjs";
 import {
     createMetroWarmUrl,
     resolveE2ePlatform,
@@ -32,11 +33,51 @@ const devClientBundleUrl = encodeURIComponent(
 
 const flows = [
     { name: "smoke", artifactSubdir: "smoke", flowPath: "e2e/smoke.yaml" },
+    {
+        name: "deeplink-smoke",
+        artifactSubdir: "deeplink-smoke",
+        flowPath: "e2e/deeplink-smoke.yaml",
+    },
 ];
+
+// Build `E2E_<NAME>_LINK` env vars from e2e/scenarios/*.json so flows can
+// reference `${E2E_SMOKE_SEED_LINK}` without embedding giant base64 inline.
+function buildScenarioLinkEnv() {
+    const dir = join(projectRoot, "e2e", "scenarios");
+    let files;
+    try {
+        files = readdirSync(dir).filter((f) => f.endsWith(".json"));
+    } catch {
+        return {}; // no scenarios dir yet
+    }
+    const out = {};
+    for (const file of files) {
+        const scenario = JSON.parse(readFileSync(join(dir, file), "utf8"));
+        const key = `E2E_${file
+            .replace(/\.json$/, "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9]+/g, "_")}_LINK`;
+        out[key] = buildScenarioLink(scenario);
+    }
+    return out;
+}
+
+// Scenario links are injected into Maestro via `--env` flags (see runMaestro),
+// NOT the process env: Maestro only auto-inherits MAESTRO_-prefixed shell vars
+// for `${...}` interpolation, so an OS env var like E2E_SMOKE_SEED_LINK would
+// resolve to the literal "undefined" inside a flow.
+const scenarioLinks = buildScenarioLinkEnv();
+const scenarioEnvFlags = Object.entries(scenarioLinks).flatMap(
+    ([key, value]) => ["--env", `${key}=${value}`],
+);
 
 const env = {
     ...process.env,
     E2E_PLATFORM: e2ePlatform,
+    // Enable the E2E test hooks (gated route + readout + backend override).
+    // Metro inlines EXPO_PUBLIC_* into the JS bundle the dev client loads, so
+    // no native rebuild is needed for the hooks to switch on for this run.
+    EXPO_PUBLIC_E2E_HOOKS: "1",
     PATH: `${maestroBin}${pathSeparator}${process.env.PATH ?? ""}`,
     MAESTRO_DEV_CLIENT_URL: `exp+${appConfig.slug}://expo-development-client/?url=${devClientBundleUrl}&disableOnboarding=1`,
 };
@@ -144,6 +185,7 @@ async function runMaestro() {
                 await runCommand("maestro", [
                     ...(maestroDevice ? ["--device", maestroDevice] : []),
                     "test",
+                    ...scenarioEnvFlags,
                     "--debug-output",
                     attemptArtifactsDir,
                     flow.flowPath,

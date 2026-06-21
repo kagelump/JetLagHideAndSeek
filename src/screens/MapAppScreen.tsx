@@ -19,6 +19,7 @@ import {
     type SheetRouteName,
 } from "@/features/sheet/sheetRoutes";
 import { useQuestionDerived } from "@/state/questionStore";
+import { E2eDebugReadout } from "@/testing/e2e/E2eDebugReadout";
 import { colors } from "@/theme/colors";
 
 export function MapAppScreen() {
@@ -85,6 +86,7 @@ export function MapAppScreen() {
                     accessibilityHidden={sheetIndex !== -1}
                     onPress={handleFabPress}
                 />
+                <E2eDebugReadout />
                 <SheetSnapProvider snapToIndex={handleSheetSnap}>
                     <AppBottomSheet
                         ref={bottomSheetRef}

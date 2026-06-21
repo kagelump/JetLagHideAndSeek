@@ -58,4 +58,15 @@ describe("parseE2eLink", () => {
         expect(result.ok).toBe(false);
         if (!result.ok) expect(result.error.code).toBe("schema-invalid");
     });
+
+    it("decodes a payload encoded by the CLI's node Buffer base64url", () => {
+        // The build-scenario-link.mjs CLI encodes with node's Buffer base64url;
+        // this proves that output is byte-compatible with the app's decoder.
+        const d = Buffer.from(JSON.stringify(scenario), "utf8").toString(
+            "base64url",
+        );
+        const result = parseE2eLink(d);
+        expect(result.ok).toBe(true);
+        if (result.ok) expect(result.scenario).toEqual(scenario);
+    });
 });

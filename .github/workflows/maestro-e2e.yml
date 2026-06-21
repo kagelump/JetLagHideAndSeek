@@ -54,6 +54,10 @@ on:
 env:
     CI: true
     E2E_FLOW: ${{ github.event_name == 'workflow_dispatch' && inputs.flow || 'all' }}
+    # Enable the deep-link E2E test hooks. Metro inlines EXPO_PUBLIC_* into the
+    # JS bundle the dev client loads, so this switches the gate on at runtime
+    # without a native rebuild. Inert in any non-dev build regardless.
+    EXPO_PUBLIC_E2E_HOOKS: "1"
 
 jobs:
     android:

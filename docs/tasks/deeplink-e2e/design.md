@@ -261,6 +261,12 @@ Conventions that make this robust:
   settled (no in-flight async geometry). Flows `extendedWaitUntil` on it before
   asserting numbers — this is how we avoid racing the async derivation
   (`docs/measuring-perf/P3-async-derivation.md` is relevant background).
+  **Implemented (C4) as `ready = !isComputing`** — "settled" means no in-flight
+  derivation, _independent_ of whether there is an eliminable value yet. A bare
+  play-area scenario (no hiding-zone stations ⇒ `useEliminationPercentage` value
+  is `null`) has still settled and must reach `ready=1`; otherwise the smoke flow
+  could never proceed. `totalPct` is therefore a _separate_ row, rendered only
+  when settled **and** the value is non-null — never bundled with the sentinel.
 - **`pointerEvents="none"`** so the overlay never blocks taps in flows that still
   drive UI.
 
@@ -320,10 +326,16 @@ What to expose (start small, grow per scenario need):
 - **Registration.** Add each flow to the `flows` array in
   `scripts/e2e-maestro-stack.mjs` and document selecting it with
   `E2E_FLOW=<name>`. CI exposes flows through the `flow` workflow input.
-- **Links as env vars.** The stack script builds the encoded links (calling
-  `scripts/e2e/build-scenario-link.mjs`) and injects them into the Maestro `env`
-  map alongside `MAESTRO_DEV_CLIENT_URL`, so flows reference `${E2E_*_LINK}` and
-  never embed giant base64 blobs inline.
+- **Links as env vars — via `maestro test --env`, not the process env.** The
+  stack script builds the encoded links (calling
+  `scripts/e2e/build-scenario-link.mjs`) so flows reference `${E2E_*_LINK}` and
+  never embed giant base64 blobs inline. **Implemented (C4):** these are passed
+  as `maestro test --env E2E_SMOKE_SEED_LINK=<link>` flags, **not** the spawned
+  process environment. Maestro's `${...}` interpolation only auto-inherits
+  `MAESTRO_`-prefixed shell vars (which is why `MAESTRO_DEV_CLIENT_URL` works
+  from the env); a plain OS var like `E2E_SMOKE_SEED_LINK` resolves to the
+  literal `"undefined"` and `simctl openurl` fails with `NSOSStatusErrorDomain
+-50`. `--env` is the reliable mechanism.
 
 ### C0 addendum — the working deep-link form (spike, 2026-06-22)
 
