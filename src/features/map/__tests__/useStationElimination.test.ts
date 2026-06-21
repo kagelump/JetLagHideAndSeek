@@ -118,6 +118,26 @@ describe("computeStationElimination", () => {
         expect(result.eliminatedStationIds.size).toBe(0);
     });
 
+    it("honors manual eliminations even when there is no boundary", () => {
+        const result = computeStationElimination(
+            threeStations,
+            emptyZoneFeatures,
+            null,
+            600,
+            bbox10x10,
+            emptyRenderState,
+            new Set(["b"]),
+        );
+        expect(result.totalCount).toBe(3);
+        expect(result.remainingCount).toBe(2);
+        expect(result.eliminatedStationIds.has("b")).toBe(true);
+        expect(result.stationAreas.get("b")).toEqual({
+            fraction: 0,
+            remainingM2: 0,
+        });
+        expect(result.stationAreas.get("a")?.fraction).toBe(1);
+    });
+
     it("returns all remaining when mask is empty (no questions)", () => {
         const result = computeStationElimination(
             threeStations,

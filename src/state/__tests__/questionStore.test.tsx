@@ -1313,6 +1313,85 @@ describe("importQuestionSettings", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Admin config provider seam: non-React consumers (getCategoryTitle) must
+// reflect the live questionStore admin pack, via the provider that
+// QuestionProvider registers on mount. This guards the seam neither the
+// matchingCategories unit tests (which register their own provider by hand)
+// nor E2E (which doesn't assert title strings) covers — and which a regression
+// in getCategoryConfig once broke silently.
+// ---------------------------------------------------------------------------
+
+import { getCategoryTitle } from "@/features/questions/matching/matchingCategories";
+
+function AdminConfigProbe() {
+    const { isRestored } = useQuestionState();
+    const { setAdminDivisionPack, setLabelLanguage } = useQuestionActions();
+
+    return (
+        <View>
+            <Text testID="probe-restored">{String(isRestored)}</Text>
+            {/* Called at render time from a NON-React module path — resolves
+                through the provider registered by QuestionProvider. */}
+            <Text testID="probe-admin-1st-title">
+                {getCategoryTitle("admin-1st")}
+            </Text>
+            <Pressable
+                accessibilityRole="button"
+                testID="action-set-english"
+                onPress={() => setLabelLanguage("english")}
+            />
+            <Pressable
+                accessibilityRole="button"
+                testID="action-set-admin-pack"
+                onPress={() =>
+                    setAdminDivisionPack([
+                        { osmLevel: "4", labelNative: "州", labelEn: "Region" },
+                        { osmLevel: "6", labelNative: "", labelEn: "" },
+                        { osmLevel: "8", labelNative: "", labelEn: "" },
+                        { osmLevel: "10", labelNative: "", labelEn: "" },
+                    ])
+                }
+            />
+        </View>
+    );
+}
+
+describe("admin config provider seam", () => {
+    beforeEach(async () => {
+        await AsyncStorage.clear();
+    });
+
+    it("getCategoryTitle reflects the live store admin pack (non-React seam)", async () => {
+        const screen = render(
+            <AppStateProviders>
+                <AdminConfigProbe />
+            </AppStateProviders>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId("probe-restored")).toHaveTextContent(
+                "true",
+            );
+        });
+
+        // Default generic pack has empty labels → derived generic title.
+        expect(screen.getByTestId("probe-admin-1st-title")).toHaveTextContent(
+            "1st Admin Division (OSM level 4)",
+        );
+
+        // Mutating the store's admin pack must flow to the non-React getter.
+        act(() => {
+            fireEvent.press(screen.getByTestId("action-set-english"));
+            fireEvent.press(screen.getByTestId("action-set-admin-pack"));
+        });
+
+        expect(screen.getByTestId("probe-admin-1st-title")).toHaveTextContent(
+            "Region",
+        );
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Task 02: Tentacles POI answer helpers — invariant & normalization tests
 // ---------------------------------------------------------------------------
 
