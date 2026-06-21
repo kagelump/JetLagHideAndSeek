@@ -17,6 +17,25 @@ export type UserCoordinateResult =
     | { coordinate: Position; status: "granted" }
     | { coordinate: null; status: "denied" | "undetermined" | "unavailable" };
 
+/**
+ * Reports whether foreground location permission is already granted, WITHOUT
+ * triggering a system permission prompt. Use this to decide whether nearby
+ * suggestions can be loaded automatically (vs. behind an explicit opt-in).
+ */
+export async function hasLocationPermission(
+    locationModule: Pick<
+        LocationModule,
+        "getForegroundPermissionsAsync"
+    > = Location,
+): Promise<boolean> {
+    try {
+        const existing = await locationModule.getForegroundPermissionsAsync();
+        return existing.granted;
+    } catch {
+        return false;
+    }
+}
+
 export async function requestUserCoordinate(
     locationModule: LocationModule = Location,
 ): Promise<UserCoordinateResult> {
