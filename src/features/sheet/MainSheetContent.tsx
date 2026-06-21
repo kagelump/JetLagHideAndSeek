@@ -167,11 +167,14 @@ function MainSheetContent({
                     ) : (
                         <>
                             <View style={styles.hudHeader}>
-                                <View>
+                                <View style={styles.hudHeaderText}>
                                     <Text style={styles.eyebrow}>
                                         Current game
                                     </Text>
-                                    <Text style={styles.title}>
+                                    <Text
+                                        style={styles.title}
+                                        numberOfLines={1}
+                                    >
                                         {playArea.label}
                                     </Text>
                                 </View>
@@ -180,14 +183,15 @@ function MainSheetContent({
                                     accessibilityRole="button"
                                     onPress={() => onNavigate("add-question")}
                                     style={({ pressed }) => [
-                                        styles.addQuestionChip,
+                                        styles.addQuestionButton,
                                         pressed ? styles.actionPressed : null,
                                     ]}
                                     testID="main-add-question"
                                 >
-                                    <Text style={styles.addQuestionChipText}>
-                                        + Add Question
-                                    </Text>
+                                    <View style={styles.plusIcon}>
+                                        <View style={styles.plusHorizontal} />
+                                        <View style={styles.plusVertical} />
+                                    </View>
                                 </Pressable>
                             </View>
 
@@ -399,18 +403,42 @@ const styles = StyleSheet.create({
     hudHeader: {
         alignItems: "center",
         flexDirection: "row",
+        gap: 12,
         justifyContent: "space-between",
     },
-    addQuestionChip: {
-        backgroundColor: colors.tint,
-        borderRadius: 16,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
+    hudHeaderText: {
+        flexShrink: 1,
     },
-    addQuestionChipText: {
-        color: colors.white,
-        fontSize: 14,
-        fontWeight: "800",
+    addQuestionButton: {
+        alignItems: "center",
+        backgroundColor: colors.tint,
+        borderRadius: 18,
+        flexShrink: 0,
+        height: 36,
+        justifyContent: "center",
+        width: 36,
+    },
+    plusIcon: {
+        height: 14,
+        width: 14,
+    },
+    plusHorizontal: {
+        backgroundColor: colors.white,
+        borderRadius: 1,
+        height: 2,
+        left: 0,
+        position: "absolute",
+        top: 6,
+        width: 14,
+    },
+    plusVertical: {
+        backgroundColor: colors.white,
+        borderRadius: 1,
+        height: 14,
+        left: 6,
+        position: "absolute",
+        top: 0,
+        width: 2,
     },
     statCard: {
         backgroundColor: colors.card,
