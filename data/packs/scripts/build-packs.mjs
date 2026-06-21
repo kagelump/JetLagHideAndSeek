@@ -637,6 +637,9 @@ async function buildRegion(
             matching: region.adminLevels?.matching ?? [4, 7, 9, 10],
             extract: region.adminLevels?.extract ??
                 region.adminLevels?.matching ?? [4, 7, 9, 10],
+            ...(region.adminLevels?.labels
+                ? { labels: region.adminLevels.labels }
+                : {}),
         },
         categories: {
             measuring: measuringCategories,

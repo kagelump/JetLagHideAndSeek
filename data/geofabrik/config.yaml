@@ -72,27 +72,6 @@ measuring:
           simplifyTolerance: 0.0001 # degrees (~11 m) — applied after dissolve
           minFeatureLengthM: 100
 
-        - key: admin-1st-border
-          osmiumFilter: "r/boundary=administrative"
-          postFilter: admin-4 # prefecture-level (ISO 3166-2)
-          geometry: polygon-to-ring
-          simplifyTolerance: 0.0001 # degrees (~11 m)
-          minFeatureLengthM: 200
-
-        - key: admin-2nd-border
-          osmiumFilter: "r/boundary=administrative"
-          postFilter: admin-7 # ward/municipality-level
-          geometry: polygon-to-ring
-          simplifyTolerance: 0.0001 # degrees (~11 m)
-          minFeatureLengthM: 100
-
-        - key: admin-boundaries
-          osmiumFilter: "r/boundary=administrative"
-          postFilter: admin-all # all admin_level values (2–10)
-          geometry: polygon
-          simplifyTolerance: 0.0001 # degrees (~11 m)
-          minFeatureLengthM: 0
-
     # ── Algorithm tuning ─────────────────────────────────────────────
 
     # Simplify tolerance for waterway centerlines (degrees, ≈ 11 m at mid-latitudes).

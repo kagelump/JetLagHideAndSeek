@@ -21,6 +21,7 @@ import {
     registerTransitSource,
     unregisterTransitSource,
 } from "@/features/hidingZone/hidingZoneData";
+import type { PackAdminLevelInfo } from "@/features/offline/adminLevelDefaults";
 import {
     registerPackAdminLevels,
     unregisterPackAdminLevels,
@@ -213,6 +214,15 @@ function registerArtifact(
         }
         case "measuring": {
             if (category) {
+                // After Phase 1, packs no longer ship admin border measuring
+                // artifacts. Admin border data comes from the boundaries
+                // artifact; skip registration defensively.
+                if (
+                    category === "admin-1st-border" ||
+                    category === "admin-2nd-border"
+                ) {
+                    break;
+                }
                 const metPath = jsonFile(packId, kind, category).uri;
                 registerMeasuringSource(
                     packId,
@@ -323,6 +333,12 @@ function registerArtifact(
                         number,
                         number,
                     ],
+                    ...(data.adminLevels.labels
+                        ? {
+                              labels: data.adminLevels
+                                  .labels as unknown as PackAdminLevelInfo["labels"],
+                          }
+                        : {}),
                 });
             }
             break;
@@ -895,6 +911,14 @@ export async function loadInstalledPacks(): Promise<void> {
                     case "measuring": {
                         // Register the file path only — lazy loading (T3 contract).
                         if (artifact.category) {
+                            // After Phase 1, admin border data comes from the
+                            // boundaries artifact; skip registration defensively.
+                            if (
+                                artifact.category === "admin-1st-border" ||
+                                artifact.category === "admin-2nd-border"
+                            ) {
+                                break;
+                            }
                             const file = jsonFile(
                                 packId,
                                 artifact.kind,
@@ -1011,6 +1035,12 @@ export async function loadInstalledPacks(): Promise<void> {
                                     0,
                                     4,
                                 ) as [number, number, number, number],
+                                ...(md.adminLevels.labels
+                                    ? {
+                                          labels: md.adminLevels
+                                              .labels as PackAdminLevelInfo["labels"],
+                                      }
+                                    : {}),
                             });
                         }
                         break;

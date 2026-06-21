@@ -330,8 +330,70 @@ describe("getBoundaryPolygon", () => {
         expect(await getBoundaryPolygon("p1", 999)).toBeNull();
     });
 
-    // TODO: re-enable once dynamic import mock is working in Jest.
-    // The jest.setup.ts mock provides File, but await import("expo-file-system")
-    // in getBoundaryPolygon doesn't resolve to the mock.
-    it.todo("decodes polygon from file and caches in LRU");
+    it("decodes polygon from file and caches in LRU", async () => {
+        // Delta-encode a simple square polygon: ring [[0,0],[0,1],[1,1],[1,0],[0,0]]
+        // Format: [polyCount, ringCount, ringLen, x0, y0, dx1, dy1, ...]
+        // SCALE = 100_000
+        const square = [0, 0, 0, 1, 1, 1, 1, 0, 0, 0];
+        const SCALE = 100_000;
+        const encoded = [
+            1, // polyCount = 1
+            1, // ringCount = 1
+            2 + (square.length / 2 - 1) * 2, // ringLen = 10
+            square[0] * SCALE, // x0 = 0
+            square[1] * SCALE, // y0 = 0
+            ...(() => {
+                const deltas: number[] = [];
+                for (let i = 2; i < square.length; i += 2) {
+                    deltas.push(
+                        (square[i] - square[i - 2]) * SCALE,
+                        (square[i + 1] - square[i - 1]) * SCALE,
+                    );
+                }
+                return deltas;
+            })(),
+        ];
+
+        const polygonsPayload = JSON.stringify({
+            schemaVersion: 1,
+            regionId: "p1",
+            polygons: { "42": encoded },
+        });
+
+        // Mock reader that serves the polygon file.
+        const fsCache: Record<string, string> = {
+            "/packs/p1/polygons.json": polygonsPayload,
+        };
+        const mockReader = async (path: string) => {
+            const content = fsCache[path];
+            if (content === undefined) throw new Error(`ENOENT: ${path}`);
+            return content;
+        };
+
+        registerBoundarySource(
+            "p1",
+            "/packs/p1/index.json",
+            "/packs/p1/polygons.json",
+            [
+                makeEntry({
+                    relationId: 42,
+                    name: "Test",
+                    adminLevel: 7,
+                }),
+            ],
+            [7],
+        );
+
+        // First call — decodes via the mock reader.
+        const result = await getBoundaryPolygon("p1", 42, mockReader);
+        expect(result).not.toBeNull();
+        expect(result!.length).toBe(1); // 1 polygon
+        expect(result![0].length).toBe(1); // 1 ring
+        expect(result![0][0].length).toBe(5); // 5 coords (closed)
+        expect(result![0][0][0]).toEqual([0, 0]);
+
+        // Second call — LRU hit (reader not invoked again).
+        const cached = await getBoundaryPolygon("p1", 42, mockReader);
+        expect(cached).toEqual(result);
+    });
 });

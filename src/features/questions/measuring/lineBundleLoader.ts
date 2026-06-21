@@ -185,8 +185,12 @@ export async function loadLineBundle(
             mergedCache.add(category);
             return adminBundle;
         }
-        // No boundary data — fall through to legacy pack measuring sources so
-        // older packs that still ship measuring-admin-*-border keep working.
+        // No boundary data for this border tier — return null. After the
+        // Phase 1 pipeline cut, packs no longer ship measuring-admin-*-border
+        // artifacts, so there are no pack sources to fall through to.
+        cache.set(category, null);
+        mergedCache.add(category);
+        return null;
     }
 
     // Build merged bundle from registered pack sources.
@@ -337,8 +341,7 @@ export function hasPackSources(category: MeasuringCategory): boolean {
     if (isAdminBorderCategory(category)) {
         const level = resolveBorderLevel(category);
         if (level == null) return false;
-        if (getAvailableBoundaryLevels().includes(level)) return true;
-        // Fall through: a legacy pack may still register a measuring source.
+        return getAvailableBoundaryLevels().includes(level);
     }
     const sources = packSources.get(category);
     return sources !== undefined && sources.length > 0;

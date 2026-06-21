@@ -55,6 +55,13 @@ export function AdminDivisionScreen() {
     );
     const hasBundleLevels = availableLevels.length > 0;
 
+    // Derive a human-readable source description for the level definitions.
+    const sourceDescription = useMemo(() => {
+        if (hasBundleLevels) return "Levels from installed offline data";
+        if (presetName === "japan") return "Japan preset — live Overpass";
+        return "Generic preset — live Overpass";
+    }, [hasBundleLevels, presetName]);
+
     const setLevelForIndex = (index: number, osmLevel: string) => {
         setAdminDivisionPack(
             (prev) =>
@@ -154,6 +161,7 @@ export function AdminDivisionScreen() {
                         </Pressable>
                     ))}
                 </View>
+                <Text style={styles.sourceIndicator}>{sourceDescription}</Text>
             </View>
 
             {/* 4 admin division entry rows */}
@@ -199,24 +207,32 @@ export function AdminDivisionScreen() {
                                         const lvStr = String(lv);
                                         const active = entry.osmLevel === lvStr;
                                         const count = levelCounts[lv] ?? 0;
+                                        const hasNoData = count === 0;
                                         return (
                                             <Pressable
-                                                accessibilityLabel={`Set ${ordinal(index + 1)} admin division to OSM level ${lv}`}
+                                                accessibilityLabel={`Set ${ordinal(index + 1)} admin division to OSM level ${lv}${hasNoData ? " — no boundary data" : ` (${count})`}`}
                                                 accessibilityRole="button"
                                                 accessibilityState={{
                                                     selected: active,
+                                                    disabled: hasNoData,
                                                 }}
                                                 key={lv}
-                                                onPress={() =>
-                                                    setLevelForIndex(
-                                                        index,
-                                                        lvStr,
-                                                    )
+                                                onPress={
+                                                    hasNoData
+                                                        ? undefined
+                                                        : () =>
+                                                              setLevelForIndex(
+                                                                  index,
+                                                                  lvStr,
+                                                              )
                                                 }
                                                 style={[
                                                     styles.levelChip,
                                                     active
                                                         ? styles.levelChipActive
+                                                        : null,
+                                                    hasNoData && !active
+                                                        ? styles.levelChipNoData
                                                         : null,
                                                 ]}
                                             >
@@ -226,12 +242,15 @@ export function AdminDivisionScreen() {
                                                         active
                                                             ? styles.levelChipTextActive
                                                             : null,
+                                                        hasNoData && !active
+                                                            ? styles.levelChipTextNoData
+                                                            : null,
                                                     ]}
                                                 >
                                                     {lv}
                                                     {count > 0
                                                         ? ` (${count})`
-                                                        : ""}
+                                                        : " (0)"}
                                                 </Text>
                                             </Pressable>
                                         );
@@ -607,5 +626,20 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         marginTop: 24,
         textTransform: "uppercase",
+    },
+    sourceIndicator: {
+        color: colors.muted,
+        fontSize: 11,
+        fontStyle: "italic",
+        marginTop: 4,
+    },
+    levelChipNoData: {
+        backgroundColor: "transparent",
+        borderColor: colors.border,
+        borderStyle: "dashed",
+        opacity: 0.5,
+    },
+    levelChipTextNoData: {
+        color: colors.muted,
     },
 });

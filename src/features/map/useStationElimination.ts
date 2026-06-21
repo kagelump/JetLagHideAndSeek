@@ -234,16 +234,19 @@ export function computeStationElimination(
 
     if (!boundary || boundary.features.length === 0) {
         const areas = new Map<string, StationAreaInfo>();
+        const eliminated = new Set<string>();
         for (const s of stations) {
+            const elim = manuallyEliminatedIds.has(s.id);
             areas.set(s.id, {
-                fraction: 1,
-                remainingM2: Math.PI * radiusMeters * radiusMeters,
+                fraction: elim ? 0 : 1,
+                remainingM2: elim ? 0 : Math.PI * radiusMeters * radiusMeters,
             });
+            if (elim) eliminated.add(s.id);
         }
         return {
-            remainingCount: stations.length,
+            remainingCount: stations.length - eliminated.size,
             totalCount: stations.length,
-            eliminatedStationIds: new Set(),
+            eliminatedStationIds: eliminated,
             stationAreas: areas,
             isComputing: false,
         };

@@ -4,7 +4,7 @@ import {
     getCategoryTitle,
     matchingCategories,
     matchingCategoriesBySection,
-    setDefaultAdminConfig,
+    registerAdminConfigProvider,
 } from "../matchingCategories";
 import { DEFAULT_ADMIN_DIVISION_PACK } from "../adminDivisionConfig";
 
@@ -46,9 +46,12 @@ describe("matchingCategories", () => {
 
     it("returns the title for a category", () => {
         expect(getCategoryTitle("zoo")).toBe("Zoo");
-        // Admin categories need the module-level defaults to be synced
-        // before they return the configured label.
-        setDefaultAdminConfig(DEFAULT_ADMIN_DIVISION_PACK, "native");
+        // Admin categories resolve their label through the registered admin
+        // config provider — register one before asserting the configured label.
+        registerAdminConfigProvider(() => ({
+            pack: DEFAULT_ADMIN_DIVISION_PACK,
+            language: "native",
+        }));
         expect(getCategoryTitle("admin-2nd")).toBe(
             "2nd Admin Division (OSM level 6)",
         );

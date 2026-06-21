@@ -14,10 +14,7 @@ export const META_SCHEMA_VERSION = 1;
 const VALID_MEASURING_CATEGORIES = new Set([
     "coastline",
     "body-of-water",
-    "admin-1st-border",
-    "admin-2nd-border",
     "high-speed-rail",
-    "admin-boundaries",
 ]);
 
 /** Valid matching category names (must match the app's MatchingCategory). */
@@ -149,6 +146,39 @@ export function validateMeta(meta, label = "meta.json") {
             !Array.isArray(meta.adminLevels.extract)
         ) {
             errors.push(`${label}: "adminLevels.extract" must be an array`);
+        }
+
+        // Validate optional labels: a 4-element array of [labelEn, labelNative] pairs.
+        if (meta.adminLevels.labels != null) {
+            const labels = meta.adminLevels.labels;
+            if (!Array.isArray(labels) || labels.length !== 4) {
+                errors.push(
+                    `${label}: "adminLevels.labels" must be an array of 4 entries`,
+                );
+            } else {
+                for (let i = 0; i < labels.length; i++) {
+                    const entry = labels[i];
+                    if (!Array.isArray(entry) || entry.length !== 2) {
+                        errors.push(
+                            `${label}: "adminLevels.labels[${i}]" must be a [labelEn, labelNative] pair`,
+                        );
+                        continue;
+                    }
+                    if (
+                        typeof entry[0] !== "string" ||
+                        entry[0].trim() === ""
+                    ) {
+                        errors.push(
+                            `${label}: "adminLevels.labels[${i}][0]" must be a non-empty string (labelEn)`,
+                        );
+                    }
+                    if (typeof entry[1] !== "string") {
+                        errors.push(
+                            `${label}: "adminLevels.labels[${i}][1]" must be a string (labelNative)`,
+                        );
+                    }
+                }
+            }
         }
     }
 

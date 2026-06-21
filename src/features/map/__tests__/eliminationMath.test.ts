@@ -184,6 +184,43 @@ describe("buildEligibilityConstraints", () => {
         expect(required).toContain(transitHit);
     });
 
+    it("splits measuring miss masks into separate excluded constraints (measuring polarity)", () => {
+        // Measuring uses `miss: "separate"` — each miss feature becomes its
+        // own excluded constraint (unlike radar where miss is `whole`).
+        // This covers admin-border answers (closer/farther) and any other
+        // measuring sub-type.
+        const zone = squareFC(0, 0, 10, 10);
+        const hit = squareFC(0, 0, 3, 10);
+        const miss: GeoJsonFeatureCollection = {
+            type: "FeatureCollection",
+            features: [
+                squareFC(3, 0, 6, 10).features[0],
+                squareFC(6, 0, 10, 10).features[0],
+            ],
+        };
+        const renderState = makeRenderState({
+            measuring: { hitMaskFeatures: hit, missMaskFeatures: miss },
+        });
+
+        const { required, excluded } = buildEligibilityConstraints(
+            zone,
+            renderState,
+        );
+        // Hit → required as separate.
+        expect(required.flatMap((c) => c.features)).toContainEqual(
+            hit.features[0],
+        );
+        // Miss → excluded as separate features (not a single whole collection).
+        expect(excluded.flatMap((c) => c.features)).toContainEqual(
+            miss.features[0],
+        );
+        expect(excluded.flatMap((c) => c.features)).toContainEqual(
+            miss.features[1],
+        );
+        // Miss features are NOT in the same constraint (they're separated).
+        expect(excluded).not.toContain(miss);
+    });
+
     it("ignores a thermometer miss mask (miss: none)", () => {
         // Thermometer only ever narrows toward the hotter side; its miss
         // polarity contributes nothing. Even a populated miss mask is dropped.

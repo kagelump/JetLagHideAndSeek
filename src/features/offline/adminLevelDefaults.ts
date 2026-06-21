@@ -13,11 +13,16 @@ import type { AdminDivisionNamePack } from "@/features/questions/matching/adminD
  * Minimal pack info needed for admin-level derivation.
  * Populated from the installed pack index (T5).
  */
+/** A [labelEn, labelNative] pair for one admin level tier. */
+type AdminLabelPair = [string, string];
+
 export type PackAdminLevelInfo = {
     packId: string;
     label: string;
     bbox: Bbox;
     matchingLevels: [number, number, number, number];
+    /** Optional per-level human-readable labels from the pack. */
+    labels?: [AdminLabelPair, AdminLabelPair, AdminLabelPair, AdminLabelPair];
 };
 
 const _packLevels: PackAdminLevelInfo[] = [];
@@ -69,21 +74,38 @@ export function findPackForPlayArea(
 
 /**
  * Build an AdminDivisionNamePack from a pack's matching levels.
- * Uses generic labels (no localized names for non-Japan packs).
+ * Uses per-pack labels when available; falls back to generic ordinals.
  */
 export function buildPackAdminDivisionPack(
     info: PackAdminLevelInfo,
 ): AdminDivisionNamePack {
-    const ordinals = ["1st", "2nd", "3rd", "4th"] as const;
-    return info.matchingLevels.map((osmLevel, i) => ({
-        osmLevel: String(osmLevel),
-        labelNative: "",
-        labelEn: genericLabel(ordinals[i], String(osmLevel)),
-    })) as unknown as AdminDivisionNamePack;
+    return info.matchingLevels.map((osmLevel, i) => {
+        const label = info.labels?.[i];
+        return {
+            osmLevel: String(osmLevel),
+            labelNative: label?.[1] ?? "",
+            labelEn: label?.[0] ?? genericLabel(ordinal(i), String(osmLevel)),
+        };
+    }) as unknown as AdminDivisionNamePack;
 }
 
-function genericLabel(ordinal: string, osmLevel: string): string {
-    return `${ordinal} Admin Division (OSM level ${osmLevel})`;
+function ordinal(n: number): string {
+    switch (n) {
+        case 0:
+            return "1st";
+        case 1:
+            return "2nd";
+        case 2:
+            return "3rd";
+        case 3:
+            return "4th";
+        default:
+            return `${n + 1}th`;
+    }
+}
+
+function genericLabel(ordinalStr: string, osmLevel: string): string {
+    return `${ordinalStr} Admin Division (OSM level ${osmLevel})`;
 }
 
 function bboxesIntersect(a: Bbox, b: Bbox): boolean {

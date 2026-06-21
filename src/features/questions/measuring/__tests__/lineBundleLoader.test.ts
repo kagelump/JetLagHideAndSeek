@@ -115,7 +115,7 @@ import {
     ADMIN_DIVISION_PRESETS,
     clonePack,
 } from "@/features/questions/matching/adminDivisionConfig";
-import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
+import { registerAdminConfigProvider } from "@/features/questions/matching/matchingCategories";
 
 import type { MeasuringCategory } from "../measuringTypes";
 
@@ -498,10 +498,11 @@ describe("admin border bundles (unified from boundaries)", () => {
         __clearPackSourcesForTest();
         boundaryStoreMock.__reset();
         // Japan pack: 1st tier → OSM level 4, 2nd tier → level 7.
-        setDefaultAdminConfig(
-            clonePack(ADMIN_DIVISION_PRESETS.japan),
-            "english",
-        );
+        const adminConfig = {
+            pack: clonePack(ADMIN_DIVISION_PRESETS.japan),
+            language: "english" as const,
+        };
+        registerAdminConfigProvider(() => adminConfig);
     });
 
     it("builds an admin-1st-border bundle from boundary polygon rings", async () => {

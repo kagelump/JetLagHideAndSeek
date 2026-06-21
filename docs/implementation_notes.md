@@ -773,8 +773,8 @@ the non-obvious design decisions that still constrain current work.
 ### Admin levels — unified matching + measuring (2026-06-21)
 
 - **Single source of truth:** the `AdminDivisionNamePack` (4-tuple of
-  osmLevel + labels, `adminDivisionConfig.ts`) drives *both* the matching
-  `admin-1st…admin-4th` categories *and* the two measuring border tiers. A
+  osmLevel + labels, `adminDivisionConfig.ts`) drives _both_ the matching
+  `admin-1st…admin-4th` categories _and_ the two measuring border tiers. A
   measuring border tier maps into the pack by index — `admin-1st-border` → tier
   0, `admin-2nd-border` → tier 1 (`ADMIN_BORDER_TIER_INDEX`). Border title +
   OSM level come from the pack via `getAdminBorder{OsmLevel,Label,QueryTags}`,
@@ -784,7 +784,7 @@ the non-obvious design decisions that still constrain current work.
   geometry from the boundary **polygon rings** already in the `boundaries`
   artifact (the unified adapter `buildAdminBorderBundle` in `lineBundleLoader.ts`
   via `boundaryStore.getBoundaryPolygonsAtLevel`), not a separate
-  `measuring-admin-*-border` line bundle. The pipeline still *emits* those
+  `measuring-admin-*-border` line bundle. The pipeline still _emits_ those
   artifacts (app-side-first scope) but the app no longer depends on them; the
   legacy pack measuring source remains a fallback. Cutting them from
   `buildMeasuring.mjs` + republishing packs is the follow-up.

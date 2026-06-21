@@ -9,7 +9,7 @@
             "regionPath": ["Asia", "China", "Beijing"],
             "bbox": [115.415497, 39.440833, 117.509508, 41.063822],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 1712206,
+            "totalBytes": 1092823,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -37,24 +37,6 @@
                     "md5": "ad2a02b65bb081bd1b2da6e45fbc2c1f",
                     "sha256": "390f9b589d7d6f915753d3a0698004af163bb5f5487a47301faa1f99c5b7fca5",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-measuring-admin-2nd-border.json.gz",
-                    "bytes": 3380,
-                    "md5": "f511fb5f25d435279cd208a622f6fc6b",
-                    "sha256": "b5d9995339725a7273e44b83eb1c3291c947a0d891c958e69a8e607961621633",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-china-beijing-measuring-admin-boundaries.json.gz",
-                    "bytes": 616003,
-                    "md5": "3f4050803da0ed4010c40965622958d8",
-                    "sha256": "f488b32bbef8af99342e90cba59015ceb664862cddb0e0a2515171bc1db18b03",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -91,7 +73,7 @@
             "regionPath": ["Asia", "India", "Northern Zone"],
             "bbox": [69.169911, 23.046881, 80.167546, 36.137884],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 14130643,
+            "totalBytes": 9456049,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -110,33 +92,6 @@
                     "md5": "e4e96c3ceff8d3af8d3429495e49c671",
                     "sha256": "e10784c27b226ef5a0e0905263a2b145d59e337aa22f803dfec3aa2e30e1cff4",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-india-northern-zone-measuring-admin-1st-border.json.gz",
-                    "bytes": 260050,
-                    "md5": "28b19b92e086e5c482ff118030976344",
-                    "sha256": "6aba07bf71dfb5cf1976cfa3aa9e71579d27e0c432d0ce9ee71da509d4027233",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-india-northern-zone-measuring-admin-2nd-border.json.gz",
-                    "bytes": 34612,
-                    "md5": "8603fd33cdbe12df622885f893797ca5",
-                    "sha256": "d1d66f6310d9ddd318e555f679c172c4f1d18e95358154c19f7accf294080cbb",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-india-northern-zone-measuring-admin-boundaries.json.gz",
-                    "bytes": 4379932,
-                    "md5": "f23635c890e63b94f684423be379d7e0",
-                    "sha256": "9c9d823d3a30d319cac9bb53f4ba9bb37797306f247a8f3e4e487811eca845d7",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -173,7 +128,7 @@
             "regionPath": ["Asia", "Japan", "Chubu"],
             "bbox": [135.4393, 34.2664899, 139.909, 38.90717],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 12179836,
+            "totalBytes": 8636081,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -212,33 +167,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-chubu-measuring-admin-1st-border.json.gz",
-                    "bytes": 233697,
-                    "md5": "2572c83d88f4b4c7de2df653a4953dd7",
-                    "sha256": "a6a983aa28fea3ac3cf140e5378209e5bef3f1450e1a63073c3f51e30b152d27",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-chubu-measuring-admin-2nd-border.json.gz",
-                    "bytes": 1323194,
-                    "md5": "e08d25a21d70232f35dd2c06e5785bd8",
-                    "sha256": "9377dd44beaf82c5f60e52623792b22425e637e5841183087d2b1913086cfafd",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-chubu-measuring-admin-boundaries.json.gz",
-                    "bytes": 1986864,
-                    "md5": "7963029f2a0a8a8841c9f7a5a16ca693",
-                    "sha256": "b6bfb1b2cc6e251902ebbe574f5fcf71d5e3a7a7036134da09cdfd79e69b79bb",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-chubu-boundaries.json.gz",
@@ -273,7 +201,7 @@
             "regionPath": ["Asia", "Japan", "Chugoku"],
             "bbox": [129.893915, 33.54225, 134.5244, 37.082889],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 7260422,
+            "totalBytes": 5274119,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -312,33 +240,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-chugoku-measuring-admin-1st-border.json.gz",
-                    "bytes": 87194,
-                    "md5": "11cd8877e7a393c5473befb8a004ea69",
-                    "sha256": "1415e5bf5cc8b0eb3d1bfe768ad7d00a36c331c645b9b47594a2107ac6d1b3be",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-chugoku-measuring-admin-2nd-border.json.gz",
-                    "bytes": 590613,
-                    "md5": "6849ed16c5efa2421bf14d143395a3a9",
-                    "sha256": "788f5c6f0fde383a738fb1c511e760976aa7262562096d50e20f0c175ec43a54",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-chugoku-measuring-admin-boundaries.json.gz",
-                    "bytes": 1308496,
-                    "md5": "9010f86a207aac43f2be5efa844d28f9",
-                    "sha256": "98e0562bfef02ff3e9dca9e855a405ce13360e92e3584754e1027bc1b0ce0239",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-chugoku-boundaries.json.gz",
@@ -373,7 +274,7 @@
             "regionPath": ["Asia", "Japan", "Hokkaido"],
             "bbox": [137.934616, 41.15098, 146.247631, 46.040273],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 11305528,
+            "totalBytes": 8469752,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -412,33 +313,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-admin-1st-border.json.gz",
-                    "bytes": 9729,
-                    "md5": "2f8e007166829dd3284fbca1bdf22fee",
-                    "sha256": "36f595336e120f7d58c013a71f2514401995574d3fbb38f543984176f6eb81d5",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-admin-2nd-border.json.gz",
-                    "bytes": 916066,
-                    "md5": "57f8cd782dc8937e17bcda10259bcd48",
-                    "sha256": "939a8c03b82753e5b5a2afac959277862f172b8455174aff2289c848cb161561",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-measuring-admin-boundaries.json.gz",
-                    "bytes": 1909981,
-                    "md5": "4480ec9567a1900fed0040c2bc0ab5b4",
-                    "sha256": "97776bc7c1926cefc9c8fbda7abff8133e9abfbf89599f1d203da712afbfac6a",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-hokkaido-boundaries.json.gz",
@@ -473,7 +347,7 @@
             "regionPath": ["Asia", "Japan", "Kansai"],
             "bbox": [133.964396, 33.0789789, 137.657278, 36.458201],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 8273380,
+            "totalBytes": 5917389,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -512,33 +386,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kansai-measuring-admin-1st-border.json.gz",
-                    "bytes": 166066,
-                    "md5": "88bb3ba743b2b50be101e659e9ce94f4",
-                    "sha256": "1e37d376b0ef736716995b1333e262be8b9ec91c077df5b363985b34c4364442",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kansai-measuring-admin-2nd-border.json.gz",
-                    "bytes": 809128,
-                    "md5": "14f6379e5713e9ecd5bb84681fd934dc",
-                    "sha256": "78266eb58d3f114d8ec28bf86177844bbf2228cefb17832944e6f59eb6d76dba",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kansai-measuring-admin-boundaries.json.gz",
-                    "bytes": 1380797,
-                    "md5": "f88e5fe3fc99649bb4cafc76b4362a74",
-                    "sha256": "50b4309ff06ec53437da6a61b4367cfa528514f56a8cb9f331fd1a002b194a27",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kansai-boundaries.json.gz",
@@ -573,7 +420,7 @@
             "regionPath": ["Asia", "Japan", "Kanto"],
             "bbox": [134.045154, 18.625054, 155.605818, 37.15988],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 9690260,
+            "totalBytes": 6124477,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -612,33 +459,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kanto-measuring-admin-1st-border.json.gz",
-                    "bytes": 114459,
-                    "md5": "3c7c0b4d24d7e3e57220e36623c80c97",
-                    "sha256": "8752993f0c9522c4541298ef2362ceea11f4884282135de0c1a9c70c939bf479",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kanto-measuring-admin-2nd-border.json.gz",
-                    "bytes": 927218,
-                    "md5": "04bb522b0d19bd70259bb37ac7431287",
-                    "sha256": "e24b9aecb30d56f6b81c87878036afbc289574159e0509f89f8d11963c95df13",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kanto-measuring-admin-boundaries.json.gz",
-                    "bytes": 2524106,
-                    "md5": "2ea1182213aa8445e2087e31fa062efe",
-                    "sha256": "0002e7babe6414459a2eed2a7051230c2db5c5193f7c9e634fbae6d3575a3c56",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kanto-boundaries.json.gz",
@@ -673,7 +493,7 @@
             "regionPath": ["Asia", "Japan", "Kyushu"],
             "bbox": [122.23438, 20.725941, 132.804417, 35.097244],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 9876068,
+            "totalBytes": 7640972,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -712,33 +532,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kyushu-measuring-admin-1st-border.json.gz",
-                    "bytes": 117859,
-                    "md5": "e749c872c695ee7ca69861654a4c77ea",
-                    "sha256": "350b3c90d5d26fb58d92e80973c1915c2634e26720eb3ce644094f3b4f39704e",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kyushu-measuring-admin-2nd-border.json.gz",
-                    "bytes": 849473,
-                    "md5": "ee63f317dc9649b8ada4c5497483d259",
-                    "sha256": "757bb6894ba0d1823567aeaac001816116b3e23466dfe3a9c62716eb0656017d",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kyushu-measuring-admin-boundaries.json.gz",
-                    "bytes": 1267764,
-                    "md5": "aefb39e58c8a1232cbf21bb53e47023e",
-                    "sha256": "4826475e566a627516c6e0e78d0ae9119bc0a25868e03c6686c71fa3bc83fbc8",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-kyushu-boundaries.json.gz",
@@ -773,7 +566,7 @@
             "regionPath": ["Asia", "Japan", "Shikoku"],
             "bbox": [131.769819, 32.229585, 135.17938, 34.65151],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 4379676,
+            "totalBytes": 3140481,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -801,33 +594,6 @@
                     "md5": "847b4c2b86574fd279ef373f55508f53",
                     "sha256": "afee9060cce4636dfa8dbe658f8ee48b2ac6ed23a5ed031b8fb713ea2800e49e",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-shikoku-measuring-admin-1st-border.json.gz",
-                    "bytes": 60991,
-                    "md5": "3121f731ea07cfaa462c2953420589ad",
-                    "sha256": "f7f26aa06ea7ebd48c0da37a38d6a892a1a507135307dffed64cc46c38942ab9",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-shikoku-measuring-admin-2nd-border.json.gz",
-                    "bytes": 349233,
-                    "md5": "bbba5dd69a6adff593cd2e4015aff12f",
-                    "sha256": "aa3d294884f5aadd057fcf71c6e071932883686c897496dc374e92ab00a3e115",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-shikoku-measuring-admin-boundaries.json.gz",
-                    "bytes": 828971,
-                    "md5": "5587084d863301c0bd756a0a847bfb36",
-                    "sha256": "064388d421cb1c5035b23a65ae3a8500172df8d0f36f0cfd7aa68b15672d730b",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -864,7 +630,7 @@
             "regionPath": ["Asia", "Japan", "Tohoku"],
             "bbox": [138.93248, 36.528607, 142.878194, 41.641794],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 10000830,
+            "totalBytes": 6813308,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -903,33 +669,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-tohoku-measuring-admin-1st-border.json.gz",
-                    "bytes": 159926,
-                    "md5": "4db5a805697db4ea3ad589785670760c",
-                    "sha256": "7f38c6a4ed23551b63c768ead2db3fa0929d108113a86748e7397b8dd865223c",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-tohoku-measuring-admin-2nd-border.json.gz",
-                    "bytes": 1189495,
-                    "md5": "ddccd084d7ff4491c5638402bbda7646",
-                    "sha256": "e95fb3e3d0e20d24549f9d30933868d3b3b8d202f9e7188a0ca5a7c12fb4f866",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-tohoku-measuring-admin-boundaries.json.gz",
-                    "bytes": 1838101,
-                    "md5": "87638d013fc9fa66625a8498f9762117",
-                    "sha256": "5046dedf02cce1a3938e45679f7ccef168592a351d20d1c528aaadcd4cc795f7",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-japan-tohoku-boundaries.json.gz",
@@ -964,7 +703,7 @@
             "regionPath": ["Asia", "Malaysia Singapore Brunei"],
             "bbox": [99.25611, 0.830813, 119.668278, 7.736849],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 13144448,
+            "totalBytes": 10284979,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1003,33 +742,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-admin-1st-border.json.gz",
-                    "bytes": 437919,
-                    "md5": "3875fe5ba20b0e553b69d992f9b668cc",
-                    "sha256": "35aec74fb69f46529ba0f97bca170244132778c80f91767f9f96d99bb3aad4aa",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-admin-2nd-border.json.gz",
-                    "bytes": 138853,
-                    "md5": "b7239c139dec56ad4e84676014151ef8",
-                    "sha256": "66465dd95c691fce14a21801ac8d48047cff88ce3b0e354b2916c176453c9567",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-measuring-admin-boundaries.json.gz",
-                    "bytes": 2282697,
-                    "md5": "ebd29b53eb4363928d671cec00b8310e",
-                    "sha256": "8406e5b7dcb5f5f69178f028b918abe173d0241e0acd5ba36ef503b734ede54c",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-malaysia-singapore-brunei-boundaries.json.gz",
@@ -1064,7 +776,7 @@
             "regionPath": ["Asia", "Philippines"],
             "bbox": [112.1661, 4.382696, 127.0742, 21.53021],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 30547835,
+            "totalBytes": 25577080,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1092,33 +804,6 @@
                     "md5": "33788d6df1b24586b025b3060140cb7a",
                     "sha256": "faa4bff688fd9247eaba43542793c77e039984796782bba15131bd6000abb9b8",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-measuring-admin-1st-border.json.gz",
-                    "bytes": 572514,
-                    "md5": "aafd2612219f26ad271a134fa2e8d39c",
-                    "sha256": "51b8acc9e41265d9159bfb27df046e917d95eb3ce19f574ad5b14a55d67a1ccb",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-measuring-admin-2nd-border.json.gz",
-                    "bytes": 54381,
-                    "md5": "628415c1013355daaef8575985f7ed07",
-                    "sha256": "984b0be6911c600a3ef5dc91106b796d9a316f139de54778540ab9fd2a9a8f99",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-philippines-measuring-admin-boundaries.json.gz",
-                    "bytes": 4343860,
-                    "md5": "b39fc4e2c0cc3a35555c4cd21f77a8cb",
-                    "sha256": "4e701d108887113def85e82bc5b9d4d71e2eaf346d6ac7096d3eab6929836000",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -1155,7 +840,7 @@
             "regionPath": ["Asia", "South Korea"],
             "bbox": [124.3188, 32.36076, 132.3386, 38.64966],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 13484842,
+            "totalBytes": 9012282,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1183,33 +868,6 @@
                     "md5": "f9437f4cc44dcc5d14b545e3cf75a8aa",
                     "sha256": "683195829c9ab74e0da7971b4bcccea83bc9509d8e67ec15166abbc94808e8a0",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-measuring-admin-1st-border.json.gz",
-                    "bytes": 351902,
-                    "md5": "7f4b7e043c9c2e63f7127f219ab01f00",
-                    "sha256": "10ae3270bac914543b8eab522ff4cacb060a218d85b5063ec59b3dc5daf05a14",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-measuring-admin-2nd-border.json.gz",
-                    "bytes": 107448,
-                    "md5": "578a354b7f91d8e8bcead6e5155517c1",
-                    "sha256": "a3be464321d789f9f62813755b5117ae1e0fd4f1d69e48e65d5db542fc7452b3",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-south-korea-measuring-admin-boundaries.json.gz",
-                    "bytes": 4013210,
-                    "md5": "f494b440b7a83f6bf8435af3f7fb2c80",
-                    "sha256": "7f95d5585c063b56b39ae6dac3c8881220fd46e6cc6b44ef9761994a050f08dc",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -1246,7 +904,7 @@
             "regionPath": ["Asia", "Taiwan"],
             "bbox": [118.1036, 20.72799, 122.9312, 26.60305],
             "osmSnapshot": "2026-06-12",
-            "totalBytes": 12986266,
+            "totalBytes": 8419240,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1285,33 +943,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-admin-1st-border.json.gz",
-                    "bytes": 296027,
-                    "md5": "8357855b9043e35fa1fcd93f0f3adcd6",
-                    "sha256": "bc29c2905d395aa7d24c9f95d5b8db43e0bf3aa3374ac97993126a0364656b05",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-admin-2nd-border.json.gz",
-                    "bytes": 392617,
-                    "md5": "89fece78ee32629c8dfa434e638940dc",
-                    "sha256": "7a60f7b58f590907536d7171715ee67ffc70801e2f90e8cfaa7e9d1186e96d51",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-measuring-admin-boundaries.json.gz",
-                    "bytes": 3878382,
-                    "md5": "b4274bc76505489585783e9d5da0440b",
-                    "sha256": "2c1091428de3decbb78545add6ed7729fda6b2f8051844e9403b4e7ee521522f",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-taiwan-boundaries.json.gz",
@@ -1346,7 +977,7 @@
             "regionPath": ["Asia", "Thailand"],
             "bbox": [97.135615, 5.597877, 105.63921, 20.468752],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 31329161,
+            "totalBytes": 18192150,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1385,33 +1016,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-admin-1st-border.json.gz",
-                    "bytes": 2255179,
-                    "md5": "da50a0b79c0ea7b468e159c1ea7bb322",
-                    "sha256": "38ceac5c2a4b21dae3abdd71515df9aa255c2a2328c875457993f7551804a988",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-admin-2nd-border.json.gz",
-                    "bytes": 456242,
-                    "md5": "34fdf0db0609f340e95d978c6c97d768",
-                    "sha256": "7d32cea665ff5eb085b97860d6979c8073b05610b4dfc78ed2d9e4835c6be73b",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-measuring-admin-boundaries.json.gz",
-                    "bytes": 10425590,
-                    "md5": "9bea390ae4eeec739ea0fa998517753a",
-                    "sha256": "613c70b04ad5e1a2ac136eb8119a39c7f6f0134a1072c58004a5b1c2d1cf1bed",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-thailand-boundaries.json.gz",
@@ -1446,7 +1050,7 @@
             "regionPath": ["Asia", "Vietnam"],
             "bbox": [102.095945, 7.382239, 114.642323, 23.402135],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 26407441,
+            "totalBytes": 16468185,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1474,24 +1078,6 @@
                     "md5": "d62d9be63a979978106750c18610f402",
                     "sha256": "501026401f6a6affabdc78487966bffcedfb87dabe317736ed501162ee8b2ac7",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-measuring-admin-1st-border.json.gz",
-                    "bytes": 858421,
-                    "md5": "23554a53c580dcd77820d6404669c256",
-                    "sha256": "ad2f64899772455378942230e24d0d6b5b726967068254aecfb08cca577bf58e",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/asia-vietnam-measuring-admin-boundaries.json.gz",
-                    "bytes": 9080835,
-                    "md5": "ae5774af4a2d0653855132e6b86886e5",
-                    "sha256": "b3dbc35c30feb5e9dea40df6d12cb626d8ef383364511ca70516aa0b1c47c99e",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -1528,7 +1114,7 @@
             "regionPath": ["Australia Oceania", "Australia", "New South Wales"],
             "bbox": [140.994781, -37.759836, 160.074672, -28.138982],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 34885283,
+            "totalBytes": 25922334,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1556,33 +1142,6 @@
                     "md5": "79b5f0c958493dd8182d098025e08924",
                     "sha256": "223caba88384df98cb72f95777fd6200f3bac5fcc9ed6b2837bc93ee4f084ebd",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-measuring-admin-1st-border.json.gz",
-                    "bytes": 209769,
-                    "md5": "793a06c61344e452dde45d329fc48e4d",
-                    "sha256": "d960842b3d81cf898e04d2c72f56457d57317685f4f3a94dfc454a480f4cf5a1",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-measuring-admin-2nd-border.json.gz",
-                    "bytes": 50758,
-                    "md5": "451b14ac4272edcdc94f3dc34ce60c2f",
-                    "sha256": "29bee347f9106ecc8808e2cc84af9999dac274dadc48ea25a154218ad7cf6e13",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/australia-oceania-new-south-wales-measuring-admin-boundaries.json.gz",
-                    "bytes": 8702422,
-                    "md5": "89a502869f1cbdd61a02680a2603cd1f",
-                    "sha256": "ac41b6f6b94c6ddb3685ec36c0e6606af1ebd777445bb8192f85a05ca928b20e",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -1619,7 +1178,7 @@
             "regionPath": ["Europe", "Germany", "Berlin"],
             "bbox": [13.08283, 52.33446, 13.762245, 52.6783],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 334387,
+            "totalBytes": 237246,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1647,24 +1206,6 @@
                     "md5": "b1be65434f6c55dc2330e1b5356d1f44",
                     "sha256": "31c62db9d22c2fa2c276c35913ca069255b367c7c6c1ad560cd9c60be912d8b9",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-measuring-admin-1st-border.json.gz",
-                    "bytes": 10337,
-                    "md5": "9033d28bc6d62598415162b5d6469569",
-                    "sha256": "d2ea66154c23eb475ad7f5b9e65b347f023a0d65527f047c92ca74932546b3e8",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-berlin-measuring-admin-boundaries.json.gz",
-                    "bytes": 86804,
-                    "md5": "148243f40b777f3a9b2a171c78006755",
-                    "sha256": "2a6b071cf880406cb0bbc992b462910c842c9a8d34a0b0bbcf3e1820a2035477",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -1706,7 +1247,7 @@
             ],
             "bbox": [-0.511482, 51.28554, 0.335437, 51.69344],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 466476,
+            "totalBytes": 385560,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1734,15 +1275,6 @@
                     "md5": "fb8ed7ac40222304e4fe0aa3df4e9f3e",
                     "sha256": "967be15ef05dbc82728e89bcf9e78f2d1ae066a1a2315003038451d711add069",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-greater-london-measuring-admin-boundaries.json.gz",
-                    "bytes": 80916,
-                    "md5": "f24ae596488e9c3901b334c9be27a006",
-                    "sha256": "88b4f54984d5941d5c5a611d1cea8afce18c85163235aa72bdd044c2ed1db990",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -1779,7 +1311,7 @@
             "regionPath": ["Europe", "France", "Ile-de-France"],
             "bbox": [1.445097, 48.11918, 3.560409, 49.24271],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 3333201,
+            "totalBytes": 1800192,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1807,33 +1339,6 @@
                     "md5": "e8295fe153fe6ca9ece10aaacdee5ca9",
                     "sha256": "6225785962191d200550bc15a08bbe723bb6d5ff77f7bf016698dfe6d4403488",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-measuring-admin-1st-border.json.gz",
-                    "bytes": 43555,
-                    "md5": "a905c3befa9db6c3f790a1c94c09ce84",
-                    "sha256": "1233423ab6f34d7f74f4fde7dab9c938df87f1cca455e5ac0d51d6cdb19a46b8",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-measuring-admin-2nd-border.json.gz",
-                    "bytes": 165783,
-                    "md5": "ab99f9dd87f906e71f10bfed227b66ad",
-                    "sha256": "9f39ff0335db7e51aa116f3a3af14d9e3b2b8929ce40cd408889525a2dc60f5d",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-ile-de-france-measuring-admin-boundaries.json.gz",
-                    "bytes": 1323671,
-                    "md5": "335d2bf556b39b03d6d92e8e18e20b17",
-                    "sha256": "fcec66b5dc9886299e74b9e4d93f34a566f84036ae0e3726df43c19cd79d56e6",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -1870,7 +1375,7 @@
             "regionPath": ["Europe", "Italy", "Centro"],
             "bbox": [8.61327, 40.21443, 14.981, 44.4797],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 8874658,
+            "totalBytes": 5634030,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1909,33 +1414,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-italy-centro-measuring-admin-1st-border.json.gz",
-                    "bytes": 198270,
-                    "md5": "6345c28f8cb53eb238996d0f8fa808a0",
-                    "sha256": "a6b714ec85dd8fa790bdd2a75b9beece5636f4b38c288d82086a1542a312f790",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-italy-centro-measuring-admin-2nd-border.json.gz",
-                    "bytes": 154547,
-                    "md5": "14c8dbf69b7fd56c564e34012e1b03ef",
-                    "sha256": "46f469b99478abb5cb7c9fe8199ad0fd79a76689a7490efdb373eb1201383eeb",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-italy-centro-measuring-admin-boundaries.json.gz",
-                    "bytes": 2887811,
-                    "md5": "9e339b4f2f75a6eca111d0b78f75f84f",
-                    "sha256": "f32bda9598a08d1b5f645393f09d1e1cb1e201141b0d4adf9168eca733995c86",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-italy-centro-boundaries.json.gz",
@@ -1970,7 +1448,7 @@
             "regionPath": ["Europe", "Spain", "Madrid"],
             "bbox": [-4.589539, 39.881157, -3.050423, 41.16864],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 1266406,
+            "totalBytes": 942189,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -1998,15 +1476,6 @@
                     "md5": "d36bffbb480828a2a0e34e36a7e9866a",
                     "sha256": "680f260801e94dbe4e69a7b0287f3d0e8916de35d4cf415aa7be784c6728966f",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-madrid-measuring-admin-boundaries.json.gz",
-                    "bytes": 324217,
-                    "md5": "0448ca26b213cfc80eb33766fee0f326",
-                    "sha256": "55a768779af1b637c1b06a7eb29eb42a80076161cc87d925f58f63352b7ddd0a",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -2043,7 +1512,7 @@
             "regionPath": ["Europe", "Netherlands"],
             "bbox": [2.936095, 50.74753, 7.230455, 54.01786],
             "osmSnapshot": "2026-06-12",
-            "totalBytes": 23634514,
+            "totalBytes": 21017198,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2082,33 +1551,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-admin-1st-border.json.gz",
-                    "bytes": 109045,
-                    "md5": "e37734bd341282651a370b58f8858012",
-                    "sha256": "3705262be1b7bfa5b7fd9022d2e55555a965cdcd6af9d58371bb619a3c610b1e",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-admin-2nd-border.json.gz",
-                    "bytes": 524727,
-                    "md5": "8055c125ebbb7b7a7e6e02bdad76e0d3",
-                    "sha256": "3009805fea62898a565412ca91dc4f91dc74597886121af13e7e16ff6c614e90",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-measuring-admin-boundaries.json.gz",
-                    "bytes": 1983544,
-                    "md5": "6759980ce15a7bec3dc3c7e50e77e262",
-                    "sha256": "0c9677a9675679cd10efbfbeaca5fb38e9daeb345b6b80ed624106dc5f1a847f",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-netherlands-boundaries.json.gz",
@@ -2143,7 +1585,7 @@
             "regionPath": ["Europe", "Turkey"],
             "bbox": [25.523985, 35.717, 44.859923, 43.074814],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 38919455,
+            "totalBytes": 23329346,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2182,33 +1624,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-admin-1st-border.json.gz",
-                    "bytes": 1279175,
-                    "md5": "d455045121f0d5b7b46a28578023f6a7",
-                    "sha256": "d1a4bee0d16a379bd77de1746304ca987c47847ca2422937762db72a90f832a7",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-admin-2nd-border.json.gz",
-                    "bytes": 163800,
-                    "md5": "ce254b9cd40a031e3783955033ade9e2",
-                    "sha256": "b5d7b94dcf85759804ea5e5889d08ed6b04fe96c174bc274170b48f2bf9d7491",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-measuring-admin-boundaries.json.gz",
-                    "bytes": 14147134,
-                    "md5": "2df1d43aa474e442ce4b584773d37514",
-                    "sha256": "8b926147438ecb5b14752115095815d7ccc0907cf1fbe822af663c6681e6162f",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/europe-turkey-boundaries.json.gz",
@@ -2243,7 +1658,7 @@
             "regionPath": ["North America", "Canada", "Ontario"],
             "bbox": [-95.15965, 41.6377, -74.30998, 57.50826],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 2486024,
+            "totalBytes": 941257,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2261,33 +1676,6 @@
                     "bytes": 79548,
                     "md5": "e944352cf7d5650fdbba84d0bce01fc2",
                     "sha256": "105c0854c819fcc3d6d6b1fb4d7fce34bbf948b6058a1c68a33465f89fe3888d",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-canada-ontario-measuring-admin-1st-border.json.gz",
-                    "bytes": 79946,
-                    "md5": "fff63fc8586bfd9f697d759f9d14ef2c",
-                    "sha256": "f5b7caab519be9ab7c95c9118df3d2e276f55f643518d4f8d12bf24122a10fb3",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-canada-ontario-measuring-admin-2nd-border.json.gz",
-                    "bytes": 4835,
-                    "md5": "f0e1a9fbb95e885597b571ee3a1d4917",
-                    "sha256": "e1ebbada4169cd058c0287e4448d04dc0d7cb10c0e7ee2829fa8a614c1ec535a",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-canada-ontario-measuring-admin-boundaries.json.gz",
-                    "bytes": 1459986,
-                    "md5": "66a234efe7d26f2cd84a81f264f80b8e",
-                    "sha256": "303ab955c0081262a3d81c49960cce0ad5ba85715eefa54f8d7a7898ab5dab0d",
                     "schemaVersion": 1
                 },
                 {
@@ -2325,7 +1713,7 @@
             "regionPath": ["North America", "Mexico"],
             "bbox": [-132.495161, 9.079755, -81.60533, 32.72067],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 55406850,
+            "totalBytes": 39012781,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2353,33 +1741,6 @@
                     "md5": "1ef336c81302ce9183ea0058e0839804",
                     "sha256": "675146c225d39fd7c7d75cef2c919c9899d5148c755448599e56f061793fc023",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-measuring-admin-1st-border.json.gz",
-                    "bytes": 2111487,
-                    "md5": "55c55421a5b0c8ce295cb2d9e8e0746e",
-                    "sha256": "0fd50d5a4d5c0a560b9fe6192bb3adc54ea00f1d29079385147fb76265080faf",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-measuring-admin-2nd-border.json.gz",
-                    "bytes": 193457,
-                    "md5": "2a9761cc7ab6eac7df55007e1273cd3a",
-                    "sha256": "1d397247976da93b8445b66ede2901a7b20df43ec8198bf2b9d2651b711bca1c",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-mexico-measuring-admin-boundaries.json.gz",
-                    "bytes": 14089125,
-                    "md5": "72dbca296c03671937f63dff379af1b4",
-                    "sha256": "98670b39f8e806012fb233206dd824fdc208aee4a9e3f0f9b37614a2594908b9",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -2416,7 +1777,7 @@
             "regionPath": ["North America", "US", "Alabama"],
             "bbox": [-88.483889, 29.954937, -84.883364, 35.00872],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 9973557,
+            "totalBytes": 8514718,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2444,33 +1805,6 @@
                     "md5": "51e5ae2f8e110219c1036e68c968e7ee",
                     "sha256": "ef2e405f7cd1300d75a2184340b6b25cd777209c5f0b4c764e71a580977c319d",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-measuring-admin-1st-border.json.gz",
-                    "bytes": 21617,
-                    "md5": "1a0b676071f119de5462f30084317650",
-                    "sha256": "8083435cb30845e659f0faee821d037eeb14698007567083932e0b27dca14f3d",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-measuring-admin-2nd-border.json.gz",
-                    "bytes": 254961,
-                    "md5": "a016dfed0f1a6598660acf7dd2155d02",
-                    "sha256": "d753acbcba7160ace17a8d04662451b4a92b17c940475edbb50bdedc8a1cf5cd",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-alabama-measuring-admin-boundaries.json.gz",
-                    "bytes": 1182261,
-                    "md5": "469bf657dd1b92b6cbebe21bdb3d03c9",
-                    "sha256": "d3378459473def8970d4fb7070d7c450569e4f485a0de83d84a00df2cfb0b5d5",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -2507,7 +1841,7 @@
             "regionPath": ["North America", "US", "Arizona"],
             "bbox": [-114.8325, 30.05891, -109.0437, 37.00596],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 15347425,
+            "totalBytes": 14923117,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2526,24 +1860,6 @@
                     "md5": "0dd9479397b7406300d712fe4af86ba6",
                     "sha256": "a508cb93a11d218964a564e79803ccf004690edb7b6f204f1d8fad678483b41a",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-measuring-admin-2nd-border.json.gz",
-                    "bytes": 122770,
-                    "md5": "7681950983ab6d1cb304a6c6cdb95cdf",
-                    "sha256": "82b3b812481f4e0b7a8590aa421e82d73e507ae29b53543ff0a512bc8dc0ab9f",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arizona-measuring-admin-boundaries.json.gz",
-                    "bytes": 301538,
-                    "md5": "e7885372f5ae77f934b86ac028d53dcd",
-                    "sha256": "412f7a2b798fb4dcdb3e8b47beed11fc2d3e7f8d5839ef329a9ed209367e39ac",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -2580,7 +1896,7 @@
             "regionPath": ["North America", "US", "Arkansas"],
             "bbox": [-94.62217, 33.0038, -89.63987, 36.55212],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 6351956,
+            "totalBytes": 5468456,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2599,33 +1915,6 @@
                     "md5": "0d8eade470b0221f07bbab896f3ac029",
                     "sha256": "3b07b54294172a3905f72802a1983913476ebacd0630927cdff97a6487310299",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-measuring-admin-1st-border.json.gz",
-                    "bytes": 23077,
-                    "md5": "fba6edfc5bd080fa4b7b83c59a213da2",
-                    "sha256": "24f70eb9b7edf20fcd47717a9a62114ab74ff1a357cc2b4d01f148b4b8f9121b",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-measuring-admin-2nd-border.json.gz",
-                    "bytes": 260962,
-                    "md5": "453900af64ad9ac545c34f819b083f67",
-                    "sha256": "368b74cc5603cbb76793471a5d21e8e76d61ac1b326fef09a44fdab9fb3612a1",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-arkansas-measuring-admin-boundaries.json.gz",
-                    "bytes": 599461,
-                    "md5": "bfd555ca95d642ae7aece9ad2c84a691",
-                    "sha256": "e337d59ad5b91e9462b522e7d53a7a6921f0bf9fcb6c4406fc6b926876159f23",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -2667,7 +1956,7 @@
             ],
             "bbox": [-126.434293, 35.78528, -115.603799, 42.434005],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 1917328,
+            "totalBytes": 1022354,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2685,15 +1974,6 @@
                     "bytes": 272936,
                     "md5": "543b4769d81bb9be57838b2e393f32ab",
                     "sha256": "7428a24f5512e588d81abe5a1c1644c0a4aed929c535652d839e053fae9a977e",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-california-norcal-measuring-admin-boundaries.json.gz",
-                    "bytes": 894974,
-                    "md5": "4536d8d5fcd08eccb89f34712d5635ed",
-                    "sha256": "dfc22fc5b9ebaf69c34255604575183bf9fe31a3ee7c313dcb126ab6e515fedd",
                     "schemaVersion": 1
                 },
                 {
@@ -2736,7 +2016,7 @@
             ],
             "bbox": [-121.440088, 32.344928, -113.860038, 35.81055],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 7828338,
+            "totalBytes": 7417404,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2764,15 +2044,6 @@
                     "md5": "b0fd0b956aca18b8662f54c2d5cf3c4a",
                     "sha256": "cd5b82ec66f4f7414759edb94763c15c2dc1595d2c46401999cedfd33a77b00b",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-california-socal-measuring-admin-boundaries.json.gz",
-                    "bytes": 410934,
-                    "md5": "4de321233a32a8b496123ceafb2cb468",
-                    "sha256": "c3b7b668194ac2633d1ffc79e575a8f707e31f63eb5aa35f49ce91f54085fc72",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -2809,7 +2080,7 @@
             "regionPath": ["North America", "US", "Colorado"],
             "bbox": [-109.0631, 36.56774, -100.4637, 41.00403],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 20707995,
+            "totalBytes": 19981612,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2828,24 +2099,6 @@
                     "md5": "40c9c65c4045d9c007eafb113f559182",
                     "sha256": "4b80125cb5adf0b39489a9be8eff288bb01d5a7793794ebf4f76061a98d6c882",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-measuring-admin-2nd-border.json.gz",
-                    "bytes": 218431,
-                    "md5": "58ce6146dbc4bb8958bdfc7c0276eaa4",
-                    "sha256": "43d849002f2baf052f757788a35c9947456ded854e6998063ea4b0f05a40cb6b",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-colorado-measuring-admin-boundaries.json.gz",
-                    "bytes": 507952,
-                    "md5": "040a226ab7e8be8da56d760be4ee013d",
-                    "sha256": "6308ce19c849e94c3914106623aa6c9e57d01223241dc3250a0659143c80ebd8",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -2882,7 +2135,7 @@
             "regionPath": ["North America", "US", "Connecticut"],
             "bbox": [-73.72889, 40.96401, -71.7853, 42.05229],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 2839262,
+            "totalBytes": 2718798,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -2921,24 +2174,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-measuring-admin-2nd-border.json.gz",
-                    "bytes": 4980,
-                    "md5": "b24f8c9917434dd9150a5bc3cebeddaf",
-                    "sha256": "6a850e1adf46eba3fbf3b27113ab26a901638538e20e08a9bd1ed53a3e825190",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-measuring-admin-boundaries.json.gz",
-                    "bytes": 115484,
-                    "md5": "d6b2277f8eb4bb4fd5772ca13822e81a",
-                    "sha256": "294c54f11a7976a339119427c7d89f035044c7eeac00d569262eef4321fd9220",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-connecticut-boundaries.json.gz",
@@ -2973,7 +2208,7 @@
             "regionPath": ["North America", "US", "Delaware"],
             "bbox": [-75.78974, 38.45043, -74.96121, 40.03221],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 720386,
+            "totalBytes": 646128,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3012,33 +2247,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-admin-1st-border.json.gz",
-                    "bytes": 3680,
-                    "md5": "077d618477bf1671c75dcbd44ed07eee",
-                    "sha256": "cab8c92c4eb6a364cf8cde514e388df0244f2ccf3d975cfbadfd5321e452606a",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-admin-2nd-border.json.gz",
-                    "bytes": 8833,
-                    "md5": "670cc8201d4208a81b18997c4c6a0b66",
-                    "sha256": "a68a03dd81b5e28607e3ca71394319282745ceb0c2f5970705c5467ece35d3df",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-measuring-admin-boundaries.json.gz",
-                    "bytes": 61745,
-                    "md5": "92d2edd7cb767e2f9b54bc3c578d4956",
-                    "sha256": "d993786a795f61f240b42fad9e13c48d4ca1897180913e23c52efecd8f9bb864",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-delaware-boundaries.json.gz",
@@ -3073,7 +2281,7 @@
             "regionPath": ["North America", "US", "Florida"],
             "bbox": [-88.70372, 23.68312, -77.72359, 31.003067],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 18465638,
+            "totalBytes": 16900318,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3112,33 +2320,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-admin-1st-border.json.gz",
-                    "bytes": 46680,
-                    "md5": "3260bdb4a44d76c4446f8a95bd22d457",
-                    "sha256": "063ebb0d9f60371a7c9299478b8bf39943e27843a53bc28a189b871ae43e067b",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-admin-2nd-border.json.gz",
-                    "bytes": 329027,
-                    "md5": "9afdf7cd9bdae91d7be278fdbb80ee34",
-                    "sha256": "c7bdccd69503463e03733790b9b688aa10cb3a01dee939b062169fe920d63960",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-measuring-admin-boundaries.json.gz",
-                    "bytes": 1189613,
-                    "md5": "5c5a70fc610d6ec23e2401218d407daf",
-                    "sha256": "6ecf44e6b7043242205d5ee2d4d3ce1a68eb85d8acf1dfe5bc8cf0baaa87a120",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-florida-boundaries.json.gz",
@@ -3173,7 +2354,7 @@
             "regionPath": ["North America", "US", "Georgia"],
             "bbox": [-85.6068, 30.35365, -80.74313, 35.00356],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 18984517,
+            "totalBytes": 17051234,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3201,24 +2382,6 @@
                     "md5": "f4f83904c9a8439e59be5cba9e9d1307",
                     "sha256": "b7359ceb2b99cf6d5d913ff6fb9b7c02eb4dbfc7b4f1c04be70b41fd9ed23f58",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-measuring-admin-2nd-border.json.gz",
-                    "bytes": 617508,
-                    "md5": "5709e5d169ab0f311f784e21057233c7",
-                    "sha256": "260e86dfbf30fd08f9bb698b40d235364dc8f2faa4f408cf6ba4af513b7eb5dc",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-georgia-measuring-admin-boundaries.json.gz",
-                    "bytes": 1315775,
-                    "md5": "65420d1b320761f11305f8534b253ad6",
-                    "sha256": "21473a9dfe56966d8ea878218e7d89f19c37f58d0e54612b7680ffea8b6465a4",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -3255,7 +2418,7 @@
             "regionPath": ["North America", "US", "Hawaii"],
             "bbox": [-179.8483, 10.83575, -137.5228, 29.09624],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 1114592,
+            "totalBytes": 1040227,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3283,33 +2446,6 @@
                     "md5": "ee302500597d38f52934c62f5641768a",
                     "sha256": "b9388a1c93bd4a597d710c76d17b0780ac4f9ffdd6cd18e38b16d30520d97732",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-measuring-admin-1st-border.json.gz",
-                    "bytes": 17670,
-                    "md5": "d1fddd24ddbbaae89f3971e3c9e497f8",
-                    "sha256": "183f938807570b79e5667fc6527922ead72644c67a59e1a11a56cf3dabbd57fb",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-measuring-admin-2nd-border.json.gz",
-                    "bytes": 20583,
-                    "md5": "feea4ca651355740be9f15df87d0083a",
-                    "sha256": "0d5b38f9b28be9b3bd604d3765eee397e69506d37d4c05542ef2535dd79c4ab8",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-hawaii-measuring-admin-boundaries.json.gz",
-                    "bytes": 36112,
-                    "md5": "70d8498ee12116c78311399b193428a3",
-                    "sha256": "eafdf22b16e2dec44f47635a029a6fa49ac902e7cc19c922af704b349bfc525b",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -3346,7 +2482,7 @@
             "regionPath": ["North America", "US", "Illinois"],
             "bbox": [-91.51608, 36.96731, -87.49264, 42.50941],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 13331483,
+            "totalBytes": 12029096,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3365,24 +2501,6 @@
                     "md5": "291c550a39a1f8740c90bd0993f52eef",
                     "sha256": "e87c97674a09804d83a76a7b184daee5d897ec6fdb1f6382860f74089bba0812",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-measuring-admin-2nd-border.json.gz",
-                    "bytes": 112265,
-                    "md5": "1314256baeec4cbab1fde6745ad79a30",
-                    "sha256": "eadb8720a52ef5070bd3143f1019695258b42cf733c5723937f98fbbb9d4afa6",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-illinois-measuring-admin-boundaries.json.gz",
-                    "bytes": 1190122,
-                    "md5": "969e01595dc352e9f2fb3b1ed549007c",
-                    "sha256": "5b5f92b65a409eedb22de2a3a47df6376998b36b444c2649be790eeacef6e65d",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -3419,7 +2537,7 @@
             "regionPath": ["North America", "US", "Indiana"],
             "bbox": [-88.10327, 37.62705, -84.50399, 41.76301],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 5556128,
+            "totalBytes": 4959789,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3438,33 +2556,6 @@
                     "md5": "71d1fec730287301c3d8033575c14084",
                     "sha256": "8f74e81bf0b01184e767aab8960fd3a9fabdbef01230810e4b8d9690a5304c23",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-measuring-admin-1st-border.json.gz",
-                    "bytes": 24267,
-                    "md5": "b6705104c2152f3d02e6e4bf3f6a371a",
-                    "sha256": "27d076c93e939930c1f883b7f3b68ae00a18dd61ea486624f5d7eb30a36dfb8e",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-measuring-admin-2nd-border.json.gz",
-                    "bytes": 100725,
-                    "md5": "c4e51ddc746c0341b440699aa2e7fe46",
-                    "sha256": "24ce2f098a02aa5342d5a2a12f471cb5cdf8fa796473cf7d4aa2478c9b9e818e",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-indiana-measuring-admin-boundaries.json.gz",
-                    "bytes": 471347,
-                    "md5": "36b126602e0056a8c242dbfbe3b9c1e4",
-                    "sha256": "0bf172e4c53e36e67f82a84f868f2b1e03cfeda43ff34c3fd6cd6a6c67df445a",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -3501,7 +2592,7 @@
             "regionPath": ["North America", "US", "Iowa"],
             "bbox": [-96.6426, 40.37266, -90.13581, 43.50182],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 10975672,
+            "totalBytes": 10501781,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3520,24 +2611,6 @@
                     "md5": "e7f320fcb101a9aa4a5e1b3faab7b35e",
                     "sha256": "315f30e70f045dde100529bf352356c91728a0f194543085c265d348e5355893",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-measuring-admin-2nd-border.json.gz",
-                    "bytes": 50877,
-                    "md5": "a7d2fd052d1dab6279dceb70040154b0",
-                    "sha256": "de19a58b3071794a04d7d1231947ef5e82562ddbb82b9e8a0bfb595758443550",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-iowa-measuring-admin-boundaries.json.gz",
-                    "bytes": 423014,
-                    "md5": "1d516544805c8c17f0c7c66cabce7d9b",
-                    "sha256": "b6340073c8d7be3c39bc9a1a82c6404c2c871371d12da03bf9cca6048685571a",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -3574,7 +2647,7 @@
             "regionPath": ["North America", "US", "Kansas"],
             "bbox": [-107.3034, 33.40115, -94.58926, 40.00681],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 5593977,
+            "totalBytes": 5253718,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3593,33 +2666,6 @@
                     "md5": "eb2fb41daa48e35fa9929b7a26eb4cda",
                     "sha256": "5cad3075b23c57462383a198a52428b62bd724d9b7d9c67abc4642b76a0d8cd8",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-measuring-admin-1st-border.json.gz",
-                    "bytes": 5828,
-                    "md5": "cc9a93d602e5c8e863e647d8192e5b3f",
-                    "sha256": "0903eb4cb0cac9daa1552b95d36892689bdb82b4adcbc9d1e02511c00c518466",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-measuring-admin-2nd-border.json.gz",
-                    "bytes": 39332,
-                    "md5": "25c6ba0e945ff56824ef58d9c956dc46",
-                    "sha256": "0439aede6d665cbcc3627e3b1afc3ede6f7f45e9f5e1ddcfffb445f0d93a88aa",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kansas-measuring-admin-boundaries.json.gz",
-                    "bytes": 295099,
-                    "md5": "8cbe2661e603ee75d51da9b8b7eaf920",
-                    "sha256": "73bd9d2c79b35dbc6b85798fc40bbcd6e16ad0613ac8c54a74046e74394848db",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -3656,7 +2702,7 @@
             "regionPath": ["North America", "US", "Kentucky"],
             "bbox": [-89.61845, 36.49325, -81.95512, 39.20518],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 5214215,
+            "totalBytes": 3697332,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3675,24 +2721,6 @@
                     "md5": "c2391594ca6c5ef4226ca1bdd7d2f59e",
                     "sha256": "1feef47c9bb64a98dfb3ed0eb9f6308bf21d6e76d6a00ceb70650ed139ca0377",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-measuring-admin-2nd-border.json.gz",
-                    "bytes": 579446,
-                    "md5": "9a815326d90c23d0516c8a42e03f94c4",
-                    "sha256": "ececc89752ab27ad04d8d7156c7813ceb47d8c1124136802d75fa6cd2dd369c3",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-kentucky-measuring-admin-boundaries.json.gz",
-                    "bytes": 937437,
-                    "md5": "5e48fb1d78414a2ff734c4db4e0c5e55",
-                    "sha256": "5bb396e926cb70a59978c5a0b4ed478b7ccf91928f061f4726215ce351ec8d37",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -3729,7 +2757,7 @@
             "regionPath": ["North America", "US", "Louisiana"],
             "bbox": [-94.04376, 28.14452, -88.66684, 33.0202499],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 15555458,
+            "totalBytes": 14690668,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3757,24 +2785,6 @@
                     "md5": "8b4fe521b8c6390e74d793a2b1f6872b",
                     "sha256": "bdd7e0a1d8b2564c59284476e0a99e58e12059adb7c63e0da709a151260213b2",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-measuring-admin-2nd-border.json.gz",
-                    "bytes": 306669,
-                    "md5": "15f30099315fcb739562867524951001",
-                    "sha256": "9665860340c97d57ed814f68eb4e7e089d0fc0e95ebc39b6702f4fb5672a9357",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-louisiana-measuring-admin-boundaries.json.gz",
-                    "bytes": 558121,
-                    "md5": "9ec1061f510aa79ae1d9f1a4b91f07dc",
-                    "sha256": "a0e779d5d03dc169f27eb4780f4bdbaacff7544afb11449342ac5a177f10b0eb",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -3811,7 +2821,7 @@
             "regionPath": ["North America", "US", "Maryland"],
             "bbox": [-79.48857, 37.88396, -74.954079, 40.17054],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 6267532,
+            "totalBytes": 5683976,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3850,33 +2860,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-admin-1st-border.json.gz",
-                    "bytes": 29356,
-                    "md5": "73dee61042e83d0df20cce416b804b3a",
-                    "sha256": "e91a3e67741fe2020633fdd2f19b0ead147f5734ed8d3f676a99f9698697d493",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-admin-2nd-border.json.gz",
-                    "bytes": 153014,
-                    "md5": "eeaa3cfb72ed4ba64a67cdbf42144403",
-                    "sha256": "836f0def760a0250d22640af64de3d463c45732b6ab111aa30f5c0b37670e064",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-measuring-admin-boundaries.json.gz",
-                    "bytes": 401186,
-                    "md5": "176c4c256233464146733a20f07ec105",
-                    "sha256": "977b62786578006c7f3eff71fbfef0c798b6cba2ce7e1a938482b2749ff1525e",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-maryland-boundaries.json.gz",
@@ -3911,7 +2894,7 @@
             "regionPath": ["North America", "US", "Massachusetts"],
             "bbox": [-73.51096, 40.82573, -68.71948, 42.88768],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 4443840,
+            "totalBytes": 4091460,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -3950,33 +2933,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-admin-1st-border.json.gz",
-                    "bytes": 9998,
-                    "md5": "56218e725cd33c7c1d64a7b0e8cad664",
-                    "sha256": "ee917ed7ad61342043af8f0ee2b57f92d09aa36f463ff11780415b776d303c64",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-admin-2nd-border.json.gz",
-                    "bytes": 49434,
-                    "md5": "467a51f698bc5fd05b795f6a55487ee0",
-                    "sha256": "7972075c09b79e68d73c829d061e22e500e607a34460ed45711fc42e8affb68b",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-measuring-admin-boundaries.json.gz",
-                    "bytes": 292948,
-                    "md5": "ecd17a190d534dc5cb5a7e9490e85f3f",
-                    "sha256": "2f47c18dc7a1e44bd60b0cfa64c6665821025919644c736a26139221c37a50b0",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-massachusetts-boundaries.json.gz",
@@ -4011,7 +2967,7 @@
             "regionPath": ["North America", "US", "Minnesota"],
             "bbox": [-97.27158, 43.49909, -89.36208, 49.99714],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 26778321,
+            "totalBytes": 25667456,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4030,24 +2986,6 @@
                     "md5": "dff3a09a2a898de259880d8cdbfe5eea",
                     "sha256": "f1473f41ef4ce3938acad675e99efb543451f7585ddb320a39433fa4b0047d76",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-measuring-admin-2nd-border.json.gz",
-                    "bytes": 197852,
-                    "md5": "8ab2fb6a6f3b6fb353ea12ca731a10ad",
-                    "sha256": "5df17188959eefc22f79dddf0bb58ba579b43449a9c7527206b30aff31ddd85d",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-minnesota-measuring-admin-boundaries.json.gz",
-                    "bytes": 913013,
-                    "md5": "f2c1807970e9a2b55cc7fb5972eb27fc",
-                    "sha256": "ed866168f5fb31200b3cab4fca79c0d02ee10fa424ecb4457a733a756fd4a760",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4084,7 +3022,7 @@
             "regionPath": ["North America", "US", "Mississippi"],
             "bbox": [-91.65857, 30.04168, -88.09292, 35.00055],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 5168036,
+            "totalBytes": 4662816,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4112,24 +3050,6 @@
                     "md5": "825a662783957f32adf1114c264c810f",
                     "sha256": "fe5bbcf21352c811bf4c6ac686c4415fc1b2fabc098f7bf69be2eb2b2825da08",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-measuring-admin-2nd-border.json.gz",
-                    "bytes": 182461,
-                    "md5": "e532ef41fa4077d78ae6618e27bc3f1e",
-                    "sha256": "a20f6bd2802a7b64ffca8ae304fee80e099505a08fe9db17c5dc9ea835e4a4f9",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-mississippi-measuring-admin-boundaries.json.gz",
-                    "bytes": 322759,
-                    "md5": "8c71ffc9e9050e5eed9cf02b7e09264b",
-                    "sha256": "8ccc832274dcf4562a204f0c0e6db8a81f7123bcd284d5fe970c738e14df47ce",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4166,7 +3086,7 @@
             "regionPath": ["North America", "US", "Missouri"],
             "bbox": [-95.77751, 35.99466, -88.87132, 40.61664],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 9224531,
+            "totalBytes": 8375681,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4185,33 +3105,6 @@
                     "md5": "38f7afec3e3507ce098c24e61c8970b6",
                     "sha256": "411a3b01f9942fee163dd49df7b227048da8a3af4d7de313033950ec17b37e54",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-measuring-admin-1st-border.json.gz",
-                    "bytes": 28913,
-                    "md5": "9a926c67f7f7c5f60a93d8374d9526c4",
-                    "sha256": "91eab76a13ddb9e40c38b374c26a7d4c167e4850b1b2ff4f07bc240b90e206a5",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-measuring-admin-2nd-border.json.gz",
-                    "bytes": 141410,
-                    "md5": "059eae9c12c3b908219b65ffe423188e",
-                    "sha256": "a521455674a5d2e2d1845262f5921e0ddb17f8cab208e6b7161bbcb173811c4c",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-missouri-measuring-admin-boundaries.json.gz",
-                    "bytes": 678527,
-                    "md5": "aecd2f1829ea372697d61492936ea6de",
-                    "sha256": "65703c460f3708a920e04ba4402e11fc66550451223a8c9849d85765f532950d",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4248,7 +3141,7 @@
             "regionPath": ["North America", "US", "Montana"],
             "bbox": [-116.0518, 44.35556, -102.685, 49.69326],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 11261349,
+            "totalBytes": 10384561,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4267,24 +3160,6 @@
                     "md5": "9db13f688993bfaf465117b1287043c5",
                     "sha256": "ba8e9ea3bb5a8b600107b5a4c4965118e39734e8782675a74fa685c6cd166280",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-measuring-admin-2nd-border.json.gz",
-                    "bytes": 349626,
-                    "md5": "1239cdbd82eda75cf9a3e69f70614fa2",
-                    "sha256": "9f8daa2335da358d26aee3aea61fb61d91e8438045ef43eb2cb1cc64408fb26f",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-montana-measuring-admin-boundaries.json.gz",
-                    "bytes": 527162,
-                    "md5": "67a1a770ff0ba55d117011f31b8ab7b1",
-                    "sha256": "82ca8c14960a490e5542f5b7412b2c37bd53454cdc03291a9f0de64d8dc95904",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4321,7 +3196,7 @@
             "regionPath": ["North America", "US", "Nebraska"],
             "bbox": [-104.7301, 40.00015, -95.30703, 43.00172],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 4884678,
+            "totalBytes": 4576447,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4340,24 +3215,6 @@
                     "md5": "e32f082562215c6afb7c9354fc1c8808",
                     "sha256": "efcbfb2711122aa7312b37f6d9c141c895100941932aa787d771fc46472fd8b6",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-measuring-admin-2nd-border.json.gz",
-                    "bytes": 46993,
-                    "md5": "2cee8a7d663a3a2af475d8f1283b34dd",
-                    "sha256": "069dfc343c8ce44ceb5a2679c4f0d2514b8d65145ead7387c812c8af6adbf101",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nebraska-measuring-admin-boundaries.json.gz",
-                    "bytes": 261238,
-                    "md5": "3e9ffbf8c35980f243cc45b49d8460d5",
-                    "sha256": "4e3202b53ce215dfb8e7e1503bd0b62e6c565964ab20f365e83a165b87535d85",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4394,7 +3251,7 @@
             "regionPath": ["North America", "US", "Nevada"],
             "bbox": [-120.0074, 35.00053, -114.0379, 42.00391],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 5701108,
+            "totalBytes": 5568217,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4413,24 +3270,6 @@
                     "md5": "04bebd9fd86d6245f8bc6eb34498fa0d",
                     "sha256": "f78371f1fbcbd63794a00cd751bcc6660f1454e001e5ef45fbad2503c9df48c6",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-measuring-admin-2nd-border.json.gz",
-                    "bytes": 41918,
-                    "md5": "cab5b3f7cd598467d3af9539f3bef6a1",
-                    "sha256": "31e88d871df629aac3621ac5ec1e23bdaa98e26cffc0547532d31d32af6af6d6",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-nevada-measuring-admin-boundaries.json.gz",
-                    "bytes": 90973,
-                    "md5": "fc3b7e74208901241c8b8b07085914f2",
-                    "sha256": "149b0181408ed3909bdf97b01e6420a8dba15f24762825bad902187d14ab194d",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4467,7 +3306,7 @@
             "regionPath": ["North America", "US", "New Jersey"],
             "bbox": [-75.83509, 38.55502, -73.67898, 41.35807],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 3874018,
+            "totalBytes": 3237687,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4506,33 +3345,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-admin-1st-border.json.gz",
-                    "bytes": 13727,
-                    "md5": "e0a0495b0f07950aa4b22450e4394713",
-                    "sha256": "4b8523e3cdf7ddaf956dbb25b30d2eb3c41477eedea2a150b48657e343313909",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-admin-2nd-border.json.gz",
-                    "bytes": 106877,
-                    "md5": "5b34265d41dc124faaddc5e2961e1e46",
-                    "sha256": "ad35df0350a07eae6418beb4a8ad1900a5b4b1fb3e16e78b7fde46566dec638b",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-measuring-admin-boundaries.json.gz",
-                    "bytes": 515727,
-                    "md5": "01c05234dd1e5c5faeb624826a4bbd9b",
-                    "sha256": "39d1d692e027a874d7c5b2567d1ccd27f926c29fd2c3d5dc65f4878bab832da6",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-jersey-boundaries.json.gz",
@@ -4567,7 +3379,7 @@
             "regionPath": ["North America", "US", "New Mexico"],
             "bbox": [-109.0504, 27.02788, -96.11707, 37.00184],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 11069633,
+            "totalBytes": 10878539,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4586,24 +3398,6 @@
                     "md5": "addf9504d9d097b7d5a0c6897728526c",
                     "sha256": "6f4f2295dff280ec066c16171dab96ea5653985849f30a3b099454c5b3802367",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-measuring-admin-2nd-border.json.gz",
-                    "bytes": 51382,
-                    "md5": "539bc5e8af2ddf78f6788eb4be281e4a",
-                    "sha256": "c9d2dc7a6997e533eb91f66c20c87262101a830b60f16dcb113d4a63ec6c57a2",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-new-mexico-measuring-admin-boundaries.json.gz",
-                    "bytes": 139712,
-                    "md5": "fad981f12ecaf2a349b1da3c0a339805",
-                    "sha256": "a266827c3020787b0cd2614dc0ebce8ed4d6804582a3f50689a740d8674f3cee",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4640,7 +3434,7 @@
             "regionPath": ["North America", "US", "New York"],
             "bbox": [-79.82402, 40.439216, -71.660801, 45.07133],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 2436455,
+            "totalBytes": 1089547,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4658,24 +3452,6 @@
                     "bytes": 258131,
                     "md5": "530fa4ff985699126b2ce3d701a71129",
                     "sha256": "3ae10f16c7cd541d2af88b000436e9671f852fdf229df8b44f7edce29b44684c",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-new-york-measuring-admin-2nd-border.json.gz",
-                    "bytes": 503972,
-                    "md5": "2fca1047952671107ccd6b22590a72a0",
-                    "sha256": "aba9e8f4322c124da11abe94314a91aaa98acef84157fee42b3cfb3d88630f66",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/north-america-us-new-york-measuring-admin-boundaries.json.gz",
-                    "bytes": 842936,
-                    "md5": "e4fc73817fe993e1d552941778e469ff",
-                    "sha256": "1ef610fe0d5414dbcd055a6d6740ab3bc10bd50a85ecd5a8733e567ee3b0cea6",
                     "schemaVersion": 1
                 },
                 {
@@ -4713,7 +3489,7 @@
             "regionPath": ["North America", "US", "North Dakota"],
             "bbox": [-105.0844, 45.93448, -96.55292, 49.70865],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 10214121,
+            "totalBytes": 9845252,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4732,24 +3508,6 @@
                     "md5": "5cd892032e42a9008f99c9efba6ff2f5",
                     "sha256": "3fce19ae9df3d751c1cc4e90042df2a941e2828f7d306a9c8ebcccf5b2a300ef",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-measuring-admin-2nd-border.json.gz",
-                    "bytes": 98398,
-                    "md5": "2b0c488d94f75bfe93b6e26085e73676",
-                    "sha256": "e076219f020ac0eec5ad8575981ad50238d76b7c8341f76e7b5a39a50c092cc7",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-north-dakota-measuring-admin-boundaries.json.gz",
-                    "bytes": 270471,
-                    "md5": "1a9dad3cd18d8536c2140d01d1e73b41",
-                    "sha256": "fb80832bc4d273cbde8a8462e6e5b04a90e56b2270576be1a36de44bc59df8ee",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4786,7 +3544,7 @@
             "regionPath": ["North America", "US", "Ohio"],
             "bbox": [-84.8219, 38.09861, -79.89951, 43.48236],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 8947213,
+            "totalBytes": 7712118,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4805,33 +3563,6 @@
                     "md5": "759438e2d206a74a4055a4c17e3eda69",
                     "sha256": "767cad3688f8dff45a1c8747ca589bc78c01a13ed0e7fb160505b0d7c324fb5a",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-measuring-admin-1st-border.json.gz",
-                    "bytes": 23814,
-                    "md5": "aea08e4c6746f3d5dc8a6ea712179f16",
-                    "sha256": "b823662dfabaf08dcf35b2f3688940dded2336452a292d6092971941705ff2ff",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-measuring-admin-2nd-border.json.gz",
-                    "bytes": 61901,
-                    "md5": "0addbf7d2dddafaec5b15359a3e8bf3a",
-                    "sha256": "2ed831ed4afe6bea21b7dc2f45da110df06e95d84f5b40cec292b2fd4b2a8ad3",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-ohio-measuring-admin-boundaries.json.gz",
-                    "bytes": 1149380,
-                    "md5": "ec7ef8b4c158b15812af9fdbcd4c5212",
-                    "sha256": "c42a31b7a06416b9c34373c0a9cf773a20c279bfb7ac88fb1c23c853a01584ac",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4868,7 +3599,7 @@
             "regionPath": ["North America", "US", "Oklahoma"],
             "bbox": [-103.007815, 33.613476, -94.429894, 37.011328],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 15665054,
+            "totalBytes": 15071573,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4887,24 +3618,6 @@
                     "md5": "32d46edf127c74e2db6aa4624b527dfc",
                     "sha256": "70d2f13364948abacb2fb98d9a75508f17a8d847f17bcc86225f790011856514",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-measuring-admin-2nd-border.json.gz",
-                    "bytes": 124839,
-                    "md5": "506daee59a1a9a0ba09532abb24a9a79",
-                    "sha256": "b71c700776e4f51d00f36f82b62167949a53d9643f382c07fe825de0c8c9279c",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oklahoma-measuring-admin-boundaries.json.gz",
-                    "bytes": 468642,
-                    "md5": "f1a0ef09d61476ca237d4a581d21f105",
-                    "sha256": "2abee6d6ae9b0d7889444ff30c3639e474a414876627fa703209e8cc9de0e140",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -4941,7 +3654,7 @@
             "regionPath": ["North America", "US", "Oregon"],
             "bbox": [-126.3879, 41.9634, -116.4545, 46.30349],
             "osmSnapshot": "2026-06-18",
-            "totalBytes": 12286293,
+            "totalBytes": 11583258,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -4969,24 +3682,6 @@
                     "md5": "31947a5826921d0c8a13b98fe9ac7a7a",
                     "sha256": "45bbcfa1b5dad557f4547e383c7a909c694bb5847722e6e54a72e6cf4ba0edba",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oregon-measuring-admin-2nd-border.json.gz",
-                    "bytes": 182157,
-                    "md5": "0e174f6d55aa39146dfffa35c28a0aec",
-                    "sha256": "f2c5cf05ddbc5e256e071ab8447f0420af91ba546575eeb779447803c3c8e3c9",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-oregon-measuring-admin-boundaries.json.gz",
-                    "bytes": 520878,
-                    "md5": "50b39ad1c9f66f1c9c3fbeae727e531c",
-                    "sha256": "5bcc89c418817c345dfd2f23fbe22649ad07345860cdfad66c90f76d5d656b65",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5023,7 +3718,7 @@
             "regionPath": ["North America", "US", "Pennsylvania"],
             "bbox": [-81.37832, 38.92139, -74.687612, 42.516493],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 10247177,
+            "totalBytes": 8450531,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5062,24 +3757,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-measuring-admin-2nd-border.json.gz",
-                    "bytes": 187811,
-                    "md5": "2fc09b82cefaa2df125f86aca5955b09",
-                    "sha256": "9521afd6e17704536e2507cfadb213bcf93615fd035201457b6b7556bed87c8f",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-measuring-admin-boundaries.json.gz",
-                    "bytes": 1608835,
-                    "md5": "750eed415268c93a1a0e7d5d143f5a5c",
-                    "sha256": "21df5a2d0b336f132360f06c3fbac309ac1357861f216210cc2fbd3061b93fa4",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-pennsylvania-boundaries.json.gz",
@@ -5114,7 +3791,7 @@
             "regionPath": ["North America", "US", "Rhode Island"],
             "bbox": [-71.91456, 40.9992, -71.063691, 42.01938],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 782893,
+            "totalBytes": 645912,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5153,24 +3830,6 @@
                     "schemaVersion": 2
                 },
                 {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-measuring-admin-2nd-border.json.gz",
-                    "bytes": 13571,
-                    "md5": "c124a9afa94bee6ab42c2e29ae9fab17",
-                    "sha256": "4dc2d06596f0058d8aa13820424cdee46ebad88dd6c3566be19514ec6c5b71d3",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-measuring-admin-boundaries.json.gz",
-                    "bytes": 123410,
-                    "md5": "6eabe4fb172d91c1a699d9711b135d76",
-                    "sha256": "b5720c6f560ed5ee12463b1490ddc0bd60f0bb8268e412f69635bce9c6bb83f6",
-                    "schemaVersion": 1
-                },
-                {
                     "kind": "boundaries",
                     "category": null,
                     "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-rhode-island-boundaries.json.gz",
@@ -5205,7 +3864,7 @@
             "regionPath": ["North America", "US", "South Carolina"],
             "bbox": [-83.35622, 32.02967, -78.51867, 35.2184],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 11344513,
+            "totalBytes": 10252214,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5233,24 +3892,6 @@
                     "md5": "53f2a195f2262cbdc3d2466751f1bc40",
                     "sha256": "c7577b28a91ac50c36f5f9139cb0dffaa512ee974541be029d8e114e8855ba83",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-measuring-admin-2nd-border.json.gz",
-                    "bytes": 275042,
-                    "md5": "50b05db850d6cf8317ac3adf1df9909f",
-                    "sha256": "5c377a4bd876ced420274ccb02a5d83f2fd552d12a11c53f1a79e67bc6a0e8b4",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-south-carolina-measuring-admin-boundaries.json.gz",
-                    "bytes": 817257,
-                    "md5": "5fb4e12e2b824b230fb905a0e17d8eb0",
-                    "sha256": "fb6e8a2b204218f59b03bb07e94acedb11eef564398abd902006faa4e6e9aa03",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5287,7 +3928,7 @@
             "regionPath": ["North America", "US", "Tennessee"],
             "bbox": [-90.31329, 34.98269, -81.64416, 36.68075],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 7948001,
+            "totalBytes": 6743638,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5306,33 +3947,6 @@
                     "md5": "0b3159e3e070c488df23cc36450ce9c6",
                     "sha256": "22564a9c688ccb229b78f50c7c0a85394b29c29b9e330e8c29771fca12d49403",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-measuring-admin-1st-border.json.gz",
-                    "bytes": 27525,
-                    "md5": "4ad40bccefc48c7603353fb80d0a4eeb",
-                    "sha256": "49c28cd91b7833db65dc3c488444fbca4872031d6ac0000c2a9b29b7804aa6b7",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-measuring-admin-2nd-border.json.gz",
-                    "bytes": 295449,
-                    "md5": "23fb7b8dec3375f3f5e4e7911e7f81a6",
-                    "sha256": "8e1ca31ecde2be98f7dd4a8502ed4f2382ca2a7db509f2f9c3f8213445530fca",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-tennessee-measuring-admin-boundaries.json.gz",
-                    "bytes": 881389,
-                    "md5": "97a732fec44aaf64572e8d6a5b2ce40a",
-                    "sha256": "076244d1abbc5c29a4e10d809f0bc6874e9a6b11f7385e57dad51f620ed9c268",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5369,7 +3983,7 @@
             "regionPath": ["North America", "US", "Texas"],
             "bbox": [-106.9125, 25.66764, -93.01897, 36.52618],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 27016858,
+            "totalBytes": 23503454,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5397,33 +4011,6 @@
                     "md5": "8ee89cea359f0d06f6a72d1799043a53",
                     "sha256": "46a5e76a776293f59394681fc004d08985c7e32d34828ffc5aa461d90081a27a",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-measuring-admin-1st-border.json.gz",
-                    "bytes": 122310,
-                    "md5": "95ef61e7a44cd46c288090bb0cf0cbf8",
-                    "sha256": "d71dbcd190d9c3117df21df93c3f241f4e3d1c8be977bdd611d51cc946cb02ef",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-measuring-admin-2nd-border.json.gz",
-                    "bytes": 997626,
-                    "md5": "94a70eb8e2a7eaa445a40b4d3567ac7a",
-                    "sha256": "68978397952b83220daf244c37e1c8e7ccf321c0103d934ce363f94b3c5d2bec",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-texas-measuring-admin-boundaries.json.gz",
-                    "bytes": 2393468,
-                    "md5": "62deeffb38ba75416c9a2e90e223c2aa",
-                    "sha256": "b385ace99e6a7fa74d04e3451505a93abcdba086bd7deec2695e99387d0f043e",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5460,7 +4047,7 @@
             "regionPath": ["North America", "US", "Utah"],
             "bbox": [-114.0556, 36.9963, -109.0394, 42.00323],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 8689234,
+            "totalBytes": 8113863,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5479,33 +4066,6 @@
                     "md5": "7bfc282c38ff68997eea72aed847f05f",
                     "sha256": "d1bf709ceb0ba808033bc1991cce249a43757b8c1eb42bcc977b7b5a19708094",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-measuring-admin-1st-border.json.gz",
-                    "bytes": 2185,
-                    "md5": "1d1312bf078053d37990e8b357ff585c",
-                    "sha256": "9946c246259b1199792a4ff6606ca53989acd00282ad77eed07d0327bb37acf7",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-measuring-admin-2nd-border.json.gz",
-                    "bytes": 184956,
-                    "md5": "d5864e3592c3b2c8c074149424bff2f5",
-                    "sha256": "0fbc66b1795a1b3a9b5a4f894cee7b67439c7111d8bccf87326098ccf6216fe0",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-utah-measuring-admin-boundaries.json.gz",
-                    "bytes": 388230,
-                    "md5": "4ed5a2dcb2244f1bf6fe00ba062d7d40",
-                    "sha256": "08cc03499aa47f30e138031b107a49dc5f0404483e39ef975411e618e3fd5d5d",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5542,7 +4102,7 @@
             "regionPath": ["North America", "US", "Virginia"],
             "bbox": [-83.67841, 36.53798, -74.29751, 39.46901],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 15315403,
+            "totalBytes": 13920043,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5570,33 +4130,6 @@
                     "md5": "1cd715d58d232957fba908fb0dd3860c",
                     "sha256": "a8cb6f355b4238ad22deb4a2628c1947f1c645bd0d0c4b9dcbd801c0136424cf",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-measuring-admin-1st-border.json.gz",
-                    "bytes": 48618,
-                    "md5": "4db1844357bd530615daeef9d0dd4796",
-                    "sha256": "afe47d61d53fa6649a82f2e0747ffe10fb03faee0eed1aa6490ef87bfed032e1",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-measuring-admin-2nd-border.json.gz",
-                    "bytes": 580030,
-                    "md5": "afc8c51cd063c9ec2d39aa2917baeda0",
-                    "sha256": "a9aae6a92dede47b2391b585e9bbf061881ce17fda341b7b0ef06c7e2881f543",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-virginia-measuring-admin-boundaries.json.gz",
-                    "bytes": 766712,
-                    "md5": "90c291728a5de831e5fda7640ee95b53",
-                    "sha256": "55e9dd28442c003b9501f505686f535f7addbd915dfd81066c7ba3d01b972126",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5633,7 +4166,7 @@
             "regionPath": ["North America", "US", "Washington"],
             "bbox": [-126.7423, 45.53882, -116.911526, 49.00708],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 15261628,
+            "totalBytes": 14555700,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5661,33 +4194,6 @@
                     "md5": "a90d2726397dbb57b7b6353d2067c6a7",
                     "sha256": "ce36afec6435a4ba009d3e19a95bd9b9bc95f68f8e957d3f5ba8027dbc314fed",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-measuring-admin-1st-border.json.gz",
-                    "bytes": 6288,
-                    "md5": "3838cd4d56b64fa1e63888b3250f7d89",
-                    "sha256": "89263763631e837c4b43e095884674e28a084e17a814e259942cda640aaba596",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-measuring-admin-2nd-border.json.gz",
-                    "bytes": 210680,
-                    "md5": "e4917d9e9fbba860d7ebc82f11c33726",
-                    "sha256": "2d0c9d6e5708d5635be3897f499cc60c480d4685c865053f6ac669aadf05577c",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-washington-measuring-admin-boundaries.json.gz",
-                    "bytes": 488960,
-                    "md5": "dca7ae0dd859bfa13f3a69941a252221",
-                    "sha256": "4e654399cb3b2c53a4110ae83eb435ff41870410c399b5cf019679631487b61d",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5724,7 +4230,7 @@
             "regionPath": ["North America", "US", "West Virginia"],
             "bbox": [-82.64965, 37.19858, -77.7141, 40.92069],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 3424567,
+            "totalBytes": 2570103,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5743,33 +4249,6 @@
                     "md5": "a567835a150946ba6901acd1743339e0",
                     "sha256": "8e2cf0ac792d30c7265bcb881096d74ef157a0f6346d4a54e903295ba22b95c5",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-west-virginia-measuring-admin-1st-border.json.gz",
-                    "bytes": 60077,
-                    "md5": "b574964865bf115057d96aff0200a761",
-                    "sha256": "6c6bc31f30b662e36a99d4bc96258e001f00da724d20139960661327bbbebb05",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-west-virginia-measuring-admin-2nd-border.json.gz",
-                    "bytes": 281649,
-                    "md5": "a1652fbcff2cfbf4736a62c2754a1c1b",
-                    "sha256": "b770aad91873b6e890f8dbb79d9135e60a447d5fb14e8d9d329eb6dbbc7d8201",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-west-virginia-measuring-admin-boundaries.json.gz",
-                    "bytes": 512738,
-                    "md5": "7d9e9d633f3df7520953ed08bd73f57d",
-                    "sha256": "641816639858363feca7611f9fb0317644842284029dd46c9290d97ded6df7c8",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5806,7 +4285,7 @@
             "regionPath": ["North America", "US", "Wisconsin"],
             "bbox": [-92.89089, 42.48899, -86.20021, 47.41451],
             "osmSnapshot": "2026-06-20",
-            "totalBytes": 16625163,
+            "totalBytes": 15308452,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5825,33 +4304,6 @@
                     "md5": "ed17b94f1669c6e66091c9f55158c087",
                     "sha256": "6f3e71dfacbfbcd710fff9e7f91f1c14bdda2a9f519d5898839065cfc18d0bb0",
                     "schemaVersion": 2
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-measuring-admin-1st-border.json.gz",
-                    "bytes": 32725,
-                    "md5": "67c6c57e3c43bcc3f222a0b4040e2628",
-                    "sha256": "6886066fa97fa14946d80fadb5e05308fe2ec48a669b5d322d36888d52d0db4d",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-measuring-admin-2nd-border.json.gz",
-                    "bytes": 113922,
-                    "md5": "f22d5aca4b858e8f25f52400796e1e55",
-                    "sha256": "7ee2e6790812a48b8feabf41cb158856888243cc0b52f0c662f5275ab628b589",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-20/north-america-us-wisconsin-measuring-admin-boundaries.json.gz",
-                    "bytes": 1170064,
-                    "md5": "4329d4849149cc921ac88955e42894ad",
-                    "sha256": "781848c48555edb81eb37f050649bba9e3641174d6330aabe16f2330c0935b87",
-                    "schemaVersion": 1
                 },
                 {
                     "kind": "boundaries",
@@ -5888,7 +4340,7 @@
             "regionPath": ["Russia", "Central Federal District"],
             "bbox": [29.26809, 48.79774, 47.67023, 59.6533],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 12151121,
+            "totalBytes": 3933900,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5906,24 +4358,6 @@
                     "bytes": 1726,
                     "md5": "154bcabb54cd6b22fda5a28ebefab99d",
                     "sha256": "61144a6b4c953341e2614295e4e8a28ead2e619ecb5222e7bb125e6632f41566",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/russia-central-fed-district-measuring-admin-1st-border.json.gz",
-                    "bytes": 760348,
-                    "md5": "939b49490ad4401b08b1053a503079b2",
-                    "sha256": "62191fc218461c3755644cb7905d7f2a335c73643e1f7c6a6bf112b4d649a504",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/russia-central-fed-district-measuring-admin-boundaries.json.gz",
-                    "bytes": 7456873,
-                    "md5": "9d18dc74039829c58260bd63625a3fd2",
-                    "sha256": "a3b4a14d7d89f0503fe1d5d5c83a4c71a2e06a144e6ed816ff4fd760aa469499",
                     "schemaVersion": 1
                 },
                 {
@@ -5961,7 +4395,7 @@
             "regionPath": ["South America", "Brazil", "Sudeste"],
             "bbox": [-53.118897, -25.499297, -28.191953, -14.22445],
             "osmSnapshot": "2026-06-13",
-            "totalBytes": 31031400,
+            "totalBytes": 8811270,
             "artifacts": [
                 {
                     "kind": "poi",
@@ -5979,33 +4413,6 @@
                     "bytes": 352937,
                     "md5": "79bf44d22ba2ca633bafb7ea4066e202",
                     "sha256": "f3c120095e101987467cff46d90c110ab7dc1fb7927acd7926aba85f5322ae4c",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-1st-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/south-america-brazil-sudeste-measuring-admin-1st-border.json.gz",
-                    "bytes": 448346,
-                    "md5": "a6cfe33d94e47ed2fed3282122c00143",
-                    "sha256": "99425e4ab34a7e48b83205d3979f73d747440c083a4935ba14e506bfcff654e6",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-2nd-border",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/south-america-brazil-sudeste-measuring-admin-2nd-border.json.gz",
-                    "bytes": 2935701,
-                    "md5": "bfa28f76b286220812dbe55efd417658",
-                    "sha256": "307b1d074314042f1f141096a3a45bc7f1ffd77657532869da3287970a135b28",
-                    "schemaVersion": 1
-                },
-                {
-                    "kind": "measuring",
-                    "category": "admin-boundaries",
-                    "url": "https://github.com/kagelump/JetLagHideAndSeek/releases/download/packs-2026-06-14/south-america-brazil-sudeste-measuring-admin-boundaries.json.gz",
-                    "bytes": 18836083,
-                    "md5": "6ed374d5a22b5613147627d996028786",
-                    "sha256": "9cf359d0e1e721e7ce00578d65fa7e45e09586525edfd70d6e25b4137145299f",
                     "schemaVersion": 1
                 },
                 {

@@ -19,6 +19,11 @@ regions:
       adminLevels:
           matching: [4, 8, 9, 10] # admin-1st..4th (level 7 has zero relations in NL)
           extract: [4, 7, 8, 9, 10] # superset
+          labels:
+              - ["Province", "Provincie"]
+              - ["Municipality", "Gemeente"]
+              - ["City / District", "Stad / Wijk"]
+              - ["Neighborhood", "Buurt"]
       artifacts: [poi, measuring, boundaries, transit]
       measuringOverrides:
           # NL is the most water-dense region in the catalog; smaller dissolve
@@ -39,6 +44,11 @@ regions:
       adminLevels:
           matching: [4, 7, 8, 9] # admin-1st..4th (level 10 has only 3 relations)
           extract: [4, 7, 8, 9, 10]
+          labels:
+              - ["County / City", "縣/市"]
+              - ["District", "區"]
+              - ["Village", "里/村"]
+              - ["Neighborhood", "鄰"]
       artifacts: [poi, measuring, boundaries, transit]
       transitOverrides:
           nameSuffixes: ["站", "車站"]

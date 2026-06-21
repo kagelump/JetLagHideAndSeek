@@ -28,7 +28,6 @@ import { isPlayAreaSet } from "@/features/map/playArea";
 import { cleanOrphanedBoundaryKeys } from "@/features/map/playAreaBoundary";
 import { METERS_PER_MILE } from "@/shared/distanceUnits";
 import { defaultUnitSystemForPlayArea } from "@/shared/unitSystemDefaults";
-import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
 import { loadInstalledPacks } from "@/features/offline/regionPacks";
 import { persistDebounceMs } from "@/state/debounceConfig";
 import { loadPersistedAppState, persistAppState } from "@/state/persistence";
@@ -197,17 +196,6 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
             flushPersist();
         };
     }, [flushPersist]);
-
-    // Keep module-level defaults in matchingCategories.ts in sync so
-    // code paths without React context access (e.g. matchingConfig.summary)
-    // use the current admin division pack and label language.
-    // See setDefaultAdminConfig JSDoc for call-site discipline.
-    useEffect(() => {
-        setDefaultAdminConfig(
-            questionState.adminDivisionPack,
-            questionState.labelLanguage,
-        );
-    }, [questionState.adminDivisionPack, questionState.labelLanguage]);
 
     // Auto-pick the unit system from the play area's geography (imperial in the
     // US, metric elsewhere) until the player overrides it in Settings. Seeds the

@@ -50,8 +50,8 @@ export const matchingCategories: MatchingCategoryConfig[] = [
 
     // Administrative Divisions are configured dynamically via
     // adminDivisionConfig.ts. Static fallback entries have been removed —
-    // setDefaultAdminConfig() is called synchronously during state
-    // initialisation so getCategoryConfig always has a pack available.
+    // getCategoryConfig resolves the live pack through the admin config
+    // provider (registerAdminConfigProvider) registered by the state layer.
 
     // Natural
     {
@@ -149,64 +149,52 @@ export const matchingCategoriesBySection = matchingCategories.reduce<
 // (e.g. matchingConfig.summary).
 // ---------------------------------------------------------------------------
 
-let _defaultAdminDivisionPack: AdminDivisionNamePack | undefined;
-let _defaultLabelLanguage: "native" | "english" = "native";
+/**
+ * Admin config provider — registered once by the React state layer so
+ * non-React consumers (Overpass-QL generation, measuring border adapter)
+ * always read the live value without call-site sync discipline.
+ */
+type AdminConfigProvider = () => {
+    pack: AdminDivisionNamePack | undefined;
+    language: "native" | "english";
+};
+
+let _configProvider: AdminConfigProvider | null = null;
 
 /**
- * Set the admin division defaults used by `getCategoryTitle()` and
- * `getCategoryConfig()` when explicit overrides are not passed. Call this
- * from the app initialisation path whenever the admin division pack or label
- * language changes.
+ * Register a callback that returns the current admin division config.
  *
- * ## Why this is a module-level mutable singleton
- *
- * `getCategoryConfig` and `getCategoryTitle` are called from non-React code
- * paths (e.g. `matchingConfig.summary`, Overpass query generation) that
- * cannot access React context. The module-level variables let those code
- * paths resolve the current admin division pack and label language without
- * threading context through every call site.
- *
- * ## Constraints
- *
- * - Call from store initialization/update paths (questionStore callbacks
- *   and AppStateProviders sync effect) whenever the admin division pack or
- *   label language changes. Do not call from event handlers, render logic,
- *   or any code outside the state-management layer.
- * - The function is called synchronously during provider setup so values are
- *   available on the first render.
- *
- * ## Call sites (canonical source)
- *
- * 1. questionStore.tsx — `setLabelLanguage` callback
- * 2. questionStore.tsx — `setAdminDivisionPack` state setter
- * 3. questionStore.tsx — `importQuestionSettings`
- * 4. AppStateProviders.tsx — sync effect on adminDivisionPack/labelLanguage
+ * Call once from the React state initialisation path (questionStore.tsx).
+ * After registration, `getDefaultAdminDivisionPack()` and
+ * `getDefaultLabelLanguage()` read from this provider — no per-mutation
+ * sync calls are needed.
  */
-export function setDefaultAdminConfig(
-    pack: AdminDivisionNamePack,
-    language: "native" | "english",
+export function registerAdminConfigProvider(
+    provider: AdminConfigProvider,
 ): void {
-    _defaultAdminDivisionPack = pack;
-    _defaultLabelLanguage = language;
+    _configProvider = provider;
 }
 
 /**
- * Read the active admin-division pack / label language for non-React consumers.
+ * Read the active admin-division pack for non-React consumers.
  *
- * The single source of truth is React state (`questionStore`), but the
- * Overpass-QL generation and the measuring admin-border runtime adapter run
- * outside the component tree and cannot read context. They read this module
- * global, kept in sync via `setDefaultAdminConfig` (see its JSDoc for the
- * call-site discipline). Returns `undefined` until the first sync.
+ * The single source of truth is React state (`questionStore`), accessed
+ * through the provider registered by `registerAdminConfigProvider`. Returns
+ * `undefined` until the provider is registered (early in app startup, before
+ * the first render commits).
  */
 export function getDefaultAdminDivisionPack():
     | AdminDivisionNamePack
     | undefined {
-    return _defaultAdminDivisionPack;
+    return _configProvider?.().pack;
 }
 
+/**
+ * Read the active label language for non-React consumers. Defaults to
+ * `"native"` until the provider is registered.
+ */
 export function getDefaultLabelLanguage(): "native" | "english" {
-    return _defaultLabelLanguage;
+    return _configProvider?.().language ?? "native";
 }
 
 export function getCategoryConfig(
@@ -214,8 +202,8 @@ export function getCategoryConfig(
     adminDivisionPack?: AdminDivisionNamePack,
     labelLanguage?: "native" | "english",
 ): MatchingCategoryConfig | undefined {
-    const pack = adminDivisionPack ?? _defaultAdminDivisionPack;
-    const lang = labelLanguage ?? _defaultLabelLanguage;
+    const pack = adminDivisionPack ?? getDefaultAdminDivisionPack();
+    const lang = labelLanguage ?? getDefaultLabelLanguage();
 
     if (isAdminCategory(category) && pack) {
         return buildAdminCategoryConfig(pack, category, lang);

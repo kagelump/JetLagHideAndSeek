@@ -400,7 +400,7 @@ message should expect the folded `"[namespace] message"` string.
 - **One schema, matching + measuring.** The `AdminDivisionNamePack` is the single
   source of truth for admin levels. The two measuring border tiers
   (`admin-1st-border`, `admin-2nd-border`) derive their OSM level + title from
-  the *same* pack (tier index via `ADMIN_BORDER_TIER_INDEX`; helpers
+  the _same_ pack (tier index via `ADMIN_BORDER_TIER_INDEX`; helpers
   `getAdminBorder{OsmLevel,Label,QueryTags}`). Never re-hardcode border levels or
   titles in `measuringCategories.ts` — they're built dynamically. There are
   deliberately only **two** border tiers.

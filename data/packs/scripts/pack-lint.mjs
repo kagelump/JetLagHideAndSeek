@@ -209,7 +209,8 @@ async function lintBoundaries(distDir) {
             }
         }
 
-        // Print per-level counts and warn on sparse matching levels.
+        // Print per-level counts and guard: border tiers (matching[0],
+        // matching[1]) must have relations in the boundaries artifact.
         if (
             metaMatchingLevels &&
             Array.isArray(metaMatchingLevels) &&
@@ -223,6 +224,12 @@ async function lintBoundaries(distDir) {
             console.log(
                 `  [boundaries] Per-level counts (matching levels: ${JSON.stringify(metaMatchingLevels)}):`,
             );
+
+            // Pre-compute extract set for border-tier guard.
+            const extractSet = metaLevels
+                ? new Set(metaLevels)
+                : new Set(metaMatchingLevels);
+
             for (const lv of metaMatchingLevels.sort((a, b) => a - b)) {
                 const count = levelCounts[lv] ?? 0;
                 const flag =
@@ -232,6 +239,31 @@ async function lintBoundaries(distDir) {
                           ? `  ⚠ only ${count} — consider curating`
                           : "";
                 console.log(`    Level ${lv}: ${count}${flag}`);
+            }
+
+            // Hard error: border tiers (first two matching levels) must have
+            // ≥1 relation in the built boundaries index, and must be present
+            // in adminLevels.extract.
+            if (metaMatchingLevels.length >= 2) {
+                const borderLevels = [
+                    metaMatchingLevels[0],
+                    metaMatchingLevels[1],
+                ];
+                for (const blv of borderLevels) {
+                    if (!extractSet.has(blv)) {
+                        errors.push(
+                            `boundaries.json.gz: border tier level ${blv} not in adminLevels.extract ` +
+                                `(${JSON.stringify(metaLevels ?? metaMatchingLevels)})`,
+                        );
+                    }
+                    const bc = levelCounts[blv] ?? 0;
+                    if (bc === 0) {
+                        errors.push(
+                            `boundaries.json.gz: border tier level ${blv} has 0 relations — ` +
+                                `admin border questions will return no data`,
+                        );
+                    }
+                }
             }
         }
 

@@ -89,6 +89,7 @@ export const metaPayloadSchema = z
             .object({
                 matching: z.array(z.number()).optional(),
                 extract: z.array(z.number()).optional(),
+                labels: z.array(z.tuple([z.string(), z.string()])).optional(),
             })
             .passthrough()
             .optional(),

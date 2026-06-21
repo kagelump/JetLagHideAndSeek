@@ -186,15 +186,22 @@ export function searchBoundaries(query: string): BoundaryHit[] {
 
 // ─── Polygon loading ──────────────────────────────────────────────────────
 
+/** Callback that reads a file and returns its text contents. */
+export type BoundaryFileReader = (absPath: string) => Promise<string>;
+
 /**
  * Decode the polygon for a relation from its installed pack.
  * Uses an LRU cache — decodes only on first request.
  *
  * Returns null if the polygon is not found or the pack is not installed.
+ *
+ * @param readFile - Optional injectable file reader for testing.
+ *   When omitted, the production `expo-file-system` File API is used.
  */
 export async function getBoundaryPolygon(
     packId: string,
     relationId: number,
+    readFile?: BoundaryFileReader,
 ): Promise<MultiPolygonCoords | null> {
     const key = cacheKey(packId, relationId);
 
@@ -210,12 +217,17 @@ export async function getBoundaryPolygon(
 
     // Lazy-load the polygons JSON file.
     try {
-        const { File } = await import("expo-file-system");
-        const fullPath = source.polygonsPath;
-        const lastSep = fullPath.lastIndexOf("/");
-        const dir = fullPath.slice(0, lastSep);
-        const name = fullPath.slice(lastSep + 1);
-        const raw = await new File(dir, name).text();
+        let raw: string;
+        if (readFile) {
+            raw = await readFile(source.polygonsPath);
+        } else {
+            const { File } = await import("expo-file-system");
+            const fullPath = source.polygonsPath;
+            const lastSep = fullPath.lastIndexOf("/");
+            const dir = fullPath.slice(0, lastSep);
+            const name = fullPath.slice(lastSep + 1);
+            raw = await new File(dir, name).text();
+        }
 
         // The installer writes the polygons file as a `{ schemaVersion,
         // regionId, polygons: {...} }` envelope (see regionPacks install).

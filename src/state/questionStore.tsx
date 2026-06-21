@@ -3,7 +3,9 @@ import {
     type ReactNode,
     useCallback,
     useContext,
+    useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
 
@@ -14,7 +16,7 @@ import {
     DEFAULT_ADMIN_DIVISION_PACK,
     DEFAULT_ADMIN_DIVISION_PRESET_NAME,
 } from "@/features/questions/matching/adminDivisionConfig";
-import { setDefaultAdminConfig } from "@/features/questions/matching/matchingCategories";
+import { registerAdminConfigProvider } from "@/features/questions/matching/matchingCategories";
 import { invalidateAdminBorderBundles } from "@/features/questions/measuring/lineBundleLoader";
 import type { MeasuringCategory } from "@/features/questions/measuring/measuringTypes";
 import { radarQuestionConfig } from "@/features/questions/radar/radarConfig";
@@ -272,6 +274,21 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
     const [unitSystem, setUnitSystemState] = useState<UnitSystem>("metric");
     const [unitSystemChosen, setUnitSystemChosen] = useState(false);
 
+    // Register a provider so non-React code paths (Overpass-QL generation,
+    // measuring border adapter) can read the live admin config without
+    // per-mutation sync discipline.
+    const adminConfigRef = useRef({
+        pack: adminDivisionPack,
+        language: labelLanguage,
+    });
+    adminConfigRef.current = {
+        pack: adminDivisionPack,
+        language: labelLanguage,
+    };
+    useEffect(() => {
+        registerAdminConfigProvider(() => adminConfigRef.current);
+    }, []);
+
     const activeQuestion = useMemo(
         () =>
             activeQuestionId
@@ -413,14 +430,9 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
         setActiveQuestionIdState(questionId);
     }, []);
 
-    const setLabelLanguage = useCallback(
-        (language: "native" | "english") => {
-            setLabelLanguageState(language);
-            // Keep module-level admin config in sync — see setDefaultAdminConfig JSDoc.
-            setDefaultAdminConfig(adminDivisionPack, language);
-        },
-        [adminDivisionPack],
-    );
+    const setLabelLanguage = useCallback((language: "native" | "english") => {
+        setLabelLanguageState(language);
+    }, []);
 
     const setGameMode = useCallback((mode: GameMode) => {
         setGameModeState(mode);
@@ -441,15 +453,13 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                               ) => AdminDivisionNamePack
                           )(prev)
                         : packOrUpdater;
-                // Keep module-level admin config in sync — see setDefaultAdminConfig JSDoc.
-                setDefaultAdminConfig(next, labelLanguage);
                 // Admin border (measuring) bundles derive their level from the
                 // pack — drop them so the next load rebuilds at the new level.
                 invalidateAdminBorderBundles();
                 return next;
             });
         },
-        [labelLanguage],
+        [],
     );
 
     const setAdminDivisionPresetName = useCallback(
@@ -474,11 +484,6 @@ export function QuestionProvider({ children }: { children: ReactNode }) {
                 settings.adminDivisionPresetName ??
                     DEFAULT_ADMIN_DIVISION_PRESET_NAME,
             );
-            // Sync module-level defaults synchronously so non-React code
-            // paths (matchingConfig.summary, questionSharePrompt) see the
-            // correct admin division labels from the first render.
-            // See setDefaultAdminConfig JSDoc in matchingCategories.ts.
-            setDefaultAdminConfig(pack, settings.labelLanguage ?? "native");
             invalidateAdminBorderBundles();
         },
         [],
