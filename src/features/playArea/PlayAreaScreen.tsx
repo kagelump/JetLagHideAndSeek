@@ -20,6 +20,10 @@ import {
 import { defaultPlayArea } from "@/features/map/playArea";
 import { OfflinePackModal } from "@/features/playArea/OfflinePackModal";
 import {
+    type LocationPlayAreaSuggestion,
+    useNearbyPlayAreas,
+} from "@/features/playArea/locationSuggestions";
+import {
     type PlayAreaSearchResult,
     usePlayAreaSearch,
 } from "@/features/playArea/playAreaSearch";
@@ -63,6 +67,16 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
     const visiblePresets = useMemo(
         () => presets.filter((p) => p !== defaultPlayArea),
         [presets],
+    );
+
+    const nearby = useNearbyPlayAreas();
+
+    const handleApplyNearby = useCallback(
+        (suggestion: LocationPlayAreaSuggestion) => {
+            void applyRelationId(String(suggestion.osmId));
+            snapToIndex(SHEET_SNAP_INDEX.medium);
+        },
+        [applyRelationId, snapToIndex],
     );
 
     useEffect(() => {
@@ -233,6 +247,8 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
                     <Text style={styles.summaryTitle}>{playArea.label}</Text>
                 </View>
 
+                <NearbySection nearby={nearby} onApply={handleApplyNearby} />
+
                 {visiblePresets.length > 0 ? (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>
@@ -392,6 +408,102 @@ export function PlayAreaScreen({ onNavigate }: PlayAreaScreenProps) {
     );
 }
 
+function NearbySection({
+    nearby,
+    onApply,
+}: {
+    nearby: ReturnType<typeof useNearbyPlayAreas>;
+    onApply: (suggestion: LocationPlayAreaSuggestion) => void;
+}) {
+    const { status, suggestions, isLoading, isError, requestLocation } = nearby;
+
+    // Nothing to opt into and nothing loaded: only show the opt-in prompt.
+    const showOptIn = status === "idle" || status === "denied";
+
+    return (
+        <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Near you</Text>
+
+            {isLoading ? (
+                <Text style={styles.loading}>Finding places near you…</Text>
+            ) : null}
+
+            {!isLoading && suggestions.length > 0
+                ? suggestions.map((suggestion) => (
+                      <Pressable
+                          accessibilityRole="button"
+                          key={suggestion.osmId}
+                          onPress={() => onApply(suggestion)}
+                          style={({ pressed }) => [
+                              styles.resultRow,
+                              pressed ? styles.actionPressed : null,
+                          ]}
+                          testID={`play-area-nearby-${suggestion.osmId}`}
+                      >
+                          <View style={styles.resultCopy}>
+                              <Text style={styles.resultTitle}>
+                                  {suggestion.label}
+                              </Text>
+                              {suggestion.context ? (
+                                  <Text style={styles.metadata}>
+                                      {suggestion.context}
+                                  </Text>
+                              ) : null}
+                          </View>
+                          <Text style={styles.chevron}>›</Text>
+                      </Pressable>
+                  ))
+                : null}
+
+            {!isLoading && status === "ready" && isError ? (
+                <Text style={styles.noResults}>
+                    Couldn’t load nearby areas. Try search below.
+                </Text>
+            ) : null}
+
+            {!isLoading &&
+            status === "ready" &&
+            !isError &&
+            suggestions.length === 0 ? (
+                <Text style={styles.noResults}>
+                    No administrative areas found here.
+                </Text>
+            ) : null}
+
+            {!isLoading && status === "unavailable" ? (
+                <Text style={styles.noResults}>
+                    Couldn’t determine your location. Try search below.
+                </Text>
+            ) : null}
+
+            {!isLoading && showOptIn ? (
+                <>
+                    {status === "denied" ? (
+                        <Text style={styles.metadata}>
+                            Location access is off. Enable it to see play areas
+                            near you.
+                        </Text>
+                    ) : null}
+                    <Pressable
+                        accessibilityLabel="Use my current location"
+                        accessibilityRole="button"
+                        onPress={() => void requestLocation()}
+                        style={({ pressed }) => [
+                            styles.locationButton,
+                            pressed ? styles.actionPressed : null,
+                        ]}
+                        testID="play-area-use-location"
+                    >
+                        <Text style={styles.locationButtonText}>
+                            Use my current location
+                        </Text>
+                    </Pressable>
+                </>
+            ) : null}
+        </View>
+    );
+}
+
 function ResultRow({
     onApply,
     result,
@@ -502,6 +614,22 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: "700",
         marginTop: 8,
+    },
+    locationButton: {
+        alignItems: "center",
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        justifyContent: "center",
+        marginTop: 10,
+        minHeight: 46,
+        paddingHorizontal: 14,
+    },
+    locationButtonText: {
+        color: colors.ink,
+        fontSize: 15,
+        fontWeight: "800",
     },
     metadata: {
         color: colors.muted,
