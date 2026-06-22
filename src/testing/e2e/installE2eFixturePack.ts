@@ -32,33 +32,19 @@ export function __setFixtureAssetsForTest(assets: FixtureBundle): void {
 function loadFixtureBundle(): FixtureBundle {
     if (fixtureAssetsOverride) return fixtureAssetsOverride;
 
-    const bundle: FixtureBundle = {
+    // Static requires — Metro resolves these at bundle time. Dynamic template
+    // literals in require() fail Metro's static analyzer, so each committed
+    // artifact needs an explicit line. Add a new line when a new artifact is
+    // committed to assets/e2e-fixture/e2e-fixture/.
+    return {
         "transit.json": require("../../../assets/e2e-fixture/e2e-fixture/transit.json"),
         "meta.json": require("../../../assets/e2e-fixture/e2e-fixture/meta.json"),
         "manifest.json": require("../../../assets/e2e-fixture/e2e-fixture/manifest.json"),
+        "measuring-high-speed-rail.json": require("../../../assets/e2e-fixture/e2e-fixture/measuring-high-speed-rail.json"),
+        "measuring-body-of-water.json": require("../../../assets/e2e-fixture/e2e-fixture/measuring-body-of-water.json"),
+        "boundaries.json": require("../../../assets/e2e-fixture/e2e-fixture/boundaries.json"),
+        "poi.json": require("../../../assets/e2e-fixture/e2e-fixture/poi.json"),
     };
-
-    // F2 — measuring artifacts (conditionally bundled).
-    const manifest = bundle["manifest.json"] as Record<string, unknown>;
-    const artifactNames = Object.keys(
-        (manifest.artifacts as Record<string, unknown>) ?? {},
-    );
-
-    // Each artifact listed in the manifest must have a matching require().
-    // F2/F3 artifacts are tried; missing ones (not yet built / F1-only) are
-    // silently skipped.
-    for (const filename of artifactNames) {
-        if (bundle[filename]) continue; // already loaded above
-        try {
-            bundle[filename] = require(
-                `../../../assets/e2e-fixture/e2e-fixture/${filename}`,
-            );
-        } catch {
-            // Artifact not yet committed (e.g. poi.json before F3 rebuild).
-        }
-    }
-
-    return bundle;
 }
 
 type InstalledArtifactEntry = {
