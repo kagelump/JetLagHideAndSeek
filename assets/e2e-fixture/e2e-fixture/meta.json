@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "regionId": "e2e-fixture",
+  "label": "E2E fixture (Tokyo core)",
+  "bbox": [
+    139.76,
+    35.68,
+    139.78,
+    35.7
+  ],
+  "osmSnapshot": "2026-06-22",
+  "adminLevels": {
+    "matching": [
+      4,
+      7,
+      9,
+      10
+    ]
+  },
+  "artifacts": [
+    "transit.json"
+  ],
+  "attribution": {
+    "text": "© OpenStreetMap contributors. Data available under the Open Database License (ODbL).",
+    "license": "ODbL-1.0",
+    "url": "https://www.openstreetmap.org/copyright"
+  }
+}

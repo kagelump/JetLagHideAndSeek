@@ -40,6 +40,8 @@
         "data:pack:catalog": "node data/packs/scripts/build-catalog.mjs",
         "data:pack:publish": "node data/packs/scripts/publish.mjs",
         "data:pack:cloud": "bash data/packs/scripts/cloud-build.sh",
+        "data:e2e-fixture": "node data/packs/scripts/build-e2e-fixture.mjs",
+        "data:e2e-fixture:lint": "node --import tsx data/packs/scripts/lint-e2e-fixture.mjs",
         "geos:fetch": "bash modules/native-geometry/scripts/fetch-geos.sh",
         "geos:build:ios": "bash modules/native-geometry/scripts/build-geos-ios.sh",
         "geos:build:android": "bash modules/native-geometry/scripts/build-geos-android.sh",

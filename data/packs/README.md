@@ -219,3 +219,28 @@ GitHub Pages must be set to **GitHub Actions** as the source.
 - **`packs-catalog.yml`**: validates the catalog schema and checks all
   artifact URLs (HEAD) on every master push that touches
   `site/packs/catalog.json`.
+
+## E2E fixture pack
+
+A tiny committed fixture pack lives in `assets/e2e-fixture/e2e-fixture/` and is
+pre-installed when `EXPO_PUBLIC_E2E_HOOKS=1`. It supplies real Tokyo transit
+stations to deep-link E2E scenarios without network.
+
+### Clipping the source PBF
+
+```bash
+mkdir -p data/packs/cache/e2e-fixture
+osmium extract --bbox 139.76,35.68,139.78,35.70 \
+  data/packs/cache/asia-japan-kanto-latest.osm.pbf \
+  -o data/packs/cache/e2e-fixture/e2e-tokyo.osm.pbf -O
+```
+
+### Building / refreshing the fixture
+
+```bash
+pnpm data:e2e-fixture
+pnpm data:e2e-fixture:lint
+```
+
+Review the diff in `assets/e2e-fixture/e2e-fixture/` before committing; update
+scenario expected bands if station counts shift.

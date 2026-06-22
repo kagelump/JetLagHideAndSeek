@@ -23,5 +23,9 @@ assets/poi
 # (Metro/Hermes `require()`) size and the runtime parse cost.
 assets/measuring
 
+# E2E fixture pack: machine-generated minified JSON. Prettier would expand
+# transit.json and invalidate the manifest's recorded sha256 / byte count.
+assets/e2e-fixture
+
 .claude/worktrees
 site/bundle-viewer
