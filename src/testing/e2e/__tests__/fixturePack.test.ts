@@ -7,6 +7,7 @@ jest.mock("../isE2eHooksEnabled", () => ({
 }));
 
 import { installE2eFixturePack } from "../installE2eFixturePack";
+import { loadInstalledPacks } from "@/features/offline/regionPacks";
 import {
     __clearPackTransitSourcesForTest,
     __getPackTransitSourcesForTest,
@@ -72,8 +73,13 @@ describe("installE2eFixturePack", () => {
         expect(__getPackTransitSourcesForTest().has("e2e-fixture")).toBe(false);
     });
 
-    it("writes files and registers the transit source", async () => {
+    it("writes the installed index so loadInstalledPacks can register", async () => {
+        // installE2eFixturePack writes files + AsyncStorage index.
+        // loadInstalledPacks (called separately by AppStateProviders) then
+        // registers transit sources from the index.
         await installE2eFixturePack();
+        await loadInstalledPacks();
+
         const sources = __getPackTransitSourcesForTest();
         expect(sources.has("e2e-fixture")).toBe(true);
         const source = sources.get("e2e-fixture")!;

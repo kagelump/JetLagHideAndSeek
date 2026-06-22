@@ -59,8 +59,9 @@ Key properties:
   a **committed** asset (like the ~175 KB Tokyo boundary placeholder), so the
   E2E run needs no network and is byte-stable.
 - **Gated + inert.** Pre-install runs only when `E2E_HOOKS_ENABLED`; the bundled
-  asset is ~sub-MB and only referenced from `src/testing/e2e/**`, so it
-  tree-shakes out of production bundles.
+  asset is ~sub-MB. Metro resolves `require("…/transit.json")` at bundle time
+  regardless of runtime gating, so the ~40 KB fixture JSON ships in all binaries.
+  The gate prevents execution, not bundling — accepted cost given the tiny size.
 - **Frozen snapshot.** Like the GEOS golden fixtures: rebuilding is an explicit,
   reviewed action (`pnpm data:e2e-fixture`), not a CI step. OSM drift is handled
   by re-observing scenario bands when you intentionally rebuild.
@@ -198,8 +199,9 @@ D1/D2/D3/D5 do **not** need to wait for F2/F3.
   Don't commit the PBF or clip.
 - **OSM drift** — frozen artifacts + re-observe bands on rebuild; never assert
   exact station counts that a future rebuild would shift (use `> 0` / ranges).
-- **gating** — install is gated; the bundled asset must not be imported from any
-  production code path (only `src/testing/e2e/**`), so it tree-shakes out.
+- **gating** — install is gated (execution only, not bundling — Metro resolves the
+  `require` calls in `AppStateProviders`'s dependency graph at bundle time, so the
+  ~40 KB fixture JSON ships in all binaries; accepted cost).
 
 ## 11. Task breakdown (Phase F, do before Phase D numeric scenarios)
 

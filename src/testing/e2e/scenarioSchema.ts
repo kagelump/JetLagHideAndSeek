@@ -26,23 +26,25 @@ export const e2eExpectSchema = z.object({
     totalPctMax: z.number().optional(),
 });
 
-export const e2eScenarioSchema = z.object({
-    kind: z.literal("e2e-scenario"),
-    /** Free-form name, surfaced in the readout for flow debugging. */
-    name: z.string().min(1),
-    controls: e2eControlsSchema.default({ showReadout: true }),
-    state: z.object({
-        adminDivisions: adminDivisionsWireSchema.optional(),
-        hidingZones: hidingZonesWireSchema.optional(),
-        playArea: playAreaWireSchema.optional(),
-        questions: z.array(questionWireSchema).optional(),
-    }),
-    /**
-     * Optional expectations a flow may also assert in YAML. Recorded in the
-     * readout so a failing flow shows expected-vs-actual side by side.
-     */
-    expect: e2eExpectSchema.optional(),
-});
+export const e2eScenarioSchema = z
+    .object({
+        kind: z.literal("e2e-scenario"),
+        /** Free-form name, surfaced in the readout for flow debugging. */
+        name: z.string().min(1),
+        controls: e2eControlsSchema.default({ showReadout: true }),
+        state: z.object({
+            adminDivisions: adminDivisionsWireSchema.optional(),
+            hidingZones: hidingZonesWireSchema.optional(),
+            playArea: playAreaWireSchema.optional(),
+            questions: z.array(questionWireSchema).optional(),
+        }),
+        /**
+         * Optional expectations a flow may also assert in YAML. Recorded in the
+         * readout so a failing flow shows expected-vs-actual side by side.
+         */
+        expect: e2eExpectSchema.optional(),
+    })
+    .passthrough();
 
 export type E2eControls = z.infer<typeof e2eControlsSchema>;
 export type E2eExpect = z.infer<typeof e2eExpectSchema>;

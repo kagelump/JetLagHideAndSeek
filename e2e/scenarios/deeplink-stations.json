@@ -13,6 +13,7 @@
         "hidingZones": {
             "radiusMeters": 800,
             "radiusUnit": "m",
+            "_comment": "Preset id is hash-derived from the operator name. After a fixture rebuild (pnpm data:e2e-fixture), re-derive the largest preset from assets/e2e-fixture/e2e-fixture/transit.json. The flow asserts stations=[1-9][0-9]* so a stale id fails loudly rather than passing hollow.",
             "selectedPresetIds": ["e2e-fixture:osm-e2e-fixture-op10r8ish"]
         }
     }

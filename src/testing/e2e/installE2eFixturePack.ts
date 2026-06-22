@@ -2,7 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Directory, File, Paths } from "expo-file-system";
 
 import { OFFLINE } from "@/config/appConfig";
-import { loadInstalledPacks } from "@/features/offline/regionPacks";
 import { createLogger } from "@/shared/logger";
 
 import { E2E_HOOKS_ENABLED } from "./isE2eHooksEnabled";
@@ -62,8 +61,7 @@ export async function installE2eFixturePack(): Promise<void> {
         try {
             const current = await versionFile.text();
             if (current === versionMarker) {
-                log.debug("E2E fixture pack already installed; re-registering");
-                await loadInstalledPacks();
+                log.debug("E2E fixture pack already installed");
                 return;
             }
         } catch {
@@ -112,7 +110,5 @@ export async function installE2eFixturePack(): Promise<void> {
     index[FIXTURE_ID] = installedPack;
     await AsyncStorage.setItem(indexKey, JSON.stringify(index));
 
-    await loadInstalledPacks();
-
-    log.debug("E2E fixture pack installed and registered");
+    log.debug("E2E fixture pack installed");
 }
