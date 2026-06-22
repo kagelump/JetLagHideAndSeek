@@ -1,0 +1,19 @@
+appId: com.raycatdev.hideandseek.v2
+---
+# Prove the E2E fixture pack pre-installs and produces real stations.
+- clearState
+- runFlow: bootstrap.yaml
+- openLink: "${E2E_DEEPLINK_STATIONS_LINK}"
+- waitForAnimationToEnd:
+      timeout: 5000
+- runFlow:
+      when:
+          visible: "Open"
+      commands:
+          - tapOn: "Open"
+- extendedWaitUntil:
+      visible: "e2e-readout:ready=1"
+      timeout: 60000
+- assertVisible: "e2e-readout:name=deeplink-stations"
+- assertVisible: "e2e-readout:stations=[1-9][0-9]*"
+- takeScreenshot: e2e/artifacts/deeplink-stations/stations-loaded

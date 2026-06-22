@@ -38,6 +38,11 @@ const flows = [
         artifactSubdir: "deeplink-smoke",
         flowPath: "e2e/deeplink-smoke.yaml",
     },
+    {
+        name: "deeplink-stations",
+        artifactSubdir: "deeplink-stations",
+        flowPath: "e2e/deeplink-stations.yaml",
+    },
 ];
 
 // Build `E2E_<NAME>_LINK` env vars from e2e/scenarios/*.json so flows can
