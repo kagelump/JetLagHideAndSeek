@@ -1,7 +1,9 @@
 # Plan: Real-data seeding for deep-link E2E (the "E2E fixture pack")
 
-Status: **planning** (2026-06-22). Unblocks Phase D of `epic.md`. Read
-`epic.md` "Riskiest part" context first.
+Status: **F1 complete** (2026-06-22). F1a–F1d shipped; transit-only fixture
+committed, gated pre-install working, stations readout live, integration flow
+ready. F2/F3 (measuring + boundaries/POI) remain as follow-ons. Unblocks Phase D
+of `epic.md`.
 
 ## 1. The problem this solves
 
