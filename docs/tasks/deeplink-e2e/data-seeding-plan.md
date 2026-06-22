@@ -1,9 +1,10 @@
 # Plan: Real-data seeding for deep-link E2E (the "E2E fixture pack")
 
-Status: **F1 complete** (2026-06-22). F1a–F1d shipped; transit-only fixture
-committed, gated pre-install working, stations readout live, integration flow
-ready. F2/F3 (measuring + boundaries/POI) remain as follow-ons. Unblocks Phase D
-of `epic.md`.
+Status: **F1–F3 complete** (2026-06-22). F1a–F1d (transit), F2 (measuring:
+high-speed-rail + body-of-water), F3 (boundaries + POI: 96 features / 8
+categories) all shipped. Committed fixture is 96 KB across 6 artifacts.
+Install function dynamically writes all manifest-declared artifacts.
+Unblocks Phase D of `epic.md`.
 
 ## 1. The problem this solves
 
