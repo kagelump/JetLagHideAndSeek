@@ -1,6 +1,6 @@
 {
   "id": "e2e-fixture",
-  "sourcePbf": "/Users/ryantseng/projects/JetLagHideAndSeek/data/packs/cache/e2e-fixture/e2e-tokyo.osm.pbf",
+  "sourcePbf": "data/packs/cache/e2e-fixture/e2e-tokyo.osm.pbf",
   "sourcePbfDate": "2026-06-22",
   "bbox": [
     139.76,
@@ -11,14 +11,14 @@
   "version": 1,
   "artifacts": {
     "transit.json": {
-      "sha256": "bd2c8ccbd99a8ce673f1a21896898d94eee03dad9aa5d0c25a49cbab5c319375",
-      "bytes": 39127,
+      "sha256": "4d68f2e3a890847e0331dcc252dba2f1b28458306b483049abfe73d947f927d4",
+      "bytes": 39128,
       "presets": 3,
       "stations": 25
     }
   },
   "meta": {
-    "sha256": "5354833f9b65312af15bfd5babaa207691ca201390007267b765fd8af9cde1ae",
-    "bytes": 513
+    "sha256": "faaa2c63965686c11e57546168ddad0f68205e02bf1ce1adeb7aadb38c94dbd7",
+    "bytes": 515
   }
 }

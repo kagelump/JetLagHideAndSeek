@@ -4,7 +4,7 @@ import { mkdtemp, rm, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { buildE2eFixture } from "./build-e2e-fixture.mjs";
+import { buildE2eFixture } from "../build-e2e-fixture.mjs";
 
 describe("build-e2e-fixture", () => {
     let outDir;

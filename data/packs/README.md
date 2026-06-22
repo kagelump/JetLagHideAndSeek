@@ -242,5 +242,11 @@ pnpm data:e2e-fixture
 pnpm data:e2e-fixture:lint
 ```
 
+To build from a non-default clipped PBF, pass `--pbf=<path>`:
+
+```bash
+pnpm data:e2e-fixture --pbf=/path/to/custom/e2e-tokyo.osm.pbf
+```
+
 Review the diff in `assets/e2e-fixture/e2e-fixture/` before committing; update
 scenario expected bands if station counts shift.

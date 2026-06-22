@@ -8,7 +8,7 @@
  */
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { buildTransitArtifact } from "./lib/buildTransit.mjs";
@@ -36,6 +36,18 @@ export const fixtureConfig = {
     transitOverrides: {},
 };
 
+/**
+ * Convert an absolute path to a repo-relative path for the manifest.
+ * Falls back to the original path if it is not inside the repo.
+ *
+ * @param {string} pbfPath
+ * @returns {string}
+ */
+function repoRelativePbfPath(pbfPath) {
+    const rel = relative(REPO_ROOT, pbfPath);
+    return rel && !rel.startsWith("..") && !rel.startsWith("/") ? rel : pbfPath;
+}
+
 export async function buildE2eFixture({
     pbfPath = DEFAULT_SOURCE_PBF,
     outDir = OUT_DIR,
@@ -60,7 +72,10 @@ export async function buildE2eFixture({
     }
 
     const transitJson = transitResult.uncompressed;
-    await writeFile(join(outDir, "transit.json"), transitJson);
+    await writeFile(
+        join(outDir, "transit.json"),
+        Buffer.concat([transitJson, Buffer.from("\n")]),
+    );
 
     await rm(join(outDir, "transit.json.gz"), { force: true });
 
@@ -79,18 +94,21 @@ export async function buildE2eFixture({
         },
     };
     const metaJson = JSON.stringify(meta, null, 2);
-    await writeFile(join(outDir, "meta.json"), metaJson);
+    await writeFile(join(outDir, "meta.json"), `${metaJson}\n`);
 
     const manifest = {
         id: FIXTURE_ID,
-        sourcePbf: pbfPath,
+        sourcePbf: repoRelativePbfPath(pbfPath),
         sourcePbfDate: meta.osmSnapshot,
         bbox: FIXTURE_BBOX,
         version: 1,
         artifacts: {
             "transit.json": {
-                sha256: createHash("sha256").update(transitJson).digest("hex"),
-                bytes: transitJson.length,
+                sha256: createHash("sha256")
+                    .update(transitJson)
+                    .update("\n")
+                    .digest("hex"),
+                bytes: transitJson.length + 1,
                 presets: transitResult.presets.length,
                 stations: transitResult.presets.reduce(
                     (sum, p) => sum + p.stations.length,
@@ -99,13 +117,16 @@ export async function buildE2eFixture({
             },
         },
         meta: {
-            sha256: createHash("sha256").update(metaJson).digest("hex"),
-            bytes: metaJson.length,
+            sha256: createHash("sha256")
+                .update(metaJson)
+                .update("\n")
+                .digest("hex"),
+            bytes: Buffer.byteLength(metaJson, "utf8") + 1,
         },
     };
     await writeFile(
         join(outDir, "manifest.json"),
-        JSON.stringify(manifest, null, 2),
+        `${JSON.stringify(manifest, null, 2)}\n`,
     );
 
     console.log(`Wrote fixture to ${outDir}`);
