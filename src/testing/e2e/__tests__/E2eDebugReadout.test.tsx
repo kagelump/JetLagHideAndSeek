@@ -27,6 +27,14 @@ jest.mock("@/features/map/useEliminationPercentage", () => ({
     useEliminationPercentage: () => mockElim,
 }));
 
+let mockSelectedStations: unknown[] = [{ id: "s1" }, { id: "s2" }];
+jest.mock("@/state/hidingZoneStore", () => ({
+    ...jest.requireActual("@/state/hidingZoneStore"),
+    useHidingZoneDerived: jest.fn(() => ({
+        selectedStations: mockSelectedStations,
+    })),
+}));
+
 import {
     E2eDebugReadout,
     formatReadoutPct,
@@ -38,6 +46,7 @@ beforeEach(() => {
     mockReadout = { active: true, name: "scn", expect: null, location: null };
     mockBackend = "geos";
     mockElim = { value: 42.134, isComputing: false };
+    mockSelectedStations = [{ id: "s1" }, { id: "s2" }];
 });
 
 describe("formatting helpers", () => {
@@ -68,10 +77,11 @@ describe("E2eDebugReadout", () => {
         expect(queryByTestId("e2e-readout")).toBeNull();
     });
 
-    it("renders name + backend + totalPct + ready once settled", () => {
+    it("renders name + backend + stations + totalPct + ready once settled", () => {
         const { getByLabelText } = render(<E2eDebugReadout />);
         expect(getByLabelText("e2e-readout:name=scn")).toBeTruthy();
         expect(getByLabelText("e2e-readout:backend=geos")).toBeTruthy();
+        expect(getByLabelText("e2e-readout:stations=2")).toBeTruthy();
         expect(getByLabelText("e2e-readout:totalPct=42.13")).toBeTruthy();
         expect(getByLabelText("e2e-readout:ready=1")).toBeTruthy();
     });
@@ -81,8 +91,9 @@ describe("E2eDebugReadout", () => {
         const { getByLabelText, queryByLabelText } = render(
             <E2eDebugReadout />,
         );
-        // name + backend always render once active …
+        // name + backend + stations always render once active …
         expect(getByLabelText("e2e-readout:backend=geos")).toBeTruthy();
+        expect(getByLabelText("e2e-readout:stations=2")).toBeTruthy();
         // … but the numeric row + ready sentinel wait for the settle.
         expect(queryByLabelText("e2e-readout:ready=1")).toBeNull();
         expect(queryByLabelText("e2e-readout:totalPct=10.00")).toBeNull();
@@ -99,5 +110,11 @@ describe("E2eDebugReadout", () => {
         );
         expect(getByLabelText("e2e-readout:ready=1")).toBeTruthy();
         expect(queryByLabelText(/e2e-readout:totalPct=/)).toBeNull();
+    });
+
+    it("renders the station count readout", () => {
+        mockSelectedStations = [{ id: "a" }, { id: "b" }, { id: "c" }];
+        const { getByLabelText } = render(<E2eDebugReadout />);
+        expect(getByLabelText("e2e-readout:stations=3")).toBeTruthy();
     });
 });

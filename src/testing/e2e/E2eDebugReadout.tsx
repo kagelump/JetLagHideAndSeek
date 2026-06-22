@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { useEliminationPercentage } from "@/features/map/useEliminationPercentage";
+import { useHidingZoneDerived } from "@/state/hidingZoneStore";
 import { colors } from "@/theme/colors";
 
 import { getActiveGeometryBackend, useE2eReadoutState } from "./e2eControls";
@@ -38,6 +39,7 @@ export function E2eDebugReadout() {
 function E2eDebugReadoutInner() {
     const { active, name } = useE2eReadoutState();
     const { value, isComputing } = useEliminationPercentage();
+    const { selectedStations } = useHidingZoneDerived();
     const backend = getActiveGeometryBackend();
 
     if (!active) return null;
@@ -52,6 +54,9 @@ function E2eDebugReadoutInner() {
         <View pointerEvents="none" style={styles.overlay} testID="e2e-readout">
             <ReadoutRow label={readoutLabel("name", name ?? "")} />
             <ReadoutRow label={readoutLabel("backend", backend)} />
+            <ReadoutRow
+                label={readoutLabel("stations", selectedStations.length)}
+            />
             {settled && value !== null ? (
                 <ReadoutRow
                     label={readoutLabel("totalPct", formatReadoutPct(value))}
