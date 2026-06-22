@@ -13,8 +13,8 @@ import {
     __getPackTransitSourcesForTest,
 } from "@/features/hidingZone/hidingZoneData";
 
-const fixtureAssets = {
-    transit: {
+const fixtureBundle = {
+    "transit.json": {
         schemaVersion: 1,
         presets: [
             {
@@ -28,7 +28,7 @@ const fixtureAssets = {
             },
         ],
     },
-    meta: {
+    "meta.json": {
         schemaVersion: 1,
         regionId: "e2e-fixture",
         label: "E2E fixture",
@@ -36,10 +36,11 @@ const fixtureAssets = {
         osmSnapshot: "2026-06-22",
         adminLevels: { matching: [4, 7, 9, 10] },
     },
-    manifest: {
+    "manifest.json": {
         id: "e2e-fixture",
         sourcePbfDate: "2026-06-22",
         version: 1,
+        bbox: [139.69, 35.66, 139.78, 35.7],
         artifacts: {
             "transit.json": {
                 sha256: "abc",
@@ -54,7 +55,7 @@ const fixtureAssets = {
 
 beforeAll(() => {
     const mod = require("../installE2eFixturePack");
-    mod.__setFixtureAssetsForTest(fixtureAssets);
+    mod.__setFixtureAssetsForTest(fixtureBundle);
 });
 
 beforeEach(() => {

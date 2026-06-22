@@ -14,45 +14,86 @@ const PACK_DIR = new Directory(
     FIXTURE_ID,
 );
 
-type FixtureAssets = {
-    transit: Record<string, unknown>;
-    meta: Record<string, unknown>;
-    manifest: Record<string, unknown>;
-};
+type ArtifactKind = "transit" | "meta" | "poi" | "measuring" | "boundaries";
 
-let fixtureAssetsOverride: FixtureAssets | null = null;
+/**
+ * Map of artifact filename → parsed JSON content. Keys match the filenames
+ * listed in manifest.json.artifacts, plus meta.json (always required).
+ */
+type FixtureBundle = Record<string, Record<string, unknown>>;
+
+let fixtureAssetsOverride: FixtureBundle | null = null;
 
 /** Test-only hook to avoid bundling real assets in Jest. */
-export function __setFixtureAssetsForTest(assets: FixtureAssets): void {
+export function __setFixtureAssetsForTest(assets: FixtureBundle): void {
     fixtureAssetsOverride = assets;
 }
 
-function loadFixtureAssets(): FixtureAssets {
+function loadFixtureBundle(): FixtureBundle {
     if (fixtureAssetsOverride) return fixtureAssetsOverride;
 
-    return {
-        transit: require("../../../assets/e2e-fixture/e2e-fixture/transit.json"),
-        meta: require("../../../assets/e2e-fixture/e2e-fixture/meta.json"),
-        manifest: require("../../../assets/e2e-fixture/e2e-fixture/manifest.json"),
+    const bundle: FixtureBundle = {
+        "transit.json": require("../../../assets/e2e-fixture/e2e-fixture/transit.json"),
+        "meta.json": require("../../../assets/e2e-fixture/e2e-fixture/meta.json"),
+        "manifest.json": require("../../../assets/e2e-fixture/e2e-fixture/manifest.json"),
     };
+
+    // F2 — measuring artifacts (conditionally bundled).
+    const manifest = bundle["manifest.json"] as Record<string, unknown>;
+    const artifactNames = Object.keys(
+        (manifest.artifacts as Record<string, unknown>) ?? {},
+    );
+
+    // Each artifact listed in the manifest must have a matching require().
+    // F2/F3 artifacts are tried; missing ones (not yet built / F1-only) are
+    // silently skipped.
+    for (const filename of artifactNames) {
+        if (bundle[filename]) continue; // already loaded above
+        try {
+            bundle[filename] = require(
+                `../../../assets/e2e-fixture/e2e-fixture/${filename}`,
+            );
+        } catch {
+            // Artifact not yet committed (e.g. poi.json before F3 rebuild).
+        }
+    }
+
+    return bundle;
 }
 
 type InstalledArtifactEntry = {
-    kind: "transit" | "meta" | "poi" | "measuring" | "boundaries";
+    kind: ArtifactKind;
     category?: string;
     bytes: number;
     status: "installed";
 };
 
+function kindFromFilename(filename: string): ArtifactKind {
+    if (filename.startsWith("measuring-")) return "measuring";
+    if (filename === "transit.json") return "transit";
+    if (filename === "meta.json") return "meta";
+    if (filename === "boundaries.json") return "boundaries";
+    if (filename === "poi.json") return "poi";
+    return "meta"; // fallback
+}
+
 /**
  * Pre-install the bundled E2E fixture pack into the app's document directory
  * and register it through the production pack loading path. Gated by
  * {@link E2E_HOOKS_ENABLED}; no-ops in production.
+ *
+ * Does NOT call loadInstalledPacks() — the caller (AppStateProviders) owns
+ * that single call after this function completes.
  */
 export async function installE2eFixturePack(): Promise<void> {
     if (!E2E_HOOKS_ENABLED) return;
 
-    const { transit, meta, manifest } = loadFixtureAssets();
+    const bundle = loadFixtureBundle();
+    const manifest = bundle["manifest.json"] as Record<string, unknown>;
+    const meta = bundle["meta.json"] as Record<string, unknown>;
+    const artifactFiles = Object.keys(
+        (manifest.artifacts as Record<string, unknown>) ?? {},
+    );
 
     const versionFile = new File(PACK_DIR, "version");
     const versionMarker = `${manifest.id}@${manifest.version ?? 0}:${manifest.sourcePbfDate}`;
@@ -78,29 +119,46 @@ export async function installE2eFixturePack(): Promise<void> {
     }
     await PACK_DIR.create({ intermediates: true });
 
-    const transitJson = JSON.stringify(transit);
-    const transitFile = new File(PACK_DIR, "transit.json");
-    await transitFile.create({ overwrite: true });
-    await transitFile.write(transitJson);
+    // Write every artifact declared in the manifest.
+    const artifacts: InstalledArtifactEntry[] = [];
+    for (const filename of artifactFiles) {
+        const content = bundle[filename];
+        if (!content) continue;
 
-    const metaJson = JSON.stringify(meta);
-    const metaFile = new File(PACK_DIR, "meta.json");
-    await metaFile.create({ overwrite: true });
-    await metaFile.write(metaJson);
+        const json = JSON.stringify(content);
+        const file = new File(PACK_DIR, filename);
+        await file.create({ overwrite: true });
+        await file.write(json);
+
+        artifacts.push({
+            kind: kindFromFilename(filename),
+            bytes: json.length,
+            status: "installed",
+        });
+    }
+
+    // Always write meta.json (not listed in manifest.artifacts but required).
+    if (!artifactFiles.includes("meta.json")) {
+        const metaJson = JSON.stringify(meta);
+        const metaFile = new File(PACK_DIR, "meta.json");
+        await metaFile.create({ overwrite: true });
+        await metaFile.write(metaJson);
+        artifacts.push({
+            kind: "meta",
+            bytes: metaJson.length,
+            status: "installed",
+        });
+    }
 
     await versionFile.create({ overwrite: true });
     await versionFile.write(versionMarker);
 
-    const artifacts: InstalledArtifactEntry[] = [
-        { kind: "transit", bytes: transitJson.length, status: "installed" },
-        { kind: "meta", bytes: metaJson.length, status: "installed" },
-    ];
-
     const installedPack = {
         id: FIXTURE_ID,
-        osmSnapshot: meta.osmSnapshot ?? manifest.sourcePbfDate,
+        osmSnapshot:
+            (meta.osmSnapshot as string) ?? (manifest.sourcePbfDate as string),
         installedAt: new Date().toISOString(),
-        bbox: meta.bbox,
+        bbox: manifest.bbox,
         artifacts,
     };
 

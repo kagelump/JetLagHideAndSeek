@@ -74,4 +74,158 @@ describe("build-e2e-fixture", () => {
             "string",
         );
     });
+
+    it("writes measuring artifacts and includes them in meta/manifest", async () => {
+        const fakePresets = [
+            {
+                id: "osm-e2e-fixture-test",
+                label: "Test Operator",
+                stations: [{ id: "n1", name: "Tokyo", lat: 35.68, lon: 139.76 }],
+            },
+        ];
+        const transitUncompressed = Buffer.from(
+            JSON.stringify({ schemaVersion: 1, presets: fakePresets }),
+            "utf8",
+        );
+
+        const measuringBodyOfWater = Buffer.from(
+            JSON.stringify({
+                schemaVersion: 1,
+                type: "measuring",
+                category: "body-of-water",
+                features: [
+                    {
+                        type: "Feature",
+                        geometry: {
+                            type: "Polygon",
+                            coordinates: [
+                                [
+                                    [139.77, 35.69],
+                                    [139.78, 35.69],
+                                    [139.78, 35.7],
+                                    [139.77, 35.7],
+                                    [139.77, 35.69],
+                                ],
+                            ],
+                        },
+                        properties: { name: "Test Water" },
+                    },
+                ],
+            }),
+            "utf8",
+        );
+
+        await buildE2eFixture({
+            outDir,
+            cacheDir: join(outDir, "cache"),
+            pbfPath: "/dev/null/does-not-exist.osm.pbf",
+            buildTransit: async () => ({
+                gzPath: join(outDir, "transit.json.gz"),
+                uncompressed: transitUncompressed,
+                presets: fakePresets,
+            }),
+            buildMeasuring: async () => ({
+                artifacts: new Map([
+                    [
+                        "measuring-body-of-water",
+                        {
+                            gzPath: join(outDir, "measuring-body-of-water.json.gz"),
+                            uncompressed: measuringBodyOfWater,
+                        },
+                    ],
+                ]),
+                categories: ["body-of-water"],
+            }),
+        });
+
+        const files = await readdir(outDir);
+        assert.ok(files.includes("measuring-body-of-water.json"));
+
+        const meta = JSON.parse(
+            await readFile(join(outDir, "meta.json"), "utf8"),
+        );
+        assert.ok(meta.artifacts.includes("measuring-body-of-water.json"));
+
+        const manifest = JSON.parse(
+            await readFile(join(outDir, "manifest.json"), "utf8"),
+        );
+        assert.ok(manifest.artifacts["measuring-body-of-water.json"]);
+        assert.strictEqual(
+            manifest.artifacts["measuring-body-of-water.json"].features,
+            1,
+        );
+    });
+
+    it("writes boundaries artifact and includes it in meta/manifest", async () => {
+        const fakePresets = [
+            {
+                id: "osm-e2e-fixture-test",
+                label: "Test Operator",
+                stations: [{ id: "n1", name: "Tokyo", lat: 35.68, lon: 139.76 }],
+            },
+        ];
+        const transitUncompressed = Buffer.from(
+            JSON.stringify({ schemaVersion: 1, presets: fakePresets }),
+            "utf8",
+        );
+
+        const boundariesUncompressed = Buffer.from(
+            JSON.stringify({
+                schemaVersion: 1,
+                type: "boundaries",
+                features: [
+                    {
+                        type: "Feature",
+                        geometry: {
+                            type: "Polygon",
+                            coordinates: [
+                                [
+                                    [139.76, 35.68],
+                                    [139.78, 35.68],
+                                    [139.78, 35.7],
+                                    [139.76, 35.7],
+                                    [139.76, 35.68],
+                                ],
+                            ],
+                        },
+                        properties: {
+                            "@id": 12345,
+                            name: "Chiyoda",
+                            admin_level: "7",
+                        },
+                    },
+                ],
+            }),
+            "utf8",
+        );
+
+        await buildE2eFixture({
+            outDir,
+            cacheDir: join(outDir, "cache"),
+            pbfPath: "/dev/null/does-not-exist.osm.pbf",
+            buildTransit: async () => ({
+                gzPath: join(outDir, "transit.json.gz"),
+                uncompressed: transitUncompressed,
+                presets: fakePresets,
+            }),
+            buildBoundaries: async () => ({
+                gzPath: join(outDir, "boundaries.json.gz"),
+                uncompressed: boundariesUncompressed,
+            }),
+        });
+
+        const files = await readdir(outDir);
+        assert.ok(files.includes("boundaries.json"));
+
+        const meta = JSON.parse(
+            await readFile(join(outDir, "meta.json"), "utf8"),
+        );
+        assert.ok(meta.artifacts.includes("boundaries.json"));
+
+        const manifest = JSON.parse(
+            await readFile(join(outDir, "manifest.json"), "utf8"),
+        );
+        assert.ok(manifest.artifacts["boundaries.json"]);
+        assert.strictEqual(typeof manifest.artifacts["boundaries.json"].sha256, "string");
+    });
 });
