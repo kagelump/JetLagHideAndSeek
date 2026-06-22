@@ -197,14 +197,20 @@ export async function buildE2eFixture({
             await rm(join(outDir, "poi.json.gz"), { force: true });
 
             metaArtifacts.push("poi.json");
+            const poiParsed = JSON.parse(poiJson.toString("utf8"));
+            const poiCategories =
+                typeof poiParsed.categories === "object" &&
+                poiParsed.categories !== null
+                    ? Object.keys(poiParsed.categories).length
+                    : 0;
             manifestArtifacts["poi.json"] = {
                 sha256: createHash("sha256")
                     .update(poiJson)
                     .update("\n")
                     .digest("hex"),
                 bytes: poiJson.length + 1,
-                categories: poiResult.columnar?.categories?.length ?? 0,
-                features: poiResult.columnar?.totalFeatures ?? 0,
+                categories: poiCategories,
+                features: poiParsed.totalCount ?? 0,
             };
         } else {
             console.warn("  [poi] No POI data — skipping artifact.");

@@ -17,22 +17,28 @@
       "stations": 25
     },
     "measuring-high-speed-rail.json": {
-      "sha256": "00e2cc6112e3195b49b82ae2b2a2a028cc2baa30172450d69d5d17ca9afb21b9",
+      "sha256": "9d45ffa7cfe13ac19df37d55c510cff4ba4dc4c2512c414f0336b0bd26d8ba8c",
       "bytes": 1289,
       "features": 3
     },
     "measuring-body-of-water.json": {
-      "sha256": "cc8b04b84aae1caf0dbb5989a43893ad993d88aedde581c93668f28a65b34141",
+      "sha256": "985e4a3811cf7f17d51aebeb26aac7f21dddeb6d57805f354cc026dd503b4a17",
       "bytes": 4131,
       "features": 5
     },
     "boundaries.json": {
-      "sha256": "dfcfa3dde4c2b2c0a95370fe15327ae63cca93036aa679f4b1c86d00ef1a3995",
+      "sha256": "09ee0f170c3435eb6d26aafbfda004282a014e4fcd021dd3f381cf4de4e2a615",
       "bytes": 27500
+    },
+    "poi.json": {
+      "sha256": "5b9cf59fd09f73082c525d4abd70995b35fef2f065744364b45f47db808c0129",
+      "bytes": 7678,
+      "categories": 8,
+      "features": 96
     }
   },
   "meta": {
-    "sha256": "2b00451b7402ff702a5175094c1aefb7496fc7c3374d82888ad03377de2181d5",
-    "bytes": 612
+    "sha256": "1e24f92dc1fe98c4759da65ceb2cd119bb2c47057888b6a5330570a5660a9b9c",
+    "bytes": 628
   }
 }

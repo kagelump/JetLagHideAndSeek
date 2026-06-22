@@ -57,6 +57,17 @@ async function lintArtifact(filename) {
         if (!Array.isArray(raw.features)) {
             throw new Error(`${filename}: missing or invalid "features" array`);
         }
+    } else if (filename === "poi.json") {
+        // Columnar POI format — check totalCount and categories object.
+        if (typeof raw.totalCount !== "number" || raw.totalCount < 0) {
+            throw new Error(`${filename}: missing or invalid "totalCount"`);
+        }
+        if (
+            typeof raw.categories !== "object" ||
+            raw.categories === null
+        ) {
+            throw new Error(`${filename}: missing or invalid "categories"`);
+        }
     } else {
         console.log(`${filename}: skipping (no schema, no structural check)`);
         return;

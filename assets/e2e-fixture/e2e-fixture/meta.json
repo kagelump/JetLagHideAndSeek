@@ -21,7 +21,8 @@
     "transit.json",
     "measuring-high-speed-rail.json",
     "measuring-body-of-water.json",
-    "boundaries.json"
+    "boundaries.json",
+    "poi.json"
   ],
   "attribution": {
     "text": "© OpenStreetMap contributors. Data available under the Open Database License (ODbL).",
