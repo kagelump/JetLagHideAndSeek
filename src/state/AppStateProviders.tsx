@@ -39,6 +39,10 @@ import {
     useQuestionState,
     useQuestions,
 } from "@/state/questionStore";
+import { createLogger } from "@/shared/logger";
+import { installE2eFixturePack } from "@/testing/e2e/installE2eFixturePack";
+
+const log = createLogger("appStateProviders");
 
 // ---------------------------------------------------------------------------
 // Restoration context — consumed by the root layout to gate the splash screen
@@ -176,7 +180,17 @@ function AppStatePersistenceCoordinator({ children }: { children: ReactNode }) {
 
             // Restore installed POI packs from the filesystem so matching
             // resolves locally across app restarts (non-blocking).
-            void loadInstalledPacks();
+            // On E2E runs, pre-install the committed fixture pack so scenarios have real
+            // stations without downloading anything. Failures are logged and non-fatal —
+            // the normal installed-packs path still runs.
+            void (async () => {
+                try {
+                    await installE2eFixturePack();
+                } catch (err) {
+                    log.error("E2E fixture pack install failed", err);
+                }
+                await loadInstalledPacks();
+            })();
         })();
 
         return () => {

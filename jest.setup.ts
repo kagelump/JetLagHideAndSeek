@@ -305,6 +305,10 @@ jest.mock("qrcode/lib/core/qrcode", () => ({
 jest.mock("@/features/hidingZone/hidingZoneData", () => {
     const packPresets: any[] = [];
     const packSourcesListeners = new Set<() => void>();
+    const packSources = new Map<
+        string,
+        { packId: string; path: string; presetSummaries: any[] }
+    >();
 
     return {
         __esModule: true,
@@ -318,11 +322,18 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
         clearTransitBundleCache: () => {
             packPresets.length = 0;
         },
-        registerTransitSource: (..._args: any[]) => {
-            void _args;
+        registerTransitSource: (
+            packId: string,
+            path: string,
+            presetSummaries: any[],
+        ) => {
+            packSources.set(packId, { packId, path, presetSummaries });
             for (const listener of packSourcesListeners) {
                 listener();
             }
+        },
+        unregisterTransitSource: (packId: string) => {
+            packSources.delete(packId);
         },
         onPackSourcesChanged: (listener: () => void) => {
             packSourcesListeners.add(listener);
@@ -335,7 +346,9 @@ jest.mock("@/features/hidingZone/hidingZoneData", () => {
         },
         __clearPackTransitSourcesForTest: () => {
             packPresets.length = 0;
+            packSources.clear();
         },
+        __getPackTransitSourcesForTest: () => packSources,
     };
 });
 
@@ -378,6 +391,7 @@ jest.mock("@/state/queryClient", () => {
 // Tests that need specific file content set up a global __fsCache.
 jest.mock("expo-file-system", () => {
     const cache: Record<string, string> = {};
+    const dirCache: Record<string, boolean> = {};
 
     function resolveFromCache(
         pathLike: string,
@@ -392,33 +406,116 @@ jest.mock("expo-file-system", () => {
         return globalCache?.[fullPath] ?? cache[fullPath];
     }
 
+    function dirExists(fullPath: string): boolean {
+        const globalCache = (
+            globalThis as unknown as { __fsCache?: Record<string, string> }
+        ).__fsCache;
+        if (dirCache[fullPath]) return true;
+        if (globalCache?.[fullPath] !== undefined) return true;
+        for (const key of Object.keys({ ...cache, ...globalCache })) {
+            if (key.startsWith(fullPath + "/")) return true;
+        }
+        return false;
+    }
+
     return {
         __esModule: true,
-        // Expo SDK 54 File API — this is the canonical file read path.
         File: jest
             .fn()
-            .mockImplementation((dirOrPath: string, name?: string) => {
-                const fullPath =
-                    name !== undefined ? `${dirOrPath}/${name}` : dirOrPath;
-                return {
-                    get exists(): boolean {
-                        return resolveFromCache(fullPath) !== undefined;
-                    },
-                    text: jest.fn(() => {
-                        const content = resolveFromCache(fullPath);
-                        if (content !== undefined) {
-                            return Promise.resolve(content);
-                        }
-                        return Promise.reject(
-                            new Error(
-                                `expo-file-system: file not found: ${fullPath}`,
-                            ),
-                        );
-                    }),
-                    uri: fullPath,
-                };
-            }),
-        // Legacy API kept for backward compat with any remaining callers.
+            .mockImplementation(
+                (dirOrPath: string | { uri: string }, name?: string) => {
+                    const parentPath =
+                        typeof dirOrPath === "string"
+                            ? dirOrPath
+                            : dirOrPath.uri;
+                    const fullPath =
+                        name !== undefined
+                            ? `${parentPath}/${name}`
+                            : parentPath;
+                    return {
+                        get exists(): boolean {
+                            return resolveFromCache(fullPath) !== undefined;
+                        },
+                        create: jest.fn(
+                            ({ overwrite }: { overwrite?: boolean }) => {
+                                if (
+                                    !overwrite &&
+                                    resolveFromCache(fullPath) !== undefined
+                                ) {
+                                    return Promise.reject(
+                                        new Error(
+                                            `expo-file-system: file already exists: ${fullPath}`,
+                                        ),
+                                    );
+                                }
+                                cache[fullPath] = cache[fullPath] ?? "";
+                                return Promise.resolve();
+                            },
+                        ),
+                        write: jest.fn((content: string) => {
+                            cache[fullPath] = content;
+                            return Promise.resolve();
+                        }),
+                        text: jest.fn(() => {
+                            const content = resolveFromCache(fullPath);
+                            if (content !== undefined) {
+                                return Promise.resolve(content);
+                            }
+                            return Promise.reject(
+                                new Error(
+                                    `expo-file-system: file not found: ${fullPath}`,
+                                ),
+                            );
+                        }),
+                        uri: fullPath,
+                    };
+                },
+            ),
+        Directory: jest
+            .fn()
+            .mockImplementation(
+                (parent: string | { uri: string }, name?: string) => {
+                    const parentPath =
+                        typeof parent === "string" ? parent : parent.uri;
+                    const fullPath =
+                        name !== undefined
+                            ? `${parentPath}/${name}`
+                            : parentPath;
+                    return {
+                        uri: fullPath,
+                        get exists(): boolean {
+                            return dirExists(fullPath);
+                        },
+                        create: jest.fn(
+                            ({
+                                intermediates,
+                            }: {
+                                intermediates?: boolean;
+                            }) => {
+                                dirCache[fullPath] = true;
+                                if (intermediates) {
+                                    let p = fullPath;
+                                    while (p) {
+                                        dirCache[p] = true;
+                                        const idx = p.lastIndexOf("/");
+                                        if (idx <= 0) break;
+                                        p = p.slice(0, idx);
+                                    }
+                                }
+                                return Promise.resolve();
+                            },
+                        ),
+                        delete: jest.fn(() => {
+                            delete dirCache[fullPath];
+                            for (const key of Object.keys(cache)) {
+                                if (key.startsWith(fullPath + "/"))
+                                    delete cache[key];
+                            }
+                            return Promise.resolve();
+                        }),
+                    };
+                },
+            ),
         readAsStringAsync: jest.fn((path: string) => {
             const content = resolveFromCache(path);
             if (content !== undefined) {
@@ -428,15 +525,11 @@ jest.mock("expo-file-system", () => {
                 new Error(`expo-file-system: file not found: ${path}`),
             );
         }),
-        Directory: {
-            document: "/mock-documents/",
-            cache: "/mock-cache/",
-        },
         Paths: {
-            document: ["/mock-documents/"],
-            cache: ["/mock-cache/"],
+            document: "/mock-documents",
+            cache: "/mock-cache",
         },
-        documentDirectory: "/mock-documents/",
-        cacheDirectory: "/mock-cache/",
+        documentDirectory: "/mock-documents",
+        cacheDirectory: "/mock-cache",
     };
 });
