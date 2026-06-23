@@ -338,9 +338,7 @@ async function main() {
                         parseFloat(m[3]),
                         parseFloat(m[4]),
                     ];
-                    if (
-                        [west, south, east, north].every(Number.isFinite)
-                    ) {
+                    if ([west, south, east, north].every(Number.isFinite)) {
                         bbox = [west, south, east, north];
                     }
                 }

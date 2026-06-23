@@ -62,10 +62,7 @@ async function lintArtifact(filename) {
         if (typeof raw.totalCount !== "number" || raw.totalCount < 0) {
             throw new Error(`${filename}: missing or invalid "totalCount"`);
         }
-        if (
-            typeof raw.categories !== "object" ||
-            raw.categories === null
-        ) {
+        if (typeof raw.categories !== "object" || raw.categories === null) {
             throw new Error(`${filename}: missing or invalid "categories"`);
         }
     } else {
@@ -83,9 +80,7 @@ async function lintManifest() {
     const manifest = JSON.parse(manifestFile.text);
 
     // Cross-check every artifact entry in the manifest.
-    for (const [filename, expected] of Object.entries(
-        manifest.artifacts,
-    )) {
+    for (const [filename, expected] of Object.entries(manifest.artifacts)) {
         let artifact;
         try {
             artifact = await readArtifact(filename);
@@ -130,9 +125,7 @@ async function lintManifest() {
 
 async function main() {
     // Validate each artifact on disk with its schema.
-    const manifest = JSON.parse(
-        (await readArtifact("manifest.json")).text,
-    );
+    const manifest = JSON.parse((await readArtifact("manifest.json")).text);
     for (const filename of Object.keys(manifest.artifacts)) {
         await lintArtifact(filename);
     }

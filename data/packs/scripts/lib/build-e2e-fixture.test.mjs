@@ -80,7 +80,9 @@ describe("build-e2e-fixture", () => {
             {
                 id: "osm-e2e-fixture-test",
                 label: "Test Operator",
-                stations: [{ id: "n1", name: "Tokyo", lat: 35.68, lon: 139.76 }],
+                stations: [
+                    { id: "n1", name: "Tokyo", lat: 35.68, lon: 139.76 },
+                ],
             },
         ];
         const transitUncompressed = Buffer.from(
@@ -129,7 +131,10 @@ describe("build-e2e-fixture", () => {
                     [
                         "measuring-body-of-water",
                         {
-                            gzPath: join(outDir, "measuring-body-of-water.json.gz"),
+                            gzPath: join(
+                                outDir,
+                                "measuring-body-of-water.json.gz",
+                            ),
                             uncompressed: measuringBodyOfWater,
                         },
                     ],
@@ -161,7 +166,9 @@ describe("build-e2e-fixture", () => {
             {
                 id: "osm-e2e-fixture-test",
                 label: "Test Operator",
-                stations: [{ id: "n1", name: "Tokyo", lat: 35.68, lon: 139.76 }],
+                stations: [
+                    { id: "n1", name: "Tokyo", lat: 35.68, lon: 139.76 },
+                ],
             },
         ];
         const transitUncompressed = Buffer.from(
@@ -226,6 +233,9 @@ describe("build-e2e-fixture", () => {
             await readFile(join(outDir, "manifest.json"), "utf8"),
         );
         assert.ok(manifest.artifacts["boundaries.json"]);
-        assert.strictEqual(typeof manifest.artifacts["boundaries.json"].sha256, "string");
+        assert.strictEqual(
+            typeof manifest.artifacts["boundaries.json"].sha256,
+            "string",
+        );
     });
 });
