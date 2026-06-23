@@ -20,6 +20,8 @@ on:
                 options:
                     - all
                     - smoke
+                    - deeplink-smoke
+                    - deeplink-stations
     pull_request:
         paths:
             - "app/**"

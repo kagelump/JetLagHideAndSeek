@@ -39,6 +39,16 @@ appId: com.raycatdev.hideandseek.v2
                 point: "91%,48%"
           - waitForAnimationToEnd:
                 timeout: 3000
+# The dev-client launcher being gone ("Continue" not visible) does NOT mean the
+# RN app has mounted — the JS bundle may still be loading. Flows that open a
+# seed deep link immediately after bootstrap (deeplink-*) otherwise race the
+# cold boot: the link fires before expo-router can route it and is dropped,
+# leaving the app at default empty state. Gate on a real "app mounted" signal —
+# the first-run home button, which only renders once the map + bottom sheet are
+# up — so the subsequent openLink lands on a deep-link-ready app.
 - extendedWaitUntil:
       notVisible: "Continue"
+      timeout: 60000
+- extendedWaitUntil:
+      visible: "Set up a game"
       timeout: 60000
