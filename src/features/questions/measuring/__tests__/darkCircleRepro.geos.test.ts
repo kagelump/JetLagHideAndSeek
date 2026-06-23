@@ -23,9 +23,10 @@
  * vs native GEOS 3.14 — the algorithm, projection, simplification, dissolve and
  * merge are byte-for-byte the production code.
  *
- * Features come from the on-disk pack artifact, which (verified by sha256 of
- * the decompressed payload == catalog `sha256`) is exactly what the device
- * downloads.
+ * Features come from committed, geographically-clipped slices of the Kantō
+ * pack measuring artifacts (water + coastline) around the notch — the full pack
+ * blobs are git-ignored and never committed, so the clip is what makes this
+ * runnable in CI. See `__fixtures__/darkCircleRepro/generate.mjs`.
  *
  * Run: `pnpm test:geos darkCircleRepro`
  */
@@ -190,12 +191,16 @@ function minDistToWaterM(p: Position, segs: [Position, Position][]): number {
 
 // ─── Bundle loading ─────────────────────────────────────────────────────────
 
+// Committed, geographically-clipped slices of the Kantō pack measuring
+// artifacts (water + coastline) around the notch/seeker. The full pack blobs in
+// `data/packs/dist/` are git-ignored and never committed (AGENTS.md → "Offline
+// Pack Rules"), so they're absent in CI; every assertion here is local to the
+// notch, so the clip preserves them. Regenerate with the sibling
+// `__fixtures__/darkCircleRepro/generate.mjs` after rebuilding the pack.
+const FIXTURE_DIR = resolve(__dirname, "__fixtures__/darkCircleRepro");
+
 function loadBundle(file: string): LineBundle {
-    const path = resolve(
-        process.cwd(),
-        "data/packs/dist/asia-japan-kanto",
-        file,
-    );
+    const path = resolve(FIXTURE_DIR, file);
     return JSON.parse(gunzipSync(readFileSync(path)).toString()) as LineBundle;
 }
 
@@ -218,8 +223,8 @@ describe("body-of-water dark-circle notch (Nakameguro / Meguro river)", () => {
         native.intersectionWKB = wasmIntersectionWKB;
         __setGeometryBackendForTest(geosGeometryBackend);
 
-        water = loadBundle("measuring-body-of-water.json.gz");
-        coastline = loadBundle("measuring-coastline.json.gz");
+        water = loadBundle("body-of-water.json.gz");
+        coastline = loadBundle("coastline.json.gz");
     }, 120_000);
 
     afterAll(() => {
