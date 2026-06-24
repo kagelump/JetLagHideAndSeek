@@ -13,20 +13,19 @@ export function resolveE2ePlatform(explicitPlatform, hostPlatform) {
 
 export function createMetroWarmUrl(metroPort, e2ePlatform) {
     // Request the `.bundle` endpoint, NOT `.js`. Metro serves `entry.js` as a
-    // single transformed module (returns in ~0s and warms nothing), whereas the
-    // dev client requests `entry.bundle` — the full-graph compile of ~2200
-    // modules (≈30s Android / ≈100s iOS cold). Warming `.bundle` forces that
-    // graph transform now, so the first flow's launch hits a warm cache instead
-    // of racing the cold compile past bootstrap's app-mounted gate.
+    // single transformed module (returns in ~0s and warms nothing), whereas a
+    // `.bundle` request compiles the full ~2200-module graph, populating Metro's
+    // transform cache and JITing the transformer worker pool.
     //
-    // `unstable_transformProfile=hermes-stable` must match the dev client's
-    // request: the app runs Hermes (`expo.jsEngine: hermes`), so the device
-    // bundle is transformed with the Hermes profile. Omitting it keys Metro's
-    // transform cache to the default profile — a *different* graph (≈2216 vs
-    // 2199 modules) — so every module misses and the device recompiles from
-    // scratch. With the profile matched, the warm populates the cache the device
-    // actually reuses.
-    return `http://127.0.0.1:${metroPort}/node_modules/expo-router/entry.bundle?platform=${e2ePlatform}&dev=true&minify=false&unstable_transformProfile=hermes-stable`;
+    // NOTE: this does NOT fully eliminate the dev client's own cold compile —
+    // its bundle request carries extra options we don't replicate here (the warm
+    // builds ~2216 modules, the device ~2199), so the per-module transform cache
+    // only partially overlaps and the device still recompiles (~100–160s on iOS
+    // cold). That in-flow compile is tolerated by bootstrap's iOS dismiss/mount
+    // poll loop, not by this warm. Keep the warm anyway: it primes the worker
+    // pool and the shared file cache, and it is what Android (fast compile)
+    // relies on. Matching the device URL exactly is a future optimization.
+    return `http://127.0.0.1:${metroPort}/node_modules/expo-router/entry.bundle?platform=${e2ePlatform}&dev=true&minify=false`;
 }
 
 export function selectFlows(flows, selectedFlow) {

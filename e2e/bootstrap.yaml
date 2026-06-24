@@ -51,13 +51,23 @@ appId: com.raycatdev.hideandseek.v2
 #   Android — the launcher button disappears once the app takes over and no dev
 #   menu auto-shows, so waiting for "Continue" gone is enough before the gate.
 #   iOS — after each clearState the dev-client re-shows its dev-menu onboarding
-#   ("This is the developer menu…") once Metro connects and the bundle loads. It
-#   covers the bottom sheet, and since it carries its own "Continue" button the
-#   gate below would either match the wrong node or never see the home button.
-#   Wait for that onboarding (its 180s budget also absorbs the first-flow cold
-#   bundle compile) and dismiss it via its Continue button. The early
-#   "Connected to:" block above only fires if the menu shows within ~3s of the
-#   openLink, which it never does on a cold iOS boot.
+#   once Metro connects and the bundle loads (the cold first-flow compile is
+#   ~100–160s). Two traps make this hard to handle:
+#     1. The dev menu renders in a SEPARATE native window that XCUITest/Maestro
+#        cannot query — asserting its text ("This is the developer menu") times
+#        out even while it is plainly on screen, and tapping its "Continue" by
+#        text never resolves. It is dismissable only by COORDINATE — its close X
+#        sits at ~91%,51% (top-right of the onboarding card). The X is used over
+#        the big "Continue" button because the X's coordinate lands on empty map
+#        when no menu is up, whereas Continue's (~50%,83%) would hit the sheet's
+#        own nav buttons and navigate away.
+#     2. While it is up it obscures the bottom sheet, so the "Set up a game"
+#        home button is unhittable.
+#   So poll: until the home button is hittable, tap the dismiss coordinate. That
+#   tap is a harmless no-op on the splash / empty map and a dismissal once the
+#   menu appears; the loop also rides out the in-flow cold compile. `times`
+#   bounds it so a genuine mount failure terminates (and the final gate reports
+#   it) instead of hanging to the job cap.
 - runFlow:
       when:
           platform: Android
@@ -69,12 +79,17 @@ appId: com.raycatdev.hideandseek.v2
       when:
           platform: iOS
       commands:
-          - extendedWaitUntil:
-                visible: "This is the developer menu"
-                timeout: 180000
-          - tapOn: "Continue"
-          - waitForAnimationToEnd:
-                timeout: 3000
+          - repeat:
+                times: 60
+                commands:
+                    - runFlow:
+                          when:
+                              notVisible: "Set up a game"
+                          commands:
+                              - tapOn:
+                                    point: "91%,51%"
+                              - waitForAnimationToEnd:
+                                    timeout: 3000
 - extendedWaitUntil:
       visible: "Set up a game"
       timeout: 90000
