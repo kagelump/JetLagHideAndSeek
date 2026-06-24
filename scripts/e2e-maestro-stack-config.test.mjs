@@ -29,7 +29,7 @@ test("resolveE2ePlatform rejects unsupported values", () => {
 test("createMetroWarmUrl targets the selected platform", () => {
     assert.equal(
         createMetroWarmUrl(8081, "android"),
-        "http://127.0.0.1:8081/node_modules/expo-router/entry.bundle?platform=android&dev=true&minify=false",
+        "http://127.0.0.1:8081/node_modules/expo-router/entry.bundle?platform=android&dev=true&minify=false&unstable_transformProfile=hermes-stable",
     );
 });
 

@@ -46,9 +46,35 @@ appId: com.raycatdev.hideandseek.v2
 # leaving the app at default empty state. Gate on a real "app mounted" signal —
 # the first-run home button, which only renders once the map + bottom sheet are
 # up — so the subsequent openLink lands on a deep-link-ready app.
-- extendedWaitUntil:
-      notVisible: "Continue"
-      timeout: 60000
+#
+# Readiness differs per platform:
+#   Android — the launcher button disappears once the app takes over and no dev
+#   menu auto-shows, so waiting for "Continue" gone is enough before the gate.
+#   iOS — after each clearState the dev-client re-shows its dev-menu onboarding
+#   ("This is the developer menu…") once Metro connects and the bundle loads. It
+#   covers the bottom sheet, and since it carries its own "Continue" button the
+#   gate below would either match the wrong node or never see the home button.
+#   Wait for that onboarding (its 180s budget also absorbs the first-flow cold
+#   bundle compile) and dismiss it via its Continue button. The early
+#   "Connected to:" block above only fires if the menu shows within ~3s of the
+#   openLink, which it never does on a cold iOS boot.
+- runFlow:
+      when:
+          platform: Android
+      commands:
+          - extendedWaitUntil:
+                notVisible: "Continue"
+                timeout: 60000
+- runFlow:
+      when:
+          platform: iOS
+      commands:
+          - extendedWaitUntil:
+                visible: "This is the developer menu"
+                timeout: 180000
+          - tapOn: "Continue"
+          - waitForAnimationToEnd:
+                timeout: 3000
 - extendedWaitUntil:
       visible: "Set up a game"
-      timeout: 60000
+      timeout: 90000

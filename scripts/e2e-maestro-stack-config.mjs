@@ -18,7 +18,15 @@ export function createMetroWarmUrl(metroPort, e2ePlatform) {
     // modules (≈30s Android / ≈100s iOS cold). Warming `.bundle` forces that
     // graph transform now, so the first flow's launch hits a warm cache instead
     // of racing the cold compile past bootstrap's app-mounted gate.
-    return `http://127.0.0.1:${metroPort}/node_modules/expo-router/entry.bundle?platform=${e2ePlatform}&dev=true&minify=false`;
+    //
+    // `unstable_transformProfile=hermes-stable` must match the dev client's
+    // request: the app runs Hermes (`expo.jsEngine: hermes`), so the device
+    // bundle is transformed with the Hermes profile. Omitting it keys Metro's
+    // transform cache to the default profile — a *different* graph (≈2216 vs
+    // 2199 modules) — so every module misses and the device recompiles from
+    // scratch. With the profile matched, the warm populates the cache the device
+    // actually reuses.
+    return `http://127.0.0.1:${metroPort}/node_modules/expo-router/entry.bundle?platform=${e2ePlatform}&dev=true&minify=false&unstable_transformProfile=hermes-stable`;
 }
 
 export function selectFlows(flows, selectedFlow) {
