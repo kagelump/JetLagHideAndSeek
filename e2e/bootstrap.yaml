@@ -47,49 +47,19 @@ appId: com.raycatdev.hideandseek.v2
 # the first-run home button, which only renders once the map + bottom sheet are
 # up — so the subsequent openLink lands on a deep-link-ready app.
 #
-# Readiness differs per platform:
-#   Android — the launcher button disappears once the app takes over and no dev
-#   menu auto-shows, so waiting for "Continue" gone is enough before the gate.
-#   iOS — after each clearState the dev-client re-shows its dev-menu onboarding
-#   once Metro connects and the bundle loads (the cold first-flow compile is
-#   ~100–160s). Two traps make this hard to handle:
-#     1. The dev menu renders in a SEPARATE native window that XCUITest/Maestro
-#        cannot query — asserting its text ("This is the developer menu") times
-#        out even while it is plainly on screen, and tapping its "Continue" by
-#        text never resolves. It is dismissable only by COORDINATE — its close X
-#        sits at ~91%,51% (top-right of the onboarding card). The X is used over
-#        the big "Continue" button because the X's coordinate lands on empty map
-#        when no menu is up, whereas Continue's (~50%,83%) would hit the sheet's
-#        own nav buttons and navigate away.
-#     2. While it is up it obscures the bottom sheet, so the "Set up a game"
-#        home button is unhittable.
-#   So poll: until the home button is hittable, tap the dismiss coordinate. That
-#   tap is a harmless no-op on the splash / empty map and a dismissal once the
-#   menu appears; the loop also rides out the in-flow cold compile. `times`
-#   bounds it so a genuine mount failure terminates (and the final gate reports
-#   it) instead of hanging to the job cap.
-- runFlow:
-      when:
-          platform: Android
-      commands:
-          - extendedWaitUntil:
-                notVisible: "Continue"
-                timeout: 60000
-- runFlow:
-      when:
-          platform: iOS
-      commands:
-          - repeat:
-                times: 60
-                commands:
-                    - runFlow:
-                          when:
-                              notVisible: "Set up a game"
-                          commands:
-                              - tapOn:
-                                    point: "91%,51%"
-                              - waitForAnimationToEnd:
-                                    timeout: 3000
+# On iOS the dev-client would otherwise auto-show its dev-menu onboarding after
+# each clearState, in a SEPARATE native window Maestro can't query but which
+# obscures this home button. That window is suppressed at the source for E2E
+# builds (the `EXDevMenuIsOnboardingFinished` UserDefault is re-set every launch
+# via a config plugin — see app.config.ts), so the home button is directly
+# hittable here and no per-platform coordinate-dismiss dance is needed.
+#
+# The 200s budget on the home-button gate absorbs the first-flow cold bundle
+# compile (~100–160s on the iOS simulator); later flows hit a warm cache and
+# settle in seconds.
+- extendedWaitUntil:
+      notVisible: "Continue"
+      timeout: 60000
 - extendedWaitUntil:
       visible: "Set up a game"
-      timeout: 90000
+      timeout: 200000
